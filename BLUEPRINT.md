@@ -2,7 +2,7 @@
 
 ## 🎲 The Game at a Glance
 
-Knowoff is an online social deduction party game for **exactly 4 or 6 players** — matched with people around the world in **Quick Play** (the main product), or gathered in person in a **Local Room**. Each round, one media item — **Known** — appears on every phone except the Offs'; Offs must pretend they see it. Everyone plays one card that supposedly relates to Known, the table argues, then votes. A vote reveals the chosen player's role: an Off is caught and out; a Knower stays, and the vote is wasted. **Knowers win by catching every Off. Offs win — together — if the votes run out first.**
+Knowoff is an online social deduction party game for **exactly 4 or 6 players** — matched with people around the world in **Quick Play** (the main product), or gathered in person in a **Local Room**. Each round, one media item — **Known** — appears on every phone except the Donowers'; Donowers must pretend they see it. Everyone plays one card that supposedly relates to Known, the table argues, then votes. **The most-voted player is eliminated and their role is revealed** — eliminating a Nower wastes the vote. **Nowers win by voting out every Donower. Donowers win — together — if the votes run out first.**
 
 There is deliberately no separate rulebook: the **Game Rules** section below is the single source of truth, and all player-facing help text, store copy, and the how-to-play clip are derived from it.
 
@@ -10,10 +10,10 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 
 | Term | Meaning |
 |---|---|
-| **Knower(s)** | Players who see Known |
-| **Off(s)** | Players who can't see Known; nobody knows who they are |
+| **Nower(s)** | Players who see Known |
+| **Donower(s)** | Players who can't see Known; nobody knows who they are |
 | **Known** | The media item of a round — image, GIF, or text (no audio or video at v1) |
-| **Unknown** | The neutral placeholder an Off's screen shows instead of Known |
+| **Unknown** | The neutral placeholder a Donower's screen shows instead of Known |
 | **Knowoff** | The vote at the end of every round |
 | **Round** | Card play + discussion + one Knowoff |
 | **Match** | Up to 2 votings at 4 players, up to 3 at 6 — until a team wins |
@@ -44,31 +44,31 @@ Architecture decision records:
 
 ### 1. Rooms, Votes & Victory
 
-* A room holds **exactly 4 players (1 Off) or exactly 6 players (2 Offs)** — no other sizes. A match may run short-handed only because someone disconnected or left (§7).
+* A room holds **exactly 4 players (1 Donower) or exactly 6 players (2 Donowers)** — no other sizes. A match may run short-handed only because someone disconnected or left (§7).
 * A match is a series of rounds; **every round ends with a Knowoff vote**. The vote budget is fixed: **2 votings at 4 players, 3 votings at 6 players**.
-* What a vote does: the player with the most votes has their role revealed. **If they're an Off, they're caught** — out of play for the rest of the match. **If they're a Knower, they stay seated and keep playing** — the vote was wasted, and that player is now publicly cleared.
-* **Knowers win** the moment every Off is caught.
-* **Offs win** the moment the remaining votes can't catch the remaining Offs. Concretely:
-  * 4 players: Off survives both votings → Offs win.
-  * 6 players: **if neither of the first two votings catches an Off, the match ends right after the second Knowoff — one vote can't catch two Offs — and Offs win.** Otherwise it runs to the third voting, and any Off still uncaught after it wins.
-* **Offs win and lose together**: a caught Off still wins if their partner survives. Offs don't know each other at match start; quietly working out who your partner is, and covering for them, is intended strategy.
+* What a vote does: **the player with the most votes is eliminated**, and their role is revealed. An eliminated player takes no further part in the match — no cards, no votes, no chat, no pokes — but they should **stay in the lobby to the end to collect their points in full**: elimination itself carries no penalty; disconnecting or leaving does (§7). Eliminating a Donower is a catch; eliminating a Nower is a wasted vote.
+* **Nowers win** the moment every Donower is caught.
+* **Donowers win** the moment the remaining votes can't catch the remaining Donowers. Concretely:
+  * 4 players: Donower survives both votings → Donowers win.
+  * 6 players: **if neither of the first two votings catches a Donower, the match ends right after the second Knowoff — one vote can't catch two Donowers — and Donowers win.** Otherwise it runs to the third voting, and any Donower still uncaught after it wins.
+* **Donowers win and lose together**: a caught Donower still wins if their partner survives. Donowers don't know each other at match start; quietly working out who your partner is, and covering for them, is intended strategy.
 * One voting per match can be re-run by a Revote card (§5).
 * Match length: roughly **4 minutes** at 4 players, **7 minutes** at 6. Ready (§8) can only shorten a match.
 
 ### 2. Roles, Known & Hands
 
 * The server assigns roles randomly and secretly at match start. Players check their role privately: **press and hold to show it, release to hide it** — everyone performs the same check, so nothing about it stands out.
-* **Known**: one item per round from the room's media pack — **image, GIF, or text**. No audio and no video at v1 (assets stay tiny, rounds are silent-autoplay-safe, and in local rooms sound would leak to Offs; v2 may revisit).
-* **Unknown**: Offs simply don't see Known — their screen shows a neutral placeholder in the same layout. In a local room this also means a glance at a neighbor's phone reveals nothing.
-* Secrecy is enforced server-side: an Off's device is never sent Known at all (⚙️ §4). Nobody knows who is Off or Knower until votes reveal roles.
-* **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text, image, or GIF** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Known in the match. That guaranteed ambiguity is what lets Offs blend in and makes Knowers doubt each other.
+* **Known**: one item per round from the room's media pack — **image, GIF, or text**. No audio and no video at v1 (assets stay tiny, rounds are silent-autoplay-safe, and in local rooms sound would leak to Donowers; v2 may revisit).
+* **Unknown**: Donowers simply don't see Known — their screen shows a neutral placeholder in the same layout. In a local room this also means a glance at a neighbor's phone reveals nothing.
+* Secrecy is enforced server-side: a Donower's device is never sent Known at all (⚙️ §4). Nobody knows who is Donower or Nower until votes reveal roles.
+* **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text, image, or GIF** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Known in the match. That guaranteed ambiguity is what lets Donowers blend in and makes Nowers doubt each other.
 * A match can never use more than those 8 cards, so a player always has a card to play.
 
 ### 3. The Round: Blind Play
 
 * Play window (`10 s × players`; ends early when everyone is Ready): each player secretly locks **one action** — play a card, or use a specialty (§5). Nothing shows while the window runs; when it closes, **all plays flip face-up at once, with names attached**. No speed races, no copying the table mid-round.
 * Played cards stay on the table for the whole match — the evidence the votes are argued over.
-* **Draws**: during a play window, a player may draw from their 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many). Drawing tells everyone your hand doesn't fit.
+* **Draws**: during a play window, a player may draw from their 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
 * **Timeout**: a player who locks nothing auto-passes and loses one random card. Stalling costs.
 
 ### 4. Discussion & Knowoff (every round)
@@ -76,49 +76,52 @@ Architecture decision records:
 * After the reveal, a discussion window opens (`10 s × players`; ends early when everyone is Ready).
   * **Local rooms:** talk happens out loud at the table.
   * **Online rooms:** players argue through **Quick Chat** — a set of canned phrases and reactions ("I suspect P3", "my card fits, trust me", "that play was weird", emotes), sent as taps, localized automatically. **No free-text chat at v1** (see Product Baseline); free-text and voice are v2 candidates behind proper moderation.
-* Then **Knowoff**: a 20-second blind ballot. Everyone votes for one player (never themselves); votes stay hidden until the window closes, then all votes are shown. The most-voted player's role is revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; still tied → the vote is a miss (it counts as survived, reveals nobody).
+* Then **Knowoff**: a 20-second blind ballot. Everyone still in the match votes for one player (never themselves); votes stay hidden until the window closes, then all votes are shown. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; still tied → the vote is a miss (it counts as survived, eliminates nobody).
 * **Result window:** every vote's outcome is displayed for 15 seconds before it becomes final — this is the window where a Revote card (§5) can land. Then it applies.
-* A caught Off watches the rest of the match; their screen no longer shows Known — a revealed Off can't feed it to a surviving partner — and they don't vote.
-* After the match, the verdict screen shows all Knowns to everyone; Offs finally see what they survived.
+* An eliminated player — Nower or Donower — watches the rest of the match: no plays, no votes, no chat, no pokes. Their screen no longer shows Known (a revealed Donower could otherwise feed it to a surviving partner). Staying connected to the end collects their points as normal (§6, §7).
+* After the match, the verdict screen shows all Knowns to everyone; Donowers finally see what they survived.
 
 ### 5. Card Specialties
 
-Five specialties in two types. Deal frequencies are tuned in `tuning.yaml`; role-restricted specialties are dealt after roles are assigned.
+Five specialties in two types. **Dealing is role-blind: any specialty can land in any player's hand.** Shuffle and Revote are restricted only in *use* — a Nower dealt Shuffle, or a Donower dealt Revote, simply holds a dead card (still usable as discard fodder). Deal frequencies are tuned in `tuning.yaml`.
 
 **Type A — Standard (your one action for the round; costs one extra discard, except Pass):**
 
 * **Pass** (occasional): skip playing a card this round. Only the Pass card is spent.
-* **Reveal** (rare): show another player's hand to the whole table. Their media cards show face-up; **their specialty cards show only as face-down backs** — so Reveal can never expose a role through a role-restricted card. Costs one extra discard.
-* **One More Card** (occasional): usable any moment during a play window without spending your action — draw 1 fresh card from the mesh. Costs one extra discard.
+* **Reveal** (rare): show another player's entire hand to the whole table — media and specialty cards alike, all face-up. Safe by design: since any specialty can sit in any hand (dealing is role-blind), seeing a Shuffle or a Revote proves nothing about its holder's role. Costs one extra discard.
+* **One More Free Card** (occasional): usable any moment during a play window without spending your action — draw 1 fresh card from the mesh, **free of the draw penalty** (§3). Used before touching your pile, it serves as a penalty-free first draw — that's its edge. Costs one extra discard.
 
-**Type B — Unique (free, role-restricted, once per match):**
+**Type B — Unique (free, use restricted by role, once per match):**
 
-* **Shuffle** (rare — **Off only**): usable only at the very start of a round, before anyone locks an action. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *a Shuffle happened* — hands visibly change — but not who did it; since nobody knows who is Off, the alert exposes no one. It wipes out the plans Knowers built around saved cards.
-* **Revote** (rare — **Knower only**): playable during the 15-second result window of any Knowoff, before the result finalizes. The shown result is **canceled: it reveals nobody, removes nobody, and does not count as a survived voting for Offs.** A fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — it's Knower-only, so using it publicly half-clears you; that's the price. (This replaces the earlier One More Round card, which fed Knowers extra votes and broke balance.)
+* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before anyone locks an action. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *a Shuffle happened* — hands visibly change — but not who did it; since nobody knows who is a Donower, the alert exposes no one. It wipes out the plans Nowers built around saved cards.
+* **Revote** (rare — **usable by Nowers only**): playable during the 15-second result window of any Knowoff, before the result finalizes. The shown result is **canceled: it reveals nobody, eliminates nobody, and does not count as a survived voting for Donowers.** A fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price. (This replaces the earlier One More Round card, which fed Nowers extra votes and broke balance.)
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 
 ### 6. Match Points & Knoin Earnings
 
 Two separate rewards come out of every match:
 
-**Match points** — the competitive score. They feed the session scoreboard (local rooms) and the Weekly Leaderboard (Quick Play only, 🎮 §5). A player who is absent when the match ends scores 0 points for it.
+**Match points** — the competitive score. They feed the session scoreboard (local rooms) and the Weekly Leaderboard (Quick Play only, 🎮 §5), and every match's net also accumulates on the profile twice: into **Overall Points** (the lifetime total — it only ever grows) and into **Non-Converted Points**, a balance convertible to Knoin (💰 §1: 100 points → 1 Knoin, one-way). A match's net floors at 0 — draw penalties can empty a match's gains, never dig debt. A player who is absent when the match ends scores 0 points for it. Eliminated players are not absent: staying in the lobby to the end collects everything.
 
 | Event | Points |
 |---|---|
-| Your vote names an Off | +1 |
-| Knower team win | +1 each Knower |
-| Off team win | +3 each Off — caught Offs included (they win together) |
+| Your vote names a Donower | +10 |
+| Nower team win | +10 each Nower |
+| Donower team win | +30 each Donower — caught Donowers included (they win together) |
+| Each card drawn from your pile | −5 (a One More Free Card draw is exempt — §5) |
 
 **Knoin** — the currency (💰 §1). Knoin grants are **per-event and credited to the profile instantly**, so they survive disconnects and abandons: what you earned is yours the moment you earned it. Values in `tuning.yaml → knoin:`.
 
 | Event | Knoin (v1 placeholders) |
 |---|---|
 | Match completed | +5 |
-| Knower team win | +30 each Knower |
-| Off team win | +50 each Off |
-| Your vote names an Off | +5 |
-| Surviving a voting as an Off | +10 |
+| Nower team win | +30 each Nower |
+| Donower team win | +50 each Donower |
+| Your vote names a Donower | +5 |
+| Surviving a voting as a Donower | +10 — credited discreetly (below) |
 | First win of the day | +25 |
+
+**Discreet crediting:** no public surface — scoreboard, lobby, or profile — ever shows per-match Knoin amounts or live balance changes, and role-linked grants like Donower vote survival appear only in their owner's private match-end settlement. The ledger credit is still instant (it survives disconnects); it just isn't visible, so numbers can never out a Donower mid-match.
 
 No chips, no stakes, no in-match economy — Knoin and points are earned by the match, never wagered in it.
 
@@ -126,11 +129,11 @@ No chips, no stakes, no in-match economy — Knoin and points are earned by the 
 
 Nobody should profit from a dropped connection — theirs or anyone else's. Three rules cover every case:
 
-1. **Grace & auto-play (20 s).** A disconnected seat is auto-played from the moment it drops: it passes, abstains from votes, counts as Ready, and can still be voted. The player has 20 seconds to reconnect before counting as absent; reconnecting later restores the seat mid-match (with a fresh role-scoped snapshot — a Knower gets Known back, an Off doesn't).
-2. **A fully absent team forfeits.** If **all Offs** are absent past grace, the match ends immediately as a **Knower win**. If all Knowers are absent past grace, Offs win. Quitting is conceding, never escaping.
+1. **Grace & auto-play (20 s).** A disconnected seat is auto-played from the moment it drops: it passes, abstains from votes, counts as Ready, and can still be voted. The player has 20 seconds to reconnect before counting as absent; reconnecting later restores the seat mid-match (with a fresh role-scoped snapshot — a Nower gets Known back, a Donower doesn't).
+2. **A fully absent team forfeits.** If **every uncaught Donower** is absent past grace, the match ends immediately as a **Nower win**. If every un-eliminated Nower is absent past grace, Donowers win. Quitting is conceding, never escaping. These checks count only players still in the match — eliminated players sit outside them.
 3. **Too few humans ends the match unscored.** If fewer than 3 players remain connected (and rule 2 hasn't already decided it), the match ends with no points and no team-win Knoin.
 
-Backstops: an absent-at-end player scores 0 match points (already-earned Knoin stays — §6); roles never move between seats; no bot ever takes over a human's hand. Repeated abandoning in Quick Play earns escalating matchmaking cooldowns.
+Backstops: an absent-at-end player — eliminated or not — scores 0 match points (already-earned Knoin stays — §6); roles never move between seats; no bot ever takes over a human's hand. Repeated abandoning in Quick Play earns escalating matchmaking cooldowns.
 
 ### 8. Pace Controls: Ready & Poke
 
@@ -154,13 +157,14 @@ Private rooms for people in the same physical place: the host shares a QR code (
 
 ### 3. Weekly Known Challenge (Community Event)
 
-A weekly community content contest, run through the Contributor Portal (🧑‍🎨):
+The game itself, stretched into a week-long social event for the whole community:
 
-* **Submissions:** the week's theme opens Monday. Anyone with portal access may submit **one entry** (image, GIF, or text). **Uploads are immutable — no edits, no replacements.** Submission capacity is **100 entries**: intake auto-closes at 100, and a slot reopens each time screening rejects an earlier entry.
-* **Screening before visibility:** every entry passes the automated screen plus a human check (curators or admin) **before** it becomes publicly visible and votable. Rejected entries never appear.
-* **Open voting:** all players may vote, one vote each, never for your own entry, and **votes are immutable** once cast. Tallies are public and live — open voting is the point.
-* **Terms:** submitting requires explicit acceptance of the contribution terms — a perpetual, non-exclusive license permitting **commercial use and modification** of the entry. Consent (terms version + timestamp) is stored with the submission. No consent, no upload.
-* **Monday close:** the winner (and curation picks) enter the community pack with **credits and Knoin rewards** (💰 §1), alongside the new week's theme.
+* **The topic is a Known:** every Monday the server publishes the week's topic — an image, GIF, or text, exactly like a round's Known. Players respond the way they play cards in a match: upload the one entry (image, GIF, or text) that best matches the topic.
+* **Open to all players, in-app** — no portal role needed. One entry per player, **immutable once submitted** — no edits, no replacements. **The system accepts the first 100 entries**, then intake auto-closes; a slot reopens each time screening rejects an earlier entry.
+* **Screening before visibility:** every entry passes the automated screen plus a human check (curators or admin) before it becomes publicly visible and votable. Rejected entries never appear.
+* **Voting:** open to all players — one vote each, never for your own entry, **immutable once cast**. Tallies are public and live.
+* **Week Winner:** at the weekly close, the most-voted entry wins. Its owner holds the **Week Winner title — shown on their profile and in lobbies until the next winner is crowned** — and receives a large Knoin award (`knoin.challenge_winner`). Winning and standout entries may also enter the community pack, with credits.
+* **Consent:** submitting requires explicit acceptance of the contribution terms — the entry may be used in the system, commercially, and in modified form (perpetual, non-exclusive license). Terms version + timestamp are stored with the entry. No consent, no upload.
 
 ### 4. Daily Known
 
@@ -168,7 +172,7 @@ One curated media item on app start — a taste of the game's humor, a dismissib
 
 ### 5. Weekly Leaderboard
 
-* Cycle: Monday–Sunday on the server clock; Monday announces last week's podium alongside the challenge winner.
+* Cycle: Monday–Sunday on the server clock; Monday announces last week's podium alongside the new Week Winner.
 * Score: the sum of a player's match points for the week — **Quick Play matches only** (private and local rooms are collusion-trivial and stay off the board), with backfilled matches counting only at ≥ `liquidity.leaderboard_min_humans` humans, and a daily cap on counted matches to blunt pure grind.
 * Display: top 100 plus the viewer's own rank; ties share a rank. Every weekly close snapshots into an immutable history table; podium finishes show on profiles.
 * Ops: Admin Console — standings inspection, cheat exclusion/reinstatement with reasons, manual re-run of the weekly close, history browsing.
@@ -180,8 +184,8 @@ One curated media item on app start — a taste of the game's humor, a dismissib
 
 ### 1. Public Player Statistics
 
-* **Every profile is visible to anyone** — tap a name in a lobby, scoreboard, or the leaderboard: matches played and won per role, vote accuracy, Off survival rate, weekly podium finishes, pokes sent, contributor credits.
-* Derived nightly from the server's audit-event stream — no client-reported numbers anywhere. Reputations are part of the metagame: a profile that survives most of its Off matches *should* scare the table.
+* **Every profile is visible to anyone** — tap a name in a lobby, scoreboard, or the leaderboard: **Overall Points** (lifetime match points — never decreasing, untouched by conversions), matches played and won per role, vote accuracy, Donower survival rate, Week Winner titles, weekly podium finishes, pokes sent, contributor credits. **Non-Converted Points** — the convertible balance (💰 §1) — shows only to the profile's owner.
+* Derived nightly from the server's audit-event stream — no client-reported numbers anywhere. Reputations are part of the metagame: a profile that survives most of its Donower matches *should* scare the table.
 * Privacy: profiles are pseudonymous (nickname + avatar, no PII); delete-my-data erases stats with the account.
 
 ### 2. Avatars (Free Presets, Paid Uploads)
@@ -210,12 +214,12 @@ Any player may **apply for a role** from their portal profile; applications are 
 
 | Role | Permissions |
 |---|---|
-| **Contributor** (entry role) | Submit media to the Weekly Known Challenge and to open pack calls; view own submission history and Knoin rewards |
+| **Contributor** (entry role) | Submit media to open pack calls; view own submission history and Knoin rewards. (The Weekly Known Challenge needs no role — it is open to every player, in-app, 🎮 §3) |
 | **Curator** | Everything a Contributor can, plus: **create Knowns and the decks that relate to them** — authoring cards against a Known, testing hands in the deal simulator, checking band coverage; screen Weekly Challenge entries before they go public. Curators work from the **Curator Guide**, a clear rulebook derived from this blueprint (⚙️ §2–3): quality targets, tone rubric, band-coverage requirements, and how to test a Known before submitting it for certification |
 | **Guard** | Community safety: review flagged accounts and **freeze** them — a timeboxed suspension (up to 48 h) from matchmaking and the portal, pending admin review. **Final action is always the admin's**: dismiss, timed ban, or permanent ban. One active freeze per Guard per target; freezes auto-expire if no admin acts |
 | **Admin** | Everything: role grants, bans, pack publishing, challenge scheduling, takedowns |
 
-* **Rewards:** contributors and curators earn **credits (name in the pack manifest and on the profile) and Knoin** for accepted work — `portal.knoin_per_accepted_asset` per published asset, a larger bonus for a Weekly Challenge win. Attribution is stored per asset, so richer reward schemes later are an economy change, not a migration.
+* **Rewards:** contributors and curators earn **credits (name in the pack manifest and on the profile) and Knoin** for accepted work — `portal.knoin_per_accepted_asset` per published asset; the Weekly Known Challenge pays its Week Winner from the same rails (🎮 §3). Attribution is stored per asset, so richer reward schemes later are an economy change, not a migration.
 * **Submission terms:** every upload requires explicit acceptance of the contribution terms — perpetual, non-exclusive license, **commercial use and modification permitted** — with the accepted terms version and timestamp stored per submission (🎮 §3).
 
 ### 2. Submission Pipeline
@@ -260,12 +264,12 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 * Format: real UI capture only; silent-autoplay friendly — big captions carry the story; one idea per beat; readable at phone size.
 * Storyboard (7 beats, 4–6 s each):
   1. Hook — "One of you can't see this." A meme cuts to static on one phone among four.
-  2. Roles — the press-and-hold role check; one card whispers *you're Off*.
-  3. Known appears on every screen at once; an Off's screen shows Unknown — and nobody can tell.
+  2. Roles — the press-and-hold role check; one card whispers *you're Donower*.
+  3. Known appears on every screen at once; a Donower's screen shows Unknown — and nobody can tell.
   4. Play — four cards lock blind, flip face-up with names; caption "whose card doesn't get it?"
   5. Pressure — a draw announcement, a poke shake, a Shuffle alert, Quick Chat accusations flying.
-  6. Knowoff — votes land; a role flips face-up… it's a Knower. The table groans; one vote left.
-  7. Verdict — the Off grins; "Offs win together." Knoin rains onto the scoreboard. Logo out.
+  6. Knowoff — votes land; the loser is out, role face-up… a Nower. The table groans; one vote left.
+  7. Verdict — the Donower grins; "Donowers win together." Knoin rains onto the scoreboard. Logo out.
 * Ship gate: produced on final production UI, released with prod — no clip work while gameplay, engine, and netcode remain open.
 
 ---
@@ -278,8 +282,8 @@ Direction locked: **pastel neo-brutalism, illustration-light** — the same desi
   * `canvas` `#DCC8F7` — lavender field with a faint low-contrast grid tile; `surface` `#F7F2E9` warm cream for cards and sheets; `#FFFFFF` content wells inside them.
   * `ink` `#141414` — every border and every glyph; text is never gray-on-gray.
   * `violet` `#B49AF5` — the neutral interactive: buttons, selected tiles, timers, progress fills.
-  * `lime` `#D4F04C` — the truth/reward signal: Knower catches, match points, Knoin grants.
-  * `pink` `#FF9ED2` — the risk/accusation signal: votes, the Knowoff board, Off reveals. The palette's single permitted gradient (`#FFD9EC → #FF9ED2`) is reserved for the Knowoff reveal header.
+  * `lime` `#D4F04C` — the truth/reward signal: Nower catches, match points, Knoin grants.
+  * `pink` `#FF9ED2` — the risk/accusation signal: votes, the Knowoff board, Donower reveals. The palette's single permitted gradient (`#FFD9EC → #FF9ED2`) is reserved for the Knowoff reveal header.
 * Structure: every container carries `Border.all(width: 3, color: ink)` and a hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`. Corners rounded — radius 16 for cards and sheets, 12 for buttons, full pill for stat chips. Pressing a control collapses its shadow to zero offset while the control translates onto its own shadow footprint: the signature brutalist click.
 * Typography: a chunky rounded display face for headings, timers, and Knoin numbers (Baloo 2 / Fredoka class — both OFL; lock one after a diacritics render check), a plain geometric sans for body. **Highlighter emphasis is the house style:** the revealed role, a Knoin delta, the clip caption — key phrases sit on a lime marker sweep, not bold-only.
 * Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (~12 glyphs: sparkle, static-burst, eye, cloud) reserved for empty states, win moments, Unknown's placeholder, and the Daily Known card.
@@ -304,7 +308,7 @@ knowoff/
 │       ├── domain/
 │       │   ├── entities/
 │       │   ├── repositories/
-│       │   └── usecases/        # QuickPlay, JoinRoom, LockPlay, DrawCards, CastVote, SendQuickChat
+│       │   └── usecases/        # QuickPlay, JoinRoom, LockPlay, DrawCards, CastVote, SendQuickChat, ConvertPoints
 │       ├── presentation/
 │       │   ├── state/           # Riverpod state for the server-driven phases
 │       │   ├── screens/         # MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict, Profile, Leaderboard, Store
@@ -352,7 +356,7 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 
 * Every Known and card carries an **embedding** in one shared multimodal space (local SigLIP/CLIP at build time; Gemini Embedding 2 as the API alternative). Tags remain human-facing metadata and theme filters — **similarity, not tag intersection, is the balance mechanism**, because tag vocabularies rot and noisy tags silently break dealing.
 * Relevance bands over cosine similarity (thresholds in `tuning.yaml → dealing:`): **high** ≥ `band_high`, **distant** in [`band_low`, `band_high`), **chaos** < `band_low`.
-* Dealing guarantee: the server picks the match's Knowns up front (secret, RNG seed logged) and deals each 5+3 hand as a constraint deal: against **every** scheduled Known, each player holds ≥ `min_high_per_known` high cards and ≥ `min_distant_per_known` distant cards, with the remainder chaos. Every hand always has a good answer, a stretch, and garbage — for Knower and Off alike.
+* Dealing guarantee: the server picks the match's Knowns up front (secret, RNG seed logged) and deals each 5+3 hand as a constraint deal: against **every** scheduled Known, each player holds ≥ `min_high_per_known` high cards and ≥ `min_distant_per_known` distant cards, with the remainder chaos. Every hand always has a good answer, a stretch, and garbage — for Nower and Donower alike.
 * Shuffle re-deals are dealt *against the current Known schedule* so the guarantee survives mid-match mutation.
 * Per-media candidate lists for all bands are precomputed at pack build; runtime dealing is array sampling, zero embedding math in the hot path.
 
@@ -362,14 +366,14 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 * **Quality targets — deliberately medium/low:** images ≤ 720 px longest side, compressed WebP; GIF loops ≤ 480p, ≤ 2 MB, re-encoded as animated WebP; text plain. Two reasons: small assets keep prefetch instant and the edge-cache path cheap, and lo-fi *is* the meme aesthetic.
 * **Content standard:** humor may include sexuality within the bounds of eroticism — suggestive, cartoon, drawn, abstract — but **never pornographic or explicit content**, and always within app-store content rules. Erotic-leaning media carries an adult rating and ships only in age-gated packs (Product Baseline); the automated screen and human curation both enforce the line.
 * Certification (the anti-dead-content gate): a pack version is publishable only if every Known has full band coverage for a 6-player deal, every card is reachable in some band, and Monte Carlo `simulate` confirms deal feasibility at both table sizes. Uncertifiable media stays in draft. The same checks back the Curator Guide's testing workflow (🧑‍🎨 §1).
-* `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Off-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
+* `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Donower-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
 * Production stack (verified on the owner's RTX 4080 Mobile, 12 GB VRAM): images via SDXL or Flux.1-Schnell fp8 (Apache-2.0); GIF loops via LTX-Video 2B distilled or Wan 2.1-1.3B (~8 GB), rendered to animated WebP; text cards via Ollama-served 7–14B models. API lane for style-critical or overflow work: nano banana (~$0.034–0.067/image), batch pricing at half rate. The binding constraint is human curation keep-rate, not compute.
 * Tone rubric: the four-bucket humor matrix (millennial cope / Gen-Z absurdism / social awkwardness / chaos) lives in `content/tone-matrix.md`; every asset carries its bucket for pack-mix balancing.
 
 ### 4. Secrecy, Sync & Anti-Cheat
 
-* Role-scoped payloads: every gameplay event is rendered per-recipient. During a round, Knower clients receive `{known: {id, signed_url, type}}`; Off clients — and caught-Off spectators — receive `{decoy: true}`. **Known never crosses the wire to a device that shouldn't have it.**
-* Signed URLs are short-lived and single-round; Knowers prefetch during the inter-round countdown and every screen flips on one synchronized `show` tick. A still-loading Knower renders the same placeholder as Unknown, so loading state leaks nothing either.
+* Role-scoped payloads: every gameplay event is rendered per-recipient. During a round, Nower clients receive `{known: {id, signed_url, type}}`; Donower clients — and every eliminated player — receive `{decoy: true}`. **Known never crosses the wire to a device that shouldn't have it.**
+* Signed URLs are short-lived and single-round; Nowers prefetch during the inter-round countdown and every screen flips on one synchronized `show` tick. A still-loading Nower renders the same placeholder as Unknown, so loading state leaks nothing either.
 * The server owns the phase clock; client timers are display-only; late intents are rejected. All match-deciding events — plays, specialty uses, votes, Revotes — are intents resolved exclusively server-side. All Knoin movement happens in the server ledger; the client only renders balances.
 * Every scoring, role, and currency event lands in the append-only audit stream — the same stream that feeds stats, the leaderboard, KPIs, and report replays.
 
@@ -382,8 +386,8 @@ seed: 42                            # reproducible dealing — same seed, same m
 
 game:
   room_sizes: [4, 6]                # the only valid room sizes
-  offs_by_size: {4: 1, 6: 2}        # public knowledge at the table
-  votes_by_size: {4: 2, 6: 3}       # one Knowoff per round; match ends early when votes can't catch remaining Offs
+  donowers_by_size: {4: 1, 6: 2}      # public knowledge at the table
+  votes_by_size: {4: 2, 6: 3}       # one Knowoff per round; match ends early when votes can't catch remaining Donowers
   min_connected: 3                  # below this the match ends unscored (Rules §7)
   reconnect_grace_s: 20             # also the team-forfeit grace (Rules §7)
   pokes_per_target_per_round: 1
@@ -395,13 +399,14 @@ timers:                             # seconds; which windows may fast-forward is
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
   vote_result_window: 15            # result display before finalizing — the Revote window
-  prefetch_countdown: 5             # inter-round countdown = Knower prefetch budget
+  prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:
   size: 5
   draw_pile: 3
-  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_card: 0.08, shuffle: 0.05, revote: 0.05}
-  # shuffle deals only into Off hands, revote only into Knower hands, post role-assignment
+  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_free_card: 0.08, shuffle: 0.05, revote: 0.05}
+  # dealing is role-blind: any specialty can land in any hand; shuffle is usable by Donowers,
+  # revote by Nowers — off-role copies are dead cards (Rules §5)
   # unique specialties (shuffle, revote) fire once per match — later copies are dead cards
 
 dealing:                            # relevance mesh (⚙️ §2) — v1 placeholders, tuned via simulate
@@ -410,24 +415,27 @@ dealing:                            # relevance mesh (⚙️ §2) — v1 placeho
   min_high_per_known: 2
   min_distant_per_known: 2
 
-points:                             # match points — leaderboard & session scoreboard
-  correct_vote: 1
-  knower_win_bonus: 1
-  off_team_win: 3
+points:                             # match points — leaderboard, session scoreboard, Overall/Non-Converted accrual (Rules §6)
+  correct_vote: 10
+  nower_win_bonus: 10
+  donower_team_win: 30
+  draw_penalty: 5                   # per pile card drawn; a One More Free Card draw is exempt (Rules §3, §5)
+  # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
 
 knoin:                              # currency earnings — instant, kept on disconnect (Rules §6)
   match_completed: 5
-  knower_win: 30
-  off_team_win: 50
+  nower_win: 30
+  donower_team_win: 50
   correct_vote: 5
-  off_vote_survived: 10
+  donower_vote_survived: 10           # credited discreetly — never shown on any public surface (Rules §6)
   daily_first_win: 25
   daily_earn_cap: 300               # anti-farm ceiling on play earnings
-  challenge_winner: 500
+  challenge_winner: 1000            # the Week Winner award (🎮 §3)
   contributor_accepted_asset: 100
 
 economy:
   free_daily_quickplay_matches: 10  # per free account per server day; local rooms never capped
+  points_to_knoin: 100              # Non-Converted Points per 1 Knoin — one-way, multiples of 100, counts toward daily_earn_cap
   premium_prices: {day_1: 250, day_3: 600, day_7: 1200}      # Knoin
   unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Knoin
   knoin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
@@ -457,6 +465,8 @@ portal:
 | Active free player affords a 1-day premium | every ~2 days of play | `knoin.*` earn values |
 | 7-day premium for a committed free player | every ~8–10 days | `premium_prices` |
 | Earned vs purchased Knoin in circulation | ≥ 70% earned | bundle sizes/prices |
+| Point-conversion share of Knoin income | ≤ ~25% | `points_to_knoin` rate |
+| Draws per player per match | ~1 (drawing is a choice, not a habit) | `points.draw_penalty` |
 | Free daily cap actually felt | by the top ~20% of free players only | `free_daily_quickplay_matches` |
 
 `mediapack simulate` reports expected per-match Knoin under bot policies at both table sizes; the nightly KPI jobs report the real numbers, and the levers above move one at a time.
@@ -470,13 +480,13 @@ portal:
 [ Flutter PWA  (any browser) ] ─┼─( WSS / JSON intents )►│  GO GAME SERVER  │◄──►[ Redis ]
 [ Flutter app / PWA … seat N ] ─┘  ◄─(role-scoped events)│  - Queues & auth │      queues/presence
               ▲                                          │  - Phase timers  │◄──►[ PostgreSQL ]
-              │ signed GETs (Knowers only)               │  - Role secrecy  │      profiles/ledger/
+              │ signed GETs (Nowers only)               │  - Role secrecy  │      profiles/ledger/
 [ Cloudflare edge cache ]◄──[ MinIO on home server ]     │  - Media dealing │      leaderboard/media
   (tunnel: cloudflared — no open ports, TLS at edge)     │  - Votes/economy │◄──►[ MinIO (assets) ]
                                                          └──────────────────┘
 ```
 
-* Protocol: one persistent WebSocket per client. Intents: `queue_quickplay`, `join_room`, `lock_play`, `use_specialty` (covers Shuffle and Revote), `draw_cards`, `cast_vote`, `quick_chat` (canned phrase id), `ready`, `poke`, `report_media`. Events: `phase_started`, `role_assigned` (private), `round_started` (role-scoped Known/decoy payload), `show`, `round_resolved` (attributed plays), `shuffle_occurred` (anonymous), `vote_result_pending` (opens the 15 s result window), `vote_nullified` (attributed Revote), `knowoff_resolved` (caught / missed + role reveal), `match_verdict`, `points_scored`, `knoin_granted`, `quick_chat` (broadcast). Versioned JSON with sequence numbers for ordered replay.
+* Protocol: one persistent WebSocket per client. Intents: `queue_quickplay`, `join_room`, `lock_play`, `use_specialty` (covers Shuffle and Revote), `draw_cards`, `cast_vote`, `quick_chat` (canned phrase id), `ready`, `poke`, `report_media`, `convert_points` (100:1, outside matches). Events: `phase_started`, `role_assigned` (private), `round_started` (role-scoped Known/decoy payload), `show`, `round_resolved` (attributed plays), `shuffle_occurred` (anonymous), `vote_result_pending` (opens the 15 s result window), `vote_nullified` (attributed Revote), `knowoff_resolved` (elimination + role reveal), `match_verdict`, `points_scored`, `points_converted` (private), `knoin_granted` (private, per-recipient — Rules §6 discreet crediting), `quick_chat` (broadcast). Versioned JSON with sequence numbers for ordered replay.
 * Fair arbitration: play windows, ballots, and runoffs are blind-simultaneous — collected privately, resolved at window close. No match-deciding event is a speed race.
 * Reconnect: session-token snapshot rejoin (Rules §7), role-scoped like everything else.
 * Room→node affinity: every room lives on exactly one node (Redis maps `room_id → node`); no cross-node game state — the property that makes horizontal scaling trivial later.
@@ -488,7 +498,7 @@ portal:
 
 Bots fill seats in two sharply separated roles — dev/test bots that never meet the public, and the labeled Quick Play backfill bots (🎮 §1). In neither role does a bot take over a human's mid-match seat, and no bot is ever disguised as a human.
 
-* **Dev/test bots:** `tools/gamebot` (Go CLI) spawns N bot players over the real WebSocket protocol — same intents, same timers, no server backdoors. Policy reuses `server/internal/media` as a library: play by noisy embedding preference as a Knower; play plausible-band cards blind as an Off; draw when the hand scores badly; vote by a noisy suspicion heuristic; occasionally Shuffle/Revote when held. Seeded — a failing match replays exactly. Bots act early and Ready immediately: a 6-seat dev match crosses every phase in well under a minute. Solo development against 5 bots is the daily loop.
+* **Dev/test bots:** `tools/gamebot` (Go CLI) spawns N bot players over the real WebSocket protocol — same intents, same timers, no server backdoors. Policy reuses `server/internal/media` as a library: play by noisy embedding preference as a Nower; play plausible-band cards blind as a Donower; draw when the hand scores badly (accepting the point penalty); vote by a noisy suspicion heuristic; occasionally Shuffle/Revote when held. Seeded — a failing match replays exactly. Bots act early and Ready immediately: a 6-seat dev match crosses every phase in well under a minute. Solo development against 5 bots is the daily loop.
 * **Backfill bots:** run inside the server (`server/internal/bots`), reusing the same policy engine with per-match randomized personality parameters so regulars can't farm a fixed tell. Labeled 🤖 always; humans outrank bots for seats; economy and leaderboard guardrails in 🎮 §1. Sunset by measurement: per queue, once p50 time-to-fill stays under the timeout for a sustained window, the scheduler stops adding bots there.
 * Configuration: a `bots:` block exists only in `local.yaml`/`staging.yaml`; the key is absent from `prod.yaml` and the server refuses external bot connections when unset. Backfill bots are configured separately (`liquidity:` in `tuning.yaml`) and are in-process, so the connection-refusal rule is untouched.
 
@@ -533,8 +543,9 @@ One currency sits at the center of the business: **Knoin**. Players earn it by p
 
 ### 1. Earning Knoin
 
-* Play rewards (Rules §6): completing matches, winning as either team, correct votes, surviving votes as an Off, first win of the day — credited instantly and kept even on disconnect. A daily earn cap (`knoin.daily_earn_cap`) blunts farming, and team-win Knoin requires ≥ `liquidity.knoin_min_humans` humans in the match.
-* Contribution rewards (🧑‍🎨 §1): Knoin per accepted asset, a large bonus for winning the Weekly Known Challenge.
+* Play rewards (Rules §6): completing matches, winning as either team, correct votes, surviving votes as a Donower (credited discreetly — Rules §6), first win of the day — credited instantly and kept even on disconnect. A daily earn cap (`knoin.daily_earn_cap`) blunts farming, and team-win Knoin requires ≥ `liquidity.knoin_min_humans` humans in the match.
+* Contribution rewards (🧑‍🎨 §1): Knoin per accepted asset, and the Week Winner award of the Weekly Known Challenge (🎮 §3).
+* **Point conversion:** every match's net points land on the profile as **Overall Points** (lifetime, never decreases) and **Non-Converted Points** (a balance). The owner may convert Non-Converted Points to Knoin at **100 points → 1 Knoin** (`economy.points_to_knoin`), in multiples of 100. Conversion is **one-way and irreversible**: converted points are subtracted from the Non-Converted balance forever, and Overall Points never change. Converted Knoin counts toward `knoin.daily_earn_cap`, so points can never bypass the anti-farm ceiling.
 * Balance target: an active free player earns a 1-day premium every ~2 days of play (protocol table in ⚙️ Tuning) — collecting is deliberately *not hard*; the sink structure below is what makes the economy work.
 
 ### 2. Premium — Time Passes Bought With Knoin
@@ -562,11 +573,11 @@ One currency sits at the center of the business: **Knoin**. Players earn it by p
 ## 🧾 Product Baseline (v1 Decisions)
 
 * Modes & discovery: Quick Play queues per room size (4/6) as the main surface; private/local rooms via 6-character codes + QR deep links. No public room browser, no skill rating at v1.
-* **Communication: canned Quick Chat + reactions only.** No free-text, no voice, no video at v1 — canned phrases are localizable, moderation-safe, and enough to accuse and defend; free-text is a v2 candidate behind mute/report infrastructure. Local rooms talk out loud anyway.
-* Progression: one server-side XP track (matches completed, correct votes, Off survivals); levels gate portal role applications and cosmetic unlocks. Values in `tuning.yaml`.
+* **Communication: canned Quick Chat + reactions only.** No free-text, no voice, no video at v1. The transport is identical either way — a canned tap and a typed message ride the same WebSocket relay, so the *build* cost is the same; **the real cost of free text is operating it**: profanity filtering, harassment review, minors' safety, and store UGC requirements, all ongoing. Canned phrases eliminate that entire surface while staying localizable and sufficient to accuse and defend. Free text is a v2 candidate behind mute/report infrastructure. Local rooms talk out loud anyway.
+* Progression: one server-side XP track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks. Values in `tuning.yaml`.
 * **Content policy:** humor may be suggestive/erotic within store rules — cartoon, drawn, abstract — **never pornographic or explicit**. Erotic-leaning media ships only in adult-rated, age-gated packs; store age ratings set accordingly (17+/18+ where such packs are available), and the age obligation sits on the user's declared age at the gate. Enforced twice: automated screen + human curation (⚙️ §3).
 * Compliance: anonymous device accounts by default, optional linking later; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
-* Analytics: no third-party client SDK — the authoritative server witnesses every event; nightly jobs derive KPIs (retention, queue fill times, matches/day, Off win rate by table size, Knoin earn/spend flows, premium conversion, pack attach rate) from the audit stream.
+* Analytics: no third-party client SDK — the authoritative server witnesses every event; nightly jobs derive KPIs (retention, queue fill times, matches/day, Donower win rate by table size, Knoin earn/spend flows, premium conversion, pack attach rate) from the audit stream.
 * Moderation & admin: nickname profanity filter, conduct + media reports, Guard freezes with admin-final bans, Admin Console actions (kick, ban, close room, avatar/media takedown) — all live before public launch.
 * Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. App-size budget enforced in CI: packs stream, binaries stay lean.
 
@@ -590,25 +601,25 @@ One currency sits at the center of the business: **Knoin**. Players earn it by p
 ### Phase 3: Realtime Game Loop
 
 * Task 1: Room lifecycle (4/6 seats only), versioned intent/event protocol with sequence numbers, session-token reconnect snapshots, **role-scoped payload rendering** (the security-critical piece — built and reviewed first). `tools/gamebot` alongside — this phase's tests depend on it.
-* Task 2: The phase state machine: role assignment, constraint dealing, per-round blind play + attributed reveal, draws, specialty resolution (Pass / Reveal with hidden specialty backs / One More Card / anonymous once-per-match Shuffle / attributed once-per-match Revote in the result window), timeout auto-discard, discussion with Quick Chat, Knowoff ballot + runoff + result window, catch/miss resolution with the early-end rule (votes remaining < Offs remaining), forfeit and unscored-match rules, match points, Ready/Poke.
+* Task 2: The phase state machine: role assignment, role-blind constraint dealing, per-round blind play + attributed reveal, penalized pile draws, specialty resolution (Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle / attributed once-per-match Revote in the result window, with off-role uses rejected), timeout auto-discard, discussion with Quick Chat, Knowoff ballot + runoff + result window, elimination with role reveal and the early-end rule (votes remaining < uncaught Donowers), eliminated-spectator scoping, forfeit and unscored-match rules, match points with the zero floor, Ready/Poke.
 * Task 3: The Flutter screens and phase state against the live protocol, on native and PWA, including the Quick Chat bar.
-* Testing Criteria: scripted bot matches complete at both table sizes with forced mid-round disconnects/reconnects and no state corruption; **a protocol-level assertion proves no Off or caught-Off connection ever received a Known id or URL in any phase**; a missed vote reveals and removes nobody; a 6-player match with two missed votes auto-ends after the second Knowoff as an Off win; a Revote in the result window nullifies the shown result and its survival credit, and a second Shuffle or Revote in the same match is rejected; disconnecting every Off ends the match as a Knower forfeit win after exactly the grace period.
+* Testing Criteria: scripted bot matches complete at both table sizes with forced mid-round disconnects/reconnects and no state corruption; **a protocol-level assertion proves no Donower or eliminated connection ever received a Known id or URL in any phase**; a missed vote eliminates the Nower it names, whose later intents are rejected while their end-of-match points still pay out if they stay connected; a 6-player match with two missed votes auto-ends after the second Knowoff as a Donower win; a Revote in the result window nullifies the shown result and its survival credit; a second Shuffle or Revote in the same match — or any off-role use — is rejected; pile draws deduct `points.draw_penalty` each and a match's net points floor at 0, while a One More Free Card draw deducts nothing; disconnecting every uncaught Donower ends the match as a Nower forfeit win after exactly the grace period.
 
 ### Phase 4: Accounts, Quick Play & Hardening
 
 * Task 1: Auth (JWT sessions) binding anonymous tokens to accounts; profiles and public stats; Quick Play FIFO queues per room size with reconnect-safe seat reservation; **backfill bots** (`server/internal/bots`) with labeling, seat-priority, and sunset scheduling; abandon cooldowns.
 * Task 2: Harden the intent pipeline: rate limiting, deadline enforcement, protocol-boundary validation, structured audit logs to PostgreSQL as the analytics event stream; nightly jobs for public stats and the **Weekly Leaderboard** (Quick Play only, min-humans and daily-count guards, immutable weekly history).
-* Testing Criteria: a deliberately modified client (forged plays, late votes, replayed messages, Off requesting Known assets) alters nothing and triggers audit trails; a queue short of humans backfills with labeled bots after the timeout and never starts below `min_humans`; a `gamebot` load test sustains hundreds of concurrent rooms on one node with prefetch traffic against MinIO; leaderboard excludes sub-threshold backfilled matches and respects the daily counted cap.
+* Testing Criteria: a deliberately modified client (forged plays, late votes, replayed messages, Donower requesting Known assets) alters nothing and triggers audit trails; a queue short of humans backfills with labeled bots after the timeout and never starts below `min_humans`; a `gamebot` load test sustains hundreds of concurrent rooms on one node with prefetch traffic against MinIO; leaderboard excludes sub-threshold backfilled matches and respects the daily counted cap.
 
 ### Phase 5: Knoin Economy, Admin & Launch Polish
 
-* Task 1: The `economy` module: Knoin wallet + append-only ledger, instant per-event play grants with the daily earn cap, premium time passes (1/3/7-day) with the Quick Play cap gate, Knoin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
+* Task 1: The `economy` module: Knoin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Knoin conversion** (100:1, one-way, cap-counted), premium time passes (1/3/7-day) with the Quick Play cap gate, Knoin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
 * Task 2: Admin Console over Phases 4–5 endpoints (case queues, Guard-freeze reviews, pack dashboard, leaderboard ops, Daily Known calendar, economy ledger); Daily Known feed; the how-to-play clip once UI is final.
 * Task 3: Performance and launch passes: client paints on low-end devices, server allocation/GC under queue load, edge-cache hit rates on pack releases, **VPS migration runbook executed** (Infra §2), store review prep for the content policy (age-gated adult packs, UMP, age gate).
-* Testing Criteria: Knoin grants land instantly and survive a mid-match disconnect; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; premium passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `knoin_min_humans` grants no team-win Knoin; takedowns propagate in the next pack version and invalidate correctly at the edge.
+* Testing Criteria: Knoin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Knoin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; premium passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `knoin_min_humans` grants no team-win Knoin; takedowns propagate in the next pack version and invalidate correctly at the edge.
 
 ### Phase 6: Contributor Portal & Community
 
 * Task 1: Promote the Workbench codebase to the public **Contributor Portal**: role applications with admin grants (Contributor / Curator / Guard), the Curator Guide and deal-simulator access, Guard freeze flows wired to the Admin Console case queue, submission pipeline with terms-consent capture (version + timestamp), credits + Knoin rewards on acceptance.
-* Task 2: The **Weekly Known Challenge**: 100-entry capacity with rejection-reopened slots, pre-vote screening queue, open live-tally voting with one immutable vote per player and no self-votes, Monday close with winner publication, credits, and Knoin payout.
-* Testing Criteria: a submission traverses `draft → published` with every transition audited and immutable after submit; entry #101 is rejected until a screening rejection reopens a slot; an unscreened entry is never publicly visible or votable; a second vote or a vote change is rejected; a Guard freeze suspends matchmaking within seconds, auto-expires at `guard_freeze_max_h`, and only an admin can convert it to a ban; challenge winners receive credits and Knoin atomically with pack publication.
+* Task 2: The **Weekly Known Challenge**: weekly topic publication (an image, GIF, or text — a Known for the whole community), in-app submissions open to all players, 100-entry capacity with rejection-reopened slots, pre-vote screening queue, open live-tally voting with one immutable vote per player and no self-votes, weekly close with the Week Winner title, Knoin payout, and optional community-pack inclusion.
+* Testing Criteria: a submission traverses `draft → published` with every transition audited and immutable after submit; entry #101 is rejected until a screening rejection reopens a slot; an unscreened entry is never publicly visible or votable; a second vote or a vote change is rejected; a Guard freeze suspends matchmaking within seconds, auto-expires at `guard_freeze_max_h`, and only an admin can convert it to a ban; the weekly close crowns the Week Winner atomically with the Knoin payout, shows the title on profile and lobbies, and transfers it at the next close.
