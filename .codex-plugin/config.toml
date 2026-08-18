@@ -1,0 +1,14 @@
+# Codex CLI plugin config.
+#
+# Paste-friendly snippet to wire this repo into ~/.codex/config.toml.
+# The full ruleset lives in AGENTS.md at the repo root; Codex reads AGENTS.md
+# by convention.
+
+[project]
+name = "ai-vscode-basics"
+agents_md = "../AGENTS.md"
+description = "Multi-assistant agent framework — Codex follows AGENTS.md."
+
+[mcp_servers.codegraph]
+command = "npx"
+args = ["-y", "@colbymchenry/codegraph"]
