@@ -148,7 +148,7 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 * One FIFO queue per room size (4 or 6), running on the core pack plus a rotating featured pack. Tap Play, get a table of strangers, argue in Quick Chat, vote.
 * **Launch liquidity — labeled backfill bots:** when a queue can't fill a room within `liquidity.queue_timeout_s` (default 25 s), the server tops it up with bots — server-side (`server/internal/bots`, reusing the `gamebot` policy engine), every seat acting through the same validated intent pipeline as humans. Every bot seat carries a visible 🤖 badge and a reserved bot nickname — in a game about reading people, a disguised bot would be a scandal; a labeled one is a practice partner. Humans always outrank bots for seats, and a room never starts below `liquidity.min_humans`.
 * Guardrails: bot seats earn nothing; matches count for the Weekly Leaderboard only with ≥ `liquidity.leaderboard_min_humans` humans, and grant team-win Noin only with ≥ `liquidity.noin_min_humans` humans — a bot table can never become a Noin farm. Backfill sunsets per queue automatically once fill times stay healthy.
-* Free accounts play `economy.free_daily_quickplay_matches` per server day (**10 at launch** — generous on purpose); a Play Pass or Premium (💰 §2) removes the cap. **Local Rooms are never capped.**
+* Free accounts play `economy.free_daily_quickplay_matches` per server day (**3 at launch** — a daily taster; regular play runs on earnable Play Passes or Premium); a Play Pass or Premium (💰 §2) removes the cap entirely — **a pass holder or Premium subscriber never hits it**. **Local Rooms are never capped.**
 
 ### 2. Local Rooms
 
@@ -440,7 +440,7 @@ noin:                              # currency earnings — instant, kept on disc
   contributor_accepted_asset: 100
 
 economy:
-  free_daily_quickplay_matches: 10  # per free account per server day; local rooms never capped
+  free_daily_quickplay_matches: 3   # per free account per server day; never applies under a Play Pass or Premium; local rooms never capped
   points_to_noin: 100              # Non-Converted Points per 1 Noin — one-way, multiples of 100, counts toward daily_earn_cap
   play_pass_prices: {day_1: 250, day_3: 600, day_7: 1200}    # Noin; passes never remove ads
   premium_yearly_discount_pct: 20   # Premium subscription (sole ad-removal path); monthly/yearly store products mapped at launch
@@ -474,7 +474,7 @@ portal:
 | Earned vs purchased Noin in circulation | ≥ 70% earned | bundle sizes/prices |
 | Point-conversion share of Noin income | ≤ ~25% | `points_to_noin` rate |
 | Draws per player per match | ~1 (drawing is a choice, not a habit) | `points.draw_penalty` |
-| Free daily cap actually felt | by the top ~20% of free players only | `free_daily_quickplay_matches` |
+| Free daily cap as the pass/Premium nudge | felt by regular free players, while a 1-day pass stays ~2 play-days of earnings away; casual once-a-day players untouched | `free_daily_quickplay_matches` |
 
 `mediapack simulate` reports expected per-match Noin under bot policies at both table sizes; the nightly KPI jobs report the real numbers, and the levers above move one at a time.
 
@@ -560,7 +560,7 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 
 * **Play Passes are unlimited Quick Play**, sold as **1-day (250), 3-day (600), and 7-day (1,200) passes priced in Noin** — plain in-game finance, an earnable convenience and nothing more, so the play-more path always runs through the one currency. **Play Passes do not remove ads.**
 * **Premium** is the one cash subscription — **monthly or yearly, with the yearly plan 20% off**, sold through platform billing — and it is the **only way to remove ads entirely**. It also includes unlimited Quick Play while active, so a subscriber never needs passes.
-* Free accounts get `economy.free_daily_quickplay_matches` per server day (**10 at launch** — tuned so only the most engaged fifth of free players ever feel it). **Local Rooms are never capped** — play with the people in your living room is always free and unlimited.
+* Free accounts get `economy.free_daily_quickplay_matches` per server day (**3 at launch** — a deliberate taster: regular free play runs on earned Play Passes, ~2 play-days per 1-day pass, or on Premium; **the cap never touches a Play Pass holder or Premium subscriber**). **Local Rooms are never capped** — play with the people in your living room is always free and unlimited.
 
 ### 3. Noin Bulks (the cash lane)
 
@@ -628,7 +628,7 @@ This lifecycle is the blueprint's executable technical roadmap. Six phases, each
 * Task 1: The `economy` module: Noin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Noin conversion** (100:1, one-way, cap-counted), Play Passes (1/3/7-day, Noin) with the Quick Play cap gate, the **Premium subscription** (monthly/yearly via platform billing, yearly −20%, the sole ad-removal entitlement), Noin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
 * Task 2: Admin Console over Phases 4–5 endpoints (case queues, Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, the system-notice composer with scheduled maintenance drain — 🎮 §4); the how-to-play clip once UI is final.
 * Task 3: Performance and launch passes: client paints on low-end devices, server allocation/GC under queue load, edge-cache hit rates on pack releases, **VPS migration runbook executed** (Infra §2), store review prep for the content policy (age-gated adult packs, UMP, age gate), and localized store listings + clip captions for every launch locale.
-* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; Play Passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; ads persist for Play Pass holders and disappear entirely only under an active Premium subscription, with the yearly price carrying the 20% discount; a scheduled maintenance window notifies at every checkpoint, blocks new matches at open, and lets running matches finish; takedowns propagate in the next pack version and invalidate correctly at the edge; a notice authored in several locales renders in each client's locale with English fallback.
+* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 4th Quick Play match of the day is rejected at queue time while a local room still opens, and the cap never rejects a Play Pass holder or Premium subscriber; Play Passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; ads persist for Play Pass holders and disappear entirely only under an active Premium subscription, with the yearly price carrying the 20% discount; a scheduled maintenance window notifies at every checkpoint, blocks new matches at open, and lets running matches finish; takedowns propagate in the next pack version and invalidate correctly at the edge; a notice authored in several locales renders in each client's locale with English fallback.
 
 ### Phase 6: Contributor Portal & Community
 

@@ -20,6 +20,7 @@ discovery hints, slash-command pointers, and custom-agent conventions.
 | Copilot slash-command prompts | [`.github/prompts/`](prompts/) |
 | Always-on instruction files | [`.github/instructions/`](instructions/) |
 | Skill library (load on demand) | [`.agents/skills/README.md`](../.agents/skills/README.md) |
+| Normative product spec | [`BLUEPRINT.md`](../BLUEPRINT.md) |
 | Project roadmap | [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md) |
 | Tracking log + schema | [`docs/tracking/tracking.csv`](../docs/tracking/tracking.csv), [`docs/tracking/tracking.schema.md`](../docs/tracking/tracking.schema.md) |
 | Tracking guide + state | [`docs/tracking/README.md`](../docs/tracking/README.md), [`docs/tracking/state/`](../docs/tracking/state/) |
@@ -46,6 +47,11 @@ with a new file at a different path.
 6. **Phase persistence:** when asked to implement a phase / sub-phase, drain every
    `[ ]` bullet before handing back. See
    [`.agents/skills/phase-persistence/SKILL.md`](../.agents/skills/phase-persistence/SKILL.md).
+7. **Blueprint-first:** [`BLUEPRINT.md`](../BLUEPRINT.md) is the normative
+   product spec; roadmap bullets are checklist entries, not full requirements.
+   Before implementing a phase's first bullet, read the BLUEPRINT sections
+   named in that phase's **Blueprint (required reading)** line — and when
+   bullet text and blueprint disagree, the blueprint wins.
 
 ## 🤖 Custom agents
 
