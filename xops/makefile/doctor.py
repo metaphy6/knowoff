@@ -23,6 +23,7 @@ CHECKS_REQUIRED = [
     "GEMINI.md",
     "CONVENTIONS.md",
     "README.md",
+    "BLUEPRINT.md",
     "LICENSE",
     "Makefile",
     ".gitignore",

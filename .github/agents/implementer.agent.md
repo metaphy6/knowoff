@@ -12,7 +12,7 @@ until every `[ ]` is `[x]` or a real blocker is hit.
 ## Scope
 
 The requested scope may be a single bullet, a sub-phase, several phases, or
-the whole [ROADMAP](../../docs/planning/ROADMAP.md). **Drain all of it.** Phase
+the whole [roadmap chapter](../../docs/planning/ROADMAP.md). **Drain all of it.** Phase
 boundaries are not stop points — when one phase's bullets are all `[x]`, start
 the next targeted phase immediately. Build the full ordered bullet queue across
 every targeted phase up front; you are done only when that queue is empty.

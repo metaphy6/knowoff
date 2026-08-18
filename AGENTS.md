@@ -36,7 +36,8 @@ does not already exist. The canonical map for this kind of repo is:
 
 - `README.md` — what this project is and how to run it.
 - `docs/README.md` — documentation index.
-- `docs/planning/ROADMAP.md` — **the** plan. Single source of truth.
+- `docs/planning/ROADMAP.md` — spec + roadmap monolith; **the** plan lives
+  in its roadmap chapter (`BLUEPRINT.md` is a pointer stub).
 - `docs/tracking/README.md` + `docs/tracking/tracking.schema.md` — tracking model.
 - `.agents/skills/README.md` — curated skill library; load the relevant skill
   before doing the kind of work it covers.

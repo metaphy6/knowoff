@@ -1,7 +1,7 @@
 """xops/makefile/roadmap_ops.py — `make roadmap.status`.
 
-Parses Markdown checkboxes in docs/planning/ROADMAP.md and prints a
-per-section count of `[ ]` vs `[x]`.
+Parses Markdown checkboxes in docs/planning/ROADMAP.md (the spec+roadmap
+monolith) and prints a per-section count of `[ ]` vs `[x]`.
 """
 
 from __future__ import annotations

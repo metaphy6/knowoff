@@ -18,9 +18,9 @@
 
 | Concern | Path |
 |---|---|
-| **Normative product + tech spec** | `BLUEPRINT.md` (root) — rules, economy, protocol, infra |
+| **Normative product + tech spec** | `docs/planning/ROADMAP.md` — spec chapters of the monolith (`BLUEPRINT.md` is a stub) |
 | Master rulebook (agents) | `AGENTS.md` |
-| Project plan | `docs/planning/ROADMAP.md` — 6 phases, lockstep with BLUEPRINT.md |
+| Project plan | `docs/planning/ROADMAP.md` — spec + roadmap monolith, 6 phases (BLUEPRINT.md is a stub) |
 | Terminology | `docs/project/GLOSSARY.md` |
 | Tracking log | `docs/tracking/tracking.csv` |
 | Skills library | `.agents/skills/` |
@@ -45,8 +45,8 @@ WebSocket echo on Android + Web.
   changes near payload rendering need a protocol-level no-leak test.
 - **Every tunable number** lives in `configs/gameplay/tuning.yaml` — never
   hardcode a timer, price, threshold, or reward value.
-- **Lockstep rule**: a feature change to `BLUEPRINT.md` lands in the same
-  commit as its `ROADMAP.md` update.
+- **Lockstep rule**: a spec-chapter change lands in the same commit as its
+  roadmap-chapter update — both live in `docs/planning/ROADMAP.md`.
 - Config discipline: env vars only select the config file
   (`KNOWOFF_CONFIG`) and inject secrets; secrets never in YAML or images.
 - No third-party analytics SDK in the client; KPIs derive from the
@@ -54,7 +54,8 @@ WebSocket echo on Android + Web.
 
 ## Out-of-scope / do not touch
 
-- `BLUEPRINT.md` game rules, economy values, and terminology change **only
+- The monolith's game rules, economy values, and terminology (spec
+  chapters of `docs/planning/ROADMAP.md`) change **only
   on explicit owner instruction** — agents propose, never unilaterally edit.
 - No pay-to-win mechanics of any kind: nothing purchasable may affect
   dealing, roles, votes, or scoring.
