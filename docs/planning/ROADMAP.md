@@ -10,6 +10,13 @@
 > Emoji section references (🏛️ ⚙️ 🎮 💰 🧑‍🎨 👤 📦 🌐 🛡️) point into
 > [`BLUEPRINT.md`](../../BLUEPRINT.md) — the normative spec for every rule,
 > value, and format named below.
+>
+> **This file sequences work; it does not restate the spec.** Every bullet
+> is a checklist entry whose full requirements live in the BLUEPRINT
+> sections its phase names under **Blueprint (required reading)** — read
+> them *before* implementing the phase's first bullet, not after a gate
+> fails. If a bullet and the blueprint disagree, the blueprint wins; fix
+> the drift in the same pass (Appendix A).
 
 ## 📊 Status snapshot
 
@@ -30,6 +37,10 @@ and this roadmap — carries no checkboxes; it landed before phase work began.
 
 ## 🧭 Guiding principles
 
+- **The blueprint is the spec; the roadmap is the sequence.** Implement
+  from [`BLUEPRINT.md`](../../BLUEPRINT.md), never from bullet text alone —
+  each phase's **Blueprint (required reading)** line names the sections
+  that must be read before its first bullet is touched.
 - **Server-authoritative always.** The client renders state and sends
   intents; it never decides an outcome, never computes a balance, never
   receives data its role shouldn't see.
@@ -131,6 +142,10 @@ so data is migration-portable from day one.
 code), `security-by-default` (secrets never in YAML files or images),
 `adr-writing` (any deviation from the blueprint stack gets an ADR).
 
+**Blueprint (required reading).** 🧱 Tech Stack + the three ADRs; 🏛️
+Codebase Taxonomy; 📦 §1–5 (containers, hosting, config, Compose, k8s
+readiness); Product Baseline (platforms & release, CI, localization).
+
 **Proof tests.** Fresh clone → `docker compose up` → healthy stack; both
 client targets connect and echo. Config negatives each fail fast listing
 **every** error in one pass: missing key, wrong type, missing secret env
@@ -189,6 +204,14 @@ a deliberately band-starved fixture pack first), `ai-output-stability`
 (seeded, reproducible generation and dealing), `cost-aware-tool-use`
 (local GPU first; API lane only for style-critical or overflow work).
 
+**Blueprint (required reading).** ⚙️ §1–4 in full — bundle format,
+relevance mesh, pipeline & content production (quality targets; the
+**content standard: the humor line** — suggestive/erotic allowed as
+cartoon/drawn/abstract, never pornographic, erotic-leaning media only in
+age-gated packs; copyleft sourcing wells; the four-bucket tone rubric and
+keep-rate expectations), secrecy & sync; 🧑‍🎨 §3 (Workbench); ⚙️ Tuning →
+`dealing:`; 🎨 asset strategy (design system and pack content never mix).
+
 **Proof tests.** `mediapack simulate` proves deal feasibility at both table
 sizes and, re-run with the same seed, reproduces its report byte-for-byte;
 certification rejects the band-starved fixture **and** a manifest-incomplete
@@ -206,7 +229,7 @@ pack from its logged inputs reproduces identical bundle hashes.
 - [ ] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
 - [ ] Versioned fixture packs committed for CI (a tiny golden pack + the band-starved pack): the test fuel every later phase reuses — gamebot matches, load tests, client cache tests, compose dev seeding.
 - [ ] Media Workbench (server-rendered, dev-only): ingest-folder watch (ComfyUI / Ollama output), bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
-- [ ] Seed pack on the local GPU: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded for copyleft-sourced media; tone rubric landed in `content/tone-matrix.md`.
+- [ ] Seed pack on the local GPU: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded for copyleft-sourced media; tone rubric landed in `content/tone-matrix.md`.
 - [ ] `client/lib/media`: pack metadata OTA sync (app start + unrecognized tag), signed-URL prefetch with retry/backoff on flaky networks (URLs short-lived, single-round), hash-verified LRU asset cache under an explicit size budget (corrupt entries evicted, never rendered), Donower placeholder renderer — also shown while a Nower's asset is still loading, so loading state leaks nothing (⚙️ §4).
 - [ ] Gate: Phase 2 proof tests pass on a clean tree.
 
@@ -241,6 +264,11 @@ match screen consumes it.
 surface), `code-review` (secrecy code reviewed before anything builds on
 it), `systematic-debugging` (seeded replay of failing matches),
 `flaky-test-triage` (timers + concurrency are flake bait).
+
+**Blueprint (required reading).** 🕹️ Game Rules §1–8 in full — the
+normative behavior spec this phase implements; 🌐 (protocol + wire
+discipline); ⚙️ §4 (secrecy & anti-cheat); 🤖 (dev/test bots); 🎨 (the
+full design matrix); ⚙️ Tuning → `game/timers/hand/points`.
 
 **Proof tests.** *Secrecy:* a protocol-level scanner over every event
 stream — both table sizes, every phase, reconnect snapshots, eliminated
@@ -315,6 +343,11 @@ stream.
 OWASP phase), `flaky-test-triage` (load and concurrency tests),
 `dependency-upgrade` (OAuth/JWT libraries vetted and pinned).
 
+**Blueprint (required reading).** 🎮 §1 + §5 (Quick Play, leaderboard);
+👤 §1–2 (stats, avatars); 🤖 (backfill bots); 📦 §2 (ingress + edge
+cache); Product Baseline (compliance, auth, analytics); ⚙️ §4 (audit
+stream); ⚙️ Tuning → `liquidity/liveops`.
+
 **Proof tests.** A deliberately modified client (forged plays, late votes,
 replayed messages, out-of-protocol frames, a Donower requesting Nown
 assets) alters nothing and leaves audit trails; an expired or replayed JWT
@@ -372,6 +405,11 @@ balance-protocol table (targets first, numbers second — ⚙️ Tuning).
 `incident-postmortem` (rehearse maintenance + migration runbooks before
 they're needed in anger).
 
+**Blueprint (required reading).** 💰 in full; Rules §6 (points & Noin);
+⚙️ Tuning (economy keys + the balance-protocol table); 🎮 §4 (notices +
+maintenance drain); 👤 §2–4 (avatars, reports, feedback); 🛡️ (Admin
+Console); 🎬 (clip); 📦 §2 (VPS migration).
+
 **Proof tests.** BLUEPRINT Phase 5 testing criteria — headline: Noin
 grants land instantly and survive a mid-match disconnect; points
 conversion is atomic, one-way, and cap-counted, rejected below 100 points,
@@ -380,8 +418,9 @@ credit exactly once; the ledger admits no update or delete, every debit is
 atomic with its entitlement write, and after a fuzzed storm of grants,
 spends, and conversions every balance equals its ledger sum; a replayed
 SSV callback or store receipt grants exactly once; a bot-heavy match under
-`noin_min_humans` grants no team-win Noin; the 11th free Quick Play match
-of the day is rejected at queue time while a Local Room still opens; a
+`noin_min_humans` grants no team-win Noin; the 4th free Quick Play match
+of the day is rejected at queue time while a Local Room still opens — and
+the cap never rejects a Play Pass holder or Premium subscriber; a
 Play Pass uncaps Quick Play, expires on schedule, re-gates correctly —
 and never removes ads; ads disappear only under an active Premium
 subscription (which also uncaps Quick Play), with the yearly price
@@ -395,7 +434,7 @@ migration rehearsal restores onto a fresh host with verified parity.
 
 - [ ] `server/internal/economy`: Noin wallet + append-only ledger — append-only enforced at the database level (no update/delete path on ledger rows), every balance always the replayable sum of its ledger with a nightly reconciliation job proving it and alerting on drift; instant per-event grants with `daily_earn_cap` and the team-win guard — no team-win Noin below `liquidity.noin_min_humans` humans (🎮 §1); property tests — no sequence of grants, spends, and conversions can go negative or double-credit; discreet crediting (no public per-match Noin surface — Rules §6).
 - [ ] Overall / Non-Converted Points accrual + points→Noin conversion: 100:1, multiples of 100, one-way, atomic under concurrency (parallel conversions can never double-credit), cap-counted, Overall Points untouched.
-- [ ] Play Passes (1/3/7-day, priced in Noin — `economy.play_pass_prices`): **unlimited Quick Play while active**, lifting the free daily cap (`economy.free_daily_quickplay_matches`, 10 at launch; Local Rooms never capped) — **Play Passes never remove ads**; **Premium** — the one cash subscription, monthly / yearly (yearly −20%, `premium_yearly_discount_pct`) via platform billing — is the **sole ad-removal path and includes unlimited Quick Play**, so a subscriber never needs passes.
+- [ ] Play Passes (1/3/7-day, priced in Noin — `economy.play_pass_prices`): **unlimited Quick Play while active**, lifting the free daily cap (`economy.free_daily_quickplay_matches`, 3 at launch — a daily taster; Local Rooms never capped) — **Play Passes never remove ads**; **Premium** — the one cash subscription, monthly / yearly (yearly −20%, `premium_yearly_discount_pct`) via platform billing — is the **sole ad-removal path and includes unlimited Quick Play**, so a subscriber never needs passes and **never hits the daily cap**.
 - [ ] Noin bulks (`economy.noin_bundles`) via platform billing — **the only place money buys Noin: everything money can get, play can also get, slower** — with server-side receipt verification and idempotent grants keyed by platform transaction id (a replayed receipt grants exactly once; refunds/chargebacks revoke via an explicit audited admin action); SSV rewarded post-match doubler — callbacks signature-verified and replay-proof, the client callback grants nothing; Premium subscribers get the doubling automatically, ad-free; theme packs (`economy.unlock_prices.theme_pack`) with Host Pass enforcement — only the room creator needs the pack in private/local rooms, Quick Play runs core + free rotating featured pack; Poke Styles + Custom Avatar unlocks priced in Noin (`economy.unlock_prices`).
 - [ ] Economy balance pass (⚙️ Tuning): every price and earn value read from `tuning.yaml` only — economy tuning never needs a client release (proof: a config price change reflects in the Store with no rebuild); numbers tuned against the balance-protocol table, targets first — expected per-match Noin from `mediapack simulate` vs the real numbers from the nightly KPI jobs, one lever at a time.
 - [ ] Custom Avatar upload pipeline (👤 §2): server-side crop to 256×256 WebP, EXIF strip, size cap, automated moderation screen before display, admin takedown reverting to presets without refund.
@@ -435,6 +474,11 @@ atomic weekly close).
 surface), `code-review` (permission boundaries per role),
 `documentation-first` (the Curator Guide is itself a deliverable, derived
 from ⚙️ §2–3).
+
+**Blueprint (required reading).** 🧑‍🎨 in full (roles, submission
+pipeline, portal architecture); 🎮 §3 (challenge); 🛡️ (portal
+administration); ⚙️ §2–3 (the Curator Guide's source material); ⚙️
+Tuning → `portal/liveops`.
 
 **Proof tests.** BLUEPRINT Phase 6 testing criteria: audited immutable
 submission lifecycle; two entries racing for slot #100 admit exactly one,
