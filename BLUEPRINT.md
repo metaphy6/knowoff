@@ -148,7 +148,7 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 * One FIFO queue per room size (4 or 6), running on the core pack plus a rotating featured pack. Tap Play, get a table of strangers, argue in Quick Chat, vote.
 * **Launch liquidity — labeled backfill bots:** when a queue can't fill a room within `liquidity.queue_timeout_s` (default 25 s), the server tops it up with bots — server-side (`server/internal/bots`, reusing the `gamebot` policy engine), every seat acting through the same validated intent pipeline as humans. Every bot seat carries a visible 🤖 badge and a reserved bot nickname — in a game about reading people, a disguised bot would be a scandal; a labeled one is a practice partner. Humans always outrank bots for seats, and a room never starts below `liquidity.min_humans`.
 * Guardrails: bot seats earn nothing; matches count for the Weekly Leaderboard only with ≥ `liquidity.leaderboard_min_humans` humans, and grant team-win Noin only with ≥ `liquidity.noin_min_humans` humans — a bot table can never become a Noin farm. Backfill sunsets per queue automatically once fill times stay healthy.
-* Free accounts play `economy.free_daily_quickplay_matches` per server day (**10 at launch** — generous on purpose); Premium (💰 §2) removes the cap. **Local Rooms are never capped.**
+* Free accounts play `economy.free_daily_quickplay_matches` per server day (**10 at launch** — generous on purpose); a Play Pass or Premium (💰 §2) removes the cap. **Local Rooms are never capped.**
 
 ### 2. Local Rooms
 
@@ -328,7 +328,7 @@ knowoff/
 │   │   ├── game/                # Phase state machine, timers, roles, votes, forfeits, scoring
 │   │   ├── bots/                # Quick Play backfill bots (labeled; reuses gamebot policy engine)
 │   │   ├── media/               # Pack loader, relevance mesh, dealing, signed-URL issuing, role-scoped payloads
-│   │   ├── economy/             # Noin wallet, ledger, premium passes, entitlements
+│   │   ├── economy/             # Noin wallet, ledger, play passes, entitlements
 │   │   ├── portal/              # Contributor Portal + Media Workbench (server-rendered) + Admin Console
 │   │   └── store/               # Postgres repositories, Redis queues/presence/routing, object-storage client
 │   └── migrations/
@@ -442,8 +442,8 @@ noin:                              # currency earnings — instant, kept on disc
 economy:
   free_daily_quickplay_matches: 10  # per free account per server day; local rooms never capped
   points_to_noin: 100              # Non-Converted Points per 1 Noin — one-way, multiples of 100, counts toward daily_earn_cap
-  premium_prices: {day_1: 250, day_3: 600, day_7: 1200}      # Noin; passes never remove ads
-  enthusiast_yearly_discount_pct: 20   # Enthusiast Player subscription (sole ad-removal path); monthly/yearly store products mapped at launch
+  play_pass_prices: {day_1: 250, day_3: 600, day_7: 1200}    # Noin; passes never remove ads
+  premium_yearly_discount_pct: 20   # Premium subscription (sole ad-removal path); monthly/yearly store products mapped at launch
   unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Noin
   noin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
 
@@ -469,8 +469,8 @@ portal:
 
 | Target | Healthy band | The one lever |
 |---|---|---|
-| Active free player affords a 1-day premium | every ~2 days of play | `noin.*` earn values |
-| 7-day premium for a committed free player | every ~8–10 days | `premium_prices` |
+| Active free player affords a 1-day Play Pass | every ~2 days of play | `noin.*` earn values |
+| 7-day Play Pass for a committed free player | every ~8–10 days | `play_pass_prices` |
 | Earned vs purchased Noin in circulation | ≥ 70% earned | bundle sizes/prices |
 | Point-conversion share of Noin income | ≤ ~25% | `points_to_noin` rate |
 | Draws per player per match | ~1 (drawing is a choice, not a habit) | `points.draw_penalty` |
@@ -547,25 +547,25 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 
 ## 💰 Monetization: The Noin Economy
 
-One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on premium time, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to reach everything), and monetize impatience, identity, and commitment — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
+One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on play passes, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to reach everything), and monetize impatience, identity, and commitment — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
 
 ### 1. Earning Noin
 
 * Play rewards (Rules §6): completing matches, winning as either team, correct votes, surviving votes as a Donower (credited discreetly — Rules §6), first win of the day — credited instantly and kept even on disconnect. A daily earn cap (`noin.daily_earn_cap`) blunts farming, and team-win Noin requires ≥ `liquidity.noin_min_humans` humans in the match.
 * Contribution rewards (🧑‍🎨 §1): Noin per accepted asset, and the Week Winner award of the Weekly Nown Challenge (🎮 §3).
 * **Point conversion:** every match's net points land on the profile as **Overall Points** (lifetime, never decreases) and **Non-Converted Points** (a balance). The owner may convert Non-Converted Points to Noin at **100 points → 1 Noin** (`economy.points_to_noin`), in multiples of 100. Conversion is **one-way and irreversible**: converted points are subtracted from the Non-Converted balance forever, and Overall Points never change. Converted Noin counts toward `noin.daily_earn_cap`, so points can never bypass the anti-farm ceiling.
-* Balance target: an active free player earns a 1-day premium every ~2 days of play (protocol table in ⚙️ Tuning) — collecting is deliberately *not hard*; the sink structure below is what makes the economy work.
+* Balance target: an active free player earns a 1-day Play Pass every ~2 days of play (protocol table in ⚙️ Tuning) — collecting is deliberately *not hard*; the sink structure below is what makes the economy work.
 
-### 2. Premium Passes (Noin) & the Enthusiast Player Subscription
+### 2. Play Passes (Noin) & the Premium Subscription
 
-* **Premium is unlimited Quick Play**, sold as **1-day (250), 3-day (600), and 7-day (1,200) passes priced in Noin** — an earnable convenience, so the play-more path always runs through the one currency. **Premium passes do not remove ads.**
-* **Enthusiast Player** is the one cash subscription — **monthly or yearly, with the yearly plan 20% off**, sold through platform billing — and it is the **only way to remove ads entirely**. It also includes Premium's unlimited Quick Play while active, so a subscriber never needs passes.
+* **Play Passes are unlimited Quick Play**, sold as **1-day (250), 3-day (600), and 7-day (1,200) passes priced in Noin** — plain in-game finance, an earnable convenience and nothing more, so the play-more path always runs through the one currency. **Play Passes do not remove ads.**
+* **Premium** is the one cash subscription — **monthly or yearly, with the yearly plan 20% off**, sold through platform billing — and it is the **only way to remove ads entirely**. It also includes unlimited Quick Play while active, so a subscriber never needs passes.
 * Free accounts get `economy.free_daily_quickplay_matches` per server day (**10 at launch** — tuned so only the most engaged fifth of free players ever feel it). **Local Rooms are never capped** — play with the people in your living room is always free and unlimited.
 
 ### 3. Noin Bulks (the cash lane)
 
 * Bulk packs via platform billing (Play Billing / StoreKit): sizes in `economy.noin_bundles`, store price tiers mapped at launch. This is the only place money enters; everything money can get, play can also get — slower.
-* Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Enthusiast subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Enthusiast Player subscription (💰 §2)** — Noin premium passes never remove ads.
+* Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Premium subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Premium subscription (💰 §2)** — Noin Play Passes never remove ads.
 
 ### 4. Theme Packs
 
@@ -624,10 +624,10 @@ This lifecycle is the blueprint's executable technical roadmap. Six phases, each
 
 ### Phase 5: Noin Economy, Admin & Launch Polish
 
-* Task 1: The `economy` module: Noin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Noin conversion** (100:1, one-way, cap-counted), premium time passes (1/3/7-day) with the Quick Play cap gate, the **Enthusiast Player subscription** (monthly/yearly via platform billing, yearly −20%, the sole ad-removal entitlement), Noin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
+* Task 1: The `economy` module: Noin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Noin conversion** (100:1, one-way, cap-counted), Play Passes (1/3/7-day, Noin) with the Quick Play cap gate, the **Premium subscription** (monthly/yearly via platform billing, yearly −20%, the sole ad-removal entitlement), Noin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
 * Task 2: Admin Console over Phases 4–5 endpoints (case queues, Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, the system-notice composer with scheduled maintenance drain — 🎮 §4); the how-to-play clip once UI is final.
 * Task 3: Performance and launch passes: client paints on low-end devices, server allocation/GC under queue load, edge-cache hit rates on pack releases, **VPS migration runbook executed** (Infra §2), store review prep for the content policy (age-gated adult packs, UMP, age gate).
-* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; premium passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; ads persist for premium-pass holders and disappear entirely only under an active Enthusiast subscription, with the yearly price carrying the 20% discount; a scheduled maintenance window notifies at every checkpoint, blocks new matches at open, and lets running matches finish; takedowns propagate in the next pack version and invalidate correctly at the edge.
+* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; Play Passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; ads persist for Play Pass holders and disappear entirely only under an active Premium subscription, with the yearly price carrying the 20% discount; a scheduled maintenance window notifies at every checkpoint, blocks new matches at open, and lets running matches finish; takedowns propagate in the next pack version and invalidate correctly at the edge.
 
 ### Phase 6: Contributor Portal & Community
 
