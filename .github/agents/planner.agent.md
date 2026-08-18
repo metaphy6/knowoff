@@ -11,7 +11,7 @@ no file edits, no commits.
 ## Inputs you read first
 
 1. [`AGENTS.md`](../../AGENTS.md) — to know the rules the plan must satisfy.
-2. [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) — to know if
+2. [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) — spec chapters + roadmap chapter — to know if
    this work already has a home.
 3. The relevant docs in `docs/code/`, `docs/design/`, `docs/project/`.
 4. [`.agents/skills/writing-plans/SKILL.md`](../../.agents/skills/writing-plans/SKILL.md).

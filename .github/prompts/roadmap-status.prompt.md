@@ -5,7 +5,7 @@ description: Summarise current ROADMAP.md progress — checked / unchecked / blo
 
 # Roadmap status
 
-Read [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) and produce:
+Read the roadmap chapter of [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) and produce:
 
 1. **Phase summary table** — for each top-level phase: total bullets,
    `[x]` count, `[~]` count, `[ ]` count.

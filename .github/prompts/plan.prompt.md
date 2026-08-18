@@ -12,7 +12,7 @@ this prompt. Output is a Markdown plan only — no `editFiles`, no `git`.
 
 1. Restate the user's request in one sentence.
 2. Read the relevant slice of:
-   - [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md)
+   - [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) — spec chapters + the roadmap chapter
    - [`docs/code/`](../../docs/code/) / [`docs/design/`](../../docs/design/)
    - any project-specific rules in [`.github/copilot-instructions.md`](../copilot-instructions.md)
 3. Load [`.agents/skills/writing-plans/SKILL.md`](../../.agents/skills/writing-plans/SKILL.md).

@@ -11,7 +11,7 @@ Switch to the [`implementer` custom agent](../agents/implementer.agent.md).
 
 **`/implement` MUST drain every `[ ]` bullet in the requested scope before the
 turn ends — whether that scope is a single sub-phase, several phases, or the
-whole [ROADMAP](../../docs/planning/ROADMAP.md).** Phase boundaries are **not**
+whole [roadmap chapter of the monolith](../../docs/planning/ROADMAP.md).** Phase boundaries are **not**
 stop points: the moment one phase's bullets are all `[x]`, immediately start
 the next unchecked phase in ROADMAP order and keep going until the whole
 requested scope is complete.
@@ -39,7 +39,7 @@ to proceed; you need no permission between bullets **or between phases**.
   - `/implement #phase <id>` (e.g. `0a.1`, `1`, `2.3`) → that one sub-phase / phase.
   - `/implement #phase <a>..<b>` or a list → every phase in that range / list, in order.
   - `/implement` with no phase (or "the roadmap" / "everything") → **every phase
-    in [ROADMAP.md](../../docs/planning/ROADMAP.md) that still has `[ ]` bullets**,
+    in the [roadmap chapter of the monolith](../../docs/planning/ROADMAP.md) that still has `[ ]` bullets**,
     top to bottom.
 - Build the full ordered list of `[ ]` bullets across **all** targeted phases
   before you start. That list is your work queue; you are done only when it is

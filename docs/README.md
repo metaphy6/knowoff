@@ -8,7 +8,7 @@ humans on **the project's design and history**.
 
 | Path | Purpose | Audience |
 |---|---|---|
-| [`../BLUEPRINT.md`](../BLUEPRINT.md) | **The normative Knowoff spec** — rules, economy, media engine, protocol, infra. | Everyone. Read first. |
+| [`planning/ROADMAP.md`](planning/ROADMAP.md) | **The normative Knowoff spec + roadmap monolith** — rules, economy, media engine, protocol, infra, then the phase checklist. | Everyone. Read first. |
 | [`code/`](code/) | Module-level documentation (architecture, modules, APIs). | Devs joining the codebase. |
 | [`project/`](project/) | The project's charter, decision log, glossary — [`GLOSSARY.md`](project/GLOSSARY.md) holds the normative Knowoff terminology. | New contributors. |
 | [`design/`](design/) | Design docs (DESIGN.md) and ADRs. | Reviewers + future-you. |
