@@ -1,0 +1,37 @@
+{
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.rulers": [100],
+  "editor.formatOnSave": false,
+  "[markdown]": {
+    "editor.wordWrap": "on",
+    "editor.quickSuggestions": {
+      "comments": "off",
+      "strings": "off",
+      "other": "off"
+    }
+  },
+  "search.exclude": {
+    "**/docs/tracking/state/log.jsonl": true,
+    "**/tmp/agent-runs": true
+  },
+  "chat.agentSkillsLocations": {
+    ".agents/skills": true
+  },
+  "chat.useAgentSkills": true,
+  "chat.instructionsFilesLocations": {
+    ".github/instructions": true
+  },
+  "github.copilot.chat.promptFileContextProvider.enabled": true,
+  "github.copilot.chat.codeGeneration.instructions": [
+    { "file": "AGENTS.md" },
+    { "file": ".github/copilot-instructions.md" }
+  ],
+  "github.copilot.chat.testGeneration.instructions": [
+    { "file": ".agents/skills/test-driven-development/SKILL.md" }
+  ],
+  "github.copilot.chat.reviewSelection.instructions": [
+    { "file": ".agents/skills/code-review/SKILL.md" }
+  ]
+}

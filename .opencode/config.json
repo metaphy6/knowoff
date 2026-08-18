@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "$comment": "OpenCode workspace config. The authoritative ruleset lives in AGENTS.md.",
+  "name": "ai-vscode-basics",
+  "instructions": [
+    "../AGENTS.md",
+    "../.agents/skills/README.md"
+  ],
+  "mcp": {
+    "codegraph": {
+      "command": "npx",
+      "args": ["-y", "@colbymchenry/codegraph"]
+    }
+  }
+}

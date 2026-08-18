@@ -1,0 +1,6 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "$comment": "VS Code Copilot MCP config. VS Code reads both this file and .mcp.json — codegraph is defined only in .mcp.json (with the project's absolute path baked in by scaffold.sh) to avoid duplicate servers. Add other project-specific MCP servers here.",
+  "servers": {},
+  "inputs": []
+}

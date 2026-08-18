@@ -1,0 +1,17 @@
+{
+  "$schema": "https://gemini.google.com/cli/extension-schema.json",
+  "name": "ai-vscode-basics",
+  "version": "0.1.0",
+  "description": "Gemini CLI extension marker. The real ruleset lives in GEMINI.md → AGENTS.md.",
+  "license": "MIT",
+  "entrypoint": {
+    "gemini_md": "./GEMINI.md",
+    "agents_md": "./AGENTS.md"
+  },
+  "mcpServers": {
+    "codegraph": {
+      "command": "npx",
+      "args": ["-y", "@colbymchenry/codegraph"]
+    }
+  }
+}

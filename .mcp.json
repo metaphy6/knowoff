@@ -1,0 +1,12 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
+  "$comment": "Repo-level MCP server configuration. Read by Claude Code, Cursor, and other MCP-aware clients. Mirrored to .vscode/mcp.json for VS Code Copilot and to .cursor/mcp.json for Cursor.",
+  "mcpServers": {
+    "codegraph": {
+      "$comment": "CodeGraph — semantic code intelligence: symbol lookup, callers/callees, route mapping. scaffold.sh writes a project-specific copy of this file with --path baked in to the absolute project path, so every MCP client works correctly. VS Code Copilot uses .vscode/mcp.json (which keeps ${workspaceFolder}). See docs/guides/MCP_SETUP.md.",
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@colbymchenry/codegraph", "serve", "--mcp", "--path", "/home/tech/code/knowoff"]
+    }
+  }
+}

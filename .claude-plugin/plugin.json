@@ -1,0 +1,11 @@
+{
+  "name": "ai-vscode-basics",
+  "version": "0.1.0",
+  "description": "Workspace plugin marker for Claude Code. The real ruleset lives in CLAUDE.md → AGENTS.md.",
+  "author": "Serhat Akbak",
+  "license": "MIT",
+  "entrypoint": {
+    "claude_md": "../CLAUDE.md",
+    "agents_md": "../AGENTS.md"
+  }
+}
