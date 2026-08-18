@@ -2,7 +2,7 @@
 
 ## 🎲 The Game at a Glance
 
-Knowoff is an online social deduction party game for **exactly 4 or 6 players** — matched with people around the world in **Quick Play** (the main product), or gathered in person in a **Local Room**. Each round, one media item — **Nown** — appears on every phone except the Donowers'; Donowers must pretend they see it. Everyone plays one card that supposedly relates to Nown, the table argues, then votes. **The most-voted player is eliminated and their role is revealed** — eliminating a Nower wastes the vote. **Nowers win by voting out every Donower. Donowers win — together — if the votes run out first.**
+Knowoff is an online social deduction party game for **exactly 4 or 6 players** — matched with people around the world in **Quick Play** (the main product), or gathered in person in a **Local Room**. Each round, one media item — **Nown** — appears on every phone except the Donowers'; Donowers must pretend they see it. In a randomly ordered sequence of timed turns, everyone plays one card that supposedly relates to Nown — each play revealed the moment it lands — the table argues, then votes. **The most-voted player is eliminated and their role is revealed** — eliminating a Nower wastes the vote. **Nowers win by voting out every Donower. Donowers win — together — if the votes run out first.**
 
 There is deliberately no separate rulebook: the **Game Rules** section below is the single source of truth, and all player-facing help text, store copy, and the how-to-play clip are derived from it.
 
@@ -52,7 +52,7 @@ Architecture decision records:
   * 6 players: **if neither of the first two votings catches a Donower, the match ends right after the second Knowoff — one vote can't catch two Donowers — and Donowers win.** Otherwise it runs to the third voting, and any Donower still uncaught after it wins.
 * **Donowers win and lose together**: a caught Donower still wins if their partner survives. Donowers don't know each other at match start; quietly working out who your partner is, and covering for them, is intended strategy.
 * One voting per match can be re-run by a Revote card (§5).
-* Match length: roughly **4 minutes** at 4 players, **7 minutes** at 6. Ready (§8) can only shorten a match.
+* Match length: roughly **5 minutes** at 4 players, **8 minutes** at 6. Acting early and Ready (§8) can only shorten a match.
 
 ### 2. Roles, Nown & Hands
 
@@ -63,19 +63,19 @@ Architecture decision records:
 * **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text, image, or GIF** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Nown in the match. That guaranteed ambiguity is what lets Donowers blend in and makes Nowers doubt each other.
 * A match can never use more than those 8 cards, so a player always has a card to play.
 
-### 3. The Round: Blind Play
+### 3. The Round: Turn-Based Play
 
-* Play window (`10 s × players`; ends early when everyone is Ready): each player secretly locks **one action** — play a card, or use a specialty (§5). Nothing shows while the window runs; when it closes, **all plays flip face-up at once, with names attached**. No speed races, no copying the table mid-round.
+* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **15 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
 * Played cards stay on the table for the whole match — the evidence the votes are argued over.
-* **Draws**: during a play window, a player may draw from their 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
-* **Timeout**: a player who locks nothing auto-passes and loses one random card. Stalling costs.
+* **Draws**: during your turn, you may draw from your 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
+* **Timeout**: a player whose turn expires with no action auto-passes and loses one random card. Stalling costs.
 
 ### 4. Discussion & Knowoff (every round)
 
-* After the reveal, a discussion window opens (`10 s × players`; ends early when everyone is Ready).
+* After the round's final turn, a discussion window opens (`10 s × players`; ends early when everyone is Ready).
   * **Local rooms:** talk happens out loud at the table.
   * **Online rooms:** players argue through **Quick Chat** — a set of canned phrases and reactions ("I suspect P3", "my card fits, trust me", "that play was weird", emotes), sent as taps, localized automatically. **No free-text chat at v1** (see Product Baseline); free-text and voice are v2 candidates behind proper moderation.
-* Then **Knowoff**: a 20-second blind ballot. Everyone still in the match votes for one player (never themselves); votes stay hidden until the window closes, then all votes are shown. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; still tied → the vote is a miss (it counts as survived, eliminates nobody).
+* Then **Knowoff**: a 20-second blind ballot. Everyone still in the match votes for one player (never themselves); votes stay hidden until the window closes, then all votes are shown. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; if the runoff is still tied, the vote is a miss: it counts as one survived voting for the Donowers, eliminates nobody, and reveals no role.
 * **Result window:** every vote's outcome is displayed for 15 seconds before it becomes final — this is the window where a Revote card (§5) can land. Then it applies.
 * An eliminated player — Nower or Donower — watches the rest of the match: no plays, no votes, no chat, no pokes. Their screen no longer shows Nown (a revealed Donower could otherwise feed it to a surviving partner). Staying connected to the end collects their points as normal (§6, §7).
 * After the match, the verdict screen shows all Nowns to everyone; Donowers finally see what they survived.
@@ -88,12 +88,12 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 
 * **Pass** (occasional): skip playing a card this round. Only the Pass card is spent.
 * **Reveal** (rare): show another player's entire hand to the whole table — media and specialty cards alike, all face-up. Safe by design: since any specialty can sit in any hand (dealing is role-blind), seeing a Shuffle or a Revote proves nothing about its holder's role. Costs one extra discard.
-* **One More Free Card** (occasional): usable any moment during a play window without spending your action — draw 1 fresh card from the mesh, **free of the draw penalty** (§3). Used before touching your pile, it serves as a penalty-free first draw — that's its edge. Costs one extra discard.
+* **One More Free Card** (occasional): usable during your turn without spending your action — draw 1 fresh card from the mesh, **free of the draw penalty** (§3). Used before touching your pile, it serves as a penalty-free first draw — that's its edge. Costs one extra discard.
 
 **Type B — Unique (free, use restricted by role, once per match):**
 
-* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before anyone locks an action. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *a Shuffle happened* — hands visibly change — but not who did it; since nobody knows who is a Donower, the alert exposes no one. It wipes out the plans Nowers built around saved cards.
-* **Revote** (rare — **usable by Nowers only**): playable during the 15-second result window of any Knowoff, before the result finalizes. The shown result is **canceled: it reveals nobody, eliminates nobody, and does not count as a survived voting for Donowers.** A fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price. (This replaces the earlier One More Round card, which fed Nowers extra votes and broke balance.)
+* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before the first turn begins. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *a Shuffle happened* — hands visibly change — but not who did it; since nobody knows who is a Donower, the alert exposes no one. It wipes out the plans Nowers built around saved cards.
+* **Revote** (rare — **usable by Nowers only**): playable during the 15-second result window of any Knowoff, before the result finalizes. The shown result is **canceled: it reveals nobody, eliminates nobody, and does not count as a survived voting for Donowers.** A fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 
 ### 6. Match Points & Noin Earnings
@@ -128,16 +128,16 @@ No chips, no stakes, no in-match economy — Noin and points are earned by the m
 
 Nobody should profit from a dropped connection — theirs or anyone else's. Three rules cover every case:
 
-1. **Grace & auto-play (20 s).** A disconnected seat is auto-played from the moment it drops: it passes, abstains from votes, counts as Ready, and can still be voted. The player has 20 seconds to reconnect before counting as absent; reconnecting later restores the seat mid-match (with a fresh role-scoped snapshot — a Nower gets Nown back, a Donower doesn't).
+1. **Grace & auto-play (20 s).** A disconnected seat is auto-played from the moment it drops: its turns pass instantly, it abstains from votes, counts as Ready, and can still be voted. The player has 20 seconds to reconnect before counting as absent; reconnecting later restores the seat mid-match (with a fresh role-scoped snapshot — a Nower gets Nown back, a Donower doesn't).
 2. **A fully absent team forfeits.** If **every uncaught Donower** is absent past grace, the match ends immediately as a **Nower win**. If every un-eliminated Nower is absent past grace, Donowers win. Quitting is conceding, never escaping. These checks count only players still in the match — eliminated players sit outside them.
-3. **Too few humans ends the match unscored.** If fewer than 3 players remain connected (and rule 2 hasn't already decided it), the match ends with no points and no team-win Noin.
+3. **Too few humans ends the match after grace, scored.** If fewer than 3 players remain connected, the match waits until every disconnected seat's grace period has expired (and rule 2 hasn't already decided it), then ends without a team result. Every player receives the match points they accrued, including disconnected players; no team-win Noin is granted.
 
-Backstops: an absent-at-end player — eliminated or not — scores 0 match points (already-earned Noin stays — §6); roles never move between seats; no bot ever takes over a human's hand. Repeated abandoning in Quick Play earns escalating matchmaking cooldowns.
+Backstops: except for the scored low-population ending above, an absent-at-end player — eliminated or not — scores 0 match points (already-earned Noin stays — §6); roles never move between seats; no bot ever takes over a human's hand. Repeated abandoning in Quick Play earns escalating matchmaking cooldowns.
 
 ### 8. Pace Controls: Ready & Poke
 
-* **Ready** — for every player, in every room type (4 or 6, local or online): locking an action (or having nothing left to do) marks you Ready, and when everyone is Ready the play and discussion windows end early. Fast tables play fast; the `10 s × players` timers are only the ceiling. **Ballots, runoffs, and result windows always run their full time** — blind and cancelable to the end.
-* **Poke**: once per target per round, you may poke a player who hasn't locked an action. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. No score effect; the cap is enforced server-side.
+* **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends the moment its player acts, and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. Fast tables play fast; the 15 s turn and `10 s × players` discussion timers are only ceilings. **Ballots, runoffs, and result windows always run their full time** — blind and cancelable to the end.
+* **Poke**: once per target per round, you may poke a player who hasn't acted — the turn player sitting on the clock, or anyone not yet Ready in discussion. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. No score effect; the cap is enforced server-side.
 
 ---
 
@@ -165,9 +165,14 @@ The game itself, stretched into a week-long social event for the whole community
 * **Week Winner:** at the weekly close, the most-voted entry wins. Its owner holds the **Week Winner title — shown on their profile and in lobbies until the next winner is crowned** — and receives a large Noin award (`noin.challenge_winner`). Winning and standout entries may also enter the community pack, with credits.
 * **Consent:** submitting requires explicit acceptance of the contribution terms — the entry may be used in the system, commercially, and in modified form (perpetual, non-exclusive license). Terms version + timestamp are stored with the entry. No consent, no upload.
 
-### 4. Daily Nown
+### 4. System Notices & Announcements
 
-One curated media item on app start — a taste of the game's humor, a dismissible card, never a gate. Scheduled via the Admin Console's editorial calendar; fetched once over HTTPS and cached.
+Players are never surprised by downtime:
+
+* **Notice types:** scheduled **maintenance** (start time + expected duration), **downtime/incident updates**, and **general announcements** — events, pack releases, rule changes.
+* **Delivery:** connected clients receive `system_notice` events in real time over the WebSocket; on app start the client fetches all active notices over HTTPS. Notices render as dismissible banners on the main menu plus a persistent notice inbox — never a blocking gate, except a hard-maintenance countdown.
+* **Maintenance flow:** a scheduled window announces itself at T−24 h, T−1 h, and T−10 min; when it opens, matchmaking stops admitting new matches and running matches drain to their natural end before the server goes down. Nobody loses a live match to planned work.
+* **Ops:** notices are composed, scheduled, localized, and withdrawn in the Admin Console (🛡️), audited like every admin action; scheduling a maintenance window arms the matchmaking drain automatically.
 
 ### 5. Weekly Leaderboard
 
@@ -251,7 +256,8 @@ One authenticated, browser-based operations board, served from the Go server on 
 * **Curation & packs:** pack dashboard — active tag per pack, checksum verification, hot-swap trigger, certification stats (⚙️ §3).
 * **Leaderboard ops** (🎮 §5): exclusions, reinstatements, weekly close re-runs, history.
 * **Economy & accounts:** Noin ledger and entitlement lookups; grants/refunds are explicit audited actions.
-* **Daily Nown:** calendar editor with exact-render preview and hot-replace. **Feedback triage:** new / seen / done.
+* **System notices** (🎮 §4): composer and scheduler for maintenance windows, downtime updates, and announcements; scheduling a maintenance window arms the matchmaking drain automatically.
+* **Feedback triage:** new / seen / done.
 * Roadmap fit: endpoints ship with the features they manage; the console UI is a Phase 5 deliverable — in place before any public launch.
 
 ---
@@ -265,7 +271,7 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
   1. Hook — "One of you can't see this." A meme cuts to static on one phone among four.
   2. Roles — the press-and-hold role check; one card whispers *you're Donower*.
   3. Nown appears on every screen at once; a Donower's screen shows only a plain placeholder — and nobody can tell.
-  4. Play — four cards lock blind, flip face-up with names; caption "whose card doesn't get it?"
+  4. Play — cards hit the table one turn at a time, each revealed instantly with a name; caption "whose card doesn't get it?"
   5. Pressure — a draw announcement, a poke shake, a Shuffle alert, Quick Chat accusations flying.
   6. Knowoff — votes land; the loser is out, role face-up… a Nower. The table groans; one vote left.
   7. Verdict — the Donower grins; "Donowers win together." Noin rains onto the scoreboard. Logo out.
@@ -275,7 +281,7 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 
 ## 🎨 Visual Identity: Soft Neo-Brutalism Design Matrix
 
-Direction locked: **pastel neo-brutalism, illustration-light** — the same design language as the example blueprint. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
+Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
 
 * Palette tokens (Flutter constants; light theme only at v1):
   * `canvas` `#DCC8F7` — lavender field with a faint low-contrast grid tile; `surface` `#F7F2E9` warm cream for cards and sheets; `#FFFFFF` content wells inside them.
@@ -285,7 +291,7 @@ Direction locked: **pastel neo-brutalism, illustration-light** — the same desi
   * `pink` `#FF9ED2` — the risk/accusation signal: votes, the Knowoff board, Donower reveals. The palette's single permitted gradient (`#FFD9EC → #FF9ED2`) is reserved for the Knowoff reveal header.
 * Structure: every container carries `Border.all(width: 3, color: ink)` and a hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`. Corners rounded — radius 16 for cards and sheets, 12 for buttons, full pill for stat chips. Pressing a control collapses its shadow to zero offset while the control translates onto its own shadow footprint: the signature brutalist click.
 * Typography: a chunky rounded display face for headings, timers, and Noin numbers (Baloo 2 / Fredoka class — both OFL; lock one after a diacritics render check), a plain geometric sans for body. **Highlighter emphasis is the house style:** the revealed role, a Noin delta, the clip caption — key phrases sit on a lime marker sweep, not bold-only.
-* Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (~12 glyphs: sparkle, static-burst, eye, cloud) reserved for empty states, win moments, the Donower-side placeholder, and the Daily Nown card.
+* Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (~12 glyphs: sparkle, static-burst, eye, cloud) reserved for empty states, win moments, and the Donower-side placeholder.
 * Fixed color semantics: violet = interact, lime = truth/reward, pink = accuse/risk, ink = information. No verdict leans on hue alone — color always pairs with icon + label (colorblind-safe by construction).
 * Performance guardrails: flat fills (the one gradient exception above), zero blur radii, no stacked translucency — low-end devices are the norm.
 * Asset strategy — code first, raster last: UI chrome is 100% widgets/`CustomPainter`s (borders, hard shadows, grid tile, highlighter sweep, press animation); doodles ship as hand-authored SVG paths. True raster — preset avatars, app icon, store art — is produced offline in curated batches via the **nano banana (Gemini image) API**, prompts derived from this matrix; candidates → human curation → consistency pass → committed like any asset. API keys live under the config discipline (📦 §3). In-game *media content* comes exclusively from media packs (⚙️) — the design system and the content pipeline never mix.
@@ -307,10 +313,10 @@ knowoff/
 │       ├── domain/
 │       │   ├── entities/
 │       │   ├── repositories/
-│       │   └── usecases/        # QuickPlay, JoinRoom, LockPlay, DrawCards, CastVote, SendQuickChat, ConvertPoints
+│       │   └── usecases/        # QuickPlay, JoinRoom, PlayCard, DrawCards, CastVote, SendQuickChat, ConvertPoints
 │       ├── presentation/
 │       │   ├── state/           # Riverpod state for the server-driven phases
-│       │   ├── screens/         # MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict, Profile, Leaderboard, Store
+│       │   ├── screens/         # MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict, Profile, Leaderboard, Store, NoticeInbox
 │       │   └── widgets/         # NownStage, HandFan, PlayTable, VoteBoard, QuickChatBar, PokeNudge, ReadyButton, RoleCard, NoinBadge
 │       └── media/               # Client MediaEngine: pack metadata sync, signed-URL prefetch, LRU asset cache, Donower placeholder renderer
 ├── server/                      # Go authoritative game server
@@ -364,6 +370,7 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 * Pipeline stages (CLI + Workbench/Portal UI over the same code): `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (automated moderation) → `tag` + `embed` → human curation (🧑‍🎨) → `certify` → `bundle` → `publish`.
 * **Quality targets — deliberately medium/low:** images ≤ 720 px longest side, compressed WebP; GIF loops ≤ 480p, ≤ 2 MB, re-encoded as animated WebP; text plain. Two reasons: small assets keep prefetch instant and the edge-cache path cheap, and lo-fi *is* the meme aesthetic.
 * **Content standard:** humor may include sexuality within the bounds of eroticism — suggestive, cartoon, drawn, abstract — but **never pornographic or explicit content**, and always within app-store content rules. Erotic-leaning media carries an adult rating and ships only in age-gated packs (Product Baseline); the automated screen and human curation both enforce the line.
+* **Copyleft-first sourcing:** wherever licensing allows, Nowns and cards are drawn from openly licensed and public-domain sources — letting players enjoy media they already know and love is part of the project's mission. Primary wells: [Wikimedia Commons](https://commons.wikimedia.org), [Openverse](https://openverse.org), [Flickr Commons](https://www.flickr.com/commons), the [Internet Archive](https://archive.org) (including [GifCities](https://gifcities.org) for GIFs), and [Project Gutenberg](https://www.gutenberg.org) / [Wikiquote](https://www.wikiquote.org) for text. Each imported asset stores its license and attribution in the pack manifest (§1); share-alike (CC BY-SA) obligations are honored in pack credits; NC/ND-licensed media is excluded — the game is commercial (see the [Creative Commons license guide](https://creativecommons.org/licenses/)).
 * Certification (the anti-dead-content gate): a pack version is publishable only if every Nown has full band coverage for a 6-player deal, every card is reachable in some band, and Monte Carlo `simulate` confirms deal feasibility at both table sizes. Uncertifiable media stays in draft. The same checks back the Curator Guide's testing workflow (🧑‍🎨 §1).
 * `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Donower-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
 * Production stack (verified on the owner's RTX 4080 Mobile, 12 GB VRAM): images via SDXL or Flux.1-Schnell fp8 (Apache-2.0); GIF loops via LTX-Video 2B distilled or Wan 2.1-1.3B (~8 GB), rendered to animated WebP; text cards via Ollama-served 7–14B models. API lane for style-critical or overflow work: nano banana (~$0.034–0.067/image), batch pricing at half rate. The binding constraint is human curation keep-rate, not compute.
@@ -387,13 +394,13 @@ game:
   room_sizes: [4, 6]                # the only valid room sizes
   donowers_by_size: {4: 1, 6: 2}      # public knowledge at the table
   votes_by_size: {4: 2, 6: 3}       # one Knowoff per round; match ends early when votes can't catch remaining Donowers
-  min_connected: 3                  # below this the match ends unscored (Rules §7)
+  min_connected: 3                  # below this, the match waits for grace then ends scored (Rules §7)
   reconnect_grace_s: 20             # also the team-forfeit grace (Rules §7)
   pokes_per_target_per_round: 1
   abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
 
 timers:                             # seconds; which windows may fast-forward is structure (§8)
-  round_per_player: 10              # play window = value × players; Ready unanimity ends it early
+  play_turn: 15                     # each player's turn; the play reveals immediately, the turn ends on action
   discussion_per_player: 10         # Ready unanimity ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
@@ -435,7 +442,8 @@ noin:                              # currency earnings — instant, kept on disc
 economy:
   free_daily_quickplay_matches: 10  # per free account per server day; local rooms never capped
   points_to_noin: 100              # Non-Converted Points per 1 Noin — one-way, multiples of 100, counts toward daily_earn_cap
-  premium_prices: {day_1: 250, day_3: 600, day_7: 1200}      # Noin
+  premium_prices: {day_1: 250, day_3: 600, day_7: 1200}      # Noin; passes never remove ads
+  enthusiast_yearly_discount_pct: 20   # Enthusiast Player subscription (sole ad-removal path); monthly/yearly store products mapped at launch
   unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Noin
   noin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
 
@@ -485,8 +493,8 @@ portal:
                                                          └──────────────────┘
 ```
 
-* Protocol: one persistent WebSocket per client. Intents: `queue_quickplay`, `join_room`, `lock_play`, `use_specialty` (covers Shuffle and Revote), `draw_cards`, `cast_vote`, `quick_chat` (canned phrase id), `ready`, `poke`, `report_media`, `convert_points` (100:1, outside matches). Events: `phase_started`, `role_assigned` (private), `round_started` (role-scoped Nown/decoy payload), `show`, `round_resolved` (attributed plays), `shuffle_occurred` (anonymous), `vote_result_pending` (opens the 15 s result window), `vote_nullified` (attributed Revote), `knowoff_resolved` (elimination + role reveal), `match_verdict`, `points_scored`, `points_converted` (private), `noin_granted` (private, per-recipient — Rules §6 discreet crediting), `quick_chat` (broadcast). Versioned JSON with sequence numbers for ordered replay.
-* Fair arbitration: play windows, ballots, and runoffs are blind-simultaneous — collected privately, resolved at window close. No match-deciding event is a speed race.
+* Protocol: one persistent WebSocket per client. Intents: `queue_quickplay`, `join_room`, `play_card`, `use_specialty` (covers Shuffle and Revote), `draw_cards`, `cast_vote`, `quick_chat` (canned phrase id), `ready`, `poke`, `report_media`, `convert_points` (100:1, outside matches). Events: `phase_started`, `role_assigned` (private), `round_started` (role-scoped Nown/decoy payload + the round's randomized turn order), `show`, `turn_started` (seat + 15 s deadline), `play_revealed` (attributed, immediate), `round_resolved` (play-phase summary), `shuffle_occurred` (anonymous), `vote_result_pending` (opens the 15 s result window), `vote_nullified` (attributed Revote), `knowoff_resolved` (elimination + role reveal), `match_verdict`, `points_scored`, `points_converted` (private), `noin_granted` (private, per-recipient — Rules §6 discreet crediting), `quick_chat` (broadcast), `system_notice` (broadcast — 🎮 §4). Versioned JSON with sequence numbers for ordered replay.
+* Fair arbitration: ballots and runoffs are blind-simultaneous — collected privately, resolved at window close. Play is sequential by server-enforced turn order with immediate attributed reveals; turn deadlines are server-owned. No match-deciding event is a speed race.
 * Reconnect: session-token snapshot rejoin (Rules §7), role-scoped like everything else.
 * Room→node affinity: every room lives on exactly one node (Redis maps `room_id → node`); no cross-node game state — the property that makes horizontal scaling trivial later.
 * Live match state in server memory only; PostgreSQL for durable outcomes and the Noin ledger; Redis for queues/presence/routing; object storage for assets.
@@ -497,7 +505,7 @@ portal:
 
 Bots fill seats in two sharply separated roles — dev/test bots that never meet the public, and the labeled Quick Play backfill bots (🎮 §1). In neither role does a bot take over a human's mid-match seat, and no bot is ever disguised as a human.
 
-* **Dev/test bots:** `tools/gamebot` (Go CLI) spawns N bot players over the real WebSocket protocol — same intents, same timers, no server backdoors. Policy reuses `server/internal/media` as a library: play by noisy embedding preference as a Nower; play plausible-band cards blind as a Donower; draw when the hand scores badly (accepting the point penalty); vote by a noisy suspicion heuristic; occasionally Shuffle/Revote when held. Seeded — a failing match replays exactly. Bots act early and Ready immediately: a 6-seat dev match crosses every phase in well under a minute. Solo development against 5 bots is the daily loop.
+* **Dev/test bots:** `tools/gamebot` (Go CLI) spawns N bot players over the real WebSocket protocol — same intents, same timers, no server backdoors. Policy reuses `server/internal/media` as a library: play by noisy embedding preference as a Nower; play plausible-band cards that relate to the table's earlier plays as a Donower; draw when the hand scores badly (accepting the point penalty); vote by a noisy suspicion heuristic; occasionally Shuffle/Revote when held. Seeded — a failing match replays exactly. Bots act early and Ready immediately: a 6-seat dev match crosses every phase in well under a minute. Solo development against 5 bots is the daily loop.
 * **Backfill bots:** run inside the server (`server/internal/bots`), reusing the same policy engine with per-match randomized personality parameters so regulars can't farm a fixed tell. Labeled 🤖 always; humans outrank bots for seats; economy and leaderboard guardrails in 🎮 §1. Sunset by measurement: per queue, once p50 time-to-fill stays under the timeout for a sustained window, the scheduler stops adding bots there.
 * Configuration: a `bots:` block exists only in `local.yaml`/`staging.yaml`; the key is absent from `prod.yaml` and the server refuses external bot connections when unset. Backfill bots are configured separately (`liquidity:` in `tuning.yaml`) and are in-process, so the connection-refusal rule is untouched.
 
@@ -508,13 +516,14 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 ### 1. Containerization Principles
 
 * Every runnable ships as a container from day one: `server` (distroless static Go binary), `postgres`, `redis`, `minio`, `cloudflared`, dev tooling (migrations runner, adminer). Multi-arch images, environment-agnostic — the same images run on the home server now, a VPS later, Kubernetes after that; behavior differs only by mounted config.
-* Stateless-by-design server: durable state in PostgreSQL, coordination in Redis, assets in object storage, live matches in memory with room→node affinity.
+* **Every backend service is stateless except the data stores — PostgreSQL and Redis.** The Go server writes nothing to local disk: durable state in PostgreSQL, coordination in Redis, assets in object storage (MinIO holds only immutable, re-publishable pack assets), live matches in ephemeral memory with room→node affinity — any server instance can be replaced at will.
 
 ### 2. Hosting: Home Server + Cloudflare (dev/beta), VPS at Launch
 
 * Dev and beta run entirely on the owner's home machine under Docker Compose. **Cloudflare Tunnel** (`cloudflared`, free) publishes `play.<domain>` (game server — WebSockets pass through) and `cdn.<domain>` (MinIO assets) with no open ports, no exposed home IP, TLS at the edge.
 * **Edge caching does the heavy lifting:** assets are content-hashed and immutable, so `cdn.<domain>/*` gets a Cache-Everything rule with a long edge TTL; after first request Cloudflare serves the media and the home uplink sees near-zero asset traffic. Low/medium media quality (⚙️ §3) keeps objects small; a round's prefetch is a few hundred KB across a table. v1 media is images and text only (loops ship as animated WebP), comfortably inside Cloudflare's free-plan content rules.
 * **Public launch moves the stack to a small VPS** (~€5/mo class): an online-first product can't ride a home ISP's uptime into the stores. It's a lift-and-shift — same images, same config model; assets can offload to Cloudflare R2's free tier (10 GB, zero egress) if the home box retires completely.
+* **Volume-portable data from day one:** every stateful service pins a named Docker volume (`pg_data`, `redis_data`, `minio_data`); containers never write outside them. Cloud migration is a rehearsed runbook, not a project: stop writes, snapshot (`pg_dump`/base backup for PostgreSQL, RDB snapshot for Redis, `mc mirror` for MinIO), restore onto the target volumes, re-point the tunnel/DNS — no schema changes, no path changes.
 * Secrets that leave the machine: the tunnel token and API keys — injected via env into the config layer below, never committed.
 
 ### 3. Centralized Configuration (No Scattered Env Vars)
@@ -538,7 +547,7 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 
 ## 💰 Monetization: The Noin Economy
 
-One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on premium time, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to reach everything), and monetize impatience and identity — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
+One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on premium time, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to reach everything), and monetize impatience, identity, and commitment — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
 
 ### 1. Earning Noin
 
@@ -547,15 +556,16 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 * **Point conversion:** every match's net points land on the profile as **Overall Points** (lifetime, never decreases) and **Non-Converted Points** (a balance). The owner may convert Non-Converted Points to Noin at **100 points → 1 Noin** (`economy.points_to_noin`), in multiples of 100. Conversion is **one-way and irreversible**: converted points are subtracted from the Non-Converted balance forever, and Overall Points never change. Converted Noin counts toward `noin.daily_earn_cap`, so points can never bypass the anti-farm ceiling.
 * Balance target: an active free player earns a 1-day premium every ~2 days of play (protocol table in ⚙️ Tuning) — collecting is deliberately *not hard*; the sink structure below is what makes the economy work.
 
-### 2. Premium — Time Passes Bought With Noin
+### 2. Premium Passes (Noin) & the Enthusiast Player Subscription
 
-* **Premium is unlimited Quick Play + no ads**, sold as **1-day (250), 3-day (600), and 7-day (1,200) passes priced in Noin** — never as a separate cash subscription, so every path to premium runs through the one currency.
+* **Premium is unlimited Quick Play**, sold as **1-day (250), 3-day (600), and 7-day (1,200) passes priced in Noin** — an earnable convenience, so the play-more path always runs through the one currency. **Premium passes do not remove ads.**
+* **Enthusiast Player** is the one cash subscription — **monthly or yearly, with the yearly plan 20% off**, sold through platform billing — and it is the **only way to remove ads entirely**. It also includes Premium's unlimited Quick Play while active, so a subscriber never needs passes.
 * Free accounts get `economy.free_daily_quickplay_matches` per server day (**10 at launch** — tuned so only the most engaged fifth of free players ever feel it). **Local Rooms are never capped** — play with the people in your living room is always free and unlimited.
 
 ### 3. Noin Bulks (the cash lane)
 
 * Bulk packs via platform billing (Play Billing / StoreKit): sizes in `economy.noin_bundles`, store price tiers mapped at launch. This is the only place money enters; everything money can get, play can also get — slower.
-* Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; premium players get the doubling automatically, ad-free. All ad surfaces disappear under premium.
+* Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Enthusiast subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Enthusiast Player subscription (💰 §2)** — Noin premium passes never remove ads.
 
 ### 4. Theme Packs
 
@@ -575,7 +585,7 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 * **Communication: canned Quick Chat + reactions only.** No free-text, no voice, no video at v1. The transport is identical either way — a canned tap and a typed message ride the same WebSocket relay, so the *build* cost is the same; **the real cost of free text is operating it**: profanity filtering, harassment review, minors' safety, and store UGC requirements, all ongoing. Canned phrases eliminate that entire surface while staying localizable and sufficient to accuse and defend. Free text is a v2 candidate behind mute/report infrastructure. Local rooms talk out loud anyway.
 * Progression: one server-side XP track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks. Values in `tuning.yaml`.
 * **Content policy:** humor may be suggestive/erotic within store rules — cartoon, drawn, abstract — **never pornographic or explicit**. Erotic-leaning media ships only in adult-rated, age-gated packs; store age ratings set accordingly (17+/18+ where such packs are available), and the age obligation sits on the user's declared age at the gate. Enforced twice: automated screen + human curation (⚙️ §3).
-* Compliance: anonymous device accounts by default, optional linking later; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
+* Compliance: anonymous device accounts by default, with **one-tap registration via Google Sign-In or Facebook Login** (OAuth 2.0 / OpenID Connect) to carry progress, Noin, and entitlements across devices — the linked identity stores only the provider subject id and email, never shown publicly; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
 * Analytics: no third-party client SDK — the authoritative server witnesses every event; nightly jobs derive KPIs (retention, queue fill times, matches/day, Donower win rate by table size, Noin earn/spend flows, premium conversion, pack attach rate) from the audit stream.
 * Moderation & admin: nickname profanity filter, conduct + media reports, Guard freezes with admin-final bans, Admin Console actions (kick, ban, close room, avatar/media takedown) — all live before public launch.
 * Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. App-size budget enforced in CI: packs stream, binaries stay lean.
@@ -583,6 +593,8 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 ---
 
 ## 🛠️ Step-by-Step Implementation Lifecycle
+
+This lifecycle is the blueprint's executable technical roadmap. Six phases, each with concrete tasks and testing criteria that gate the next phase; every feature section above maps to a phase below. The discipline is bidirectional: a feature change lands together with its roadmap update, and a phase is done only when its testing criteria pass — so this one document stays sufficient to take Knowoff from empty repo to public launch.
 
 ### Phase 1: Foundation — Monorepo, Containers & Config
 
@@ -600,22 +612,22 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 ### Phase 3: Realtime Game Loop
 
 * Task 1: Room lifecycle (4/6 seats only), versioned intent/event protocol with sequence numbers, session-token reconnect snapshots, **role-scoped payload rendering** (the security-critical piece — built and reviewed first). `tools/gamebot` alongside — this phase's tests depend on it.
-* Task 2: The phase state machine: role assignment, role-blind constraint dealing, per-round blind play + attributed reveal, penalized pile draws, specialty resolution (Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle / attributed once-per-match Revote in the result window, with off-role uses rejected), timeout auto-discard, discussion with Quick Chat, Knowoff ballot + runoff + result window, elimination with role reveal and the early-end rule (votes remaining < uncaught Donowers), eliminated-spectator scoping, forfeit and unscored-match rules, match points with the zero floor, Ready/Poke.
+* Task 2: The phase state machine: role assignment, role-blind constraint dealing, per-round turn-based play (randomized per-round turn order, 15 s turns, immediate attributed reveals), penalized pile draws, specialty resolution (Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle / attributed once-per-match Revote in the result window, with off-role uses rejected), timeout auto-discard, discussion with Quick Chat, Knowoff ballot + runoff + result window, elimination with role reveal and the early-end rule (votes remaining < uncaught Donowers), eliminated-spectator scoping, forfeit and scored low-population ending after grace, match points with the zero floor, Ready/Poke.
 * Task 3: The Flutter screens and phase state against the live protocol, on native and PWA, including the Quick Chat bar.
-* Testing Criteria: scripted bot matches complete at both table sizes with forced mid-round disconnects/reconnects and no state corruption; **a protocol-level assertion proves no Donower or eliminated connection ever received a Nown id or URL in any phase**; a missed vote eliminates the Nower it names, whose later intents are rejected while their end-of-match points still pay out if they stay connected; a 6-player match with two missed votes auto-ends after the second Knowoff as a Donower win; a Revote in the result window nullifies the shown result and its survival credit; a second Shuffle or Revote in the same match — or any off-role use — is rejected; pile draws deduct `points.draw_penalty` each and a match's net points floor at 0, while a One More Free Card draw deducts nothing; disconnecting every uncaught Donower ends the match as a Nower forfeit win after exactly the grace period.
+* Testing Criteria: scripted bot matches complete at both table sizes with forced mid-round disconnects/reconnects and no state corruption; plays resolve strictly in the server's randomized turn order, an out-of-turn `play_card` intent is rejected, and the order re-randomizes every round; **a protocol-level assertion proves no Donower or eliminated connection ever received a Nown id or URL in any phase**; a missed vote eliminates the Nower it names, whose later intents are rejected while their end-of-match points still pay out if they stay connected; a 6-player match with two missed votes auto-ends after the second Knowoff as a Donower win; a Revote in the result window nullifies the shown result and its survival credit; a second Shuffle or Revote in the same match — or any off-role use — is rejected; pile draws deduct `points.draw_penalty` each and a match's net points floor at 0, while a One More Free Card draw deducts nothing; disconnecting every uncaught Donower ends the match as a Nower forfeit win after exactly the grace period.
 
 ### Phase 4: Accounts, Quick Play & Hardening
 
-* Task 1: Auth (JWT sessions) binding anonymous tokens to accounts; profiles and public stats; Quick Play FIFO queues per room size with reconnect-safe seat reservation; **backfill bots** (`server/internal/bots`) with labeling, seat-priority, and sunset scheduling; abandon cooldowns.
+* Task 1: Auth (JWT sessions) binding anonymous tokens to accounts, plus **Google Sign-In / Facebook Login** registration and account linking; profiles and public stats; Quick Play FIFO queues per room size with reconnect-safe seat reservation; **backfill bots** (`server/internal/bots`) with labeling, seat-priority, and sunset scheduling; abandon cooldowns.
 * Task 2: Harden the intent pipeline: rate limiting, deadline enforcement, protocol-boundary validation, structured audit logs to PostgreSQL as the analytics event stream; nightly jobs for public stats and the **Weekly Leaderboard** (Quick Play only, min-humans and daily-count guards, immutable weekly history).
-* Testing Criteria: a deliberately modified client (forged plays, late votes, replayed messages, Donower requesting Nown assets) alters nothing and triggers audit trails; a queue short of humans backfills with labeled bots after the timeout and never starts below `min_humans`; a `gamebot` load test sustains hundreds of concurrent rooms on one node with prefetch traffic against MinIO; leaderboard excludes sub-threshold backfilled matches and respects the daily counted cap.
+* Testing Criteria: a deliberately modified client (forged plays, late votes, replayed messages, Donower requesting Nown assets) alters nothing and triggers audit trails; a queue short of humans backfills with labeled bots after the timeout and never starts below `min_humans`; a `gamebot` load test sustains hundreds of concurrent rooms on one node with prefetch traffic against MinIO; leaderboard excludes sub-threshold backfilled matches and respects the daily counted cap; a Google or Facebook sign-in links an anonymous profile and restores its progress, Noin, and entitlements on a second device.
 
 ### Phase 5: Noin Economy, Admin & Launch Polish
 
-* Task 1: The `economy` module: Noin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Noin conversion** (100:1, one-way, cap-counted), premium time passes (1/3/7-day) with the Quick Play cap gate, Noin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
-* Task 2: Admin Console over Phases 4–5 endpoints (case queues, Guard-freeze reviews, pack dashboard, leaderboard ops, Daily Nown calendar, economy ledger); Daily Nown feed; the how-to-play clip once UI is final.
+* Task 1: The `economy` module: Noin wallet + append-only ledger, instant per-event play grants with the daily earn cap, Overall/Non-Converted Points accrual and the **points→Noin conversion** (100:1, one-way, cap-counted), premium time passes (1/3/7-day) with the Quick Play cap gate, the **Enthusiast Player subscription** (monthly/yearly via platform billing, yearly −20%, the sole ad-removal entitlement), Noin bulk IAP via platform billing, SSV rewarded post-match doubler, theme packs with Host Pass enforcement, Poke Styles and Custom Avatar unlocks.
+* Task 2: Admin Console over Phases 4–5 endpoints (case queues, Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, the system-notice composer with scheduled maintenance drain — 🎮 §4); the how-to-play clip once UI is final.
 * Task 3: Performance and launch passes: client paints on low-end devices, server allocation/GC under queue load, edge-cache hit rates on pack releases, **VPS migration runbook executed** (Infra §2), store review prep for the content policy (age-gated adult packs, UMP, age gate).
-* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; premium passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; takedowns propagate in the next pack version and invalidate correctly at the edge.
+* Testing Criteria: Noin grants land instantly and survive a mid-match disconnect; a points conversion debits Non-Converted Points and credits Noin atomically, is rejected below 100 points, never touches Overall Points, cannot be reversed, and counts toward the daily earn cap; a free account's 11th Quick Play match of the day is rejected at queue time while a local room still opens; premium passes expire on schedule and re-gate correctly; ad grants only via SSV; debits atomic with entitlements; a bot-heavy match under `noin_min_humans` grants no team-win Noin; ads persist for premium-pass holders and disappear entirely only under an active Enthusiast subscription, with the yearly price carrying the 20% discount; a scheduled maintenance window notifies at every checkpoint, blocks new matches at open, and lets running matches finish; takedowns propagate in the next pack version and invalidate correctly at the edge.
 
 ### Phase 6: Contributor Portal & Community
 
