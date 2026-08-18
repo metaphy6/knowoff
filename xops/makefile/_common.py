@@ -17,7 +17,7 @@ THIS_FILE = Path(__file__).resolve()
 REPO_ROOT = THIS_FILE.parents[2]  # xops/makefile/_common.py → repo root
 TRACKING_CSV = REPO_ROOT / "docs" / "tracking" / "tracking.csv"
 TRACKING_APPEND_SH = REPO_ROOT / "xops" / "agent" / "tracking_append.sh"
-ROADMAP_MD = REPO_ROOT / "docs" / "planning" / "ROADMAP.md"
+ROADMAP_MD = REPO_ROOT / "docs" / "planning" / "ROADMAP.md"  # the spec+roadmap monolith
 
 # ── color / emoji ────────────────────────────────────────────────────────
 _USE_COLOR = sys.stderr.isatty() and os.environ.get("NO_COLOR") is None

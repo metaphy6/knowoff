@@ -1,7 +1,7 @@
 # 📖 Glossary — Knowoff
 
 Domain terms used across this repo. The terminology is **normative**
-(locked rev 2026-08-17, [`BLUEPRINT.md`](../../BLUEPRINT.md)): game terms
+(locked rev 2026-08-17, [`docs/planning/ROADMAP.md`](../planning/ROADMAP.md)): game terms
 are written **without "the"** ("Nown appears", not "the Nown appears").
 Deprecated names must not reappear in new code, docs, or identifiers.
 
