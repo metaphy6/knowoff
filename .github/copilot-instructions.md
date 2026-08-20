@@ -53,6 +53,28 @@ with a new file at a different path.
    (required reading)** line — and when bullet text and a spec chapter
    disagree, the spec chapter wins.
 
+### 🧭 Roadmap execution contract
+
+The monolith has two deliberately different layers:
+
+1. The chapters before **🗺 Roadmap — Step-by-Step Implementation Lifecycle**
+   are the normative blueprint: product rules, architecture, protocol,
+   security, design, and operational requirements.
+2. The roadmap chapter is the implementation sequence: phase scope, ordered
+   checkboxes, proof tests, skills, and gates.
+
+For `/implement`, resolve work in this order: target phase and bullet scope,
+that phase's **Spec (required reading)** chapters, the phase's What/Why/How
+and Proof tests, then the ordered checkboxes. A checkbox never overrides the
+blueprint. If a checkbox is narrower than, or conflicts with, its required
+reading, implement the blueprint requirement and update the roadmap/spec in
+the same change rather than silently choosing the narrower interpretation.
+Read the required chapters before the first edit in each phase, keep the
+phase's proof tests as the acceptance contract, and tick a checkbox only after
+its implementation and proof are complete. Do not infer requirements from a
+bullet alone or invent per-bullet Goal/Test-plan sections that are not present
+in the monolith.
+
 ## 🤖 Custom agents
 
 | Agent | When | File |

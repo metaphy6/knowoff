@@ -9,5 +9,8 @@ work, and the only place where "phases" and `[ ]` bullets are authoritative.
   checkboxes. [`BLUEPRINT.md`](../../BLUEPRINT.md) is a pointer stub.
 
 Agents reading this folder: when implementing a phase, drain every `[ ]`
-bullet in that phase before handing back. See
+bullet in that phase before handing back. First read the phase's **Spec
+(required reading)** chapters in the monolith: those opening blueprint/spec
+chapters are normative, while the final roadmap chapter controls sequence,
+checkboxes, Proof tests, and gates. See
 [`phase-persistence`](../../.agents/skills/phase-persistence/SKILL.md).

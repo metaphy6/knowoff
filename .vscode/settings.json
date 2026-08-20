@@ -26,7 +26,8 @@
   "github.copilot.chat.promptFileContextProvider.enabled": true,
   "github.copilot.chat.codeGeneration.instructions": [
     { "file": "AGENTS.md" },
-    { "file": ".github/copilot-instructions.md" }
+    { "file": ".github/copilot-instructions.md" },
+    { "file": "docs/planning/ROADMAP.md" }
   ],
   "github.copilot.chat.testGeneration.instructions": [
     { "file": ".agents/skills/test-driven-development/SKILL.md" }
