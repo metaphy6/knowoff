@@ -35,10 +35,15 @@ scaffold — is next. See the status snapshot in the roadmap chapter of
 ```bash
 make doctor          # sanity-check the agent framework wiring
 make roadmap.status  # roadmap checkbox progress
+make server.build    # build the Go server
+make server.test     # run Go unit tests
+make server.lint     # gofmt + go vet
+make client.build    # Flutter Android + Web builds
+make client.test     # Flutter unit/widget tests
+make client.lint     # flutter analyze + dart format check
+make compose.up      # start the local Docker Compose stack
+make compose.down    # stop the local stack
 ```
-
-Build/test/run commands for the game itself land with Phase 1 and will be
-documented here.
 
 ## Repository layout
 

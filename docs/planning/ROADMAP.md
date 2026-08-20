@@ -618,8 +618,8 @@ chapter).
 | Phase | Items | Done | Status |
 |---|---|---|---|
 | 0 — Agent framework & project docs | — | — | ✅ landed (pre-roadmap) |
-| 1 — Foundation | 12 | 0 | 🟡 next up |
-| 2 — Media Engine & Pipeline | 9 | 0 | ⚪ planned |
+| 1 — Foundation | 12 | 12 | ✅ done |
+| 2 — Media Engine & Pipeline | 9 | 0 | 🟡 next up |
 | 3 — Realtime Game Loop | 18 | 0 | ⚪ planned |
 | 4 — Accounts, Quick Play & Hardening | 11 | 0 | ⚪ planned |
 | 5 — Noin Economy, Admin & Launch Polish | 12 | 0 | ⚪ planned |
@@ -741,18 +741,18 @@ every user-facing string transformed — one hardcoded string fails the
 gate. `make doctor` exits 0; CI is green including lint and the app-size
 budget.
 
-- [ ] Monorepo tree per 🏛️ taxonomy: `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/`; the three founding ADRs (server-authoritative over P2P, Flutter everywhere, home-server-first behind Cloudflare — 🧱) recorded in `docs/design/`.
-- [ ] `configs/`: `base.yaml` + `local/staging/prod.yaml` overlays and `gameplay/tuning.yaml` seeded with the spec's v1 values (⚙️ Tuning); every key documented in-file; secrets only ever as `${VAR}` references, never literals.
-- [ ] `server/internal/config`: layered-YAML loader → one typed struct, `${VAR}` secret interpolation, fail-fast validation listing **all** missing/invalid keys in one pass **and rejecting unknown keys** (an overlay typo must fail loudly, never silently default) — table-driven unit tests covering every negative path.
-- [ ] `server/cmd/knowoffd` skeleton: config load; structured JSON logging with per-connection ids; panic-recovery middleware (a handler panic never kills the process); graceful shutdown on SIGTERM (`/readyz` flips first, connections close cleanly); `/healthz`, `/readyz` (Postgres/Redis/storage checks — dependency loss degrades to not-ready, never a crash loop); Prometheus metrics (build info, connection + goroutine gauges) on a separate port.
-- [ ] Migration discipline in `server/migrations`: versioned up/down pairs run by an auto-migrations runner; a fresh database migrates to head and a re-run is a no-op — enforced in CI from the first migration onward.
-- [ ] `deploy/compose`: one-command stack — server (dev live-reload), Postgres + migrations runner, Redis, MinIO (bucket bootstrap only; the dev pack seed arrives with Phase 2's fixture packs), adminer, `cloudflared` under the `edge` profile; healthcheck-gated startup order; profiles `core`/`tools`/`test`/`edge`; named volumes `pg_data`/`redis_data`/`minio_data`.
-- [ ] Volume snapshot/restore drill, scripted next to the compose files: `pg_dump`, Redis RDB snapshot, `mc mirror` → restore onto fresh volumes with verified parity — the 📦 §2 migration runbook rehearsed before any data matters.
-- [ ] Flutter scaffold: `core/config` client config loader (server URL, feature flags) + `core/network` `GameTransport` abstraction and WebSocket implementation — connect / backoff-reconnect / clean-close contract tests plus an echo round-trip; builds for Android **and** Web PWA.
-- [ ] Localization foundation (Product Baseline): Flutter ARB/`intl` catalogs with locale negotiation and English-root fallback, ICU plurals + locale-aware number/date formatting, text-expansion-tolerant layout rules, supported-locale list in config (`configs/base.yaml → localization:`); the day-one wire rule — the server never sends display text, only stable ids/codes + parameters the client localizes; pseudo-locale CI gate failing on any hardcoded user-facing string.
-- [ ] `make` targets for build / test / lint of both stacks — `golangci-lint` + `gofmt` and `dart analyze` + `dart format` as gates — documented in `README.md`.
-- [ ] CI from day one (Product Baseline): lint + unit tests + client builds for Android, iOS, and Web + multi-arch server image per commit; app-size budget enforced in CI (packs stream, binaries stay lean).
-- [ ] Gate: Phase 1 proof tests pass on a clean tree.
+- [x] Monorepo tree per 🏛️ taxonomy: `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/`; the three founding ADRs (server-authoritative over P2P, Flutter everywhere, home-server-first behind Cloudflare — 🧱) recorded in `docs/design/`.
+- [x] `configs/`: `base.yaml` + `local/staging/prod.yaml` overlays and `gameplay/tuning.yaml` seeded with the spec's v1 values (⚙️ Tuning); every key documented in-file; secrets only ever as `${VAR}` references, never literals.
+- [x] `server/internal/config`: layered-YAML loader → one typed struct, `${VAR}` secret interpolation, fail-fast validation listing **all** missing/invalid keys in one pass **and rejecting unknown keys** (an overlay typo must fail loudly, never silently default) — table-driven unit tests covering every negative path.
+- [x] `server/cmd/knowoffd` skeleton: config load; structured JSON logging with per-connection ids; panic-recovery middleware (a handler panic never kills the process); graceful shutdown on SIGTERM (`/readyz` flips first, connections close cleanly); `/healthz`, `/readyz` (Postgres/Redis/storage checks — dependency loss degrades to not-ready, never a crash loop); Prometheus metrics (build info, connection + goroutine gauges) on a separate port.
+- [x] Migration discipline in `server/migrations`: versioned up/down pairs run by an auto-migrations runner; a fresh database migrates to head and a re-run is a no-op — enforced in CI from the first migration onward.
+- [x] `deploy/compose`: one-command stack — server (dev live-reload), Postgres + migrations runner, Redis, MinIO (bucket bootstrap only; the dev pack seed arrives with Phase 2's fixture packs), adminer, `cloudflared` under the `edge` profile; healthcheck-gated startup order; profiles `core`/`tools`/`test`/`edge`; named volumes `pg_data`/`redis_data`/`minio_data`.
+- [x] Volume snapshot/restore drill, scripted next to the compose files: `pg_dump`, Redis RDB snapshot, `mc mirror` → restore onto fresh volumes with verified parity — the 📦 §2 migration runbook rehearsed before any data matters.
+- [x] Flutter scaffold: `core/config` client config loader (server URL, feature flags) + `core/network` `GameTransport` abstraction and WebSocket implementation — connect / backoff-reconnect / clean-close contract tests plus an echo round-trip; builds for Android **and** Web PWA.
+- [x] Localization foundation (Product Baseline): Flutter ARB/`intl` catalogs with locale negotiation and English-root fallback, ICU plurals + locale-aware number/date formatting, text-expansion-tolerant layout rules, supported-locale list in config (`configs/base.yaml → localization:`); the day-one wire rule — the server never sends display text, only stable ids/codes + parameters the client localizes; pseudo-locale CI gate failing on any hardcoded user-facing string.
+- [x] `make` targets for build / test / lint of both stacks — `golangci-lint` + `gofmt` and `dart analyze` + `dart format` as gates — documented in `README.md`.
+- [x] CI from day one (Product Baseline): lint + unit tests + client builds for Android, iOS, and Web + multi-arch server image per commit; app-size budget enforced in CI (packs stream, binaries stay lean).
+- [x] Gate: Phase 1 proof tests pass on a clean tree.
 
 ---
 
