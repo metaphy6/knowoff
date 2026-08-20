@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: gofmt
+        run: |
+          cd server
+          test -z "$(gofmt -l .)" || (echo "gofmt issues:"; gofmt -l .; exit 1)
+      - name: go vet
+        run: cd server && go vet ./...
+      - name: go test
+        run: cd server && go test ./...
+      - name: build server image
+        run: cd server && docker build -t knowoffd:test .
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: flutter pub get
+        run: cd client && flutter pub get
+      - name: generate localizations
+        run: cd client && flutter gen-l10n
+      - name: flutter analyze
+        run: cd client && flutter analyze
+      - name: flutter format check
+        run: cd client && dart format --output=none --set-exit-if-changed .
+      - name: flutter test
+        run: cd client && flutter test
+      - name: build Android
+        run: cd client && flutter build apk --debug
+      - name: build Web
+        run: cd client && flutter build web
+      - name: build iOS
+        run: cd client && flutter build ios --no-codesign
+      - name: app size budget
+        run: |
+          cd client
+          APK_SIZE=$(stat -c%s build/app/outputs/flutter-apk/app-debug.apk)
+          echo "APK size: $APK_SIZE bytes"
+          # Phase 1 budget: debug APK under 50 MB; release budget will be tighter.
+          if [ "$APK_SIZE" -gt 52428800 ]; then
+            echo "APK exceeds 50 MB budget"
+            exit 1
+          fi
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compose config check
+        run: cd deploy/compose && docker compose --profile core config > /dev/null

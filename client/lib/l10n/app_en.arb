@@ -1,0 +1,28 @@
+{
+  "@@locale": "en",
+  "appTitle": "Knowoff",
+  "@appTitle": {
+    "description": "The app name shown in the launcher and window title."
+  },
+  "mainMenuPlay": "Play",
+  "@mainMenuPlay": {
+    "description": "Main menu button to enter Quick Play queue."
+  },
+  "mainMenuLocalRoom": "Local Room",
+  "@mainMenuLocalRoom": {
+    "description": "Main menu button to create or join a local room."
+  },
+  "lobbyWaitingForPlayers": "Waiting for players...",
+  "@lobbyWaitingForPlayers": {
+    "description": "Lobby status while seats are not full."
+  },
+  "playersCount": "{count, plural, =0{No players} =1{One player} other{{count} players}}",
+  "@playersCount": {
+    "description": "Player count label with ICU plural support.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

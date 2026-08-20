@@ -1,0 +1,19 @@
+# Staging overlay.
+
+app:
+  env: staging
+
+log:
+  level: debug
+  format: json
+
+server:
+  bind_addr: 0.0.0.0
+  port: 8080
+
+storage:
+  assets_url: https://cdn-staging.example.com/knowoff
+
+# External dev/test bots may connect only when this block is present.
+bots:
+  enabled: true

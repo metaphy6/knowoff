@@ -1,0 +1,90 @@
+# Base configuration for Knowoff.
+# Every key must have a sane default. Secrets are ${VAR} references only.
+# Environment overlays (local/staging/prod.yaml) override values; they must not introduce new keys unless base declares them.
+
+app:
+  name: knowoffd
+  version: 0.1.0
+  env: local  # overridden by overlay
+
+log:
+  level: info          # debug | info | warn | error
+  format: json         # json | text
+  add_caller: false
+
+server:
+  # Public game server
+  bind_addr: 0.0.0.0
+  port: 8080
+  read_timeout_s: 10
+  write_timeout_s: 10
+  idle_timeout_s: 120
+  # Admin / internal operations port (never exposed through public ingress)
+  admin_bind_addr: 127.0.0.1
+  admin_port: 9090
+  # Metrics port (separate from public traffic)
+  metrics_bind_addr: 0.0.0.0
+  metrics_port: 9091
+  # Graceful shutdown window
+  shutdown_grace_s: 15
+
+websocket:
+  max_message_bytes: 65536
+  pong_wait_s: 60
+  ping_period_s: 30
+  write_wait_s: 10
+
+protocol:
+  # Wire protocol version. Client and server negotiate this on connect.
+  version: 1
+
+localization:
+  default_locale: en
+  supported_locales:
+    - en
+  pseudo_locale_enabled: true  # CI gate uses pseudo-locale to catch hardcoded strings
+
+database:
+  driver: postgres
+  host: postgres
+  port: 5432
+  name: knowoff
+  user: knowoff
+  password: ${KNOWOFF_DB_PASSWORD}
+  ssl_mode: disable
+  max_open_conns: 25
+  max_idle_conns: 5
+  conn_max_lifetime_s: 1800
+
+redis:
+  addr: redis:6379
+  password: ${KNOWOFF_REDIS_PASSWORD}
+  db: 0
+  pool_size: 10
+
+storage:
+  driver: s3
+  endpoint: http://minio:9000
+  region: us-east-1
+  bucket: knowoff
+  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
+  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
+  use_path_style: true
+  assets_url: http://localhost:9000/knowoff
+
+media:
+  active_pack_tag: dev-placeholder
+  pack_check_interval_s: 60
+  signed_url_ttl_s: 300
+  # Local path for pack bundles during development. Overrides object storage when set.
+  local_bundle_path: ""
+
+security:
+  jwt_signing_key: ${KNOWOFF_JWT_KEY}
+  jwt_issuer: knowoff
+  jwt_audience: knowoff-players
+  access_token_ttl_m: 15
+  refresh_token_ttl_h: 168
+  bcrypt_cost: 10
+
+# Tunable gameplay constants live in gameplay/tuning.yaml and are merged under "tuning".

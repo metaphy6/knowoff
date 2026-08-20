@@ -26,7 +26,9 @@ TAG ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help git git.dry track.add track.list roadmap.status doctor scaffold skills.status skills.find test verify
+.PHONY: help git git.dry track.add track.list roadmap.status doctor scaffold skills.status skills.find test verify \
+  server.build server.test server.lint client.build client.test client.lint \
+  compose.up compose.down compose.snap.create compose.snap.restore
 
 ## help              List all available targets
 help:
@@ -71,11 +73,59 @@ skills.status:
 skills.find:
 	@TAG="$(TAG)" $(XOPS)/skills_ops.py find
 
-## test              Run the xops test suite
+## test              Run server and client unit tests
 test:
-	@bash xops/test/run_tests.sh
+	@$(MAKE) --no-print-directory server.test
+	@$(MAKE) --no-print-directory client.test
 
 ## verify            Verifier gate: full test suite + make doctor (run cold)
 verify:
 	@$(MAKE) --no-print-directory test
 	@$(MAKE) --no-print-directory doctor
+
+## server.build      Build the Go server binary
+server.build:
+	@cd server && go build ./cmd/knowoffd
+
+## server.test       Run all Go unit tests
+server.test:
+	@cd server && go test ./...
+
+## server.lint       Lint and format-check Go code (golangci-lint, fallback gofmt + go vet)
+server.lint:
+	@cd server && if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		test -z "$$(gofmt -l .)" || (echo "gofmt issues:"; gofmt -l .; exit 1); \
+		go vet ./...; \
+	fi
+
+## client.build      Build Flutter for Android and Web (CI also builds iOS)
+client.build:
+	@cd client && flutter build apk --debug
+	@cd client && flutter build web
+
+## client.test       Run Flutter unit/widget tests
+client.test:
+	@cd client && flutter test
+
+## client.lint       Run Flutter static analysis and format check
+client.lint:
+	@cd client && flutter analyze
+	@cd client && dart format --output=none --set-exit-if-changed .
+
+## compose.up        Start the local Docker Compose stack
+compose.up:
+	@cd deploy/compose && docker compose --profile core up --build -d
+
+## compose.down      Stop the local Docker Compose stack
+compose.down:
+	@cd deploy/compose && docker compose --profile core down
+
+## compose.snap.create <dir>  Snapshot running Compose volumes
+compose.snap.create:
+	@cd deploy/compose && ./snapshot.sh create "$(dir)"
+
+## compose.snap.restore <dir> Restore snapshot onto fresh Compose volumes
+compose.snap.restore:
+	@cd deploy/compose && ./snapshot.sh restore "$(dir)"
