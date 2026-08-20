@@ -92,8 +92,8 @@ func TestManager_RoomNodeAffinity(t *testing.T) {
 }
 
 func TestRoom_SessionTokenAndReconnect(t *testing.T) {
-	r := NewRoom("r1", "AAAAAA", 4, 0, testDeps())
-	seat, token, ok := r.ClaimSeat()
+	r := NewRoom("r1", "AAAAAA", 4, 0, false, testDeps())
+	seat, token, ok := r.ClaimSeat("", false)
 	if !ok || seat != 0 || token == "" {
 		t.Fatalf("unexpected claim result seat=%d token=%q ok=%v", seat, token, ok)
 	}
@@ -109,8 +109,8 @@ func TestRoom_SessionTokenAndReconnect(t *testing.T) {
 }
 
 func TestRoom_GraceExpiryMarksAbsent(t *testing.T) {
-	r := NewRoom("r1", "AAAAAA", 4, 0, testDeps())
-	seat, _, _ := r.ClaimSeat()
+	r := NewRoom("r1", "AAAAAA", 4, 0, false, testDeps())
+	seat, _, _ := r.ClaimSeat("", false)
 	r.SetConnection(seat, nil)
 
 	// Wait for the 1-second grace.

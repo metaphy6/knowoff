@@ -15,9 +15,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/knowoff/knowoff/server/internal/audit"
+	"github.com/knowoff/knowoff/server/internal/auth"
+	"github.com/knowoff/knowoff/server/internal/bots"
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/handler"
+	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
+	"github.com/knowoff/knowoff/server/internal/profile"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
 	"github.com/knowoff/knowoff/server/internal/workbench"
@@ -52,6 +58,9 @@ func run() error {
 	if len(os.Args) > 1 && os.Args[1] == "migrate" {
 		return runMigrations(cfg, logger)
 	}
+	if len(os.Args) > 1 && (os.Args[1] == "close-week" || os.Args[1] == "nightly") {
+		return closeWeek(cfg, logger)
+	}
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewBuildInfoCollector())
@@ -70,6 +79,26 @@ func run() error {
 		return fmt.Errorf("open database: %w", err)
 	}
 	defer db.Close()
+
+	authManager := auth.NewManager(db, []byte(cfg.Security.JWTSigningKey), cfg.Security.JWTIssuer, cfg.Security.JWTAudience,
+		time.Duration(cfg.Security.AccessTokenTTLM)*time.Minute,
+		time.Duration(cfg.Security.RefreshTokenTTLH)*time.Hour,
+		auth.OAuthProviders{
+			Google: auth.OAuthProviderConfig{
+				ClientID:     cfg.Security.OAuth.Google.ClientID,
+				ClientSecret: cfg.Security.OAuth.Google.ClientSecret,
+				RedirectURL:  cfg.Security.OAuth.Google.RedirectURL,
+			},
+			Facebook: auth.OAuthProviderConfig{
+				ClientID:     cfg.Security.OAuth.Facebook.ClientID,
+				ClientSecret: cfg.Security.OAuth.Facebook.ClientSecret,
+				RedirectURL:  cfg.Security.OAuth.Facebook.RedirectURL,
+			},
+		})
+	profileManager := profile.NewManager(db, cfg.Tuning.Progression)
+	auditLogger := audit.NewLogger(db)
+	leaderboardManager := leaderboard.NewManager(db)
+	economyManager := economy.NewManager(db, cfg)
 
 	mediaManager := media.NewManager(nil)
 	if cfg.Media.LocalBundlePath != "" {
@@ -93,6 +122,11 @@ func run() error {
 		AssetBaseURL: cfg.Storage.AssetsURL,
 		Redis:        redisClient,
 		NodeID:       cfg.App.Name + "-" + cfg.App.Version + "-" + fmt.Sprintf("%d", time.Now().Unix()),
+		Auth:         authManager,
+		Profile:      profileManager,
+		Audit:        auditLogger,
+		Leaderboard:  leaderboardManager,
+		Economy:      economyManager,
 	})
 
 	deps := transport.Deps{
@@ -110,7 +144,18 @@ func run() error {
 		Logger:      logger,
 		Lobby:       lobbyManager,
 		Connections: connections,
+		Auth:        authManager,
+		Profile:     profileManager,
+		Audit:       auditLogger,
+		Leaderboard: leaderboardManager,
+		Redis:       redisClient,
 	}
+
+	backfillManager := bots.NewBackfillManager(bots.Deps{
+		Config: cfg,
+		Logger: logger,
+		Lobby:  lobbyManager,
+	})
 
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
@@ -118,6 +163,8 @@ func run() error {
 	publicMux.HandleFunc("/ws", handler.RealtimeHandler(handlerDeps))
 	publicBaseURL := fmt.Sprintf("http://%s:%d", cfg.Server.BindAddr, cfg.Server.Port)
 	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
+	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager})
+	handler.RegisterProfileRoutes(publicMux, handler.ProfileDeps{Profile: profileManager, Leaderboard: leaderboardManager}, authManager)
 
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
@@ -160,6 +207,11 @@ func run() error {
 	go func() { errCh <- metricsServer.ListenAndServe() }()
 
 	transport.SetReady(true)
+	runCtx, runCancel := context.WithCancel(context.Background())
+	defer runCancel()
+	go runHealthWatcher(runCtx, deps, lobbyManager, logger)
+	backfillManager.Start(runCtx)
+	defer backfillManager.Stop()
 
 	logger.Info("server started",
 		"public", publicServer.Addr,
@@ -182,6 +234,8 @@ func run() error {
 
 	// Flip readiness off before draining so load balancers stop sending traffic.
 	transport.SetReady(false)
+	lobbyManager.SetReady(false)
+	runCancel()
 	logger.Info("readiness disabled, draining connections")
 	// Brief pause so a probe can observe the 503 before listeners close.
 	time.Sleep(1 * time.Second)
@@ -200,6 +254,24 @@ func run() error {
 	}
 
 	logger.Info("server stopped")
+	return nil
+}
+
+func closeWeek(cfg *config.Config, logger *slog.Logger) error {
+	logger.Info("closing weekly leaderboard")
+	db, err := openDB(cfg)
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer db.Close()
+	m := leaderboard.NewManager(db)
+	weekID := leaderboard.WeekID(time.Now().UTC().Add(-7 * 24 * time.Hour))
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	if _, err := m.CloseWeek(ctx, weekID); err != nil {
+		return fmt.Errorf("close week %s: %w", weekID, err)
+	}
+	logger.Info("weekly leaderboard closed", "week_id", weekID)
 	return nil
 }
 
@@ -310,6 +382,41 @@ func storagePingFunc(cfg *config.Config) func(context.Context) error {
 			return fmt.Errorf("storage unhealthy: %d", resp.StatusCode)
 		}
 		return nil
+	}
+}
+
+func runHealthWatcher(ctx context.Context, deps transport.Deps, lobby *lobby.Manager, logger *slog.Logger) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		ok := true
+		if deps.DB != nil {
+			if err := deps.DB.PingContext(checkCtx); err != nil {
+				logger.Warn("dependency degraded", "dependency", "postgres", "error", err)
+				ok = false
+			}
+		}
+		if ok && deps.RedisPing != nil {
+			if err := deps.RedisPing(checkCtx); err != nil {
+				logger.Warn("dependency degraded", "dependency", "redis", "error", err)
+				ok = false
+			}
+		}
+		if ok && deps.StoragePing != nil {
+			if err := deps.StoragePing(checkCtx); err != nil {
+				logger.Warn("dependency degraded", "dependency", "storage", "error", err)
+				ok = false
+			}
+		}
+		cancel()
+		transport.SetReady(ok)
+		lobby.SetReady(ok)
 	}
 }
 

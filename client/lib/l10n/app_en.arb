@@ -173,5 +173,69 @@
   "emptyHand": "Your hand is empty.",
   "@emptyHand": {
     "description": "Placeholder when the player has no cards."
+  },
+  "mainMenuProfile": "Profile",
+  "@mainMenuProfile": {
+    "description": "Main menu button to open the profile screen."
+  },
+  "mainMenuLeaderboard": "Leaderboard",
+  "@mainMenuLeaderboard": {
+    "description": "Main menu button to open the leaderboard screen."
+  },
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "Profile screen title."
+  },
+  "profileNickname": "Nickname",
+  "@profileNickname": {
+    "description": "Profile nickname label."
+  },
+  "profileLevel": "Level",
+  "@profileLevel": {
+    "description": "Profile level label."
+  },
+  "profileXP": "XP",
+  "@profileXP": {
+    "description": "Profile XP label."
+  },
+  "profileOverallPoints": "Overall Points",
+  "@profileOverallPoints": {
+    "description": "Profile overall points label."
+  },
+  "profileNonConvertedPoints": "Non-Converted Points",
+  "@profileNonConvertedPoints": {
+    "description": "Profile non-converted points label."
+  },
+  "profileMatchesPlayed": "Matches Played",
+  "@profileMatchesPlayed": {
+    "description": "Profile matches played label."
+  },
+  "profileMatchesWonNower": "Nower Wins",
+  "@profileMatchesWonNower": {
+    "description": "Profile Nower wins label."
+  },
+  "profileMatchesWonDonower": "Donower Wins",
+  "@profileMatchesWonDonower": {
+    "description": "Profile Donower wins label."
+  },
+  "profileCorrectVotes": "Correct Votes",
+  "@profileCorrectVotes": {
+    "description": "Profile correct votes label."
+  },
+  "leaderboardTitle": "Leaderboard",
+  "@leaderboardTitle": {
+    "description": "Leaderboard screen title."
+  },
+  "leaderboardYourRank": "Your rank",
+  "@leaderboardYourRank": {
+    "description": "Leaderboard own rank header."
+  },
+  "genericError": "Something went wrong.",
+  "@genericError": {
+    "description": "Generic error message."
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retry action label."
   }
 }

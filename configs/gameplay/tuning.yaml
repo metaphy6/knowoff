@@ -76,3 +76,19 @@ portal:
   min_account_level_to_apply: 2
   submissions_per_contributor_per_day: 10
   guard_freeze_max_h: 48
+
+progression:                        # XP and account levels (Profiles §2)
+  xp_base: 10                       # base XP for completing a match
+  xp_per_correct_vote: 5            # additional XP per correct vote
+  xp_win_bonus: 20                  # additional XP for winning the match
+  level_thresholds:                 # cumulative XP required for each level; level = highest threshold met + 1
+    - 0
+    - 50
+    - 120
+    - 220
+    - 360
+    - 540
+    - 760
+    - 1020
+    - 1340
+    - 1720

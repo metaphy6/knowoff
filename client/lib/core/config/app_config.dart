@@ -1,0 +1,25 @@
+import '../../data/auth_service.dart';
+import 'client_config.dart';
+
+/// Global application configuration and services.
+class AppConfig {
+  AppConfig._(this.clientConfig) : authService = AuthService(baseUrl: clientConfig.serverUrl);
+
+  static AppConfig? _instance;
+
+  /// Initializes the global config. If [config] is omitted it is loaded.
+  static Future<AppConfig> initialize([ClientConfig? config]) async {
+    final cfg = config ?? await ClientConfig.load();
+    _instance = AppConfig._(cfg);
+    await _instance!.authService.ensureSession();
+    return _instance!;
+  }
+
+  static AppConfig get instance => _instance ?? AppConfig._(ClientConfig.defaultConfig());
+
+  final ClientConfig clientConfig;
+  final AuthService authService;
+
+  String get serverUrl => clientConfig.serverUrl;
+  String get websocketUrl => clientConfig.websocketUrl;
+}

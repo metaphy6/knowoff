@@ -10,8 +10,13 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/knowoff/knowoff/server/internal/audit"
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
+	"github.com/knowoff/knowoff/server/internal/profile"
+	"github.com/knowoff/knowoff/server/internal/ratelimit"
 	"github.com/knowoff/knowoff/server/internal/transport"
 )
 
@@ -24,9 +29,17 @@ type ConnectionState struct {
 	Conn         *websocket.Conn
 	Room         *lobby.Room
 	Seat         int
+	AccountID    string
+	accessToken  string
 	sessionToken string
 	Lobby        *lobby.Manager
 	Logger       *slog.Logger
+	Auth         *auth.Manager
+	Audit        *audit.Logger
+	Redis        interface {
+		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
+	}
+	rateLimiter  *ratelimit.Limiter
 }
 
 // HandlerDeps bundles dependencies for the realtime WebSocket handler.
@@ -35,6 +48,13 @@ type HandlerDeps struct {
 	Logger      *slog.Logger
 	Lobby       *lobby.Manager
 	Connections interface{}
+	Auth        *auth.Manager
+	Profile     *profile.Manager
+	Audit       *audit.Logger
+	Leaderboard *leaderboard.Manager
+	Redis       interface {
+		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
+	}
 }
 
 // RealtimeHandler upgrades HTTP requests to WebSockets and routes Knowoff
@@ -58,10 +78,15 @@ func RealtimeHandler(deps HandlerDeps) http.HandlerFunc {
 			defer g.Dec()
 		}
 
+		limiter := ratelimit.New(float64(deps.Config.RateLimit.MaxIntentsPerSecond), float64(deps.Config.RateLimit.MaxIntentsBurst))
 		state := &ConnectionState{
-			Conn:   conn,
-			Lobby:  deps.Lobby,
-			Logger: logger,
+			Conn:        conn,
+			Lobby:       deps.Lobby,
+			Logger:      logger,
+			Auth:        deps.Auth,
+			Audit:       deps.Audit,
+			Redis:       deps.Redis,
+			rateLimiter: limiter,
 		}
 		defer state.Close()
 
@@ -90,11 +115,21 @@ func (s *ConnectionState) run(ctx context.Context) error {
 		return s.reject("join_failed", err.Error())
 	}
 
-	// Main read loop.
+	// Main read loop. Periodically re-validate the access token so bans and
+	// revocations drop live connections within seconds.
+	revalidate := time.NewTicker(5 * time.Second)
+	defer revalidate.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case <-revalidate.C:
+			if s.accessToken != "" && s.Auth != nil {
+				if _, err := s.Auth.ValidateAccessToken(ctx, s.accessToken); err != nil {
+					_ = s.sendError("token_revoked", "session invalidated")
+					return fmt.Errorf("token revoked")
+				}
+			}
 		default:
 		}
 
@@ -102,12 +137,28 @@ func (s *ConnectionState) run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		if s.rateLimiter != nil && s.Config().RateLimit.Enabled && !s.rateLimiter.Allow() {
+			_ = s.sendError("rate_limited", "too many intents")
+			s.Audit.LogWithAccount(ctx, audit.EventIntentRejected, uuidToAccount(s.AccountID), s.RoomID(), "", map[string]any{"reason": "rate_limited"})
+			continue
+		}
+		if s.Redis != nil && s.Config().RateLimit.Enabled {
+			allowed, err := s.Redis.AllowIntent(ctx, s.AccountID, time.Second, s.Config().RateLimit.MaxIntentsPerSecond)
+			if err != nil {
+				s.Logger.Warn("redis rate limit check failed", "error", err)
+			} else if !allowed {
+				_ = s.sendError("rate_limited", "too many intents")
+				s.Audit.LogWithAccount(ctx, audit.EventIntentRejected, uuidToAccount(s.AccountID), s.RoomID(), "", map[string]any{"reason": "account_rate_limited"})
+				continue
+			}
+		}
 		if !transport.IntentIsPhase3(env.Kind) {
 			_ = s.sendError("expected_intent", "only intents accepted after join")
 			continue
 		}
 		if err := s.handleIntent(env); err != nil {
 			_ = s.sendError("rejected", err.Error())
+			s.Audit.LogWithAccount(ctx, audit.EventIntentRejected, uuidToAccount(s.AccountID), s.RoomID(), "", map[string]any{"reason": err.Error(), "intent": env.Kind})
 		}
 	}
 }
@@ -117,10 +168,24 @@ func (s *ConnectionState) readEnvelope() (*transport.Envelope, error) {
 	if err != nil {
 		return nil, err
 	}
-	return transport.DecodeEnvelope(data, 0)
+	return transport.DecodeEnvelope(data, s.Config().RateLimit.MaxBytesPerFrame)
+}
+
+// Config returns the server config from the lobby manager.
+func (s *ConnectionState) Config() *config.Config {
+	return s.Lobby.Config()
 }
 
 func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
+	if s.Auth != nil {
+		if at, _ := env.Payload["access_token"].(string); at != "" {
+			accountID, err := s.Auth.ValidateAccessToken(context.Background(), at)
+			if err == nil {
+				s.AccountID = accountID
+				s.accessToken = at
+			}
+		}
+	}
 	switch env.Kind {
 	case transport.IntentJoinRoom:
 		code, _ := env.Payload["code"].(string)
@@ -139,7 +204,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 			}
 			token = room.SessionToken(seat)
 		} else {
-			seat, token, ok = room.ClaimSeat()
+			seat, token, ok = room.ClaimSeat(s.AccountID, false)
 			if !ok {
 				return fmt.Errorf("room full")
 			}
@@ -155,7 +220,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 	case transport.IntentQueueQuickPlay:
 		sizeF, _ := env.Payload["size"].(float64)
 		size := int(sizeF)
-		queueID, assigned, err := s.Lobby.QueueQuickPlay(size)
+		queueID, assigned, err := s.Lobby.QueueQuickPlay(size, s.AccountID)
 		if err != nil {
 			return err
 		}
@@ -220,4 +285,21 @@ func (s *ConnectionState) Close() {
 	if s.Conn != nil {
 		_ = s.Conn.Close()
 	}
+}
+
+func (s *ConnectionState) RoomID() string {
+	if s.Room == nil {
+		return ""
+	}
+	return s.Room.ID
+}
+
+func uuidToAccount(s string) uuid.UUID {
+	if s == "" {
+		return uuid.UUID{}
+	}
+	if id, err := uuid.Parse(s); err == nil {
+		return id
+	}
+	return uuid.UUID{}
 }
