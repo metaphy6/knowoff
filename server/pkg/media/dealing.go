@@ -243,6 +243,26 @@ func DealFeasible(d *Dealer, tableSize int, nownIDs []string, rounds int, seed i
 	return success, total, nil
 }
 
+// MediaByID returns a Nown by id from the pack, or nil if absent.
+func (p *Pack) MediaByID(id string) *MediaItem {
+	for _, n := range p.Media {
+		if n.ID == id {
+			return n
+		}
+	}
+	return nil
+}
+
+// CardByID returns a card by id from the pack, or nil if absent.
+func (p *Pack) CardByID(id string) *CardItem {
+	for _, c := range p.Cards {
+		if c.ID == id {
+			return c
+		}
+	}
+	return nil
+}
+
 // CardReachable returns true if every card appears in at least one band list.
 func CardReachable(pack *Pack) ([]string, bool) {
 	reachable := map[string]bool{}

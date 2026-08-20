@@ -29,7 +29,7 @@ class ClientConfig {
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return ClientConfig.fromJson(json);
     } on Exception {
-      return _defaultConfig();
+      return defaultConfig();
     }
   }
 
@@ -46,7 +46,7 @@ class ClientConfig {
     );
   }
 
-  static ClientConfig _defaultConfig() => const ClientConfig(
+  static ClientConfig defaultConfig() => const ClientConfig(
         serverUrl: 'http://localhost:8080',
         websocketUrl: 'ws://localhost:8080/ws',
         protocolVersion: 1,

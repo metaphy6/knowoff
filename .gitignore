@@ -21,6 +21,7 @@ docs/tracking/state/*
 # Go
 server/knowoffd
 server/tmp/
+tools/gamebot/gamebot
 *.exe
 
 # Flutter / Dart

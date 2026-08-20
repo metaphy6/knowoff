@@ -24,5 +24,154 @@
         "type": "int"
       }
     }
+  },
+  "queueTitle": "Quick Play",
+  "@queueTitle": {
+    "description": "Queue screen title."
+  },
+  "findingMatch": "Finding a match...",
+  "@findingMatch": {
+    "description": "Queue status label."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel action label."
+  },
+  "lobbyTitle": "Lobby",
+  "@lobbyTitle": {
+    "description": "Lobby screen title."
+  },
+  "lobbyCodeLabel": "Room code",
+  "@lobbyCodeLabel": {
+    "description": "Label for the room join code."
+  },
+  "lobbyQRHint": "Scan the QR code or share the room code.",
+  "@lobbyQRHint": {
+    "description": "Hint shown below the QR code."
+  },
+  "roundTitle": "Round",
+  "@roundTitle": {
+    "description": "Round screen title."
+  },
+  "discussionTitle": "Discussion",
+  "@discussionTitle": {
+    "description": "Discussion screen title."
+  },
+  "knowoffTitle": "Knowoff",
+  "@knowoffTitle": {
+    "description": "Voting screen title."
+  },
+  "verdictTitle": "Verdict",
+  "@verdictTitle": {
+    "description": "Match verdict screen title."
+  },
+  "readyLabel": "Ready",
+  "@readyLabel": {
+    "description": "Ready button label."
+  },
+  "pokeLabel": "Poke",
+  "@pokeLabel": {
+    "description": "Poke action label."
+  },
+  "voteLabel": "Vote",
+  "@voteLabel": {
+    "description": "Vote action label."
+  },
+  "youLabel": "You",
+  "@youLabel": {
+    "description": "Label marking the local player."
+  },
+  "roleNower": "Nower",
+  "@roleNower": {
+    "description": "Nower role name."
+  },
+  "roleDonower": "Donower",
+  "@roleDonower": {
+    "description": "Donower role name."
+  },
+  "eliminatedLabel": "Eliminated",
+  "@eliminatedLabel": {
+    "description": "Eliminated player label."
+  },
+  "yourTurn": "Your turn",
+  "@yourTurn": {
+    "description": "Label shown when it is the local player's turn."
+  },
+  "playCard": "Play card",
+  "@playCard": {
+    "description": "Button label to play a card."
+  },
+  "drawCards": "Draw",
+  "@drawCards": {
+    "description": "Button label to draw cards."
+  },
+  "passTurn": "Pass",
+  "@passTurn": {
+    "description": "Button label to pass the turn."
+  },
+  "discussionPrompt": "Argue. Accuse. Bluff.",
+  "@discussionPrompt": {
+    "description": "Prompt shown during discussion."
+  },
+  "voteFor": "Vote for {name}",
+  "@voteFor": {
+    "description": "Accessibility label for a vote button.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "waitingForVotes": "Waiting for votes...",
+  "@waitingForVotes": {
+    "description": "Label shown while votes are being cast."
+  },
+  "nowerWin": "Nowers win",
+  "@nowerWin": {
+    "description": "Verdict headline when Nowers win."
+  },
+  "donowerWin": "Donowers win",
+  "@donowerWin": {
+    "description": "Verdict headline when Donowers win."
+  },
+  "quickChatSuspect": "I suspect you",
+  "@quickChatSuspect": {
+    "description": "Canned chat phrase."
+  },
+  "quickChatFit": "My card fits",
+  "@quickChatFit": {
+    "description": "Canned chat phrase."
+  },
+  "quickChatWeird": "That was weird",
+  "@quickChatWeird": {
+    "description": "Canned chat phrase."
+  },
+  "quickChatTrust": "Trust me",
+  "@quickChatTrust": {
+    "description": "Canned chat phrase."
+  },
+  "quickChatNotMe": "Not me",
+  "@quickChatNotMe": {
+    "description": "Canned chat phrase."
+  },
+  "quickChatLaugh": "Ha!",
+  "@quickChatLaugh": {
+    "description": "Canned chat reaction."
+  },
+  "pressAndHoldRole": "Press and hold to check your role",
+  "@pressAndHoldRole": {
+    "description": "Hint on the role card."
+  },
+  "donowerPlaceholder": "You cannot see this Nown.",
+  "@donowerPlaceholder": {
+    "description": "Placeholder prompt shown to Donowers."
+  },
+  "emptyTable": "No cards played yet.",
+  "@emptyTable": {
+    "description": "Placeholder when the table has no cards."
+  },
+  "emptyHand": "Your hand is empty.",
+  "@emptyHand": {
+    "description": "Placeholder when the player has no cards."
   }
 }
