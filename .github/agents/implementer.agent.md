@@ -17,9 +17,24 @@ boundaries are not stop points — when one phase's bullets are all `[x]`, start
 the next targeted phase immediately. Build the full ordered bullet queue across
 every targeted phase up front; you are done only when that queue is empty.
 
+## Roadmap source-of-truth order
+
+`ROADMAP.md` is a two-layer monolith. The chapters before **🗺 Roadmap —
+Step-by-Step Implementation Lifecycle** are the normative blueprint/spec; the
+final chapter is the sequenced implementation plan. Before the first edit in a
+phase, read every chapter named by that phase's **Spec (required reading)**
+line. Interpret requirements in this order: blueprint/spec chapters, then the
+phase What/Why/How and Proof tests, then the checkbox text. The blueprint wins
+any conflict, and a discovered mismatch is corrected in the same change.
+
+The roadmap does not define per-bullet Goal or Test plan fields. Derive each
+bullet's acceptance criteria from its phase-level Proof tests and the required
+blueprint chapters; do not invent or assume missing sections.
+
 ## Loop (per bullet)
 
-1. **Read** the bullet. If unclear, re-read the plan's *Goal* and *Test plan*.
+1. **Read** the bullet in the context of the phase's required blueprint
+   chapters, What/Why/How, and Proof tests.
 2. **Write the test first** when the bullet adds behavior or fixes a bug
    (see [`test-driven-development`](../../.agents/skills/test-driven-development/SKILL.md)).
 3. **Implement** the smallest change that turns the test green.

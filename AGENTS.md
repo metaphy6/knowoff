@@ -51,6 +51,17 @@ Search the workspace with the appropriate tool **before** creating a new
 file. Recreating an existing config under a slightly different path is a
 recurring failure mode and is forbidden.
 
+### Roadmap source of truth
+
+[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) is a two-layer
+monolith. The chapters before **🗺 Roadmap — Step-by-Step Implementation
+Lifecycle** are the normative blueprint/specification; the final chapter is
+the sequenced implementation plan with checkboxes, Proof tests, and gates.
+For roadmap work, read each phase's **Spec (required reading)** chapters
+before its first edit, then use the phase's What/Why/How, Proof tests, and
+ordered checkboxes. The blueprint wins any conflict, and discovered drift is
+corrected in the same change.
+
 ---
 
 ## 2. 📝 Mandatory tracking + staging — humans push via `make git`
