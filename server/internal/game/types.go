@@ -32,11 +32,11 @@ const (
 
 // Specialty card identifiers.
 const (
-	SpecialtyPass          = "pass"
-	SpecialtyReveal        = "reveal"
-	SpecialtyOneMore       = "one_more_free_card"
-	SpecialtyShuffle       = "shuffle"
-	SpecialtyRevote        = "revote"
+	SpecialtyPass    = "pass"
+	SpecialtyReveal  = "reveal"
+	SpecialtyOneMore = "one_more_free_card"
+	SpecialtyShuffle = "shuffle"
+	SpecialtyRevote  = "revote"
 )
 
 // PlayerHand holds the cards dealt to one seat.
@@ -84,11 +84,31 @@ type Broadcaster interface {
 	BroadcastPerSeat(fn func(seat int) *transport.Envelope)
 }
 
+// MatchResult is the durable outcome of a finished match.
+type MatchResult struct {
+	Winner  Role
+	Players []PlayerResult
+}
+
+// PlayerResult is the durable outcome for one seat.
+type PlayerResult struct {
+	Seat        int
+	Role        Role
+	MatchPoints int
+	CorrectVote bool
+	Eliminated  bool
+	Absent      bool
+}
+
+// MatchFinishCallback is invoked once when a match reaches verdict.
+type MatchFinishCallback func(winner Role, result MatchResult)
+
 // Dependencies bundles the external services a Match needs.
 type Dependencies struct {
 	Config   *config.Config
 	Pack     *media.Pack
 	Renderer *PayloadRenderer
+	OnFinish MatchFinishCallback
 }
 
 // MatchOption customises Match construction.
@@ -118,10 +138,10 @@ type Play struct {
 
 // IntentRecord is one intent processed by the match, used for replay and audit.
 type IntentRecord struct {
-	Seat    int                    `json:"seat"`
-	Kind    string                 `json:"kind"`
-	Payload map[string]any         `json:"payload"`
-	At      int64                  `json:"at"` // monotonic tick or unix nano
+	Seat    int            `json:"seat"`
+	Kind    string         `json:"kind"`
+	Payload map[string]any `json:"payload"`
+	At      int64          `json:"at"` // monotonic tick or unix nano
 }
 
 // ensureRand returns a non-nil RNG. It is used by constructors that may be

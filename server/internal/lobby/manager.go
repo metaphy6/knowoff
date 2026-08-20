@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/game"
 )
 
@@ -19,17 +21,31 @@ const roomMappingTTL = 24 * time.Hour
 type Manager struct {
 	deps Deps
 
-	mu     sync.RWMutex
-	rooms  map[string]*Room   // by Room.ID
-	codes  map[string]*Room   // by short join code
-	queues map[int][]*queueEntry // size -> FIFO entries
+	mu      sync.RWMutex
+	rooms   map[string]*Room      // by Room.ID
+	codes   map[string]*Room      // by short join code
+	queues  map[int][]*queueEntry // size -> FIFO entries
+	ready   atomic.Bool
+}
+
+// Config returns the server configuration.
+func (m *Manager) Config() *config.Config { return m.deps.Config }
+
+// SetReady pauses or resumes matchmaking.
+func (m *Manager) SetReady(v bool) {
+	m.ready.Store(v)
+}
+
+func (m *Manager) matchmakingReady() bool {
+	return m.ready.Load()
 }
 
 type queueEntry struct {
-	id       string
-	size     int
-	joinedAt time.Time
-	assigned chan QueueAssignment
+	id        string
+	size      int
+	accountID string
+	joinedAt  time.Time
+	assigned  chan QueueAssignment
 }
 
 // QueueAssignment is the result sent to a queued player when a room is ready.
@@ -41,22 +57,31 @@ type QueueAssignment struct {
 
 // NewManager returns an empty lobby manager.
 func NewManager(deps Deps) *Manager {
-	return &Manager{
+	m := &Manager{
 		deps:   deps,
 		rooms:  make(map[string]*Room),
 		codes:  make(map[string]*Room),
 		queues: make(map[int][]*queueEntry),
 	}
+	m.ready.Store(true)
+	return m
 }
 
 // CreateRoom makes a new local/private room and returns it.
 func (m *Manager) CreateRoom(size int) (*Room, error) {
+	if !m.matchmakingReady() {
+		return nil, fmt.Errorf("matchmaking paused")
+	}
 	if size != 4 && size != 6 {
 		return nil, fmt.Errorf("invalid room size %d", size)
 	}
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.makeRoomLocked(size)
+	r, err := m.makeRoomLocked(size)
+	if r != nil {
+		r.QuickPlay = false
+	}
+	return r, err
 }
 
 // RoomByCode looks up a room by its short join code.
@@ -99,15 +124,31 @@ func (m *Manager) destroyRoomLocked(id string) {
 // QueueQuickPlay adds a player to the FIFO queue for the requested size.
 // It returns a queue id and a channel that receives the room assignment when
 // enough humans are available.
-func (m *Manager) QueueQuickPlay(size int) (string, <-chan QueueAssignment, error) {
+func (m *Manager) QueueQuickPlay(size int, accountID string) (string, <-chan QueueAssignment, error) {
+	if !m.matchmakingReady() {
+		return "", nil, fmt.Errorf("matchmaking paused")
+	}
 	if size != 4 && size != 6 {
 		return "", nil, fmt.Errorf("invalid room size %d", size)
 	}
+	if m.deps.Economy != nil {
+		ok, err := m.deps.Economy.CanQueueQuickPlay(context.Background(), accountID)
+		if err != nil {
+			return "", nil, fmt.Errorf("quickplay eligibility: %w", err)
+		}
+		if !ok {
+			return "", nil, fmt.Errorf("daily quickplay limit reached")
+		}
+		if err := m.deps.Economy.CheckCooldown(context.Background(), accountID); err != nil {
+			return "", nil, err
+		}
+	}
 	entry := &queueEntry{
-		id:       uuid.NewString(),
-		size:     size,
-		joinedAt: time.Now(),
-		assigned: make(chan QueueAssignment, 1),
+		id:        uuid.NewString(),
+		size:      size,
+		accountID: accountID,
+		joinedAt:  time.Now(),
+		assigned:  make(chan QueueAssignment, 1),
 	}
 	m.mu.Lock()
 	m.queues[size] = append(m.queues[size], entry)
@@ -131,8 +172,8 @@ func (m *Manager) RemoveFromQueue(queueID string) {
 	}
 }
 
-// ProcessQueue matches waiting players into rooms. For Phase 3 it fills rooms
-// with humans only; bot backfill is a Phase 4 concern.
+// ProcessQueue matches waiting players into rooms. It fills rooms with humans
+// only; backfill is handled separately by ProcessBackfill.
 func (m *Manager) ProcessQueue(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -146,9 +187,54 @@ func (m *Manager) ProcessQueue(ctx context.Context) {
 			for i := 0; i < size; i++ {
 				entry := m.queues[size][0]
 				m.queues[size] = m.queues[size][1:]
-			seat, token, _ := r.ClaimSeat()
-			entry.assigned <- QueueAssignment{Room: r, Seat: seat, SessionToken: token}
+				seat, token, _ := r.ClaimSeat(entry.accountID, false)
+				entry.assigned <- QueueAssignment{Room: r, Seat: seat, SessionToken: token}
 			}
+		}
+	}
+}
+
+// ProcessBackfill tops up Quick Play queues with labeled bots once the oldest
+// human entry has waited past queue_timeout_s and at least min_humans humans
+// are present. It never starts a room below min_humans.
+func (m *Manager) ProcessBackfill(ctx context.Context) {
+	if !m.deps.Config.Tuning.Liquidity.BackfillEnabled {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	timeout := time.Duration(m.deps.Config.Tuning.Liquidity.QueueTimeoutS) * time.Second
+	minHumans := m.deps.Config.Tuning.Liquidity.MinHumans
+	if minHumans <= 0 {
+		minHumans = 1
+	}
+
+	for size := range m.queues {
+		for len(m.queues[size]) > 0 {
+			oldest := m.queues[size][0].joinedAt
+			if time.Since(oldest) < timeout {
+				break
+			}
+			humans := len(m.queues[size])
+			if humans < minHumans || humans >= size {
+				break
+			}
+			bots := size - humans
+			r, err := m.makeRoomLocked(size)
+			if err != nil {
+				return
+			}
+			for i := 0; i < humans; i++ {
+				entry := m.queues[size][0]
+				m.queues[size] = m.queues[size][1:]
+				seat, token, _ := r.ClaimSeat(entry.accountID, false)
+				entry.assigned <- QueueAssignment{Room: r, Seat: seat, SessionToken: token}
+			}
+			for i := 0; i < bots; i++ {
+				_, _, _ = r.ClaimSeat("", true)
+			}
+			m.deps.Logger.Info("backfilled room with bots", "room_id", r.ID, "size", size, "humans", humans, "bots", bots)
 		}
 	}
 }
@@ -159,10 +245,20 @@ func (m *Manager) makeRoomLocked(size int) (*Room, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := NewRoom(id, code, size, 0, m.deps)
+	r := NewRoom(id, code, size, 0, true, m.deps)
 	r.SetOnStart(func(r *Room) error {
 		renderer := game.NewPayloadRenderer(m.deps.Manager, m.deps.Issuer, m.deps.AssetBaseURL)
-		return r.StartMatch(renderer)
+		deps := game.Dependencies{
+			Config:   m.deps.Config,
+			Pack:     m.deps.Pack,
+			Renderer: renderer,
+			OnFinish: r.matchFinishCallback(),
+		}
+		if err := r.StartMatch(deps); err != nil {
+			return err
+		}
+		r.recordQuickPlayStart()
+		return nil
 	})
 	r.SetOnDestroy(func(r *Room) { m.DestroyRoom(r.ID) })
 	m.rooms[id] = r
@@ -174,8 +270,6 @@ func (m *Manager) makeRoomLocked(size int) (*Room, error) {
 	}
 	return r, nil
 }
-
-
 
 func generateRoomCode() (string, error) {
 	const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

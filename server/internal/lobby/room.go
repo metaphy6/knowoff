@@ -1,6 +1,7 @@
 package lobby
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -8,26 +9,36 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/knowoff/knowoff/server/internal/audit"
+	"github.com/knowoff/knowoff/server/internal/bots"
 	"github.com/knowoff/knowoff/server/internal/game"
+	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/transport"
 )
 
 // SeatBinding holds the durable seat assignment for a player. It survives
 // reconnects within the grace window.
 type SeatBinding struct {
-	Seat        int
+	Seat         int
+	AccountID    string
+	Bot          bool
+	BotName      string // reserved bot nickname for UI labeling
 	SessionToken string
-	BoundAt     time.Time
-	GraceTimer  *time.Timer
+	BoundAt      time.Time
+	GraceTimer   *time.Timer
 }
+
+// RoomID returns the room identifier.
+func (r *Room) RoomID() string { return r.ID }
 
 // Room is a single match session. It owns the authoritative Match and the
 // seat→connection mapping. All public methods are concurrency-safe.
 type Room struct {
-	ID       string
-	Code     string
-	Size     int
-	HostSeat int
+	ID        string
+	Code      string
+	Size      int
+	HostSeat  int
+	QuickPlay bool
 
 	deps Deps
 	mu   sync.RWMutex
@@ -41,19 +52,21 @@ type Room struct {
 	onDestroy  func(r *Room)
 	started    bool
 	finished   bool
+	botActors  []*bots.BotActor
 }
 
 // NewRoom creates a room in the waiting phase.
-func NewRoom(id, code string, size int, hostSeat int, deps Deps) *Room {
+func NewRoom(id, code string, size int, hostSeat int, quickPlay bool, deps Deps) *Room {
 	return &Room{
-		ID:       id,
-		Code:     code,
-		Size:     size,
-		HostSeat: hostSeat,
-		deps:     deps,
-		conns:    make(map[int]*websocket.Conn),
-		bindings: make(map[int]*SeatBinding),
-		nextSeat: 0,
+		ID:        id,
+		Code:      code,
+		Size:      size,
+		HostSeat:  hostSeat,
+		QuickPlay: quickPlay,
+		deps:      deps,
+		conns:     make(map[int]*websocket.Conn),
+		bindings:  make(map[int]*SeatBinding),
+		nextSeat:  0,
 	}
 }
 
@@ -74,23 +87,38 @@ func (r *Room) SetOnDestroy(fn func(r *Room)) {
 
 // StartMatch initializes the authoritative match. It may be called once the
 // room is full.
-func (r *Room) StartMatch(renderer *game.PayloadRenderer) error {
+func (r *Room) StartMatch(deps game.Dependencies) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.match != nil {
 		return fmt.Errorf("match already started")
 	}
 	bcast := &roomBcast{room: r}
-	m := game.NewMatch(r.Size, game.Dependencies{
-		Config:   r.deps.Config,
-		Pack:     r.deps.Pack,
-		Renderer: renderer,
-	}, bcast)
+	m := game.NewMatch(r.Size, deps, bcast)
 	if err := m.Start(); err != nil {
 		return err
 	}
 	r.match = m
+	r.startBotActorsLocked(m)
 	return nil
+}
+
+func (r *Room) startBotActorsLocked(m *game.Match) {
+	for seat, b := range r.bindings {
+		if !b.Bot {
+			continue
+		}
+		actor := bots.NewBotActor(r, seat, nil, r.deps.Logger)
+		actor.Start()
+		r.botActors = append(r.botActors, actor)
+	}
+}
+
+func (r *Room) stopBotsLocked() {
+	for _, a := range r.botActors {
+		a.Stop()
+	}
+	r.botActors = nil
 }
 
 // Match returns the current match. The caller must not mutate it.
@@ -100,9 +128,14 @@ func (r *Room) Match() *game.Match {
 	return r.match
 }
 
-// ClaimSeat reserves the next available seat for a new connection. It returns
+
+
+// ClaimSeat reserves the next available seat for a player or bot. It returns
 // the seat index and its session token, or -1,"",false if the room is full.
-func (r *Room) ClaimSeat() (int, string, bool) {
+// Bots have an empty AccountID and Bot=true; their session token is still
+// generated so the seat can be addressed uniformly. Bot seats receive a
+// reserved bot nickname for UI labeling.
+func (r *Room) ClaimSeat(accountID string, bot bool) (int, string, bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.nextSeat >= r.Size {
@@ -111,11 +144,17 @@ func (r *Room) ClaimSeat() (int, string, bool) {
 	seat := r.nextSeat
 	r.nextSeat++
 	token := uuid.NewString()
-	r.bindings[seat] = &SeatBinding{
+	binding := &SeatBinding{
 		Seat:         seat,
+		AccountID:    accountID,
+		Bot:          bot,
 		SessionToken: token,
 		BoundAt:      time.Now(),
 	}
+	if bot {
+		binding.BotName = bots.BotNickname(r.ID, seat)
+	}
+	r.bindings[seat] = binding
 	return seat, token, true
 }
 
@@ -200,12 +239,20 @@ func (r *Room) onGraceExpired(seat int) {
 		return
 	}
 	b.GraceTimer = nil
+	if r.match != nil && !b.Bot && r.match.Phase() != game.PhaseFinished {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		if err := r.deps.Economy.RecordAbandon(ctx, b.AccountID); err != nil {
+			r.deps.Logger.Warn("record abandon failed", "error", err, "room_id", r.ID, "seat", seat)
+		}
+	}
 	if r.match != nil {
 		r.match.OnGraceExpired(seat)
 	}
 	// Tear down the room once the match has finished.
 	if r.match != nil && r.match.Phase() == game.PhaseFinished {
 		r.finished = true
+		r.stopBotsLocked()
 		if r.onDestroy != nil {
 			go r.onDestroy(r)
 		}
@@ -272,6 +319,103 @@ func (r *Room) write(conn *websocket.Conn, env *transport.Envelope) error {
 // roomBcast adapts a Room to the game.Broadcaster interface.
 type roomBcast struct {
 	room *Room
+}
+
+// matchFinishCallback returns the game.Dependencies OnFinish closure for this
+// room. It records match results to profiles, the weekly leaderboard, and the
+// audit stream. Bot seats (empty AccountID) are skipped.
+func (r *Room) matchFinishCallback() game.MatchFinishCallback {
+	return func(winner game.Role, result game.MatchResult) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		weekID := ""
+		if r.QuickPlay {
+			weekID = leaderboard.WeekID(time.Now().UTC())
+		}
+		r.mu.RLock()
+		bindings := make(map[int]*SeatBinding, len(r.bindings))
+		for k, v := range r.bindings {
+			bindings[k] = v
+		}
+		r.mu.RUnlock()
+
+		humanCount := 0
+		for _, pr := range result.Players {
+			if b, ok := bindings[pr.Seat]; ok && !b.Bot {
+				humanCount++
+			}
+		}
+		countForLeaderboard := r.QuickPlay && humanCount >= r.deps.Config.Tuning.Liquidity.LeaderboardMinHumans
+
+		for _, pr := range result.Players {
+			b, ok := bindings[pr.Seat]
+			if !ok || b.AccountID == "" {
+				continue
+			}
+			accountID := b.AccountID
+			won := (pr.Role == winner)
+			isNower := pr.Role == game.RoleNower
+			if r.deps.Profile != nil {
+				if err := r.deps.Profile.ApplyMatchResult(ctx, accountID, isNower, won, boolInt(pr.CorrectVote), 0, int64(pr.MatchPoints)); err != nil {
+					r.deps.Logger.Warn("profile apply failed", "error", err, "room_id", r.ID, "seat", pr.Seat)
+				}
+			}
+			if countForLeaderboard && r.deps.Leaderboard != nil && weekID != "" {
+				_, err := r.deps.Leaderboard.RecordPoints(ctx, weekID, accountID, int64(pr.MatchPoints), time.Now().UTC(), r.deps.Config.Tuning.LiveOps.LeaderboardDailyCountedMatches)
+				if err != nil {
+					r.deps.Logger.Warn("leaderboard record failed", "error", err, "room_id", r.ID, "seat", pr.Seat)
+				}
+			}
+			if r.deps.Audit != nil {
+				uid := uuid.UUID{}
+				if id, err := uuid.Parse(accountID); err == nil {
+					uid = id
+				}
+				r.deps.Audit.LogWithAccount(ctx, audit.EventMatchFinished, uid, r.ID, "", map[string]any{
+					"seat":         pr.Seat,
+					"role":         string(pr.Role),
+					"won":          won,
+					"points":       pr.MatchPoints,
+					"eliminated":   pr.Eliminated,
+					"absent":       pr.Absent,
+					"correct_vote": pr.CorrectVote,
+					"quick_play":   r.QuickPlay,
+				})
+			}
+		}
+	}
+}
+
+// recordQuickPlayStart increments the daily Quick Play counter for every
+// human seat. It is safe to call multiple times (idempotent per player per
+// match would require a flag; here we call it once at match start).
+func (r *Room) recordQuickPlayStart() {
+	if !r.QuickPlay || r.deps.Economy == nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.mu.RLock()
+	bindings := make(map[int]*SeatBinding, len(r.bindings))
+	for k, v := range r.bindings {
+		bindings[k] = v
+	}
+	r.mu.RUnlock()
+	for _, b := range bindings {
+		if b.AccountID == "" {
+			continue
+		}
+		if err := r.deps.Economy.RecordQuickPlayMatch(ctx, b.AccountID); err != nil {
+			r.deps.Logger.Warn("record quickplay start failed", "error", err, "room_id", r.ID, "account_id", b.AccountID)
+		}
+	}
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 func (b *roomBcast) Broadcast(env *transport.Envelope, exceptSeat int) {

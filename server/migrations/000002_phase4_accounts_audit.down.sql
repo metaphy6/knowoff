@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS daily_quickplay_counts;
+DROP TABLE IF EXISTS queue_cooldowns;
+DROP TABLE IF EXISTS leaderboard_history;
+DROP TABLE IF EXISTS leaderboard_entries;
+DROP TABLE IF EXISTS leaderboard_weeks;
+DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS profiles;
+DROP TABLE IF EXISTS auth_revocations;
+DROP TABLE IF EXISTS oauth_links;
+DROP TABLE IF EXISTS device_tokens;
+DROP TABLE IF EXISTS accounts;
