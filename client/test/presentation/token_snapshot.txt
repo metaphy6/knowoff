@@ -1,0 +1,13 @@
+KoColors.canvas=ffdcc8f7
+KoColors.surface=fff7f2e9
+KoColors.whiteWell=ffffffff
+KoColors.ink=ff141414
+KoColors.violet=ffb49af5
+KoColors.lime=ffd4f04c
+KoColors.pink=ffff9ed2
+KoRadii.card=16.0
+KoRadii.sheet=16.0
+KoRadii.button=12.0
+KoRadii.chip=999.0
+KoShadows.hard=BoxShadow(ff141414, Offset(4.0, 4.0), 0.0)
+KoShadows.pressed=BoxShadow(ff141414, Offset(0.0, 0.0), 0.0)
