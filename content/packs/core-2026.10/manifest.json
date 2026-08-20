@@ -1,0 +1,14 @@
+{
+  "pack_tag": "synthetic-20260820",
+  "format_version": 1,
+  "language": "en",
+  "embedding_model": "synthetic-deterministic",
+  "embedding_version": "1.0",
+  "age_rating": "everyone",
+  "created_at": "2026-08-20T15:15:47Z",
+  "attribution": null,
+  "checksums": {
+    "cards.jsonl": "57f5b59246906297ab3a11eb6ef25837c3ad2a2c07a3ace8a2735d53b2275cda",
+    "media.jsonl": "ac82634048732d6a6d88d76c285471efc4c5396805b35914f30d236b9c8b319e"
+  }
+}

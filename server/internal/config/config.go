@@ -107,10 +107,12 @@ type StorageConfig struct {
 
 // MediaConfig controls pack loading and signed URLs.
 type MediaConfig struct {
-	ActivePackTag      string `yaml:"active_pack_tag"`
-	PackCheckIntervalS int    `yaml:"pack_check_interval_s"`
-	SignedURLTTLS      int    `yaml:"signed_url_ttl_s"`
-	LocalBundlePath    string `yaml:"local_bundle_path"`
+	ActivePackTag       string `yaml:"active_pack_tag"`
+	PackCheckIntervalS  int    `yaml:"pack_check_interval_s"`
+	SignedURLTTLS       int    `yaml:"signed_url_ttl_s"`
+	LocalBundlePath     string `yaml:"local_bundle_path"`
+	URLSigningKey       string `yaml:"url_signing_key"`
+	WorkbenchIngestPath string `yaml:"workbench_ingest_path"`
 }
 
 // SecurityConfig holds JWT and crypto settings.
@@ -247,5 +249,6 @@ func (c *Config) RequiredSecrets() []string {
 		"KNOWOFF_STORAGE_ACCESS_KEY",
 		"KNOWOFF_STORAGE_SECRET_KEY",
 		"KNOWOFF_JWT_KEY",
+		"KNOWOFF_MEDIA_URL_KEY",
 	}
 }
