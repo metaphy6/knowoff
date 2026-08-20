@@ -23,11 +23,11 @@ type Match struct {
 	round  int
 	active int
 
-	roles       []Role
-	eliminated  []bool
-	connected   []bool
-	absent      []bool
-	players     []*PlayerState
+	roles        []Role
+	eliminated   []bool
+	connected    []bool
+	absent       []bool
+	players      []*PlayerState
 	nownSchedule []string
 
 	turnOrder   []int
@@ -36,10 +36,10 @@ type Match struct {
 
 	discussionReady map[int]bool
 
-	ballots     map[int]int
-	runoff      bool
-	runoffCandidates []int
-	resultPending bool
+	ballots             map[int]int
+	runoff              bool
+	runoffCandidates    []int
+	resultPending       bool
 	eliminatedThisRound int
 
 	remainingVotes int
@@ -59,18 +59,18 @@ type Match struct {
 // NewMatch creates a match in the waiting phase.
 func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOption) *Match {
 	m := &Match{
-		deps:        deps,
-		bcast:       bcast,
-		size:        size,
-		rng:         ensureRand(),
-		phase:       PhaseWaiting,
-		roles:       make([]Role, size),
-		eliminated:  make([]bool, size),
-		connected:   make([]bool, size),
-		absent:      make([]bool, size),
-		players:     make([]*PlayerState, size),
-		plays:       make(map[int]string),
-		discussionReady: make(map[int]bool),
+		deps:                deps,
+		bcast:               bcast,
+		size:                size,
+		rng:                 ensureRand(),
+		phase:               PhaseWaiting,
+		roles:               make([]Role, size),
+		eliminated:          make([]bool, size),
+		connected:           make([]bool, size),
+		absent:              make([]bool, size),
+		players:             make([]*PlayerState, size),
+		plays:               make(map[int]string),
+		discussionReady:     make(map[int]bool),
 		ballots:             make(map[int]int),
 		uniqueUsed:          make(map[string]bool),
 		eliminatedThisRound: -1,
@@ -710,11 +710,11 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 	}
 	m.players[seat].Hand.Specialty = ""
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
-		"seat":       seat,
-		"specialty":  SpecialtyReveal,
-		"target":     target,
-		"hand":       m.players[target].Hand.Cards,
-		"draw_pile":  m.players[target].Hand.DrawPile,
+		"seat":           seat,
+		"specialty":      SpecialtyReveal,
+		"target":         target,
+		"hand":           m.players[target].Hand.Cards,
+		"draw_pile":      m.players[target].Hand.DrawPile,
 		"specialty_held": m.players[target].Hand.Specialty,
 	}), -1)
 	m.stopTurnTimer()
@@ -1166,6 +1166,21 @@ func (m *Match) finishMatch(winner Role) {
 		}
 	}
 
+	if m.deps.OnFinish != nil {
+		result := MatchResult{Winner: winner, Players: make([]PlayerResult, len(m.players))}
+		for i, p := range m.players {
+			result.Players[i] = PlayerResult{
+				Seat:        i,
+				Role:        p.Role,
+				MatchPoints: p.MatchPoints,
+				CorrectVote: p.CorrectVote,
+				Eliminated:  p.Eliminated,
+				Absent:      m.absent[i],
+			}
+		}
+		m.deps.OnFinish(winner, result)
+	}
+
 	// Verdict: all Nowns revealed to everyone.
 	nowns := make([]map[string]any, 0, len(m.nownSchedule))
 	for _, id := range m.nownSchedule {
@@ -1219,6 +1234,72 @@ func (m *Match) useRevote(seat int) error {
 	// Fresh ballot with full remaining_votes unchanged.
 	m.beginKnowoff()
 	return nil
+}
+
+// BotAccessors expose read-only match state for in-process backfill bots.
+// These are intentionally narrow and only return data a human client would
+// also receive over the wire.
+
+// CurrentTurnSeat returns the seat whose turn it is, or -1 during other phases.
+func (m *Match) CurrentTurnSeat() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.phase != PhasePlay || m.currentTurn < 0 || m.currentTurn >= len(m.turnOrder) {
+		return -1
+	}
+	return m.turnOrder[m.currentTurn]
+}
+
+// PlayerHand returns the current hand for a seat.
+func (m *Match) PlayerHand(seat int) PlayerHand {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if seat < 0 || seat >= m.size {
+		return PlayerHand{}
+	}
+	return m.players[seat].Hand
+}
+
+// PlayerRole returns the role for a seat.
+func (m *Match) PlayerRole(seat int) Role {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if seat < 0 || seat >= m.size {
+		return ""
+	}
+	return m.roles[seat]
+}
+
+// ActiveSeats returns seats still in the match (not eliminated, not absent).
+func (m *Match) ActiveSeats() []int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.activeSeats()
+}
+
+// TablePlays returns the plays revealed so far this round.
+func (m *Match) TablePlays() []Play {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]Play, 0, len(m.plays))
+	for seat, cardID := range m.plays {
+		out = append(out, Play{Seat: seat, CardID: cardID})
+	}
+	return out
+}
+
+// IsDiscussionReadyAllowed reports whether the discussion phase is active.
+func (m *Match) IsDiscussionReadyAllowed() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.phase == PhaseDiscussion
+}
+
+// KnowoffActive reports whether a ballot is open.
+func (m *Match) KnowoffActive() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.phase == PhaseKnowoff || m.phase == PhaseRunoff
 }
 
 func (m *Match) roundID() string {

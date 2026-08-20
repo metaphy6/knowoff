@@ -89,5 +89,20 @@ security:
   access_token_ttl_m: 15
   refresh_token_ttl_h: 168
   bcrypt_cost: 10
+  oauth:
+    google:
+      client_id: ${KNOWOFF_OAUTH_GOOGLE_CLIENT_ID}
+      client_secret: ${KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET}
+      redirect_url: ""
+    facebook:
+      client_id: ${KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID}
+      client_secret: ${KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET}
+      redirect_url: ""
+
+rate_limit:
+  enabled: true
+  max_intents_per_second: 10
+  max_intents_burst: 20
+  max_bytes_per_frame: 65536
 
 # Tunable gameplay constants live in gameplay/tuning.yaml and are merged under "tuning".

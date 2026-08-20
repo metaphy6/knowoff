@@ -620,8 +620,8 @@ chapter).
 | 0 — Agent framework & project docs | — | — | ✅ landed (pre-roadmap) |
 | 1 — Foundation | 12 | 12 | ✅ done |
 | 2 — Media Engine & Pipeline | 9 | 9 | ✅ done |
-| 3 — Realtime Game Loop | 18 | 5 | 🟡 in progress |
-| 4 — Accounts, Quick Play & Hardening | 11 | 0 | ⚪ planned |
+| 3 — Realtime Game Loop | 18 | 18 | ✅ done |
+| 4 — Accounts, Quick Play & Hardening | 11 | 11 | ✅ done |
 | 5 — Noin Economy, Admin & Launch Polish | 12 | 0 | ⚪ planned |
 | 6 — Contributor Portal & Community | 5 | 0 | ⚪ planned |
 
@@ -944,17 +944,17 @@ nightly job reproduces identical stats and standings (idempotency); killing
 and restoring Redis mid-queue leaves a healthy, leak-free process; an idle
 match survives 10+ minutes through the tunnel on heartbeats.
 
-- [ ] Auth: anonymous device accounts → JWT sessions with expiry + refresh and server-side revocation (a ban invalidates tokens and drops live connections within seconds); Google Sign-In / Facebook Login one-tap registration + account linking via OAuth 2.0 / OIDC with PKCE and state validation (provider subject id + email stored privately, never shown; a subject already linked elsewhere fails with a clear, safe error).
-- [ ] Profiles + public stats (👤 §1) derived nightly from the audit stream — pseudonymous, no PII on any public surface; Non-Converted Points visible to the owner only; locale-aware nickname profanity filter; free preset avatar gallery (👤 §2) — the first curated **nano banana (Gemini image) raster batch** per the 🎨 asset strategy: prompts derived from the design matrix, candidates → human curation → consistency pass → committed like any asset; API keys under the 📦 §3 config discipline.
-- [ ] XP progression (Product Baseline): one server-side track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks — values in `tuning.yaml`.
-- [ ] Quick Play FIFO queues per room size (core pack + rotating featured pack) with reconnect-safe seat reservation and escalating abandon cooldowns.
-- [ ] Backfill bots (`server/internal/bots`): 🤖 badge + reserved nicknames, human seat priority, `min_humans` floor, per-match randomized personality parameters (no farmable tell), per-queue sunset by fill-time measurement, economy + leaderboard guardrails (🎮 §1 — bot seats earn nothing).
-- [ ] Beta ingress (📦 §2): `cloudflared` publishes `play.<domain>` (WebSockets) + `cdn.<domain>` (assets) — no open ports, no exposed home IP, TLS at the edge; WebSocket heartbeat interval below the edge idle timeout, verified end-to-end through the tunnel (no silent mid-match drops); Cache-Everything + long-TTL rule on content-hashed assets so the edge absorbs media traffic.
-- [ ] Intent-pipeline hardening: per-connection + per-account rate limiting (Redis), deadline enforcement, protocol-boundary validation, frame-size caps, slow-consumer disconnect policy (one stalled client never blocks a room), structured audit log to PostgreSQL as **the** analytics event stream — schema-versioned from the first event.
-- [ ] Weekly Leaderboard (🎮 §5): Quick Play only, Monday–Sunday on the server clock, `leaderboard_min_humans` + daily counted cap, top-100 + own rank (ties share a rank), immutable weekly history; nightly stats/KPI jobs idempotent and re-runnable — a crashed or repeated job never double-counts.
-- [ ] Dependency-degradation drills: losing Redis or Postgres flips `/readyz` and pauses matchmaking with a clear client message while the process stays healthy; service resumes without restart when the store returns; no goroutine or connection leak across the outage (metrics-proven).
-- [ ] Client surfaces on native + PWA: Profile (public stats, owner-only Non-Converted Points) and Leaderboard screens, themed per the design system.
-- [ ] Gate: full Phase 4 proof tests pass (forged-client suite, backfill behavior, quantified load test, OAuth second-device restore, leaderboard guards).
+- [x] Auth: anonymous device accounts → JWT sessions with expiry + refresh and server-side revocation (a ban invalidates tokens and drops live connections within seconds); Google Sign-In / Facebook Login one-tap registration + account linking via OAuth 2.0 / OIDC with PKCE and state validation (provider subject id + email stored privately, never shown; a subject already linked elsewhere fails with a clear, safe error).
+- [x] Profiles + public stats (👤 §1) derived nightly from the audit stream — pseudonymous, no PII on any public surface; Non-Converted Points visible to the owner only; locale-aware nickname profanity filter; free preset avatar gallery (👤 §2) — the first curated **nano banana (Gemini image) raster batch** per the 🎨 asset strategy: prompts derived from the design matrix, candidates → human curation → consistency pass → committed like any asset; API keys under the 📦 §3 config discipline.
+- [x] XP progression (Product Baseline): one server-side track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks — values in `tuning.yaml`.
+- [x] Quick Play FIFO queues per room size (core pack + rotating featured pack) with reconnect-safe seat reservation and escalating abandon cooldowns.
+- [x] Backfill bots (`server/internal/bots`): 🤖 badge + reserved nicknames, human seat priority, `min_humans` floor, per-match randomized personality parameters (no farmable tell), per-queue sunset by fill-time measurement, economy + leaderboard guardrails (🎮 §1 — bot seats earn nothing).
+- [x] Beta ingress (📦 §2): `cloudflared` publishes `play.<domain>` (WebSockets) + `cdn.<domain>` (assets) — no open ports, no exposed home IP, TLS at the edge; WebSocket heartbeat interval below the edge idle timeout, verified end-to-end through the tunnel (no silent mid-match drops); Cache-Everything + long-TTL rule on content-hashed assets so the edge absorbs media traffic.
+- [x] Intent-pipeline hardening: per-connection + per-account rate limiting (Redis), deadline enforcement, protocol-boundary validation, frame-size caps, slow-consumer disconnect policy (one stalled client never blocks a room), structured audit log to PostgreSQL as **the** analytics event stream — schema-versioned from the first event.
+- [x] Weekly Leaderboard (🎮 §5): Quick Play only, Monday–Sunday on the server clock, `leaderboard_min_humans` + daily counted cap, top-100 + own rank (ties share a rank), immutable weekly history; nightly stats/KPI jobs idempotent and re-runnable — a crashed or repeated job never double-counts.
+- [x] Dependency-degradation drills: losing Redis or Postgres flips `/readyz` and pauses matchmaking with a clear client message while the process stays healthy; service resumes without restart when the store returns; no goroutine or connection leak across the outage (metrics-proven).
+- [x] Client surfaces on native + PWA: Profile (public stats, owner-only Non-Converted Points) and Leaderboard screens, themed per the design system.
+- [x] Gate: full Phase 4 proof tests pass (forged-client suite, backfill behavior, quantified load test, OAuth second-device restore, leaderboard guards).
 
 ---
 

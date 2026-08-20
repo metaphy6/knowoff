@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
 
+import 'leaderboard_screen.dart';
 import 'lobby_screen.dart';
+import 'profile_screen.dart';
 import 'queue_screen.dart';
 
 /// The main entry screen. Every user-facing string is localized; no hardcoded
@@ -32,6 +34,28 @@ class MainMenuScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () => _showJoinRoomDialog(context),
               child: Text(l10n.mainMenuLocalRoom),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const ProfileScreen(),
+                  ),
+                );
+              },
+              child: Text(l10n.mainMenuProfile),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const LeaderboardScreen(),
+                  ),
+                );
+              },
+              child: Text(l10n.mainMenuLeaderboard),
             ),
           ],
         ),

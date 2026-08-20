@@ -15,11 +15,11 @@ func testConfig(size int) *config.Config {
 		Tuning: config.TuningConfig{
 			Seed: 42,
 			Game: config.GameTuning{
-				RoomSizes:       []int{4, 6},
-				DonowersBySize:  map[int]int{4: 1, 6: 2},
-				VotesBySize:     map[int]int{4: 2, 6: 3},
-				MinConnected:    3,
-				ReconnectGraceS: 20,
+				RoomSizes:              []int{4, 6},
+				DonowersBySize:         map[int]int{4: 1, 6: 2},
+				VotesBySize:            map[int]int{4: 2, 6: 3},
+				MinConnected:           3,
+				ReconnectGraceS:        20,
 				PokesPerTargetPerRound: 1,
 			},
 			Timers: config.TimersTuning{

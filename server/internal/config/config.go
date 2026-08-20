@@ -19,6 +19,7 @@ type Config struct {
 	Storage      StorageConfig      `yaml:"storage"`
 	Media        MediaConfig        `yaml:"media"`
 	Security     SecurityConfig     `yaml:"security"`
+	RateLimit    RateLimitConfig    `yaml:"rate_limit"`
 	Tuning       TuningConfig       `yaml:"tuning"`
 	Bots         *BotsConfig        `yaml:"bots,omitempty"`
 }
@@ -117,12 +118,35 @@ type MediaConfig struct {
 
 // SecurityConfig holds JWT and crypto settings.
 type SecurityConfig struct {
-	JWTSigningKey    string `yaml:"jwt_signing_key"`
-	JWTIssuer        string `yaml:"jwt_issuer"`
-	JWTAudience      string `yaml:"jwt_audience"`
-	AccessTokenTTLM  int    `yaml:"access_token_ttl_m"`
-	RefreshTokenTTLH int    `yaml:"refresh_token_ttl_h"`
-	BcryptCost       int    `yaml:"bcrypt_cost"`
+	JWTSigningKey    string              `yaml:"jwt_signing_key"`
+	JWTIssuer        string              `yaml:"jwt_issuer"`
+	JWTAudience      string              `yaml:"jwt_audience"`
+	AccessTokenTTLM  int                 `yaml:"access_token_ttl_m"`
+	RefreshTokenTTLH int                 `yaml:"refresh_token_ttl_h"`
+	BcryptCost       int                 `yaml:"bcrypt_cost"`
+	OAuth            OAuthSecurityConfig `yaml:"oauth"`
+}
+
+// OAuthSecurityConfig holds OAuth client settings. Secrets are interpolated
+// from environment variables.
+type OAuthSecurityConfig struct {
+	Google   OAuthProviderSecurityConfig `yaml:"google"`
+	Facebook OAuthProviderSecurityConfig `yaml:"facebook"`
+}
+
+// OAuthProviderSecurityConfig is one OAuth provider's client credentials.
+type OAuthProviderSecurityConfig struct {
+	ClientID     string `yaml:"client_id"`
+	ClientSecret string `yaml:"client_secret"`
+	RedirectURL  string `yaml:"redirect_url"`
+}
+
+// RateLimitConfig tunes the per-connection and per-account intent rate limits.
+type RateLimitConfig struct {
+	Enabled             bool `yaml:"enabled"`
+	MaxIntentsPerSecond int  `yaml:"max_intents_per_second"`
+	MaxIntentsBurst     int  `yaml:"max_intents_burst"`
+	MaxBytesPerFrame    int  `yaml:"max_bytes_per_frame"`
 }
 
 // BotsConfig enables external dev/test bot connections. Intentionally absent from prod.
@@ -133,17 +157,18 @@ type BotsConfig struct {
 
 // TuningConfig is the gameplay and economy tuning loaded from gameplay/tuning.yaml.
 type TuningConfig struct {
-	Seed      int             `yaml:"seed"`
-	Game      GameTuning      `yaml:"game"`
-	Timers    TimersTuning    `yaml:"timers"`
-	Hand      HandTuning      `yaml:"hand"`
-	Dealing   DealingTuning   `yaml:"dealing"`
-	Points    PointsTuning    `yaml:"points"`
-	Noin      NoinTuning      `yaml:"noin"`
-	Economy   EconomyTuning   `yaml:"economy"`
-	Liquidity LiquidityTuning `yaml:"liquidity"`
-	LiveOps   LiveOpsTuning   `yaml:"liveops"`
-	Portal    PortalTuning    `yaml:"portal"`
+	Seed        int               `yaml:"seed"`
+	Game        GameTuning        `yaml:"game"`
+	Timers      TimersTuning      `yaml:"timers"`
+	Hand        HandTuning        `yaml:"hand"`
+	Dealing     DealingTuning     `yaml:"dealing"`
+	Points      PointsTuning      `yaml:"points"`
+	Noin        NoinTuning        `yaml:"noin"`
+	Economy     EconomyTuning     `yaml:"economy"`
+	Liquidity   LiquidityTuning   `yaml:"liquidity"`
+	LiveOps     LiveOpsTuning     `yaml:"liveops"`
+	Portal      PortalTuning      `yaml:"portal"`
+	Progression ProgressionTuning `yaml:"progression"`
 }
 
 // GameTuning is room structure and victory rules.
@@ -234,6 +259,14 @@ type PortalTuning struct {
 	MinAccountLevelToApply          int `yaml:"min_account_level_to_apply"`
 	SubmissionsPerContributorPerDay int `yaml:"submissions_per_contributor_per_day"`
 	GuardFreezeMaxH                 int `yaml:"guard_freeze_max_h"`
+}
+
+// ProgressionTuning controls XP awards and level thresholds.
+type ProgressionTuning struct {
+	XPBase           int   `yaml:"xp_base"`
+	XPPerCorrectVote int   `yaml:"xp_per_correct_vote"`
+	XPWinBonus       int   `yaml:"xp_win_bonus"`
+	LevelThresholds  []int `yaml:"level_thresholds"`
 }
 
 // ShutdownGrace returns the configured graceful shutdown window.

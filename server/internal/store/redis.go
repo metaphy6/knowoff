@@ -52,3 +52,25 @@ func (r *RedisClient) UnregisterRoom(ctx context.Context, roomID string) error {
 	key := fmt.Sprintf("room:%s:node", roomID)
 	return r.client.Del(ctx, key).Err()
 }
+
+// AllowIntent implements a sliding-window per-account intent rate limit.
+// It returns true if the intent is allowed under the given window and max.
+func (r *RedisClient) AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error) {
+	if accountID == "" || r.client == nil {
+		return true, nil
+	}
+	key := fmt.Sprintf("rate:%s:intents", accountID)
+	now := float64(time.Now().UnixNano()) / 1e9
+	cutoff := now - window.Seconds()
+
+	pipe := r.client.Pipeline()
+	pipe.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%f", cutoff))
+	countCmd := pipe.ZCard(ctx, key)
+	pipe.ZAdd(ctx, key, redis.Z{Score: now, Member: now})
+	pipe.Expire(ctx, key, window)
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return false, err
+	}
+	return int(countCmd.Val()) < max, nil
+}
