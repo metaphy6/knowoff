@@ -33,8 +33,13 @@ to proceed; you need no permission between bullets **or between phases**.
 
 ## Inputs & scope resolution
 
-- A plan (in chat, in `docs/planning/`, or referenced as a `[ ]` block in
-  the ROADMAP). If no plan exists, run [`plan`](plan.prompt.md) first.
+- A plan (in chat, in `docs/planning/`), or a requested phase in the roadmap
+   chapter of [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md). If
+   no plan or phase scope exists, run [`plan`](plan.prompt.md) first.
+- Treat the roadmap monolith as two layers: the chapters before
+   **🗺 Roadmap — Step-by-Step Implementation Lifecycle** are the normative
+   blueprint/specification; the final chapter supplies the implementation
+   order, checkboxes, proof tests, and gates.
 - Resolve the **target scope** from the invocation:
   - `/implement #phase <id>` (e.g. `0a.1`, `1`, `2.3`) → that one sub-phase / phase.
   - `/implement #phase <a>..<b>` or a list → every phase in that range / list, in order.
@@ -44,6 +49,11 @@ to proceed; you need no permission between bullets **or between phases**.
 - Build the full ordered list of `[ ]` bullets across **all** targeted phases
   before you start. That list is your work queue; you are done only when it is
   empty (or a real blocker is documented).
+- Before touching the first bullet of each phase, read every chapter named by
+   that phase's **Spec (required reading)** line in the same monolith. Resolve
+   requirements in this order: blueprint/spec chapters, then phase What/Why/How
+   and Proof tests, then checklist wording. If they conflict, the blueprint
+   wins and the discrepancy must be corrected in the same change.
 
 ## Loop — outer pass per phase, inner pass per `[ ]` bullet
 
@@ -51,9 +61,12 @@ to proceed; you need no permission between bullets **or between phases**.
 documented real blocker.** Process phases in ROADMAP order; within each phase,
 process bullets in order.
 
-1. Read the bullet, the *Goal*, and the *Test plan* line for that bullet.
+1. Read the bullet in the context of the phase's required blueprint chapters,
+   What/Why/How, and Proof tests. The roadmap has no required per-bullet Goal
+   or Test plan fields; derive acceptance from those phase-level sections.
 2. Write the test first when the bullet adds behavior / fixes a bug.
-3. Implement the smallest change that turns the test green.
+3. Implement the smallest change that turns the test green while satisfying
+   the normative blueprint.
 4. Run the project's test gate. If red:
    - Read the log (via [`xops/agent/safe-run.sh`](../../xops/agent/safe-run.sh)).
    - Diagnose the root cause; fix it.
@@ -64,9 +77,11 @@ process bullets in order.
    The `summary` **must** be Conventional Commits (`type(scope)?(!)?: description`)
    — the appender now rejects (exit 65) anything else and `make git`
    re-validates, so a malformed subject can never reach the commit log.
-6. **Tick the bullet's checkbox** in ROADMAP.md (or the plan document) using `multi_replace_string_in_file`.
+6. **Tick the bullet's checkbox** in `docs/planning/ROADMAP.md` only after its
+   implementation and proof pass. If implementation exposed a spec/roadmap
+   mismatch, correct both layers in the same change before ticking it.
 7. `git add -A`.
-8. **Move to the next `[ ]` bullet.** **Do not stop.** Do not hand back to the user. Do not cite token count or context limits. When a phase's bullets are all `[x]`, run that phase's *Test plan* line, **then run the per-phase quality gate below (implementer → reviewer → verifier)**, update the ROADMAP status snapshot, then **immediately start the next targeted phase** at step 1. Keep going until:
+8. **Move to the next `[ ]` bullet.** **Do not stop.** Do not hand back to the user. Do not cite token count or context limits. When a phase's bullets are all `[x]`, run that phase's *Proof tests* line, **then run the per-phase quality gate below (implementer → reviewer → verifier)**, update the ROADMAP status snapshot, then **immediately start the next targeted phase** at step 1. Keep going until:
    - Every bullet in **every targeted phase** is `[x]` **and each phase passed the quality gate**, **OR**
    - You hit a documented real blocker (see [`phase-persistence`](../../.agents/skills/phase-persistence/SKILL.md)).
 
