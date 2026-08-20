@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/handler"
+	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
 	"github.com/knowoff/knowoff/server/internal/workbench"
@@ -80,6 +82,19 @@ func run() error {
 		}
 	}
 
+	issuer := media.NewSignedURLIssuer([]byte(cfg.Media.URLSigningKey), time.Duration(cfg.Media.SignedURLTTLS)*time.Second)
+	redisClient := store.NewRedisClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
+	lobbyManager := lobby.NewManager(lobby.Deps{
+		Config:       cfg,
+		Logger:       logger,
+		Pack:         mediaManager.Active(),
+		Manager:      mediaManager,
+		Issuer:       issuer,
+		AssetBaseURL: cfg.Storage.AssetsURL,
+		Redis:        redisClient,
+		NodeID:       cfg.App.Name + "-" + cfg.App.Version + "-" + fmt.Sprintf("%d", time.Now().Unix()),
+	})
+
 	deps := transport.Deps{
 		Config:      cfg,
 		Logger:      logger,
@@ -90,10 +105,19 @@ func run() error {
 		Media:       mediaManager,
 	}
 
+	handlerDeps := handler.HandlerDeps{
+		Config:      cfg,
+		Logger:      logger,
+		Lobby:       lobbyManager,
+		Connections: connections,
+	}
+
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	publicMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
-	publicMux.HandleFunc("/ws", transport.WebSocketHandler(deps))
+	publicMux.HandleFunc("/ws", handler.RealtimeHandler(handlerDeps))
+	publicBaseURL := fmt.Sprintf("http://%s:%d", cfg.Server.BindAddr, cfg.Server.Port)
+	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
 
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
