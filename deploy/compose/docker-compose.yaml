@@ -61,9 +61,12 @@ services:
       KNOWOFF_STORAGE_ACCESS_KEY: ${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}
       KNOWOFF_STORAGE_SECRET_KEY: ${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}
       KNOWOFF_JWT_KEY: ${KNOWOFF_JWT_KEY:-dev-jwt-key-change-in-prod}
+      KNOWOFF_MEDIA_URL_KEY: ${KNOWOFF_MEDIA_URL_KEY:-dev-media-url-key-change-in-prod}
     volumes:
       - ../../configs:/app/configs:ro
       - ../../server/migrations:/migrations:ro
+      - ../../content/packs:/data/packs:ro
+      - ../../content/ingest:/data/ingest:ro
     entrypoint: ["/knowoffd", "migrate"]
     depends_on:
       postgres:
@@ -81,9 +84,12 @@ services:
       KNOWOFF_STORAGE_ACCESS_KEY: ${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}
       KNOWOFF_STORAGE_SECRET_KEY: ${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}
       KNOWOFF_JWT_KEY: ${KNOWOFF_JWT_KEY:-dev-jwt-key-change-in-prod}
+      KNOWOFF_MEDIA_URL_KEY: ${KNOWOFF_MEDIA_URL_KEY:-dev-media-url-key-change-in-prod}
     volumes:
       - ../../server:/app
       - ../../configs:/app/configs:ro
+      - ../../content/packs:/data/packs:ro
+      - ../../content/ingest:/data/ingest:ro
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:9090:9090"

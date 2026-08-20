@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
 var ready atomic.Bool
@@ -28,6 +29,7 @@ type Deps struct {
 	RedisPing   func(context.Context) error
 	StoragePing func(context.Context) error
 	Connections interface{}
+	Media       *media.Manager
 }
 
 // HealthzHandler always returns 200 OK; it only reports that the process is up.

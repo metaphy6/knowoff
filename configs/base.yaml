@@ -78,6 +78,9 @@ media:
   signed_url_ttl_s: 300
   # Local path for pack bundles during development. Overrides object storage when set.
   local_bundle_path: ""
+  url_signing_key: ${KNOWOFF_MEDIA_URL_KEY}
+  # Ingest folder watched by the dev-only Media Workbench. Empty disables watching.
+  workbench_ingest_path: ""
 
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}

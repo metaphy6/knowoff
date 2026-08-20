@@ -23,6 +23,7 @@ storage:
 
 media:
   local_bundle_path: /data/packs
+  workbench_ingest_path: /data/ingest
 
 # External dev/test bots may connect only when this block is present.
 # It is intentionally absent from prod.yaml.

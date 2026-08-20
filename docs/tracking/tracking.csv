@@ -20,3 +20,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-20T14:21:01Z,phase1-20260820-172101,human,phase-1,commit,completed,"fix(server): readiness probe checks Postgres, Redis and storage; echo handler tolerates JSON-encoded newline","server/internal/transport/health.go,server/cmd/knowoffd/main.go,server/internal/transport/websocket.go",pending
 2026-08-20T14:21:01Z,phase1-20260820-172101,human,phase-1,commit,completed,"fix(deploy): snapshot script bucket creation, host/password for pg_restore and Postgres readiness wait",deploy/compose/snapshot.sh,pending
 2026-08-20T14:22:13Z,phase1-20260820-172101,human,phase-1,commit,completed,fix(build): wire make verify to server and client unit tests,Makefile,pending
+2026-08-20T15:33:01Z,run-20260820153301-251880,human,phase-2,commit,completed,"feat(media): complete Phase 2 media engine, pipeline, workbench, and client media module",docs/planning/ROADMAP.md,pending

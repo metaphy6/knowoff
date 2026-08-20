@@ -1,0 +1,14 @@
+{"id":"high-0","type":"text","asset_ref":"","content":"High","embedding":[1,0],"tags":["test"],"tone_bucket":"millennial-cope"}
+{"id":"high-1","type":"text","asset_ref":"","content":"High","embedding":[1,0],"tags":["test"],"tone_bucket":"millennial-cope"}
+{"id":"high-2","type":"text","asset_ref":"","content":"High","embedding":[1,0],"tags":["test"],"tone_bucket":"millennial-cope"}
+{"id":"high-3","type":"text","asset_ref":"","content":"High","embedding":[1,0],"tags":["test"],"tone_bucket":"millennial-cope"}
+{"id":"chaos-0","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.7914614,-0.6112191],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-1","type":"text","asset_ref":"","content":"Chaos","embedding":[0.9309492,-0.36514866],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-2","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.51141894,-0.85933155],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-3","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.9243937,0.38143972],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-4","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.8899701,0.45601878],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-5","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.3866093,-0.9222436],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-6","type":"text","asset_ref":"","content":"Chaos","embedding":[0.9161577,0.40081802],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-7","type":"text","asset_ref":"","content":"Chaos","embedding":[0.55416274,0.8324083],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-8","type":"text","asset_ref":"","content":"Chaos","embedding":[0.82006174,0.57227504],"tags":["test"],"tone_bucket":"chaos"}
+{"id":"chaos-9","type":"text","asset_ref":"","content":"Chaos","embedding":[-0.31446084,0.9492704],"tags":["test"],"tone_bucket":"chaos"}
