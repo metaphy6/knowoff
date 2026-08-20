@@ -1,0 +1,31 @@
+# Local development overlay.
+# Loaded when KNOWOFF_CONFIG=configs/local.yaml (default for docker compose dev).
+
+app:
+  env: local
+
+log:
+  level: debug
+  format: text
+  add_caller: true
+
+server:
+  bind_addr: 0.0.0.0
+  port: 8080
+  admin_bind_addr: 0.0.0.0
+  admin_port: 9090
+  metrics_bind_addr: 0.0.0.0
+  metrics_port: 9091
+
+storage:
+  endpoint: http://minio:9000
+  assets_url: http://localhost:9000/knowoff
+
+media:
+  local_bundle_path: /data/packs
+
+# External dev/test bots may connect only when this block is present.
+# It is intentionally absent from prod.yaml.
+bots:
+  enabled: true
+  dev_bot_endpoint: ws://localhost:8080/ws

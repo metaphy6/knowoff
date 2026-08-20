@@ -1,0 +1,8 @@
+{
+  "@@locale": "en_XA",
+  "appTitle": "[Knowoff]",
+  "mainMenuPlay": "[Play]",
+  "mainMenuLocalRoom": "[Local Room]",
+  "lobbyWaitingForPlayers": "[Waiting for players...]",
+  "playersCount": "[{count, plural, =0{[No players]} =1{[One player]} other{[{count} players]}}]"
+}

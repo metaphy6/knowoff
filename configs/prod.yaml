@@ -1,0 +1,18 @@
+# Production overlay.
+# NO secrets here. Only environment-specific values.
+
+app:
+  env: prod
+
+log:
+  level: info
+  format: json
+
+server:
+  bind_addr: 0.0.0.0
+  port: 8080
+
+storage:
+  assets_url: https://cdn.example.com/knowoff
+
+# bots: intentionally absent in production — external bot connections are refused.

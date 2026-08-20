@@ -15,3 +15,11 @@ Records — accepted decisions with rationale).
 
 Both live alongside the code they shape — file name embeds the topic
 (`DESIGN-auth-rework.md`, `ADR-0007-use-postgres-not-mongo.md`).
+
+## Accepted ADRs
+
+| ADR | Title |
+|---|---|
+| [ADR-001](ADR-001-server-authoritative-over-p2p.md) | Server-authoritative over P2P |
+| [ADR-002](ADR-002-flutter-everywhere.md) | Flutter everywhere |
+| [ADR-003](ADR-003-home-server-behind-cloudflare.md) | Home-server-first behind Cloudflare |

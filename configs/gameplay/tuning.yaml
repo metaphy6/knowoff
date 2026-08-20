@@ -1,0 +1,78 @@
+# Gameplay tuning — every tunable number lives here.
+# Structure is code; values are keys. Changing this file never requires a client release.
+
+seed: 42                            # reproducible dealing — same seed, same match
+
+game:
+  room_sizes: [4, 6]                # the only valid room sizes
+  donowers_by_size: {4: 1, 6: 2}    # public knowledge at the table
+  votes_by_size: {4: 2, 6: 3}       # one Knowoff per round; match ends early when votes can't catch remaining Donowers
+  min_connected: 3                  # below this, the match waits for grace then ends scored (Rules §7)
+  reconnect_grace_s: 20             # also the team-forfeit grace (Rules §7)
+  pokes_per_target_per_round: 1
+  abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
+
+timers:                             # seconds; which windows may fast-forward is structure (Rules §8)
+  play_turn: 15                     # each player's turn; the play reveals immediately, the turn ends on action
+  discussion_per_player: 10         # Ready unanimity ends it early
+  knowoff_ballot: 20                # always runs full
+  knowoff_runoff: 15                # tie-break among tied players; always runs full
+  vote_result_window: 15            # result display before finalizing — the Revote window
+  prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
+
+hand:
+  size: 5
+  draw_pile: 3
+  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_free_card: 0.08, shuffle: 0.05, revote: 0.05}
+  # dealing is role-blind: any specialty can land in any hand; shuffle is usable by Donowers,
+  # revote by Nowers — off-role copies are dead cards (Rules §5)
+  # unique specialties (shuffle, revote) fire once per match — later copies are dead cards
+
+dealing:                            # relevance mesh (Media Engine §2) — v1 placeholders, tuned via simulate
+  band_high: 0.55
+  band_low: 0.30
+  min_high_per_nown: 2
+  min_distant_per_nown: 2
+
+points:                             # match points — leaderboard, session scoreboard, Overall/Non-Converted accrual (Rules §6)
+  correct_vote: 10
+  nower_win_bonus: 10
+  donower_team_win: 30
+  draw_penalty: 5                   # per pile card drawn; a One More Free Card draw is exempt (Rules §3, §5)
+  # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
+
+noin:                               # currency earnings — instant, kept on disconnect (Rules §6)
+  match_completed: 5
+  nower_win: 30
+  donower_team_win: 50
+  correct_vote: 5
+  donower_vote_survived: 10         # credited discreetly — never shown on any public surface (Rules §6)
+  daily_first_win: 25
+  daily_earn_cap: 300               # anti-farm ceiling on play earnings
+  challenge_winner: 1000            # the Week Winner award (Game Modes §3)
+  contributor_accepted_asset: 100
+
+economy:
+  free_daily_quickplay_matches: 3   # per free account per server day; never applies under a Play Pass or Premium; local rooms never capped
+  points_to_noin: 100               # Non-Converted Points per 1 Noin — one-way, multiples of 100, counts toward daily_earn_cap
+  play_pass_prices: {day_1: 250, day_3: 600, day_7: 1200}    # Noin; passes never remove ads
+  premium_yearly_discount_pct: 20   # Premium subscription (sole ad-removal path); monthly/yearly store products mapped at launch
+  unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Noin
+  noin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
+
+liquidity:                          # Quick Play backfill bots (Game Modes §1)
+  backfill_enabled: true
+  queue_timeout_s: 25
+  min_humans: 1
+  leaderboard_min_humans: 3
+  noin_min_humans: 2                # team-win Noin requires this many humans
+
+liveops:
+  leaderboard_daily_counted_matches: 10
+  challenge_max_entries: 100        # intake auto-closes; rejections reopen slots
+  challenge_votes_per_player: 1     # immutable once cast
+
+portal:
+  min_account_level_to_apply: 2
+  submissions_per_contributor_per_day: 10
+  guard_freeze_max_h: 48

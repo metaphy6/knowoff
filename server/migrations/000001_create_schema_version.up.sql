@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS schema_migrations (
+    version BIGINT PRIMARY KEY,
+    dirty BOOLEAN NOT NULL DEFAULT FALSE,
+    applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
