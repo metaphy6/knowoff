@@ -1,0 +1,300 @@
+{"id":"card-00000","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9997224,0.023560751],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00001","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.99990433,-0.013831282],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00002","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.99986553,0.01640036],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00003","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9997745,0.021234991],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00004","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9990248,0.044152763],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00005","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.99927557,-0.038057625],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00006","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9997723,-0.021339467],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00007","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.99988365,0.0152556235],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00008","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9990894,0.042665888],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00009","type":"text","asset_ref":"","content":"High match for topic 0","embedding":[0.9999879,-0.00492413],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00010","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.43255728,0.90160644],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00011","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.33562908,0.94199425],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00012","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.4853286,0.87433183],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00013","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.3273034,0.9449193],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00014","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.47104958,0.8821067],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00015","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.36362344,0.93154603],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00016","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.45266604,0.8916801],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00017","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.37082875,0.9287013],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00018","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.3465346,0.93803716],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00019","type":"text","asset_ref":"","content":"Distant match for topic 0","embedding":[0.3980843,0.91734886],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00020","type":"text","asset_ref":"","content":"Chaos card 20","embedding":[0.38596588,0.92251307],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00021","type":"text","asset_ref":"","content":"Chaos card 21","embedding":[0.44502142,0.8955199],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00022","type":"text","asset_ref":"","content":"Chaos card 22","embedding":[0.9257086,-0.3782375],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00023","type":"text","asset_ref":"","content":"Chaos card 23","embedding":[0.26916397,-0.96309435],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00024","type":"text","asset_ref":"","content":"Chaos card 24","embedding":[-0.9788126,-0.2047582],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00025","type":"text","asset_ref":"","content":"Chaos card 25","embedding":[0.1010484,0.9948815],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00026","type":"text","asset_ref":"","content":"Chaos card 26","embedding":[-0.95708585,0.28980464],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00027","type":"text","asset_ref":"","content":"Chaos card 27","embedding":[-0.2182077,0.9759024],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00028","type":"text","asset_ref":"","content":"Chaos card 28","embedding":[0.9699646,0.24324614],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00029","type":"text","asset_ref":"","content":"Chaos card 29","embedding":[-0.05613181,0.99842334],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00030","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.7840123,0.6207453],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00031","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.8281057,0.56057197],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00032","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.8340527,0.55168486],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00033","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.82030135,0.5719316],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00034","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.7849969,0.6194997],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00035","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.8232961,0.5676121],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00036","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.81172884,0.58403444],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00037","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.8008382,0.5988808],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00038","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.81204075,0.5836007],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00039","type":"text","asset_ref":"","content":"High match for topic 1","embedding":[0.8101578,0.58621186],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00040","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.28639737,0.9581109],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00041","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.1614055,0.9868882],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00042","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.19492967,0.9808172],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00043","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.2679762,0.9634255],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00044","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.14976913,0.988721],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00045","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.16148962,0.9868744],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00046","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.27447554,0.9615941],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00047","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.23969334,0.9708486],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00048","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.17272465,0.98497015],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00049","type":"text","asset_ref":"","content":"Distant match for topic 1","embedding":[-0.1890847,0.9819608],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00050","type":"text","asset_ref":"","content":"Chaos card 50","embedding":[0.9962765,0.086215995],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00051","type":"text","asset_ref":"","content":"Chaos card 51","embedding":[0.9936372,-0.11262817],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00052","type":"text","asset_ref":"","content":"Chaos card 52","embedding":[-0.5550501,0.8318169],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00053","type":"text","asset_ref":"","content":"Chaos card 53","embedding":[0.64161813,0.7670242],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00054","type":"text","asset_ref":"","content":"Chaos card 54","embedding":[0.87547606,-0.48326144],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00055","type":"text","asset_ref":"","content":"Chaos card 55","embedding":[0.8693403,-0.49421394],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00056","type":"text","asset_ref":"","content":"Chaos card 56","embedding":[-0.98282886,-0.18451951],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00057","type":"text","asset_ref":"","content":"Chaos card 57","embedding":[-0.47648266,0.8791839],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00058","type":"text","asset_ref":"","content":"Chaos card 58","embedding":[-0.058955308,-0.9982606],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00059","type":"text","asset_ref":"","content":"Chaos card 59","embedding":[-0.6458489,-0.7634653],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00060","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.32137558,0.9469518],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00061","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.34182858,0.9397623],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00062","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.2779794,0.960587],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00063","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.32557896,0.94551486],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00064","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.34582323,0.9382997],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00065","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.33912134,0.9407426],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00066","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.2704236,0.96274143],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00067","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.33591786,0.94189125],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00068","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.35015297,0.93669254],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00069","type":"text","asset_ref":"","content":"High match for topic 2","embedding":[0.34575632,0.93832433],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00070","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.7487145,0.6628926],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00071","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.69226795,0.7216405],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00072","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.7964047,0.60476404],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00073","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.70590544,0.7083061],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00074","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.7726219,0.6348664],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00075","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.76240814,0.64709646],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00076","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.75099003,0.6603135],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00077","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.67495453,0.7378593],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00078","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.76851285,0.63983434],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00079","type":"text","asset_ref":"","content":"Distant match for topic 2","embedding":[-0.7793708,0.626563],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00080","type":"text","asset_ref":"","content":"Chaos card 80","embedding":[0.91137326,-0.41158086],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00081","type":"text","asset_ref":"","content":"Chaos card 81","embedding":[-0.8880263,0.4597926],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00082","type":"text","asset_ref":"","content":"Chaos card 82","embedding":[0.5414421,0.84073806],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00083","type":"text","asset_ref":"","content":"Chaos card 83","embedding":[-0.9736362,0.22810653],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00084","type":"text","asset_ref":"","content":"Chaos card 84","embedding":[-0.4662875,0.88463324],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00085","type":"text","asset_ref":"","content":"Chaos card 85","embedding":[-0.64500207,-0.76418084],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00086","type":"text","asset_ref":"","content":"Chaos card 86","embedding":[-0.48326278,0.87547535],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00087","type":"text","asset_ref":"","content":"Chaos card 87","embedding":[-0.8772943,0.47995284],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00088","type":"text","asset_ref":"","content":"Chaos card 88","embedding":[0.6900796,-0.7237334],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00089","type":"text","asset_ref":"","content":"Chaos card 89","embedding":[0.9246691,0.3807717],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00090","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.30971727,0.9508287],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00091","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.34554857,0.93840086],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00092","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.34794575,0.93751466],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00093","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.3066283,0.9518293],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00094","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.3194519,0.9476025],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00095","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.2914954,0.95657223],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00096","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.31545186,0.9489416],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00097","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.33086157,0.9436793],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00098","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.3010381,0.9536121],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00099","type":"text","asset_ref":"","content":"High match for topic 3","embedding":[-0.31224123,0.95000285],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00100","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9981849,0.060223505],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00101","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.98967564,0.14332515],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00102","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9908839,0.1347185],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00103","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.98372126,0.17970107],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00104","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.983249,0.18226723],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00105","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9855748,0.16924039],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00106","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.98655885,0.16340621],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00107","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9890633,0.14749134],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00108","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9999479,0.010209534],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00109","type":"text","asset_ref":"","content":"Distant match for topic 3","embedding":[-0.9919777,0.12641293],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00110","type":"text","asset_ref":"","content":"Chaos card 110","embedding":[0.9909271,0.1344006],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00111","type":"text","asset_ref":"","content":"Chaos card 111","embedding":[-0.86807585,-0.49643156],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00112","type":"text","asset_ref":"","content":"Chaos card 112","embedding":[0.2576681,0.9662335],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00113","type":"text","asset_ref":"","content":"Chaos card 113","embedding":[0.07853472,-0.9969114],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00114","type":"text","asset_ref":"","content":"Chaos card 114","embedding":[-0.034172546,-0.99941593],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00115","type":"text","asset_ref":"","content":"Chaos card 115","embedding":[0.9315223,-0.36368418],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00116","type":"text","asset_ref":"","content":"Chaos card 116","embedding":[-0.8745328,-0.48496628],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00117","type":"text","asset_ref":"","content":"Chaos card 117","embedding":[0.821028,0.570888],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00118","type":"text","asset_ref":"","content":"Chaos card 118","embedding":[-0.28556925,-0.95835805],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00119","type":"text","asset_ref":"","content":"Chaos card 119","embedding":[0.97954684,-0.20121619],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00120","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.8186286,0.57432324],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00121","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.8348183,0.55052555],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00122","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.7976071,0.60317737],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00123","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.8290627,0.55915564],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00124","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.78960925,0.61361],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00125","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.7957104,0.6056773],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00126","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.83055973,0.5569295],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00127","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.7970482,0.6039157],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00128","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.82610756,0.5635125],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00129","type":"text","asset_ref":"","content":"High match for topic 4","embedding":[-0.7810749,0.62443733],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00130","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.8764868,-0.48142588],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00131","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.8313938,-0.5556837],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00132","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.90530825,-0.42475522],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00133","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.90282696,-0.430004],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00134","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.9074534,-0.42015272],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00135","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.86570024,-0.5005627],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00136","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.89270616,-0.4506392],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00137","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.8270725,-0.5620953],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00138","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.82918686,-0.5589716],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00139","type":"text","asset_ref":"","content":"Distant match for topic 4","embedding":[-0.8492192,-0.52804047],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00140","type":"text","asset_ref":"","content":"Chaos card 140","embedding":[-0.9959509,0.089898795],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00141","type":"text","asset_ref":"","content":"Chaos card 141","embedding":[-0.988799,-0.14925325],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00142","type":"text","asset_ref":"","content":"Chaos card 142","embedding":[0.9885096,-0.15115827],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00143","type":"text","asset_ref":"","content":"Chaos card 143","embedding":[-0.3651603,0.9309447],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00144","type":"text","asset_ref":"","content":"Chaos card 144","embedding":[0.48104042,-0.87669843],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00145","type":"text","asset_ref":"","content":"Chaos card 145","embedding":[0.3973973,0.91764665],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00146","type":"text","asset_ref":"","content":"Chaos card 146","embedding":[0.36927885,0.9293186],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00147","type":"text","asset_ref":"","content":"Chaos card 147","embedding":[-0.25293988,-0.967482],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00148","type":"text","asset_ref":"","content":"Chaos card 148","embedding":[-0.6444317,0.76466185],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00149","type":"text","asset_ref":"","content":"Chaos card 149","embedding":[-0.644697,-0.7644382],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00150","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.998983,-0.045088347],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00151","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9988553,0.047834408],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00152","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9997719,-0.021358145],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00153","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9989255,0.04634523],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00154","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9995426,0.030242274],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00155","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.999452,0.03310067],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00156","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9998829,0.015303881],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00157","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9996402,0.026821647],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00158","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.9999855,0.0053767026],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00159","type":"text","asset_ref":"","content":"High match for topic 5","embedding":[-0.999335,0.03646391],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00160","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.47349256,-0.8807978],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00161","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.36416712,-0.9313336],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00162","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.44726327,-0.8944023],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00163","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.36781475,-0.9298991],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00164","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.44671857,-0.89467454],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00165","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.4455642,-0.89524996],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00166","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.48711088,-0.87334013],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00167","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.44915202,-0.8934553],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00168","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.3917107,-0.9200884],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00169","type":"text","asset_ref":"","content":"Distant match for topic 5","embedding":[-0.3301491,-0.9439288],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00170","type":"text","asset_ref":"","content":"Chaos card 170","embedding":[0.39155585,-0.92015433],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00171","type":"text","asset_ref":"","content":"Chaos card 171","embedding":[0.89106596,0.45387384],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00172","type":"text","asset_ref":"","content":"Chaos card 172","embedding":[0.8182126,0.5749157],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00173","type":"text","asset_ref":"","content":"Chaos card 173","embedding":[-0.07938415,-0.9968441],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00174","type":"text","asset_ref":"","content":"Chaos card 174","embedding":[-0.8534709,0.52114046],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00175","type":"text","asset_ref":"","content":"Chaos card 175","embedding":[-0.9648325,-0.2628656],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00176","type":"text","asset_ref":"","content":"Chaos card 176","embedding":[-0.9923893,0.12313971],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00177","type":"text","asset_ref":"","content":"Chaos card 177","embedding":[-0.82749236,-0.56147695],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00178","type":"text","asset_ref":"","content":"Chaos card 178","embedding":[0.49857554,0.86684626],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00179","type":"text","asset_ref":"","content":"Chaos card 179","embedding":[0.976013,0.21771234],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00180","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.8318763,-0.55496114],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00181","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.7804882,-0.6251705],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00182","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.82389927,-0.5667363],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00183","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.7963288,-0.604864],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00184","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.8298051,-0.5580533],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00185","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.8268934,-0.5623587],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00186","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.8013017,-0.59826046],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00187","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.8102625,-0.58606714],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00188","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.7832211,-0.62174326],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00189","type":"text","asset_ref":"","content":"High match for topic 6","embedding":[-0.81137604,-0.5845245],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00190","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.12245646,-0.9924739],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00191","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.26409668,-0.9644962],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00192","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.2686776,-0.9632302],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00193","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.21045461,-0.9776036],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00194","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.26123536,-0.9652751],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00195","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.12219523,-0.9925061],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00196","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.13846684,-0.99036705],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00197","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.14029701,-0.99010944],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00198","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.23937735,-0.9709266],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00199","type":"text","asset_ref":"","content":"Distant match for topic 6","embedding":[0.25233597,-0.9676397],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00200","type":"text","asset_ref":"","content":"Chaos card 200","embedding":[0.886147,0.46340418],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00201","type":"text","asset_ref":"","content":"Chaos card 201","embedding":[0.7586461,0.65150297],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00202","type":"text","asset_ref":"","content":"Chaos card 202","embedding":[-0.13951245,0.9902203],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00203","type":"text","asset_ref":"","content":"Chaos card 203","embedding":[-0.917735,0.39719325],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00204","type":"text","asset_ref":"","content":"Chaos card 204","embedding":[0.93888813,0.34422234],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00205","type":"text","asset_ref":"","content":"Chaos card 205","embedding":[0.94143707,-0.3371887],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00206","type":"text","asset_ref":"","content":"Chaos card 206","embedding":[0.76111704,0.6486145],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00207","type":"text","asset_ref":"","content":"Chaos card 207","embedding":[0.33391833,-0.94260204],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00208","type":"text","asset_ref":"","content":"Chaos card 208","embedding":[-0.30249858,-0.95314986],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00209","type":"text","asset_ref":"","content":"Chaos card 209","embedding":[-0.81480694,0.5797324],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00210","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.3450133,-0.9385978],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00211","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.3470113,-0.93786097],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00212","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.28957903,-0.9571541],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00213","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.34371683,-0.9390733],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00214","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.32290184,-0.9464325],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00215","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.29224467,-0.9563436],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00216","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.2619869,-0.96507144],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00217","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.27683792,-0.96091664],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00218","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.35409936,-0.9352078],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00219","type":"text","asset_ref":"","content":"High match for topic 7","embedding":[-0.34066918,-0.9401832],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00220","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.71837735,-0.6956536],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00221","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.6862161,-0.72739774],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00222","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.79839385,-0.6021356],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00223","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.7838386,-0.6209646],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00224","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.7894896,-0.6137639],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00225","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.76649195,-0.64225394],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00226","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.78729546,-0.6165759],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00227","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.69393253,-0.72004],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00228","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.73867553,-0.6740612],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00229","type":"text","asset_ref":"","content":"Distant match for topic 7","embedding":[0.7167244,-0.6973565],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00230","type":"text","asset_ref":"","content":"Chaos card 230","embedding":[-0.8757857,0.48270014],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00231","type":"text","asset_ref":"","content":"Chaos card 231","embedding":[-0.15870933,-0.9873254],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00232","type":"text","asset_ref":"","content":"Chaos card 232","embedding":[-0.6022487,0.7983085],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00233","type":"text","asset_ref":"","content":"Chaos card 233","embedding":[0.08610191,0.99628633],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00234","type":"text","asset_ref":"","content":"Chaos card 234","embedding":[0.8787818,0.47722384],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00235","type":"text","asset_ref":"","content":"Chaos card 235","embedding":[0.993292,0.115633264],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00236","type":"text","asset_ref":"","content":"Chaos card 236","embedding":[-0.5516974,0.8340444],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00237","type":"text","asset_ref":"","content":"Chaos card 237","embedding":[0.80836195,0.58868575],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00238","type":"text","asset_ref":"","content":"Chaos card 238","embedding":[-0.6956866,0.71834546],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00239","type":"text","asset_ref":"","content":"Chaos card 239","embedding":[0.9944587,-0.10512805],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00240","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.2936015,-0.9559279],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00241","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.29157656,-0.9565475],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00242","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.31500846,-0.9490889],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00243","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.27102017,-0.96257365],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00244","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.34967527,-0.936871],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00245","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.31766918,-0.9482016],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00246","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.27742666,-0.9607468],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00247","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.32259497,-0.9465371],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00248","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.28919655,-0.9572697],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00249","type":"text","asset_ref":"","content":"High match for topic 8","embedding":[0.2839571,-0.958837],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00250","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.99903655,-0.043885738],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00251","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.9858602,-0.16756958],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00252","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.99868333,-0.051298805],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00253","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.9942577,-0.10701231],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00254","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.9929164,-0.118815236],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00255","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.99979746,-0.020125287],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00256","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.98439646,-0.17596494],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00257","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.9999322,-0.011642018],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00258","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.9985685,-0.05348829],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00259","type":"text","asset_ref":"","content":"Distant match for topic 8","embedding":[0.99992615,-0.012152198],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00260","type":"text","asset_ref":"","content":"Chaos card 260","embedding":[-0.99886656,-0.0475981],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00261","type":"text","asset_ref":"","content":"Chaos card 261","embedding":[0.11550606,0.99330676],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00262","type":"text","asset_ref":"","content":"Chaos card 262","embedding":[0.96369475,-0.26700652],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00263","type":"text","asset_ref":"","content":"Chaos card 263","embedding":[-0.8651326,0.5015433],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00264","type":"text","asset_ref":"","content":"Chaos card 264","embedding":[-0.47153082,-0.8818496],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00265","type":"text","asset_ref":"","content":"Chaos card 265","embedding":[-0.97767323,-0.21013115],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00266","type":"text","asset_ref":"","content":"Chaos card 266","embedding":[0.19480881,0.9808412],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00267","type":"text","asset_ref":"","content":"Chaos card 267","embedding":[-0.9193597,-0.3934181],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00268","type":"text","asset_ref":"","content":"Chaos card 268","embedding":[0.9250041,-0.37995702],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00269","type":"text","asset_ref":"","content":"Chaos card 269","embedding":[-0.3678112,-0.92990047],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00270","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.7797636,-0.62607414],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00271","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.8163908,-0.5774998],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00272","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.78359187,-0.6212759],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00273","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.81971717,-0.57276857],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00274","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.8360013,-0.5487275],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00275","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.8205572,-0.57156444],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00276","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.79758143,-0.6032113],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00277","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.8270988,-0.5620566],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00278","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.818541,-0.5744481],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00279","type":"text","asset_ref":"","content":"High match for topic 9","embedding":[0.81465226,-0.5799497],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00280","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.86571336,0.5005401],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00281","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.90609986,0.42306384],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00282","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.8469183,0.5317231],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00283","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.84308577,0.53777915],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00284","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.88523036,0.46515283],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00285","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.88185465,0.47152132],"tags":["synthetic","text"],"tone_bucket":"social-awkwardness"}
+{"id":"card-00286","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.8763157,0.4817373],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00287","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.89772093,0.44056457],"tags":["synthetic","text"],"tone_bucket":"gen-z-absurdism"}
+{"id":"card-00288","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.9105032,0.41350195],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00289","type":"text","asset_ref":"","content":"Distant match for topic 9","embedding":[0.8733493,0.48709437],"tags":["synthetic","text"],"tone_bucket":"millennial-cope"}
+{"id":"card-00290","type":"text","asset_ref":"","content":"Chaos card 290","embedding":[-0.9863863,0.16444458],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00291","type":"text","asset_ref":"","content":"Chaos card 291","embedding":[0.8181173,-0.57505137],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00292","type":"text","asset_ref":"","content":"Chaos card 292","embedding":[0.3425316,0.9395063],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00293","type":"text","asset_ref":"","content":"Chaos card 293","embedding":[-0.9404608,-0.3399021],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00294","type":"text","asset_ref":"","content":"Chaos card 294","embedding":[-0.81250197,-0.5829584],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00295","type":"text","asset_ref":"","content":"Chaos card 295","embedding":[0.9287603,0.3706809],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00296","type":"text","asset_ref":"","content":"Chaos card 296","embedding":[0.6825427,0.73084575],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00297","type":"text","asset_ref":"","content":"Chaos card 297","embedding":[-0.99657995,0.0826342],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00298","type":"text","asset_ref":"","content":"Chaos card 298","embedding":[-0.47626337,0.8793027],"tags":["synthetic","text"],"tone_bucket":"chaos"}
+{"id":"card-00299","type":"text","asset_ref":"","content":"Chaos card 299","embedding":[0.51702213,-0.85597205],"tags":["synthetic","text"],"tone_bucket":"chaos"}

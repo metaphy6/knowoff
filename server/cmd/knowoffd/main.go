@@ -18,6 +18,8 @@ import (
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
+	"github.com/knowoff/knowoff/server/internal/workbench"
+	"github.com/knowoff/knowoff/server/pkg/media"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -67,6 +69,17 @@ func run() error {
 	}
 	defer db.Close()
 
+	mediaManager := media.NewManager(nil)
+	if cfg.Media.LocalBundlePath != "" {
+		pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
+		if err != nil {
+			logger.Error("failed to load media pack", "path", cfg.Media.LocalBundlePath, "error", err)
+		} else {
+			mediaManager.Load(pack)
+			logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
+		}
+	}
+
 	deps := transport.Deps{
 		Config:      cfg,
 		Logger:      logger,
@@ -74,6 +87,7 @@ func run() error {
 		RedisPing:   redisPingFunc(cfg),
 		StoragePing: storagePingFunc(cfg),
 		Connections: connections,
+		Media:       mediaManager,
 	}
 
 	publicMux := http.NewServeMux()
@@ -84,6 +98,16 @@ func run() error {
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	adminMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
+	if cfg.App.Env != "prod" {
+		ingestPath := cfg.Media.WorkbenchIngestPath
+		if ingestPath == "" {
+			ingestPath = "content/ingest"
+		}
+		wb := workbench.New(deps.Media, ingestPath)
+		defer wb.Close()
+		wb.Register(adminMux)
+		logger.Info("media workbench mounted", "env", cfg.App.Env, "ingest", ingestPath)
+	}
 
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
@@ -195,6 +219,15 @@ func openDB(cfg *config.Config) (*sql.DB, error) {
 		return nil, err
 	}
 	return db, nil
+}
+
+func dealingTuningFromConfig(cfg *config.Config) media.DealingTuning {
+	return media.DealingTuning{
+		BandHigh:          cfg.Tuning.Dealing.BandHigh,
+		BandLow:           cfg.Tuning.Dealing.BandLow,
+		MinHighPerNown:    cfg.Tuning.Dealing.MinHighPerNown,
+		MinDistantPerNown: cfg.Tuning.Dealing.MinDistantPerNown,
+	}
 }
 
 func redisPingFunc(cfg *config.Config) func(context.Context) error {

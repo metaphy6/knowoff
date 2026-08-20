@@ -94,6 +94,8 @@ storage:
   secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
+media:
+  url_signing_key: ${KNOWOFF_MEDIA_URL_KEY}
 `)
 	// Clear all required secrets to ensure a single error lists every missing one.
 	for _, k := range (&Config{}).RequiredSecrets() {
