@@ -43,3 +43,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-21T12:34:01Z,run-20260821123401-179395,copilot,phase-5,commit,completed,build(make): run server tests sequentially (-p=1) to avoid shared-test-DB contention,Makefile,pending
 2026-08-21T12:43:42Z,run-20260821124342-191100,human,general,commit,completed,"feat(server/migrations): Phase 6 portal, community, challenge and guard-freeze schema",,pending
 2026-08-21T14:03:23Z,run-20260821140323-303293,human,phase-6,commit,completed,feat(portal): complete Phase 6 contributor portal and community features,,pending
+2026-08-21T14:22:42Z,run-20260821142242-325389,human,agents,commit,completed,feat(agents): add knowoff primary project agent,,pending
+2026-08-21T14:33:58Z,run-20260821143358-337843,human,docs,commit,completed,docs(planning): trim BLUEPRINT.md back to a pointer stub; ROADMAP.md stays the single spec+roadmap monolith,,pending
