@@ -6,8 +6,11 @@ import (
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/auth"
+	"github.com/knowoff/knowoff/server/internal/avatar"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
+	"github.com/knowoff/knowoff/server/internal/notices"
 	"github.com/knowoff/knowoff/server/internal/profile"
+	"github.com/knowoff/knowoff/server/internal/reports"
 )
 
 // AuthDeps bundles auth-related handlers.
@@ -194,6 +197,77 @@ func RegisterProfileRoutes(mux *http.ServeMux, deps ProfileDeps, authMgr *auth.M
 		}
 		writeJSON(w, map[string]any{"top": top, "own": own})
 	})
+}
+
+// PublicRouteDeps bundles the public HTTP surface introduced in Phase 5.
+type PublicRouteDeps struct {
+	Auth    *auth.Manager
+	Notices *notices.Manager
+	Reports *reports.Manager
+	Avatar  *avatar.Manager
+}
+
+// RegisterPublicRoutes mounts player-facing endpoints for notices, reports,
+// feedback, and avatar uploads.
+func RegisterPublicRoutes(mux *http.ServeMux, deps PublicRouteDeps) {
+	mux.HandleFunc("/api/notices", deps.Notices.HTTPActiveNotices)
+
+	mux.HandleFunc("/api/reports", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accountID, ok := bearerAccount(r, deps.Auth)
+		if !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		var req struct {
+			ReportType      string `json:"report_type"`
+			TargetAccountID string `json:"target_account_id"`
+			TargetMediaID   string `json:"target_media_id"`
+			Reason          string `json:"reason"`
+			Description     string `json:"description"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if err := deps.Reports.CreateReport(r.Context(), accountID, reports.ReportType(req.ReportType), req.TargetAccountID, req.TargetMediaID, req.Reason, req.Description); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	mux.HandleFunc("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		accountID, ok := bearerAccount(r, deps.Auth)
+		if !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		var req struct {
+			Type            string         `json:"type"`
+			Title           string         `json:"title"`
+			Message         string         `json:"message"`
+			ContextSnapshot map[string]any `json:"context_snapshot"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if err := deps.Reports.CreateFeedback(r.Context(), accountID, req.Type, req.Title, req.Message, req.ContextSnapshot); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	mux.Handle("/api/avatar", deps.Avatar.Handler(deps.Auth))
 }
 
 func bearerAccount(r *http.Request, authMgr *auth.Manager) (string, bool) {

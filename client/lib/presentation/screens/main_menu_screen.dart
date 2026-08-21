@@ -3,8 +3,10 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 
 import 'leaderboard_screen.dart';
 import 'lobby_screen.dart';
+import 'notice_inbox_screen.dart';
 import 'profile_screen.dart';
 import 'queue_screen.dart';
+import 'store_screen.dart';
 
 /// The main entry screen. Every user-facing string is localized; no hardcoded
 /// display text is allowed.
@@ -56,6 +58,28 @@ class MainMenuScreen extends StatelessWidget {
                 );
               },
               child: Text(l10n.mainMenuLeaderboard),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const StoreScreen(),
+                  ),
+                );
+              },
+              child: Text(l10n.mainMenuStore),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => const NoticeInboxScreen(),
+                  ),
+                );
+              },
+              child: Text(l10n.mainMenuNotices),
             ),
           ],
         ),

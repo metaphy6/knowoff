@@ -15,15 +15,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/knowoff/knowoff/server/internal/admin"
 	"github.com/knowoff/knowoff/server/internal/audit"
 	"github.com/knowoff/knowoff/server/internal/auth"
+	"github.com/knowoff/knowoff/server/internal/avatar"
 	"github.com/knowoff/knowoff/server/internal/bots"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/handler"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
+	"github.com/knowoff/knowoff/server/internal/notices"
 	"github.com/knowoff/knowoff/server/internal/profile"
+	"github.com/knowoff/knowoff/server/internal/reports"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
 	"github.com/knowoff/knowoff/server/internal/workbench"
@@ -148,6 +152,7 @@ func run() error {
 		Profile:     profileManager,
 		Audit:       auditLogger,
 		Leaderboard: leaderboardManager,
+		Economy:     economyManager,
 		Redis:       redisClient,
 	}
 
@@ -157,6 +162,11 @@ func run() error {
 		Lobby:  lobbyManager,
 	})
 
+	adminManager := admin.NewManager(db, cfg, redisClient)
+	noticesManager := notices.NewManager(db, cfg, lobbyManager)
+	reportsManager := reports.NewManager(db)
+	avatarManager := avatar.NewManager(db, cfg, economyManager)
+
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	publicMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
@@ -165,10 +175,22 @@ func run() error {
 	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
 	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager})
 	handler.RegisterProfileRoutes(publicMux, handler.ProfileDeps{Profile: profileManager, Leaderboard: leaderboardManager}, authManager)
+	handler.RegisterPublicRoutes(publicMux, handler.PublicRouteDeps{
+		Auth:    authManager,
+		Notices: noticesManager,
+		Reports: reportsManager,
+		Avatar:  avatarManager,
+	})
+	handler.RegisterEconomyRoutes(publicMux, handler.EconomyDeps{
+		Config:  cfg,
+		Auth:    authManager,
+		Economy: economyManager,
+	})
 
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	adminMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
+	adminMux.Handle("/admin/", adminManager.Handler(noticesManager))
 	if cfg.App.Env != "prod" {
 		ingestPath := cfg.Media.WorkbenchIngestPath
 		if ingestPath == "" {
@@ -191,8 +213,12 @@ func run() error {
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeoutS) * time.Second,
 	}
 
+	adminAddr := cfg.Server.AdminAddr
+	if adminAddr == "" {
+		adminAddr = fmt.Sprintf("%s:%d", cfg.Server.AdminBindAddr, cfg.Server.AdminPort)
+	}
 	adminServer := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", cfg.Server.AdminBindAddr, cfg.Server.AdminPort),
+		Addr:    adminAddr,
 		Handler: transport.RecoverPanic(adminMux, logger),
 	}
 

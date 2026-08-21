@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/lib/pq"
 )
 
 // Profile is the public + owner-only view of a player.
@@ -68,7 +69,7 @@ func (m *Manager) Get(ctx context.Context, accountID string, owner bool) (*Profi
 		&p.MatchesPlayed, &p.MatchesWonNower, &p.MatchesWonDonower,
 		&p.CorrectVotes, &p.VotesCast, &p.DonowerSurvivals, &p.DonowerMatches,
 		&p.PokesSent, &p.WeekWinnerTitles, &p.WeeklyPodiums,
-		&p.ContributorCredits, &p.UpdatedAt,
+		pq.Array(&p.ContributorCredits), &p.UpdatedAt,
 	); err != nil {
 		return nil, fmt.Errorf("load profile: %w", err)
 	}

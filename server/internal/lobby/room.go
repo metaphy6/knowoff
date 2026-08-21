@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/knowoff/knowoff/server/internal/audit"
 	"github.com/knowoff/knowoff/server/internal/bots"
+	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/game"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/transport"
@@ -381,6 +382,95 @@ func (r *Room) matchFinishCallback() game.MatchFinishCallback {
 					"correct_vote": pr.CorrectVote,
 					"quick_play":   r.QuickPlay,
 				})
+			}
+		}
+
+		// Noin grants: instant, durable, capped per day. Team-win Noin requires
+		// enough humans; bot tables cannot farm currency.
+		if r.deps.Economy != nil {
+			inputs := make([]economy.MatchGrantInput, 0, len(result.Players))
+			for _, pr := range result.Players {
+				b, ok := bindings[pr.Seat]
+				if !ok {
+					continue
+				}
+				inputs = append(inputs, economy.MatchGrantInput{
+					AccountID:   b.AccountID,
+					Seat:        pr.Seat,
+					Role:        pr.Role,
+					Won:         pr.Role == winner,
+					Eliminated:  pr.Eliminated,
+					Absent:      pr.Absent,
+					CorrectVote: pr.CorrectVote,
+				})
+			}
+			grants := economy.MatchGrants(r.deps.Config, humanCount, inputs)
+			privateGrants := map[int]int{}
+			publicGrants := map[int]int{}
+			for _, g := range grants {
+				if g.AccountID == "" || g.Amount <= 0 {
+					continue
+				}
+				credited, err := r.deps.Economy.Wallet.Grant(ctx, g.AccountID, g.EventType, g.Amount, g.Reason, int64(r.deps.Config.Tuning.Noin.DailyEarnCap))
+				if err != nil {
+					r.deps.Logger.Warn("noin grant failed", "error", err, "room_id", r.ID, "seat", g.Seat, "reason", g.Reason)
+					continue
+				}
+				if credited <= 0 {
+					continue
+				}
+				if g.Discreet {
+					privateGrants[g.Seat] += credited
+				} else {
+					publicGrants[g.Seat] += credited
+				}
+				uid := uuid.UUID{}
+				if id, err := uuid.Parse(g.AccountID); err == nil {
+					uid = id
+				}
+				if r.deps.Audit != nil {
+					r.deps.Audit.LogWithAccount(ctx, audit.EventNoinGranted, uid, r.ID, "", map[string]any{
+						"seat":       g.Seat,
+						"amount":     credited,
+						"reason":     g.Reason,
+						"discreet":   g.Discreet,
+						"quick_play": r.QuickPlay,
+					})
+				}
+			}
+			// Daily first-win bonus, separate from match grants.
+			for _, pr := range result.Players {
+				b, ok := bindings[pr.Seat]
+				if !ok || b.Bot || b.AccountID == "" {
+					continue
+				}
+				won := pr.Role == winner
+				if !won {
+					continue
+				}
+				credited, err := r.deps.Economy.GrantDailyFirstWin(ctx, b.AccountID)
+				if err != nil {
+					r.deps.Logger.Warn("daily first win grant failed", "error", err, "room_id", r.ID, "seat", pr.Seat)
+					continue
+				}
+				if credited > 0 {
+					privateGrants[pr.Seat] += credited
+				}
+			}
+			// Public per-seat events (non-discreet). Sent privately so every player
+			// sees only their own grant; the table sees no amounts.
+			for seat, total := range publicGrants {
+				r.SendTo(seat, transport.NewEvent(transport.EventNoinGranted, map[string]any{
+					"amount":   total,
+					"discreet": false,
+				}))
+			}
+			// Discreet events: only the recipient sees role-linked grants.
+			for seat, total := range privateGrants {
+				r.SendTo(seat, transport.NewEvent(transport.EventNoinGranted, map[string]any{
+					"amount":   total,
+					"discreet": true,
+				}))
 			}
 		}
 	}

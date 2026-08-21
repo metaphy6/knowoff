@@ -1,6 +1,5 @@
-// Package economy implements the minimal v1 Noin economy surface needed for
-// Phase 4 (daily Quick Play cap tracking). The full ledger and store are
-// completed in Phase 5.
+// Package economy implements the Noin wallet, ledger, entitlements, and store
+// purchase verification surface.
 package economy
 
 import (
@@ -15,14 +14,26 @@ import (
 
 // Manager owns economy-side account checks. It is safe for concurrent use.
 type Manager struct {
-	db     *sql.DB
-	config *config.Config
+	db          *sql.DB
+	config      *config.Config
+	Wallet      *Wallet
+	Entitlements *Entitlements
+	Purchases   *Purchases
 }
 
 // NewManager returns an economy manager backed by Postgres.
 func NewManager(db *sql.DB, config *config.Config) *Manager {
-	return &Manager{db: db, config: config}
+	return &Manager{
+		db:           db,
+		config:       config,
+		Wallet:       NewWallet(db),
+		Entitlements: NewEntitlements(db),
+		Purchases:    NewPurchases(db, NewWallet(db), []byte(config.Security.SSVCallbackKey), config.Security.SSVAllowedSenders),
+	}
 }
+
+// DB returns the underlying database handle for tests.
+func (m *Manager) DB() *sql.DB { return m.db }
 
 // serverDay returns the date used for daily counters.
 func serverDay(t time.Time) time.Time {
@@ -30,9 +41,8 @@ func serverDay(t time.Time) time.Time {
 }
 
 // CanQueueQuickPlay returns true when the account may enter a Quick Play
-// queue under the free daily cap. Play Pass / Premium entitlements are not
-// yet implemented and always deny the cap here; Phase 5 will check active
-// entitlements before enforcing the cap.
+// queue. Play Pass holders and Premium subscribers bypass the free daily cap;
+// free accounts are checked against economy.free_daily_quickplay_matches.
 func (m *Manager) CanQueueQuickPlay(ctx context.Context, accountID string) (bool, error) {
 	if accountID == "" {
 		// Anonymous / unauthenticated players are treated as free accounts
@@ -42,6 +52,17 @@ func (m *Manager) CanQueueQuickPlay(ctx context.Context, accountID string) (bool
 	}
 	if _, err := uuid.Parse(accountID); err != nil {
 		return false, fmt.Errorf("invalid account id: %w", err)
+	}
+	// Premium or any active Play Pass removes the cap entirely.
+	if premium, err := m.Entitlements.HasPremium(ctx, accountID); err != nil {
+		return false, fmt.Errorf("check premium: %w", err)
+	} else if premium {
+		return true, nil
+	}
+	if pass, err := m.Entitlements.HasAnyPlayPass(ctx, accountID); err != nil {
+		return false, fmt.Errorf("check play pass: %w", err)
+	} else if pass {
+		return true, nil
 	}
 	day := serverDay(time.Now().UTC())
 	var count int

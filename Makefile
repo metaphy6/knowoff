@@ -89,7 +89,7 @@ server.build:
 
 ## server.test       Run all Go unit tests
 server.test:
-	@cd server && go test ./...
+	@cd server && go test ./... -count=1 -p=1
 
 ## server.lint       Lint and format-check Go code (golangci-lint, fallback gofmt + go vet)
 server.lint:
