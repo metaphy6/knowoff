@@ -24,7 +24,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err := db.Ping(); err != nil {
 		t.Skipf("postgres not available: %v", err)
 	}
-	if err := store.MigrateUp(db, "../migrations"); err != nil {
+	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	return db

@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/game"
+	"github.com/knowoff/knowoff/server/internal/transport"
 )
 
 const roomMappingTTL = 24 * time.Hour
@@ -103,6 +104,15 @@ func (m *Manager) DestroyRoom(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.destroyRoomLocked(id)
+}
+
+// BroadcastAll delivers an envelope to every connected seat in every live room.
+func (m *Manager) BroadcastAll(env *transport.Envelope) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, r := range m.rooms {
+		r.Broadcast(env, -1)
+	}
 }
 
 func (m *Manager) destroyRoomLocked(id string) {

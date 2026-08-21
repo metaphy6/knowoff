@@ -189,6 +189,14 @@ func (m *Manager) ValidateAccessToken(ctx context.Context, token string) (string
 	if revoked {
 		return "", fmt.Errorf("token revoked")
 	}
+	// Account-level bans invalidate all tokens immediately.
+	var bannedAt sql.NullTime
+	if err := m.db.QueryRowContext(ctx, "SELECT banned_at FROM accounts WHERE id = $1", claims.AccountID).Scan(&bannedAt); err != nil && err != sql.ErrNoRows {
+		return "", fmt.Errorf("ban check: %w", err)
+	}
+	if bannedAt.Valid {
+		return "", fmt.Errorf("account banned")
+	}
 	return claims.AccountID, nil
 }
 
@@ -218,6 +226,9 @@ func (m *Manager) Refresh(ctx context.Context, refreshToken string) (*TokenPair,
 func (m *Manager) RevokeAccount(ctx context.Context, accountID string) error {
 	if _, err := m.db.ExecContext(ctx, "DELETE FROM device_tokens WHERE account_id = $1", accountID); err != nil {
 		return fmt.Errorf("delete device tokens: %w", err)
+	}
+	if _, err := m.db.ExecContext(ctx, "UPDATE accounts SET banned_at = now() WHERE id = $1", accountID); err != nil {
+		return fmt.Errorf("mark account banned: %w", err)
 	}
 	return nil
 }
