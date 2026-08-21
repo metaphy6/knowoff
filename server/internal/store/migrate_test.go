@@ -23,9 +23,11 @@ func TestMigrateUpIdempotent(t *testing.T) {
 		t.Skipf("postgres not available (%v), skipping integration test", err)
 	}
 
-	// Ensure we start clean.
-	if _, err := db.Exec(`DROP TABLE IF EXISTS schema_migrations`); err != nil {
-		t.Fatalf("drop schema_migrations: %v", err)
+	// Ensure we start clean: drop the public schema and recreate it so the
+	// migration runs against an empty database even if previous test runs left
+	// tables behind.
+	if _, err := db.Exec(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO knowoff;`); err != nil {
+		t.Fatalf("reset public schema: %v", err)
 	}
 
 	migrationsPath := filepath.Join("..", "..", "migrations")

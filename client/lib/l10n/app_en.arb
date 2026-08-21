@@ -237,5 +237,256 @@
   "retry": "Retry",
   "@retry": {
     "description": "Retry action label."
+  },
+  "mainMenuStore": "Store",
+  "@mainMenuStore": {
+    "description": "Main menu button to open the store screen."
+  },
+  "mainMenuNotices": "Notices",
+  "@mainMenuNotices": {
+    "description": "Main menu button to open the notice inbox."
+  },
+  "storeTitle": "Store",
+  "@storeTitle": {
+    "description": "Store screen title."
+  },
+  "storeNoinBalance": "{balance} Noin",
+  "@storeNoinBalance": {
+    "description": "Noin balance chip label.",
+    "placeholders": {
+      "balance": {
+        "type": "int"
+      }
+    }
+  },
+  "storePlayPasses": "Play Passes",
+  "@storePlayPasses": {
+    "description": "Store section header for play passes."
+  },
+  "storePlayPassDay1": "1 day",
+  "@storePlayPassDay1": {
+    "description": "Label for the 1-day play pass."
+  },
+  "storePlayPassDay3": "3 days",
+  "@storePlayPassDay3": {
+    "description": "Label for the 3-day play pass."
+  },
+  "storePlayPassDay7": "7 days",
+  "@storePlayPassDay7": {
+    "description": "Label for the 7-day play pass."
+  },
+  "storeBuy": "Buy",
+  "@storeBuy": {
+    "description": "Buy button label."
+  },
+  "storeBuyPrice": "Buy {price}",
+  "@storeBuyPrice": {
+    "description": "Buy button label with a price.",
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "storeNoinBulks": "Noin Bulks",
+  "@storeNoinBulks": {
+    "description": "Store section header for Noin bulk packs."
+  },
+  "storeBulkSize": "{size} Noin",
+  "@storeBulkSize": {
+    "description": "Label for a Noin bulk pack size.",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "storeUnlocks": "Unlocks",
+  "@storeUnlocks": {
+    "description": "Store section header for permanent unlocks."
+  },
+  "storeUnlockCustomAvatar": "Custom Avatar",
+  "@storeUnlockCustomAvatar": {
+    "description": "Label for the custom avatar unlock."
+  },
+  "storeUnlockPokeStyle": "Poke Style",
+  "@storeUnlockPokeStyle": {
+    "description": "Label for the poke style unlock."
+  },
+  "storeUnlockThemePack": "Theme Pack",
+  "@storeUnlockThemePack": {
+    "description": "Label for the theme pack unlock."
+  },
+  "storePremium": "Premium",
+  "@storePremium": {
+    "description": "Premium subscription section header."
+  },
+  "storePremiumMonthly": "Monthly",
+  "@storePremiumMonthly": {
+    "description": "Monthly premium plan label."
+  },
+  "storePremiumYearly": "Yearly",
+  "@storePremiumYearly": {
+    "description": "Yearly premium plan label."
+  },
+  "storePremiumYearlyDiscount": "Save {percent}%",
+  "@storePremiumYearlyDiscount": {
+    "description": "Yearly discount note.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "storeBought": "Purchased",
+  "@storeBought": {
+    "description": "Snackbar confirmation after a successful purchase."
+  },
+  "storeError": "Purchase failed. Try again.",
+  "@storeError": {
+    "description": "Snackbar error after a failed purchase."
+  },
+  "convertPointsTitle": "Convert Points",
+  "@convertPointsTitle": {
+    "description": "Convert points dialog title."
+  },
+  "convertPointsHint": "Points to convert",
+  "@convertPointsHint": {
+    "description": "Input hint for points conversion."
+  },
+  "convertPointsMultiple": "Must be a multiple of {rate}.",
+  "@convertPointsMultiple": {
+    "description": "Validation message for points conversion multiples.",
+    "placeholders": {
+      "rate": {
+        "type": "int"
+      }
+    }
+  },
+  "convertPointsConvert": "Convert",
+  "@convertPointsConvert": {
+    "description": "Convert points button label."
+  },
+  "convertPointsResult": "You received {amount} Noin",
+  "@convertPointsResult": {
+    "description": "Result message after converting points.",
+    "placeholders": {
+      "amount": {
+        "type": "int"
+      }
+    }
+  },
+  "noticeMaintenanceIn": "Maintenance in {duration}",
+  "@noticeMaintenanceIn": {
+    "description": "Maintenance countdown banner label.",
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "noticeInboxTitle": "Notices",
+  "@noticeInboxTitle": {
+    "description": "Notice inbox screen title."
+  },
+  "noticeTypeMaintenance": "Maintenance",
+  "@noticeTypeMaintenance": {
+    "description": "Label for maintenance notice type."
+  },
+  "noticeTypeDowntime": "Downtime",
+  "@noticeTypeDowntime": {
+    "description": "Label for downtime notice type."
+  },
+  "noticeTypeAnnouncement": "Announcement",
+  "@noticeTypeAnnouncement": {
+    "description": "Label for announcement notice type."
+  },
+  "reportTitle": "Report",
+  "@reportTitle": {
+    "description": "Report dialog title."
+  },
+  "reportType": "Type",
+  "@reportType": {
+    "description": "Report type field label."
+  },
+  "reportTypeConduct": "Inappropriate conduct",
+  "@reportTypeConduct": {
+    "description": "Report type option for conduct."
+  },
+  "reportTypeMedia": "Inappropriate media",
+  "@reportTypeMedia": {
+    "description": "Report type option for media."
+  },
+  "reportTypeCheating": "Cheating or collusion",
+  "@reportTypeCheating": {
+    "description": "Report type option for cheating."
+  },
+  "reportTypeHarassment": "Harassment",
+  "@reportTypeHarassment": {
+    "description": "Report type option for harassment."
+  },
+  "reportReason": "Reason",
+  "@reportReason": {
+    "description": "Report reason field label."
+  },
+  "reportDescription": "Description (optional)",
+  "@reportDescription": {
+    "description": "Report description field label."
+  },
+  "reportSubmit": "Submit Report",
+  "@reportSubmit": {
+    "description": "Report submit button label."
+  },
+  "feedbackTitle": "Feedback",
+  "@feedbackTitle": {
+    "description": "Feedback dialog title."
+  },
+  "feedbackType": "Type",
+  "@feedbackType": {
+    "description": "Feedback type field label."
+  },
+  "feedbackTypeBug": "Bug",
+  "@feedbackTypeBug": {
+    "description": "Feedback type option for bug."
+  },
+  "feedbackTypeIdea": "Idea",
+  "@feedbackTypeIdea": {
+    "description": "Feedback type option for idea."
+  },
+  "feedbackTypeOther": "Other",
+  "@feedbackTypeOther": {
+    "description": "Feedback type option for other."
+  },
+  "feedbackTitleHint": "Short summary",
+  "@feedbackTitleHint": {
+    "description": "Feedback title input hint."
+  },
+  "feedbackMessage": "Message",
+  "@feedbackMessage": {
+    "description": "Feedback message field label."
+  },
+  "feedbackSubmit": "Send Feedback",
+  "@feedbackSubmit": {
+    "description": "Feedback submit button label."
+  },
+  "avatarUploadTitle": "Custom Avatar",
+  "@avatarUploadTitle": {
+    "description": "Avatar upload sheet title."
+  },
+  "avatarUploadPick": "Pick Image",
+  "@avatarUploadPick": {
+    "description": "Avatar upload pick image button."
+  },
+  "avatarUploadSubmit": "Upload",
+  "@avatarUploadSubmit": {
+    "description": "Avatar upload submit button."
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "OK action label."
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close action label."
   }
 }

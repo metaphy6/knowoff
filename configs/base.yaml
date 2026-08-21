@@ -19,7 +19,9 @@ server:
   read_timeout_s: 10
   write_timeout_s: 10
   idle_timeout_s: 120
-  # Admin / internal operations port (never exposed through public ingress)
+  # Admin / internal operations server (never exposed through public ingress).
+  # When admin_addr is non-empty it takes precedence over admin_bind_addr + admin_port.
+  admin_addr: ":8081"
   admin_bind_addr: 127.0.0.1
   admin_port: 9090
   # Metrics port (separate from public traffic)
@@ -89,6 +91,10 @@ security:
   access_token_ttl_m: 15
   refresh_token_ttl_h: 168
   bcrypt_cost: 10
+  admin_totp_issuer: Knowoff Admin
+  admin_session_ttl_h: 24
+  ssv_callback_key: ${KNOWOFF_SSV_CALLBACK_KEY}
+  ssv_allowed_senders: ""
   oauth:
     google:
       client_id: ${KNOWOFF_OAUTH_GOOGLE_CLIENT_ID}

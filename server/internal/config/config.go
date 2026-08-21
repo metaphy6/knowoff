@@ -42,6 +42,7 @@ type LogConfig struct {
 type ServerConfig struct {
 	BindAddr        string `yaml:"bind_addr"`
 	Port            int    `yaml:"port"`
+	AdminAddr       string `yaml:"admin_addr"`
 	AdminBindAddr   string `yaml:"admin_bind_addr"`
 	AdminPort       int    `yaml:"admin_port"`
 	MetricsBindAddr string `yaml:"metrics_bind_addr"`
@@ -118,13 +119,17 @@ type MediaConfig struct {
 
 // SecurityConfig holds JWT and crypto settings.
 type SecurityConfig struct {
-	JWTSigningKey    string              `yaml:"jwt_signing_key"`
-	JWTIssuer        string              `yaml:"jwt_issuer"`
-	JWTAudience      string              `yaml:"jwt_audience"`
-	AccessTokenTTLM  int                 `yaml:"access_token_ttl_m"`
-	RefreshTokenTTLH int                 `yaml:"refresh_token_ttl_h"`
-	BcryptCost       int                 `yaml:"bcrypt_cost"`
-	OAuth            OAuthSecurityConfig `yaml:"oauth"`
+	JWTSigningKey     string              `yaml:"jwt_signing_key"`
+	JWTIssuer         string              `yaml:"jwt_issuer"`
+	JWTAudience       string              `yaml:"jwt_audience"`
+	AccessTokenTTLM   int                 `yaml:"access_token_ttl_m"`
+	RefreshTokenTTLH  int                 `yaml:"refresh_token_ttl_h"`
+	BcryptCost        int                 `yaml:"bcrypt_cost"`
+	AdminTOTPIssuer   string              `yaml:"admin_totp_issuer"`
+	AdminSessionTTLH  int                 `yaml:"admin_session_ttl_h"`
+	SSVCallbackKey    string              `yaml:"ssv_callback_key"`
+	SSVAllowedSenders string              `yaml:"ssv_allowed_senders"`
+	OAuth             OAuthSecurityConfig `yaml:"oauth"`
 }
 
 // OAuthSecurityConfig holds OAuth client settings. Secrets are interpolated

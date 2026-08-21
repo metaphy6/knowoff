@@ -14,7 +14,7 @@ class KoCanvasGridPainter extends CustomPainter {
     if (size.isEmpty) return;
 
     final paint = Paint()
-      ..color = KoColors.ink.withOpacity(0.04)
+      ..color = KoColors.ink.withValues(alpha: 0.04)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 

@@ -24,10 +24,27 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err := db.Ping(); err != nil {
 		t.Skipf("postgres not available: %v", err)
 	}
-	if err := store.MigrateUp(db, "../migrations"); err != nil {
+	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
+	// Keep tests hermetic: global leaderboard rows persist across runs.
+	_, _ = db.Exec("TRUNCATE TABLE leaderboard_entries, leaderboard_weeks, leaderboard_history, accounts, profiles RESTART IDENTITY CASCADE")
 	return db
+}
+
+func ensureAccount(t *testing.T, db *sql.DB, id, nickname string) {
+	t.Helper()
+	_, err := db.ExecContext(context.Background(),
+		`INSERT INTO accounts (id, nickname) VALUES ($1, $2)
+		 ON CONFLICT (id) DO UPDATE SET nickname = EXCLUDED.nickname`,
+		id, nickname,
+	)
+	if err != nil {
+		t.Fatalf("ensure account %s: %v", id, err)
+	}
+	_, _ = db.ExecContext(context.Background(),
+		`INSERT INTO profiles (account_id) VALUES ($1) ON CONFLICT DO NOTHING`, id,
+	)
 }
 
 func TestWeekBounds(t *testing.T) {
@@ -54,6 +71,7 @@ func TestRecordAndGet(t *testing.T) {
 		t.Fatalf("ensure week: %v", err)
 	}
 
+	ensureAccount(t, db, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "PlayerA")
 	counted, err := m.RecordPoints(ctx, weekID, "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", 100, time.Now().UTC(), 10)
 	if err != nil {
 		t.Fatalf("record: %v", err)
@@ -88,6 +106,7 @@ func TestCloseWeek(t *testing.T) {
 	if err := m.EnsureWeek(ctx, weekID, start, end); err != nil {
 		t.Fatalf("ensure week: %v", err)
 	}
+	ensureAccount(t, db, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", "PlayerB")
 	if _, err := m.RecordPoints(ctx, weekID, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", 200, start, 10); err != nil {
 		t.Fatalf("record: %v", err)
 	}
@@ -112,6 +131,7 @@ func TestDailyCap(t *testing.T) {
 		t.Fatalf("ensure week: %v", err)
 	}
 	acct := "cccccccc-cccc-cccc-cccc-cccccccccccc"
+	ensureAccount(t, db, acct, "PlayerC")
 	today := time.Now().UTC()
 	for i := 0; i < 3; i++ {
 		counted, err := m.RecordPoints(ctx, weekID, acct, 10, today, 2)

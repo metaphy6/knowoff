@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS admin_sessions;
+DROP TABLE IF EXISTS admin_accounts;
+DROP TABLE IF EXISTS feedback;
+DROP TABLE IF EXISTS reports;
+DROP TABLE IF EXISTS system_notices;
+DROP TABLE IF EXISTS custom_avatars;
+DROP TABLE IF EXISTS store_purchases;
+DROP TABLE IF EXISTS entitlements;
+DROP TABLE IF EXISTS daily_noin_earned;
+DROP TABLE IF EXISTS noin_ledger;
+DROP TABLE IF EXISTS noin_wallets;

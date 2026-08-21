@@ -13,6 +13,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/audit"
 	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/profile"
@@ -35,7 +36,9 @@ type ConnectionState struct {
 	Lobby        *lobby.Manager
 	Logger       *slog.Logger
 	Auth         *auth.Manager
+	Profile      *profile.Manager
 	Audit        *audit.Logger
+	Economy      *economy.Manager
 	Redis        interface {
 		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
 	}
@@ -52,6 +55,7 @@ type HandlerDeps struct {
 	Profile     *profile.Manager
 	Audit       *audit.Logger
 	Leaderboard *leaderboard.Manager
+	Economy     *economy.Manager
 	Redis       interface {
 		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
 	}
@@ -84,7 +88,9 @@ func RealtimeHandler(deps HandlerDeps) http.HandlerFunc {
 			Lobby:       deps.Lobby,
 			Logger:      logger,
 			Auth:        deps.Auth,
+			Profile:     deps.Profile,
 			Audit:       deps.Audit,
+			Economy:     deps.Economy,
 			Redis:       deps.Redis,
 			rateLimiter: limiter,
 		}
@@ -152,7 +158,7 @@ func (s *ConnectionState) run(ctx context.Context) error {
 				continue
 			}
 		}
-		if !transport.IntentIsPhase3(env.Kind) {
+		if !transport.IntentIsPhase3(env.Kind) && env.Kind != transport.IntentConvertPoints && env.Kind != transport.IntentReportMedia {
 			_ = s.sendError("expected_intent", "only intents accepted after join")
 			continue
 		}
@@ -246,14 +252,62 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 }
 
 func (s *ConnectionState) handleIntent(env *transport.Envelope) error {
-	if s.Room == nil {
-		return fmt.Errorf("not joined")
+	switch env.Kind {
+	case transport.IntentConvertPoints:
+		return s.handleConvertPoints(env)
+	case transport.IntentReportMedia:
+		return s.handleReportMedia(env)
+	default:
+		if s.Room == nil {
+			return fmt.Errorf("not joined")
+		}
+		m := s.Room.Match()
+		if m == nil {
+			return fmt.Errorf("match not started")
+		}
+		return m.HandleIntent(s.Seat, env)
 	}
-	m := s.Room.Match()
-	if m == nil {
-		return fmt.Errorf("match not started")
+}
+
+func (s *ConnectionState) handleConvertPoints(env *transport.Envelope) error {
+	if s.Economy == nil {
+		return fmt.Errorf("convert_points unavailable")
 	}
-	return m.HandleIntent(s.Seat, env)
+	pointsF, ok := env.Payload["points"].(float64)
+	if !ok {
+		return fmt.Errorf("points required")
+	}
+	points := int64(pointsF)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	noin, err := s.Economy.ConvertPoints(ctx, s.AccountID, points)
+	if err != nil {
+		return err
+	}
+	return s.send(transport.NewEvent(transport.EventPointsConverted, map[string]any{
+		"points_converted": points,
+		"noin_granted":     noin,
+	}))
+}
+
+func (s *ConnectionState) handleReportMedia(env *transport.Envelope) error {
+	if s.Audit == nil {
+		return fmt.Errorf("report unavailable")
+	}
+	mediaID, _ := env.Payload["media_id"].(string)
+	reason, _ := env.Payload["reason"].(string)
+	if mediaID == "" {
+		return fmt.Errorf("media_id required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	s.Audit.LogWithAccount(ctx, audit.EventIntentRejected, uuidToAccount(s.AccountID), s.RoomID(), "", map[string]any{
+		"intent":   "report_media",
+		"media_id": mediaID,
+		"reason":   reason,
+	})
+	return s.sendOK("report_received", map[string]any{"media_id": mediaID})
 }
 
 func (s *ConnectionState) sendOK(key string, payload map[string]any) error {
