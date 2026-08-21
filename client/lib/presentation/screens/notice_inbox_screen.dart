@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
 import '../../l10n/app_localizations.dart';
+import '../theme/knowoff_tokens.dart';
+import '../widgets/ko_button.dart';
+import '../widgets/ko_container.dart';
 
 /// Screen listing all active system notices.
 class NoticeInboxScreen extends StatefulWidget {
@@ -62,6 +65,7 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      backgroundColor: KoColors.canvas,
       appBar: AppBar(title: Text(l10n.noticeInboxTitle)),
       body: _body(context, l10n),
     );
@@ -75,7 +79,8 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(l10n.genericError),
-            TextButton(onPressed: _load, child: Text(l10n.retry)),
+            const SizedBox(height: 12),
+            KoButton(label: l10n.retry, onTap: _load),
           ],
         ),
       );
@@ -85,13 +90,35 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
       return Center(child: Text(l10n.noticeTypeAnnouncement));
     }
     return ListView.builder(
+      padding: const EdgeInsets.all(16),
       itemCount: notices.length,
       itemBuilder: (context, index) {
         final n = notices[index] as Map<String, dynamic>;
-        return ListTile(
-          title: Text(n['title']?.toString() ?? ''),
-          subtitle: Text(n['body']?.toString() ?? ''),
-          trailing: Text(_typeLabel(l10n, n['type']?.toString())),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: KoContainer(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        n['title']?.toString() ?? '',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Text(_typeLabel(l10n, n['type']?.toString())),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(n['body']?.toString() ?? ''),
+              ],
+            ),
+          ),
         );
       },
     );

@@ -9,9 +9,10 @@ import '../../l10n/app_localizations.dart';
 /// For maintenance notices that include a [start_time], the banner shows a live
 /// countdown. Other notice types render title + body only.
 class NoticeBanner extends StatefulWidget {
-  const NoticeBanner({required this.notice, super.key});
+  const NoticeBanner({required this.notice, this.onDismiss, super.key});
 
   final Map<String, dynamic> notice;
+  final VoidCallback? onDismiss;
 
   @override
   State<NoticeBanner> createState() => _NoticeBannerState();
@@ -83,7 +84,11 @@ class _NoticeBannerState extends State<NoticeBanner> {
       actions: [
         TextButton(
           onPressed: () {
-            ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+            if (widget.onDismiss != null) {
+              widget.onDismiss!();
+            } else {
+              ScaffoldMessenger.of(context).hideCurrentMaterialBanner();
+            }
           },
           child: Text(l10n.close),
         ),

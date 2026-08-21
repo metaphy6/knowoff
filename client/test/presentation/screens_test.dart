@@ -39,7 +39,7 @@ GameSession _sampleSession({String phase = 'play'}) {
           id: 'n1', type: 'text', content: 'A dog on a skateboard'),
       decoy: false,
       turnSeat: 0,
-      plays: const {'1': 'c3'},
+      plays: const {'1': CardDto(id: 'c3', type: 'text', content: 'c3')},
       nowns: const [
         NownRefDto(id: 'n1', type: 'text', content: 'A dog on a skateboard'),
       ],

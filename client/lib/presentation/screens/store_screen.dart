@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
 import '../../l10n/app_localizations.dart';
+import '../theme/knowoff_tokens.dart';
 import '../widgets/convert_points_dialog.dart';
+import '../widgets/ko_button.dart';
+import '../widgets/ko_chip.dart';
+import '../widgets/ko_container.dart';
 
 /// The player-facing store: Noin balance, Play Passes, Noin bulks, unlocks,
 /// Premium subscription, and points-to-Noin conversion.
@@ -106,6 +110,7 @@ class _StoreScreenState extends State<StoreScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      backgroundColor: KoColors.canvas,
       appBar: AppBar(title: Text(l10n.storeTitle)),
       body: _body(context, l10n),
     );
@@ -119,7 +124,8 @@ class _StoreScreenState extends State<StoreScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(l10n.genericError),
-            TextButton(onPressed: _load, child: Text(l10n.retry)),
+            const SizedBox(height: 12),
+            KoButton(label: l10n.retry, onTap: _load),
           ],
         ),
       );
@@ -131,9 +137,10 @@ class _StoreScreenState extends State<StoreScreen> {
         children: [
           _balanceChip(l10n),
           const SizedBox(height: 8),
-          ElevatedButton(
-            onPressed: _showConvertDialog,
-            child: Text(l10n.convertPointsTitle),
+          KoButton(
+            label: l10n.convertPointsTitle,
+            backgroundColor: KoColors.lime,
+            onTap: _showConvertDialog,
           ),
           const SizedBox(height: 24),
           _sectionTitle(l10n.storePlayPasses),
@@ -166,9 +173,10 @@ class _StoreScreenState extends State<StoreScreen> {
   }
 
   Widget _balanceChip(AppLocalizations l10n) {
-    return Chip(
-      avatar: const Icon(Icons.monetization_on),
-      label: Text(l10n.storeNoinBalance(_noinBalance())),
+    return KoChip(
+      icon: const Icon(Icons.monetization_on, size: 16),
+      label: l10n.storeNoinBalance(_noinBalance()),
+      color: KoColors.lime,
     );
   }
 
@@ -185,52 +193,76 @@ class _StoreScreenState extends State<StoreScreen> {
   Widget _playPassTile(String label, String type) {
     final l10n = AppLocalizations.of(context);
     final price = (_playPassPrices()[type] as num?)?.toInt();
-    return ListTile(
-      title: Text(label),
-      trailing: price == null
-          ? null
-          : ElevatedButton(
-              onPressed: () => _buyPlayPass(type),
-              child: Text(l10n.storeBuyPrice(price)),
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: KoContainer(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            if (price != null)
+              KoButton(
+                label: l10n.storeBuyPrice(price),
+                onTap: () => _buyPlayPass(type),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _bulkTile(int size) {
     final l10n = AppLocalizations.of(context);
-    return ListTile(
-      title: Text(l10n.storeBulkSize(size)),
-      trailing: const Icon(Icons.shopping_cart_outlined),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: KoContainer(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(l10n.storeBulkSize(size)),
+            const Icon(Icons.shopping_cart_outlined),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _unlockTile(String label, String type) {
     final l10n = AppLocalizations.of(context);
     final price = (_unlockPrices()[type] as num?)?.toInt();
-    return ListTile(
-      title: Text(label),
-      trailing: price == null
-          ? null
-          : ElevatedButton(
-              onPressed: () => _buyUnlock(type),
-              child: Text(l10n.storeBuyPrice(price)),
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: KoContainer(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label),
+            if (price != null)
+              KoButton(
+                label: l10n.storeBuyPrice(price),
+                onTap: () => _buyUnlock(type),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _premiumCard(AppLocalizations l10n) {
     final discount = _yearlyDiscount();
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.storePremiumMonthly),
-            Text(l10n.storePremiumYearly),
-            Text(l10n.storePremiumYearlyDiscount(discount)),
-          ],
-        ),
+    return KoContainer(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.storePremiumMonthly),
+          Text(l10n.storePremiumYearly),
+          Text(l10n.storePremiumYearlyDiscount(discount)),
+        ],
       ),
     );
   }

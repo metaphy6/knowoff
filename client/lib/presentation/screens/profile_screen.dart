@@ -3,6 +3,10 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 
 import '../../data/api_client.dart';
 import '../../core/config/app_config.dart';
+import '../theme/knowoff_tokens.dart';
+import '../widgets/avatar_upload_sheet.dart';
+import '../widgets/ko_button.dart';
+import '../widgets/ko_container.dart';
 
 /// The public profile screen. The viewer always sees their own profile here,
 /// including the owner-only Non-Converted Points balance.
@@ -44,10 +48,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _openAvatarUpload() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: KoColors.surface,
+      builder: (context) => AvatarUploadSheet(api: _api),
+    ).then((_) => _load());
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      backgroundColor: KoColors.canvas,
       appBar: AppBar(title: Text(l10n.profileTitle)),
       body: _body(context, l10n),
     );
@@ -61,7 +74,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(l10n.genericError),
-            TextButton(onPressed: _load, child: Text(l10n.retry)),
+            const SizedBox(height: 12),
+            KoButton(label: l10n.retry, onTap: _load),
           ],
         ),
       );
@@ -70,15 +84,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _stat(l10n.profileNickname, p['nickname'] ?? ''),
-        _stat(l10n.profileLevel, '${p['level']}'),
-        _stat(l10n.profileXP, '${p['xp']}'),
-        _stat(l10n.profileOverallPoints, '${p['overall_points']}'),
-        _stat(l10n.profileNonConvertedPoints, '${p['non_converted_points']}'),
-        _stat(l10n.profileMatchesPlayed, '${p['matches_played']}'),
-        _stat(l10n.profileMatchesWonNower, '${p['matches_won_nower']}'),
-        _stat(l10n.profileMatchesWonDonower, '${p['matches_won_donower']}'),
-        _stat(l10n.profileCorrectVotes, '${p['correct_votes']}'),
+        Center(
+          child: KoButton(
+            label: l10n.profileChangeAvatar,
+            backgroundColor: KoColors.lime,
+            onTap: _openAvatarUpload,
+          ),
+        ),
+        const SizedBox(height: 16),
+        KoContainer(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _stat(l10n.profileNickname, p['nickname'] ?? ''),
+              _stat(l10n.profileLevel, '${p['level']}'),
+              _stat(l10n.profileXP, '${p['xp']}'),
+              _stat(l10n.profileOverallPoints, '${p['overall_points']}'),
+              _stat(l10n.profileNonConvertedPoints,
+                  '${p['non_converted_points']}'),
+              _stat(l10n.profileMatchesPlayed, '${p['matches_played']}'),
+              _stat(l10n.profileMatchesWonNower, '${p['matches_won_nower']}'),
+              _stat(
+                  l10n.profileMatchesWonDonower, '${p['matches_won_donower']}'),
+              _stat(l10n.profileCorrectVotes, '${p['correct_votes']}'),
+            ],
+          ),
+        ),
       ],
     );
   }

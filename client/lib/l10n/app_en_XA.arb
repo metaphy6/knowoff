@@ -60,5 +60,22 @@
   "avatarUploadPick": "[Pick Image]",
   "avatarUploadSubmit": "[Upload]",
   "ok": "[OK]",
-  "close": "[Close]"
+  "close": "[Close]",
+  "mainMenuFeedback": "[Feedback]",
+  "localRoomHostAction": "[Host a Room]",
+  "localRoomJoinAction": "[Join with Code]",
+  "roomSizeChooserTitle": "[Room size]",
+  "roomSize4": "[4 players]",
+  "roomSize6": "[6 players]",
+  "profileChangeAvatar": "[Change Avatar]",
+  "reportNownAction": "[Report]",
+  "specialtyRevealAction": "[Reveal a Hand]",
+  "specialtyOneMoreAction": "[Free Card]",
+  "specialtyShuffleAction": "[Shuffle]",
+  "specialtyRevoteAction": "[Revote]",
+  "chooseRevealTargetTitle": "[Choose a player to reveal]",
+  "turnTimeRemaining": "[{seconds}s left]",
+  "pokedByLabel": "[{name} poked you]",
+  "chatLogEmpty": "[No chatter yet.]",
+  "pokedTargetLog": "[{name} poked {target}]"
 }
