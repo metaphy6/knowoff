@@ -79,13 +79,15 @@ in the monolith.
 
 | Agent | When | File |
 |---|---|---|
+| `knowoff` | **Default entry point.** Any Knowoff-related request — Q&A, running the stack, features, debugging, migrations, DevOps, testing, UI/UX, economy tuning, the local AI content pipeline. Full read/write authority over the repo, including all docs. | [`agents/knowoff.agent.md`](agents/knowoff.agent.md) |
 | `planner` | Decomposing a request into a roadmap or implementation plan | [`agents/planner.agent.md`](agents/planner.agent.md) |
 | `implementer` | Executing a plan / phase end-to-end with tracking + staging | [`agents/implementer.agent.md`](agents/implementer.agent.md) |
 | `reviewer` | Reviewing a phase's staged diff (middle stage of the per-phase gate) | [`agents/reviewer.agent.md`](agents/reviewer.agent.md) |
 | `verifier` | Final mechanical gate per phase: `make verify` cold + invariant checks | [`agents/verifier.agent.md`](agents/verifier.agent.md) |
 
-Each `/implement` phase runs the **`implementer → reviewer → verifier`** gate
-before the next phase starts — no exceptions.
+`knowoff` handles day-to-day work directly; for roadmap-phase-sized work it
+delegates into the same **`implementer → reviewer → verifier`** gate below
+rather than reinventing it — no exceptions, and no phase skips the gate.
 
 ## ⚡ Slash commands
 
