@@ -3,7 +3,8 @@ import 'client_config.dart';
 
 /// Global application configuration and services.
 class AppConfig {
-  AppConfig._(this.clientConfig) : authService = AuthService(baseUrl: clientConfig.serverUrl);
+  AppConfig._(this.clientConfig)
+      : authService = AuthService(baseUrl: clientConfig.serverUrl);
 
   static AppConfig? _instance;
 
@@ -15,7 +16,8 @@ class AppConfig {
     return _instance!;
   }
 
-  static AppConfig get instance => _instance ?? AppConfig._(ClientConfig.defaultConfig());
+  static AppConfig get instance =>
+      _instance ?? AppConfig._(ClientConfig.defaultConfig());
 
   final ClientConfig clientConfig;
   final AuthService authService;
