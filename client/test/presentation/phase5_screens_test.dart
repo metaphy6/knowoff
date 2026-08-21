@@ -87,12 +87,8 @@ class _FakeApiClient extends ApiClient {
 }
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
-  SharedPreferences.setMockInitialValues({
-    'knowoff_access_token': 'token',
-    'knowoff_refresh_token': 'refresh',
-    'knowoff_account_id': 'account',
-  });
-  await AppConfig.initialize(ClientConfig.defaultConfig());
+  SharedPreferences.setMockInitialValues({});
+  await AppConfig.initialize(ClientConfig.defaultConfig(), _FakeAuthService());
   await tester.pumpWidget(
     MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

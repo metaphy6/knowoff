@@ -5,14 +5,17 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -53,11 +56,13 @@ func newIntent(kind string, payload map[string]any) *envelope {
 }
 
 type bot struct {
-	name   string
-	server string
-	room   string
-	conn   *websocket.Conn
-	rng    *rand.Rand
+	name        string
+	server      string
+	apiBaseURL  string
+	room        string
+	conn        *websocket.Conn
+	rng         *rand.Rand
+	accessToken string
 
 	seat    int
 	size    int
@@ -88,14 +93,23 @@ func main() {
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 
+	apiBaseURL := websocketToHTTP(*server)
+
 	bots := make([]*bot, 0, *count)
 	for i := 0; i < *count; i++ {
 		b := &bot{
-			name:   fmt.Sprintf("bot-%03d", i),
-			server: *server,
-			room:   *room,
-			rng:    rand.New(rand.NewSource(rng.Int63())),
+			name:       fmt.Sprintf("bot-%03d", i),
+			server:     *server,
+			apiBaseURL: apiBaseURL,
+			room:       *room,
+			rng:        rand.New(rand.NewSource(rng.Int63())),
 		}
+		token, err := deviceAuth(apiBaseURL)
+		if err != nil {
+			logger.Error("bot auth failed", "bot", b.name, "error", err)
+			continue
+		}
+		b.accessToken = token
 		var joinKind string
 		var payload map[string]any
 		if *room != "" {
@@ -130,6 +144,9 @@ func (b *bot) connect(joinKind string, payload map[string]any) error {
 	}
 	b.conn = conn
 
+	if b.accessToken != "" {
+		payload["access_token"] = b.accessToken
+	}
 	if err := b.write(newIntent(joinKind, payload)); err != nil {
 		return err
 	}
@@ -218,7 +235,44 @@ func (b *bot) castVote() {
 		return
 	}
 	target := candidates[b.rng.Intn(len(candidates))]
-	_ = b.write(newIntent(intentCastVote, map[string]any{"target": float64(target)}))
+	_ = b.write(newIntent(intentCastVote, map[string]any{"target_seat": float64(target)}))
+}
+
+// websocketToHTTP derives the REST base URL from a ws:// or wss:// endpoint.
+func websocketToHTTP(wsURL string) string {
+	u, err := url.Parse(wsURL)
+	if err != nil {
+		return wsURL
+	}
+	switch u.Scheme {
+	case "ws":
+		u.Scheme = "http"
+	case "wss":
+		u.Scheme = "https"
+	}
+	u.Path = "/"
+	return strings.TrimSuffix(u.String(), "/")
+}
+
+// deviceAuth creates an anonymous device account and returns an access token.
+func deviceAuth(baseURL string) (string, error) {
+	deviceHash := fmt.Sprintf("gamebot-%d-%d", time.Now().UnixNano(), rand.Int())
+	body, _ := json.Marshal(map[string]any{"device_hash": deviceHash})
+	res, err := http.Post(baseURL+"/api/auth/device", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("device auth status %d", res.StatusCode)
+	}
+	var data struct {
+		AccessToken string `json:"access_token"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return "", err
+	}
+	return data.AccessToken, nil
 }
 
 func (b *bot) write(ev *envelope) error {

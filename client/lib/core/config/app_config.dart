@@ -3,15 +3,16 @@ import 'client_config.dart';
 
 /// Global application configuration and services.
 class AppConfig {
-  AppConfig._(this.clientConfig)
-      : authService = AuthService(baseUrl: clientConfig.serverUrl);
+  AppConfig._(this.clientConfig, [dynamic authService])
+      : authService = authService ?? AuthService(baseUrl: clientConfig.serverUrl);
 
   static AppConfig? _instance;
 
   /// Initializes the global config. If [config] is omitted it is loaded.
-  static Future<AppConfig> initialize([ClientConfig? config]) async {
+  static Future<AppConfig> initialize(
+      [ClientConfig? config, dynamic authService]) async {
     final cfg = config ?? await ClientConfig.load();
-    _instance = AppConfig._(cfg);
+    _instance = AppConfig._(cfg, authService);
     await _instance!.authService.ensureSession();
     return _instance!;
   }

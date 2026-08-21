@@ -90,14 +90,25 @@ func (r *Room) SetOnDestroy(fn func(r *Room)) {
 // room is full.
 func (r *Room) StartMatch(deps game.Dependencies) error {
 	r.mu.Lock()
+	if r.match != nil {
+		r.mu.Unlock()
+		return fmt.Errorf("match already started")
+	}
+	r.mu.Unlock()
+
+	r.deps.Logger.Info("creating match", "room_id", r.ID)
+	bcast := &roomBcast{room: r}
+	m := game.NewMatch(r.Size, deps, bcast)
+	r.deps.Logger.Info("starting match engine", "room_id", r.ID)
+	if err := m.Start(); err != nil {
+		return err
+	}
+	r.deps.Logger.Info("match engine started", "room_id", r.ID)
+
+	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.match != nil {
 		return fmt.Errorf("match already started")
-	}
-	bcast := &roomBcast{room: r}
-	m := game.NewMatch(r.Size, deps, bcast)
-	if err := m.Start(); err != nil {
-		return err
 	}
 	r.match = m
 	r.startBotActorsLocked(m)
@@ -129,8 +140,6 @@ func (r *Room) Match() *game.Match {
 	return r.match
 }
 
-
-
 // ClaimSeat reserves the next available seat for a player or bot. It returns
 // the seat index and its session token, or -1,"",false if the room is full.
 // Bots have an empty AccountID and Bot=true; their session token is still
@@ -156,6 +165,11 @@ func (r *Room) ClaimSeat(accountID string, bot bool) (int, string, bool) {
 		binding.BotName = bots.BotNickname(r.ID, seat)
 	}
 	r.bindings[seat] = binding
+	if bot {
+		// Bot seats have no WebSocket connection; count them as bound so the
+		// room starts once the human seats have connected.
+		r.boundCount++
+	}
 	return seat, token, true
 }
 
@@ -204,6 +218,7 @@ func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
 	} else {
 		if _, ok := r.conns[seat]; !ok {
 			r.boundCount++
+			r.deps.Logger.Info("seat connected", "room_id", r.ID, "seat", seat, "bound_count", r.boundCount, "size", r.Size)
 		}
 		r.conns[seat] = conn
 		if b, ok := r.bindings[seat]; ok && b.GraceTimer != nil {
@@ -216,7 +231,14 @@ func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
 	}
 	if !r.started && r.onStart != nil && r.boundCount >= r.Size {
 		r.started = true
-		go r.onStart(r)
+		r.deps.Logger.Info("starting match", "room_id", r.ID, "bound_count", r.boundCount, "size", r.Size)
+		go func() {
+			if err := r.onStart(r); err != nil {
+				r.deps.Logger.Error("room start failed", "room_id", r.ID, "error", err)
+			} else {
+				r.deps.Logger.Info("match started", "room_id", r.ID)
+			}
+		}()
 	}
 }
 

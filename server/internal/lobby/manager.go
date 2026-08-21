@@ -22,11 +22,11 @@ const roomMappingTTL = 24 * time.Hour
 type Manager struct {
 	deps Deps
 
-	mu      sync.RWMutex
-	rooms   map[string]*Room      // by Room.ID
-	codes   map[string]*Room      // by short join code
-	queues  map[int][]*queueEntry // size -> FIFO entries
-	ready   atomic.Bool
+	mu     sync.RWMutex
+	rooms  map[string]*Room      // by Room.ID
+	codes  map[string]*Room      // by short join code
+	queues map[int][]*queueEntry // size -> FIFO entries
+	ready  atomic.Bool
 }
 
 // Config returns the server configuration.
@@ -142,11 +142,15 @@ func (m *Manager) QueueQuickPlay(size int, accountID string) (string, <-chan Que
 		return "", nil, fmt.Errorf("invalid room size %d", size)
 	}
 	if m.deps.Economy != nil {
+		cap := m.deps.Config.Tuning.Economy.FreeDailyQuickplayMatches
+		m.deps.Logger.Info("queue quickplay check", "account_id", accountID, "cap", cap)
 		ok, err := m.deps.Economy.CanQueueQuickPlay(context.Background(), accountID)
 		if err != nil {
+			m.deps.Logger.Warn("queue quickplay eligibility error", "account_id", accountID, "error", err)
 			return "", nil, fmt.Errorf("quickplay eligibility: %w", err)
 		}
 		if !ok {
+			m.deps.Logger.Warn("queue quickplay cap reached", "account_id", accountID, "cap", cap)
 			return "", nil, fmt.Errorf("daily quickplay limit reached")
 		}
 		if err := m.deps.Economy.CheckCooldown(context.Background(), accountID); err != nil {
@@ -235,14 +239,16 @@ func (m *Manager) ProcessBackfill(ctx context.Context) {
 			if err != nil {
 				return
 			}
+			// Claim bot seats first so their bound count is already reflected
+			// when the human connection binds and triggers auto-start.
+			for i := 0; i < bots; i++ {
+				_, _, _ = r.ClaimSeat("", true)
+			}
 			for i := 0; i < humans; i++ {
 				entry := m.queues[size][0]
 				m.queues[size] = m.queues[size][1:]
 				seat, token, _ := r.ClaimSeat(entry.accountID, false)
 				entry.assigned <- QueueAssignment{Room: r, Seat: seat, SessionToken: token}
-			}
-			for i := 0; i < bots; i++ {
-				_, _, _ = r.ClaimSeat("", true)
 			}
 			m.deps.Logger.Info("backfilled room with bots", "room_id", r.ID, "size", size, "humans", humans, "bots", bots)
 		}
