@@ -40,6 +40,8 @@ security:
 tuning:
   economy:
     free_daily_quickplay_matches: 10000   # local dev: effectively unlimited
+  liquidity:
+    queue_timeout_s: 3   # local dev: backfill with bots almost immediately instead of the prod 25s wait
 
 # External dev/test bots may connect only when this block is present.
 # It is intentionally absent from prod.yaml.
