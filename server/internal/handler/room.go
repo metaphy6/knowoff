@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -8,6 +9,33 @@ import (
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/skip2/go-qrcode"
 )
+
+// RoomCreateHandler creates a new Local Room and returns its join code so the
+// host can share it as a 6-character code or QR (via RoomJoinHandler).
+func RoomCreateHandler(mgr *lobby.Manager) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"code":"method_not_allowed"}`, http.StatusMethodNotAllowed)
+			return
+		}
+		var body struct {
+			Size int `json:"size"`
+		}
+		if r.Body != nil {
+			_ = json.NewDecoder(r.Body).Decode(&body)
+		}
+		if body.Size == 0 {
+			body.Size = 4
+		}
+		room, err := mgr.CreateRoom(body.Size)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`{"code":"create_failed","error":%q}`, err.Error()), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{"room_id":%q,"code":%q,"size":%d}`, room.ID, room.Code, room.Size)
+	}
+}
 
 // RoomJoinHandler returns the deep-link information for a room code. Clients
 // can use the returned URL to render a QR code or attempt a native deep link.

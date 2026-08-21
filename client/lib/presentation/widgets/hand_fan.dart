@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/knowoff_tokens.dart';
+import 'card_face.dart';
 import 'ko_chip.dart';
 
 /// Scrollable row of card buttons. Tapping selects a card; the draw pile count
@@ -45,15 +46,15 @@ class HandFan extends StatelessWidget {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: ChoiceChip(
-                    label: Text(card.id),
+                    label: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 140),
+                      child: CardFace(card: card, compact: true),
+                    ),
                     selected: selected,
                     onSelected:
                         onSelect != null ? (_) => onSelect!(card.id) : null,
                     selectedColor: KoColors.violet,
                     backgroundColor: KoColors.surface,
-                    labelStyle: TextStyle(
-                      color: selected ? KoColors.ink : KoColors.ink,
-                    ),
                   ),
                 );
               }),

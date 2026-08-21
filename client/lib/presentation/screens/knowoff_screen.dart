@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
+import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/verdict_chip.dart';
 import '../widgets/vote_board.dart';
@@ -64,6 +65,14 @@ class KnowoffScreen extends ConsumerWidget {
                             ? KoColors.lime
                             : KoColors.pink,
                       ),
+                    if (session.isNower && dto.hand.specialty == 'revote') ...[
+                      const SizedBox(height: 12),
+                      KoButton(
+                        label: l10n.specialtyRevoteAction,
+                        backgroundColor: KoColors.violet,
+                        onTap: () => notifier.useSpecialty('revote'),
+                      ),
+                    ],
                   ],
                 ),
               ),

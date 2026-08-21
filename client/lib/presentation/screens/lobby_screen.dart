@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/config/app_config.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/knowoff_tokens.dart';
@@ -39,6 +40,18 @@ class LobbyScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(l10n.lobbyQRHint),
+                  if (code.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Center(
+                      child: Image.network(
+                        '${AppConfig.instance.serverUrl}/join/$code?format=qr',
+                        width: 160,
+                        height: 160,
+                        errorBuilder: (context, error, stack) =>
+                            const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

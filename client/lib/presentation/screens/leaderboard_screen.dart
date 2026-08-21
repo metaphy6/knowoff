@@ -3,6 +3,9 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
+import '../theme/knowoff_tokens.dart';
+import '../widgets/ko_button.dart';
+import '../widgets/ko_container.dart';
 
 /// The weekly Quick Play leaderboard screen.
 class LeaderboardScreen extends StatefulWidget {
@@ -49,6 +52,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
+      backgroundColor: KoColors.canvas,
       appBar: AppBar(title: Text(l10n.leaderboardTitle)),
       body: _body(context, l10n),
     );
@@ -62,33 +66,55 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(l10n.genericError),
-            TextButton(onPressed: _load, child: Text(l10n.retry)),
+            const SizedBox(height: 12),
+            KoButton(label: l10n.retry, onTap: _load),
           ],
         ),
       );
     }
-    return Column(
-      children: [
-        if (_own != null)
-          ListTile(
-            tileColor: Theme.of(context).colorScheme.primaryContainer,
-            title: Text(l10n.leaderboardYourRank),
-            trailing: Text('#${_own!['rank']} • ${_own!['points']}'),
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          if (_own != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: KoContainer(
+                backgroundColor: KoColors.lime,
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(l10n.leaderboardYourRank),
+                    Text('#${_own!['rank']} • ${_own!['points']}'),
+                  ],
+                ),
+              ),
+            ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _top?.length ?? 0,
+              itemBuilder: (context, index) {
+                final r = _top![index] as Map<String, dynamic>;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: KoContainer(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('#${r['rank']}'),
+                        Text('${r['account_id']}'.substring(0, 8)),
+                        Text('${r['points']}'),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        Expanded(
-          child: ListView.builder(
-            itemCount: _top?.length ?? 0,
-            itemBuilder: (context, index) {
-              final r = _top![index] as Map<String, dynamic>;
-              return ListTile(
-                leading: Text('#${r['rank']}'),
-                title: Text('${r['account_id']}'.substring(0, 8)),
-                trailing: Text('${r['points']}'),
-              );
-            },
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

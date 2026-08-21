@@ -188,6 +188,7 @@ func run() error {
 	publicMux.HandleFunc("/ws", handler.RealtimeHandler(handlerDeps))
 	publicBaseURL := fmt.Sprintf("http://%s:%d", cfg.Server.BindAddr, cfg.Server.Port)
 	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
+	publicMux.HandleFunc("/rooms/create", handler.RoomCreateHandler(lobbyManager))
 	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager})
 	handler.RegisterProfileRoutes(publicMux, handler.ProfileDeps{Profile: profileManager, Leaderboard: leaderboardManager}, authManager)
 	handler.RegisterPublicRoutes(publicMux, handler.PublicRouteDeps{

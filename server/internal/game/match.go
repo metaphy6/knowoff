@@ -138,11 +138,7 @@ func (m *Match) Start() error {
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventRoleAssigned, map[string]any{
 			"role": string(p.Role),
 		}))
-		m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandDealt, map[string]any{
-			"cards":     p.Hand.Cards,
-			"draw_pile": p.Hand.DrawPile,
-			"specialty": p.Hand.Specialty,
-		}))
+		m.sendHandDealt(seat, p)
 	}
 
 	m.phase = PhasePrefetch
@@ -302,13 +298,9 @@ func (m *Match) finishMatchScored() {
 
 	nowns := make([]map[string]any, 0, len(m.nownSchedule))
 	for _, id := range m.nownSchedule {
-		item := m.deps.Pack.MediaByID(id)
-		if item == nil {
+		n, err := m.deps.Renderer.MediaPayload(m.roundID(), id)
+		if err != nil {
 			continue
-		}
-		n := map[string]any{"id": item.ID, "type": string(item.Type)}
-		if item.Type == media.MediaTypeText {
-			n["content"] = item.Content
 		}
 		nowns = append(nowns, n)
 	}
@@ -623,7 +615,7 @@ func (m *Match) autoPass(seat int) {
 		m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 			"seat":    seat,
 			"timeout": true,
-			"lost":    removed,
+			"lost":    m.cardPayload(removed),
 		}), -1)
 	} else {
 		m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
@@ -671,6 +663,7 @@ func (m *Match) handlePlayCard(seat int, payload map[string]any) error {
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":    seat,
 		"card_id": cardID,
+		"card":    m.cardPayload(cardID),
 	}), -1)
 	m.stopTurnTimer()
 	m.advanceTurn()
@@ -736,8 +729,8 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 		"seat":           seat,
 		"specialty":      SpecialtyReveal,
 		"target":         target,
-		"cards":          m.players[target].Hand.Cards,
-		"draw_pile":      m.players[target].Hand.DrawPile,
+		"cards":          m.cardPayloads(m.players[target].Hand.Cards),
+		"draw_pile":      m.cardPayloads(m.players[target].Hand.DrawPile),
 		"specialty_held": m.players[target].Hand.Specialty,
 	}), -1)
 	m.stopTurnTimer()
@@ -758,7 +751,7 @@ func (m *Match) useOneMore(seat int, payload map[string]any) error {
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":      seat,
 		"specialty": SpecialtyOneMore,
-		"drew":      cardID,
+		"drew":      m.cardPayload(cardID),
 		"free":      true,
 	}), -1)
 	m.stopTurnTimer()
@@ -784,6 +777,11 @@ func (m *Match) useShuffle(seat int) error {
 	m.bcast.Broadcast(transport.NewEvent(transport.EventShuffleOccurred, map[string]any{
 		"round": m.round,
 	}), -1)
+	// Re-sync every seat's freshly re-dealt hand; a Shuffle is silent about
+	// who triggered it, but everyone's hand visibly changes (Rules §5).
+	for s, p := range m.players {
+		m.sendHandDealt(s, p)
+	}
 	m.stopTurnTimer()
 	m.scheduleTurn()
 	return nil
@@ -854,7 +852,7 @@ func (m *Match) handleDrawCards(seat int, payload map[string]any) error {
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":  seat,
 		"draw":  count,
-		"cards": drawn,
+		"cards": m.cardPayloads(drawn),
 	}), -1)
 	m.stopTurnTimer()
 	m.advanceTurn()
@@ -1207,13 +1205,9 @@ func (m *Match) finishMatch(winner Role) {
 	// Verdict: all Nowns revealed to everyone.
 	nowns := make([]map[string]any, 0, len(m.nownSchedule))
 	for _, id := range m.nownSchedule {
-		item := m.deps.Pack.MediaByID(id)
-		if item == nil {
+		n, err := m.deps.Renderer.MediaPayload(m.roundID(), id)
+		if err != nil {
 			continue
-		}
-		n := map[string]any{"id": item.ID, "type": string(item.Type)}
-		if item.Type == media.MediaTypeText {
-			n["content"] = item.Content
 		}
 		nowns = append(nowns, n)
 	}
@@ -1223,6 +1217,7 @@ func (m *Match) finishMatch(winner Role) {
 	}), -1)
 
 	// Points scored events are sent privately to each seat.
+
 	for seat, p := range m.players {
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventPointsScored, map[string]any{
 			"match_points": p.MatchPoints,
@@ -1327,6 +1322,39 @@ func (m *Match) KnowoffActive() bool {
 
 func (m *Match) roundID() string {
 	return fmt.Sprintf("match-%d", m.round)
+}
+
+// cardPayload resolves one card id to its full {id, type[, content][, signed_url]}
+// wire shape. On any renderer error it falls back to a minimal id-only payload
+// so a missing/misconfigured pack degrades gracefully instead of dropping the
+// event.
+func (m *Match) cardPayload(id string) map[string]any {
+	if m.deps.Renderer == nil {
+		return map[string]any{"id": id}
+	}
+	p, err := m.deps.Renderer.CardPayload(m.roundID(), id)
+	if err != nil {
+		return map[string]any{"id": id}
+	}
+	return p
+}
+
+// cardPayloads resolves a list of card ids to their full wire payloads.
+func (m *Match) cardPayloads(ids []string) []map[string]any {
+	out := make([]map[string]any, len(ids))
+	for i, id := range ids {
+		out[i] = m.cardPayload(id)
+	}
+	return out
+}
+
+// sendHandDealt sends one seat's full hand, draw pile, and specialty.
+func (m *Match) sendHandDealt(seat int, p *PlayerState) {
+	m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandDealt, map[string]any{
+		"cards":     m.cardPayloads(p.Hand.Cards),
+		"draw_pile": m.cardPayloads(p.Hand.DrawPile),
+		"specialty": p.Hand.Specialty,
+	}))
 }
 
 func (m *Match) after(d time.Duration, f func()) *time.Timer {

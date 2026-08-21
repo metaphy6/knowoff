@@ -31,15 +31,24 @@ class PlayerDto {
 
 @immutable
 class CardDto {
-  const CardDto({required this.id, required this.type});
+  const CardDto({
+    required this.id,
+    required this.type,
+    this.content,
+    this.signedUrl,
+  });
 
   final String id;
   final String type;
+  final String? content;
+  final String? signedUrl;
 
   factory CardDto.fromJson(Map<String, dynamic> json) {
     return CardDto(
       id: json['id'] as String? ?? '',
       type: json['type'] as String? ?? 'text',
+      content: json['content'] as String?,
+      signedUrl: json['signed_url'] as String?,
     );
   }
 }
@@ -103,6 +112,21 @@ List<CardDto> cardList(dynamic value) {
 }
 
 @immutable
+class ChatEventDto {
+  const ChatEventDto({
+    required this.kind,
+    required this.fromSeat,
+    this.phraseId,
+    this.targetSeat,
+  });
+
+  final String kind;
+  final int fromSeat;
+  final String? phraseId;
+  final int? targetSeat;
+}
+
+@immutable
 class GameStateDto {
   const GameStateDto({
     this.phase = 'waiting',
@@ -123,6 +147,8 @@ class GameStateDto {
     this.log = const [],
     this.matchPoints = 0,
     this.roomCode = '',
+    this.turnDeadline,
+    this.chatEvents = const [],
   });
 
   final String phase;
@@ -134,7 +160,7 @@ class GameStateDto {
   final NownRefDto? nown;
   final bool decoy;
   final int turnSeat;
-  final Map<String, String> plays;
+  final Map<String, CardDto> plays;
   final bool discussionReady;
   final int voteTarget;
   final VoteResultDto? result;
@@ -143,6 +169,8 @@ class GameStateDto {
   final List<String> log;
   final int matchPoints;
   final String roomCode;
+  final DateTime? turnDeadline;
+  final List<ChatEventDto> chatEvents;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
     return GameStateDto(
@@ -158,7 +186,7 @@ class GameStateDto {
           : NownRefDto.fromJson(json['nown'] as Map<String, dynamic>),
       decoy: json['decoy'] as bool? ?? false,
       turnSeat: json['turn_seat'] as int? ?? -1,
-      plays: stringMap(json['plays']),
+      plays: cardMap(json['plays']),
       discussionReady: json['discussion_ready'] as bool? ?? false,
       voteTarget: json['vote_target'] as int? ?? -1,
       result: json['result'] == null
@@ -182,7 +210,7 @@ class GameStateDto {
     NownRefDto? nown,
     bool? decoy,
     int? turnSeat,
-    Map<String, String>? plays,
+    Map<String, CardDto>? plays,
     bool? discussionReady,
     int? voteTarget,
     VoteResultDto? result,
@@ -191,6 +219,8 @@ class GameStateDto {
     List<String>? log,
     int? matchPoints,
     String? roomCode,
+    DateTime? turnDeadline,
+    List<ChatEventDto>? chatEvents,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -211,6 +241,8 @@ class GameStateDto {
       log: log ?? this.log,
       matchPoints: matchPoints ?? this.matchPoints,
       roomCode: roomCode ?? this.roomCode,
+      turnDeadline: turnDeadline ?? this.turnDeadline,
+      chatEvents: chatEvents ?? this.chatEvents,
     );
   }
 }
@@ -248,6 +280,16 @@ List<PlayerDto> playerList(dynamic value) {
 Map<String, String> stringMap(dynamic value) {
   if (value is! Map<String, dynamic>) return const {};
   return value.map((k, v) => MapEntry(k, v.toString()));
+}
+
+Map<String, CardDto> cardMap(dynamic value) {
+  if (value is! Map<String, dynamic>) return const {};
+  return value.map((k, v) {
+    if (v is Map<String, dynamic>) {
+      return MapEntry(k, CardDto.fromJson(v));
+    }
+    return MapEntry(k, CardDto(id: v.toString(), type: 'text'));
+  });
 }
 
 List<NownRefDto> nownList(dynamic value) {

@@ -8,6 +8,7 @@ import 'core/config/client_config.dart';
 import 'core/network/websocket_transport.dart';
 import 'presentation/screens/main_menu_screen.dart';
 import 'presentation/state/game_session_provider.dart';
+import 'presentation/theme/knowoff_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,10 +47,7 @@ class KnowoffApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFB49AF5)),
-      ),
+      theme: knowoffTheme(),
       home: const MainMenuScreen(),
     );
   }

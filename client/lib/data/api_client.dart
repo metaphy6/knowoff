@@ -87,6 +87,11 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getLeaderboard() => _get('/api/leaderboard');
 
+  // ---- Rooms ---------------------------------------------------------
+
+  Future<Map<String, dynamic>> createRoom(int size) =>
+      _postJson('/rooms/create', {'size': size});
+
   // ---- Economy -----------------------------------------------------------
 
   Future<Map<String, dynamic>> getWallet() => _get('/api/economy/wallet');

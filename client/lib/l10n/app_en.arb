@@ -492,5 +492,91 @@
   "close": "Close",
   "@close": {
     "description": "Close action label."
+  },
+  "mainMenuFeedback": "Feedback",
+  "@mainMenuFeedback": {
+    "description": "Main menu button to open the feedback dialog."
+  },
+  "localRoomHostAction": "Host a Room",
+  "@localRoomHostAction": {
+    "description": "Local Room chooser: create a new room as host."
+  },
+  "localRoomJoinAction": "Join with Code",
+  "@localRoomJoinAction": {
+    "description": "Local Room chooser: join an existing room by code."
+  },
+  "roomSizeChooserTitle": "Room size",
+  "@roomSizeChooserTitle": {
+    "description": "Title for the host room-size picker."
+  },
+  "roomSize4": "4 players",
+  "@roomSize4": {
+    "description": "Room size option: 4 players."
+  },
+  "roomSize6": "6 players",
+  "@roomSize6": {
+    "description": "Room size option: 6 players."
+  },
+  "profileChangeAvatar": "Change Avatar",
+  "@profileChangeAvatar": {
+    "description": "Profile screen button to open the avatar upload sheet."
+  },
+  "reportNownAction": "Report",
+  "@reportNownAction": {
+    "description": "Button to report the current round's Nown media."
+  },
+  "specialtyRevealAction": "Reveal a Hand",
+  "@specialtyRevealAction": {
+    "description": "Button to use the Reveal specialty card."
+  },
+  "specialtyOneMoreAction": "Free Card",
+  "@specialtyOneMoreAction": {
+    "description": "Button to use the One More Free Card specialty."
+  },
+  "specialtyShuffleAction": "Shuffle",
+  "@specialtyShuffleAction": {
+    "description": "Button to use the Shuffle specialty card."
+  },
+  "specialtyRevoteAction": "Revote",
+  "@specialtyRevoteAction": {
+    "description": "Button to use the Revote specialty card."
+  },
+  "chooseRevealTargetTitle": "Choose a player to reveal",
+  "@chooseRevealTargetTitle": {
+    "description": "Dialog title when picking a Reveal specialty target."
+  },
+  "turnTimeRemaining": "{seconds}s left",
+  "@turnTimeRemaining": {
+    "description": "Turn timer countdown label.",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "pokedByLabel": "{name} poked you",
+  "@pokedByLabel": {
+    "description": "Shown when the local player is poked.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "chatLogEmpty": "No chatter yet.",
+  "@chatLogEmpty": {
+    "description": "Empty state for the Quick Chat / poke feed."
+  },
+  "pokedTargetLog": "{name} poked {target}",
+  "@pokedTargetLog": {
+    "description": "Feed entry for a poke sent to another player.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
   }
 }
