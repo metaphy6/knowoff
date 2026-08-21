@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/app_localizations.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
+import '../widgets/chat_feed.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/poke_nudge.dart';
 import '../widgets/quick_chat_bar.dart';
@@ -49,6 +50,12 @@ class DiscussionScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             QuickChatBar(onPhrase: notifier.quickChat),
+            const SizedBox(height: 16),
+            ChatFeed(
+              events: session.dto.chatEvents,
+              players: session.dto.players,
+              localSeat: session.seat,
+            ),
           ],
         ),
       ),

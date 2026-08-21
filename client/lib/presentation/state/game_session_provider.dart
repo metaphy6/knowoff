@@ -43,8 +43,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         ));
         break;
       case 'phase_started':
-      case 'round_started':
+        _mergeState(payload);
+        break;
       case 'turn_started':
+        _mergeState(payload);
+        _setTurnDeadline(payload);
+        break;
+      case 'round_started':
+        _setDto(state.dto.copyWith(plays: const {}));
         _mergeState(payload);
         break;
       case 'play_revealed':
@@ -55,8 +61,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'vote_result_pending':
       case 'vote_nullified':
       case 'knowoff_resolved':
-      case 'quick_chat':
         _mergeState(payload);
+        break;
+      case 'quick_chat':
+        _appendChatEvent(payload);
         break;
       case 'role_assigned':
         final role = payload['role'] as String?;
@@ -83,14 +91,52 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   void _mergePlayRevealed(Map<String, dynamic> payload) {
     final seat = payload['seat'] as int?;
     final cardId = payload['card_id'] as String?;
+    if (seat != null &&
+        payload.containsKey('specialty') &&
+        seat == state.dto.seat) {
+      _setDto(state.dto.copyWith(
+        hand: HandDto(
+          cards: state.dto.hand.cards,
+          drawPile: state.dto.hand.drawPile,
+          specialty: null,
+        ),
+      ));
+    }
     if (seat == null || cardId == null) return;
+    final cardPayload = payload['card'] as Map<String, dynamic>?;
+    final card = cardPayload != null
+        ? CardDto.fromJson(cardPayload)
+        : CardDto(id: cardId, type: 'text');
     final current = state.dto;
-    final plays = Map<String, String>.from(current.plays);
-    plays[seat.toString()] = cardId;
+    final plays = Map<String, CardDto>.from(current.plays);
+    plays[seat.toString()] = card;
     state = state.copyWith(
       dto: current.copyWith(plays: plays),
       lastError: null,
     );
+  }
+
+  void _setTurnDeadline(Map<String, dynamic> payload) {
+    final timeoutSeconds = payload['timeout'] as int?;
+    if (timeoutSeconds == null) return;
+    _setDto(state.dto.copyWith(
+        turnDeadline: DateTime.now().add(Duration(seconds: timeoutSeconds))));
+  }
+
+  void _appendChatEvent(Map<String, dynamic> payload) {
+    final fromSeat = payload['from_seat'] as int?;
+    if (fromSeat == null) return;
+    final kind = payload['kind'] as String? ?? 'chat';
+    final event = ChatEventDto(
+      kind: kind,
+      fromSeat: fromSeat,
+      phraseId: payload['phrase_id'] as String?,
+      targetSeat: payload['target_seat'] as int?,
+    );
+    final events = [...state.dto.chatEvents, event];
+    final trimmed =
+        events.length > 20 ? events.sublist(events.length - 20) : events;
+    _setDto(state.dto.copyWith(chatEvents: trimmed));
   }
 
   void _mergeState(Map<String, dynamic> payload) {
@@ -115,7 +161,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       decoy: payload['decoy'] as bool? ?? current.decoy,
       turnSeat: payload['turn_seat'] as int? ?? current.turnSeat,
       plays: payload.containsKey('plays')
-          ? stringMap(payload['plays'])
+          ? cardMap(payload['plays'])
           : current.plays,
       discussionReady:
           payload['discussion_ready'] as bool? ?? current.discussionReady,
@@ -171,10 +217,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   Future<void> playCard(String cardId) =>
       _send('play_card', {'card_id': cardId});
 
-  Future<void> useSpecialty(String specialty, {String? discardCardId}) =>
+  Future<void> useSpecialty(String specialty,
+          {String? discardCardId, int? targetSeat}) =>
       _send('use_specialty', {
         'specialty': specialty,
         if (discardCardId != null) 'discard_card_id': discardCardId,
+        if (targetSeat != null) 'target_seat': targetSeat,
       });
 
   Future<void> drawCards(int count) => _send('draw_cards', {'count': count});

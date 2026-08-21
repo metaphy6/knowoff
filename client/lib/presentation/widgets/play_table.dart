@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../theme/knowoff_tokens.dart';
+import 'card_face.dart';
 import 'ko_container.dart';
 
 /// The evidence table: played cards mapped to the seat that played them.
@@ -14,7 +15,7 @@ class PlayTable extends StatelessWidget {
   });
 
   final List<PlayerDto> players;
-  final Map<String, String> plays;
+  final Map<String, CardDto> plays;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +66,7 @@ class PlayTable extends StatelessWidget {
                       border: Border.all(width: 2, color: KoColors.ink),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(entry.value),
+                    child: CardFace(card: entry.value, compact: true),
                   ),
                 ),
               ],

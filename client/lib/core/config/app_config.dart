@@ -4,7 +4,8 @@ import 'client_config.dart';
 /// Global application configuration and services.
 class AppConfig {
   AppConfig._(this.clientConfig, [dynamic authService])
-      : authService = authService ?? AuthService(baseUrl: clientConfig.serverUrl);
+      : authService =
+            authService ?? AuthService(baseUrl: clientConfig.serverUrl);
 
   static AppConfig? _instance;
 

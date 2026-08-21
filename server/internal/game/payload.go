@@ -58,32 +58,64 @@ func (r *PayloadRenderer) NownPayload(roundID string, nownID string, view Recipi
 	if item == nil {
 		return nil, fmt.Errorf("nown %q not found", nownID)
 	}
-
-	payload := map[string]any{
-		"nown": map[string]any{
-			"id":   item.ID,
-			"type": string(item.Type),
-		},
+	nownMap, err := r.mediaItemPayload(roundID, item.ID, item.Type, item.Content, item.AssetRef)
+	if err != nil {
+		return nil, err
 	}
-	nownMap := payload["nown"].(map[string]any)
+	return map[string]any{"nown": nownMap}, nil
+}
 
-	switch item.Type {
+// MediaPayload builds a {id, type[, content][, signed_url]} payload for any
+// Nown by id, regardless of round secrecy. Used for the verdict reveal, where
+// every Nown is shown to every player once the match ends.
+func (r *PayloadRenderer) MediaPayload(roundID string, nownID string) (map[string]any, error) {
+	if r.media == nil {
+		return nil, fmt.Errorf("media manager not loaded")
+	}
+	item := r.media.MediaByID(nownID)
+	if item == nil {
+		return nil, fmt.Errorf("nown %q not found", nownID)
+	}
+	return r.mediaItemPayload(roundID, item.ID, item.Type, item.Content, item.AssetRef)
+}
+
+// CardPayload builds a {id, type[, content][, signed_url]} payload for a hand
+// or draw-pile card by id. Cards carry no round secrecy, so any recipient may
+// receive the same payload for a given card id.
+func (r *PayloadRenderer) CardPayload(roundID string, cardID string) (map[string]any, error) {
+	if r.media == nil {
+		return nil, fmt.Errorf("media manager not loaded")
+	}
+	card := r.media.CardByID(cardID)
+	if card == nil {
+		return nil, fmt.Errorf("card %q not found", cardID)
+	}
+	return r.mediaItemPayload(roundID, card.ID, card.Type, card.Content, card.AssetRef)
+}
+
+// mediaItemPayload assembles the common {id, type[, content][, signed_url]}
+// shape shared by Nowns and cards.
+func (r *PayloadRenderer) mediaItemPayload(roundID, id string, typ media.MediaType, content, assetRef string) (map[string]any, error) {
+	payload := map[string]any{
+		"id":   id,
+		"type": string(typ),
+	}
+	switch typ {
 	case media.MediaTypeText:
-		// Text Nowns carry their literal content; there is no asset to sign.
-		nownMap["content"] = item.Content
+		// Text items carry their literal content; there is no asset to sign.
+		payload["content"] = content
 	case media.MediaTypeImage, media.MediaTypeGIF:
-		if item.AssetRef == "" {
-			return nil, fmt.Errorf("nown %q has empty asset_ref", nownID)
+		if assetRef == "" {
+			return nil, fmt.Errorf("item %q has empty asset_ref", id)
 		}
-		token, _, err := r.issuer.Issue(roundID, item.AssetRef, time.Now())
+		token, _, err := r.issuer.Issue(roundID, assetRef, time.Now())
 		if err != nil {
 			return nil, fmt.Errorf("issue signed url: %w", err)
 		}
-		nownMap["signed_url"] = signedURL(r.assetBase, item.AssetRef, token)
+		payload["signed_url"] = signedURL(r.assetBase, assetRef, token)
 	default:
-		return nil, fmt.Errorf("unknown nown type %q", item.Type)
+		return nil, fmt.Errorf("unknown item type %q", typ)
 	}
-
 	return payload, nil
 }
 
