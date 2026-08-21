@@ -40,17 +40,18 @@ type LogConfig struct {
 
 // ServerConfig is the public and admin HTTP server configuration.
 type ServerConfig struct {
-	BindAddr        string `yaml:"bind_addr"`
-	Port            int    `yaml:"port"`
-	AdminAddr       string `yaml:"admin_addr"`
-	AdminBindAddr   string `yaml:"admin_bind_addr"`
-	AdminPort       int    `yaml:"admin_port"`
-	MetricsBindAddr string `yaml:"metrics_bind_addr"`
-	MetricsPort     int    `yaml:"metrics_port"`
-	ShutdownGraceS  int    `yaml:"shutdown_grace_s"`
-	ReadTimeoutS    int    `yaml:"read_timeout_s"`
-	WriteTimeoutS   int    `yaml:"write_timeout_s"`
-	IdleTimeoutS    int    `yaml:"idle_timeout_s"`
+	BindAddr        string   `yaml:"bind_addr"`
+	Port            int      `yaml:"port"`
+	AdminAddr       string   `yaml:"admin_addr"`
+	AdminBindAddr   string   `yaml:"admin_bind_addr"`
+	AdminPort       int      `yaml:"admin_port"`
+	MetricsBindAddr string   `yaml:"metrics_bind_addr"`
+	MetricsPort     int      `yaml:"metrics_port"`
+	ShutdownGraceS  int      `yaml:"shutdown_grace_s"`
+	ReadTimeoutS    int      `yaml:"read_timeout_s"`
+	WriteTimeoutS   int      `yaml:"write_timeout_s"`
+	IdleTimeoutS    int      `yaml:"idle_timeout_s"`
+	AllowedOrigins  []string `yaml:"allowed_origins"`
 }
 
 // WebSocketConfig tunes the WebSocket codec and keepalive.

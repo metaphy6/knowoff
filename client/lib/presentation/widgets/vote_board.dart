@@ -32,8 +32,9 @@ class VoteBoard extends StatelessWidget {
       children: candidates.map((player) {
         final alreadyVoted = votedSeat >= 0;
         final selected = votedSeat == player.seat;
+        final name = player.name.isEmpty ? 'P${player.seat}' : player.name;
         return KoButton(
-          label: l10n.voteFor(player.name),
+          label: l10n.voteFor(name),
           backgroundColor: selected ? KoColors.lime : KoColors.pink,
           onTap: alreadyVoted || onVote == null
               ? null

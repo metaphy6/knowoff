@@ -227,8 +227,11 @@ func run() error {
 	metricsMux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 
 	publicServer := &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", cfg.Server.BindAddr, cfg.Server.Port),
-		Handler:      transport.RecoverPanic(publicMux, logger),
+		Addr: fmt.Sprintf("%s:%d", cfg.Server.BindAddr, cfg.Server.Port),
+		Handler: transport.CORS(
+			transport.RecoverPanic(publicMux, logger),
+			cfg.Server.AllowedOrigins,
+		),
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeoutS) * time.Second,
 		WriteTimeout: time.Duration(cfg.Server.WriteTimeoutS) * time.Second,
 		IdleTimeout:  time.Duration(cfg.Server.IdleTimeoutS) * time.Second,

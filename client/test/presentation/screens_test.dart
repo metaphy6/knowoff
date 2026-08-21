@@ -91,12 +91,9 @@ class _FakeTransport implements gt.GameTransport {
 void main() {
   testWidgets('QueueScreen renders finding match', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: QueueScreen(),
-      ),
+      _wrapWithSession(const QueueScreen(), _sampleSession(phase: 'waiting')),
     );
+    await tester.pump();
     expect(find.text('Finding a match...'), findsOneWidget);
   });
 

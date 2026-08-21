@@ -29,6 +29,8 @@ server:
   metrics_port: 9091
   # Graceful shutdown window
   shutdown_grace_s: 15
+  # Origins allowed for CORS. Empty disables CORS headers. Use ["*"] for dev.
+  allowed_origins: []
 
 websocket:
   max_message_bytes: 65536

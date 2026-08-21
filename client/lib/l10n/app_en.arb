@@ -33,6 +33,10 @@
   "@findingMatch": {
     "description": "Queue status label."
   },
+  "queueInitializing": "Joining queue...",
+  "@queueInitializing": {
+    "description": "Queue status before the intent has been sent."
+  },
   "cancel": "Cancel",
   "@cancel": {
     "description": "Cancel action label."

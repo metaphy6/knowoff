@@ -4,6 +4,8 @@
   "mainMenuPlay": "[Play]",
   "mainMenuLocalRoom": "[Local Room]",
   "lobbyWaitingForPlayers": "[Waiting for players...]",
+  "findingMatch": "[Finding a match...]",
+  "queueInitializing": "[Joining queue...]",
   "playersCount": "[{count, plural, =0{[No players]} =1{[One player]} other{[{count} players]}}]",
   "mainMenuStore": "[Store]",
   "mainMenuNotices": "[Notices]",

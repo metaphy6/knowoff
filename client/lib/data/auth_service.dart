@@ -33,8 +33,22 @@ class AuthService {
     _refreshToken = prefs.getString(_refreshKey);
     _accountId = prefs.getString(_accountKey);
 
-    if (_accessToken != null && _refreshToken != null && _accountId != null) {
+    if (_accessToken != null &&
+        _refreshToken != null &&
+        _accountId != null &&
+        !_isTokenExpired(_accessToken!)) {
       return;
+    }
+
+    // Access token missing or expired: try to refresh with the stored
+    // refresh token before falling back to a brand-new device session.
+    if (_refreshToken != null && !_isTokenExpired(_refreshToken!)) {
+      try {
+        await refresh();
+        return;
+      } catch (_) {
+        // Fall through to new device session.
+      }
     }
 
     final deviceHash = _deviceHash();
@@ -48,6 +62,23 @@ class AuthService {
     }
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     await _persist(data);
+  }
+
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      ) as Map<String, dynamic>;
+      final exp = payload['exp'] as int?;
+      if (exp == null) return true;
+      return DateTime.now().isAfter(
+        DateTime.fromMillisecondsSinceEpoch(exp * 1000),
+      );
+    } catch (_) {
+      return true;
+    }
   }
 
   /// Refreshes the access token using the stored refresh token.

@@ -14,11 +14,11 @@ import (
 
 // Manager owns economy-side account checks. It is safe for concurrent use.
 type Manager struct {
-	db          *sql.DB
-	config      *config.Config
-	Wallet      *Wallet
+	db           *sql.DB
+	config       *config.Config
+	Wallet       *Wallet
 	Entitlements *Entitlements
-	Purchases   *Purchases
+	Purchases    *Purchases
 }
 
 // NewManager returns an economy manager backed by Postgres.
@@ -53,6 +53,7 @@ func (m *Manager) CanQueueQuickPlay(ctx context.Context, accountID string) (bool
 	if _, err := uuid.Parse(accountID); err != nil {
 		return false, fmt.Errorf("invalid account id: %w", err)
 	}
+	cap := m.config.Tuning.Economy.FreeDailyQuickplayMatches
 	// Premium or any active Play Pass removes the cap entirely.
 	if premium, err := m.Entitlements.HasPremium(ctx, accountID); err != nil {
 		return false, fmt.Errorf("check premium: %w", err)
@@ -77,7 +78,7 @@ func (m *Manager) CanQueueQuickPlay(ctx context.Context, accountID string) (bool
 	if err != nil {
 		return false, fmt.Errorf("lookup daily quickplay count: %w", err)
 	}
-	return count < m.config.Tuning.Economy.FreeDailyQuickplayMatches, nil
+	return count < cap, nil
 }
 
 // RecordQuickPlayMatch increments the daily counter for a Quick Play match.

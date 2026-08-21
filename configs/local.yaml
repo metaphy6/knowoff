@@ -12,18 +12,34 @@ log:
 server:
   bind_addr: 0.0.0.0
   port: 8080
+  admin_addr: "0.0.0.0:9090"
   admin_bind_addr: 0.0.0.0
   admin_port: 9090
   metrics_bind_addr: 0.0.0.0
   metrics_port: 9091
+  allowed_origins: ["*"]
 
 storage:
   endpoint: http://minio:9000
   assets_url: http://localhost:9000/knowoff
 
 media:
-  local_bundle_path: /data/packs
+  local_bundle_path: /data/packs/core-2026.10
   workbench_ingest_path: /data/ingest
+
+security:
+  ssv_callback_key: dev-ssv-key-change-in-prod
+  oauth:
+    google:
+      client_id: dev-google-client-id
+      client_secret: dev-google-client-secret
+    facebook:
+      client_id: dev-facebook-client-id
+      client_secret: dev-facebook-client-secret
+
+tuning:
+  economy:
+    free_daily_quickplay_matches: 10000   # local dev: effectively unlimited
 
 # External dev/test bots may connect only when this block is present.
 # It is intentionally absent from prod.yaml.

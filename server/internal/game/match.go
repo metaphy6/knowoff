@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"sync"
 	"time"
@@ -99,6 +100,7 @@ func (m *Match) Start() error {
 	m.rng = rand.New(rand.NewSource(m.seed))
 	m.active = m.size
 	m.remainingVotes = m.deps.Config.Tuning.Game.VotesBySize[m.size]
+	slog.Info("match start init", "seed", m.seed, "size", m.size)
 
 	// Assign roles.
 	donowers := m.deps.Config.Tuning.Game.DonowersBySize[m.size]
@@ -116,16 +118,19 @@ func (m *Match) Start() error {
 	}
 
 	// Build Nown schedule.
+	slog.Info("building nown schedule")
 	if err := m.buildNownSchedule(); err != nil {
 		return err
 	}
 
 	// Deal prompt cards.
+	slog.Info("dealing hands")
 	if err := m.dealHands(); err != nil {
 		return err
 	}
 
 	// Deal specialty cards.
+	slog.Info("dealing specialties")
 	m.dealSpecialties()
 
 	m.phase = PhaseRoleReveal
@@ -134,7 +139,7 @@ func (m *Match) Start() error {
 			"role": string(p.Role),
 		}))
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandDealt, map[string]any{
-			"hand":      p.Hand.Cards,
+			"cards":     p.Hand.Cards,
 			"draw_pile": p.Hand.DrawPile,
 			"specialty": p.Hand.Specialty,
 		}))
@@ -466,13 +471,31 @@ func (m *Match) viewFor(seat int) RecipientView {
 
 func (m *Match) broadcastPhase() {
 	payload := map[string]any{
-		"phase": m.phase,
-		"round": m.round,
+		"phase":   m.phase,
+		"round":   m.round,
+		"players": m.playerPayloads(),
 	}
 	if m.phase == PhasePlay || m.phase == PhaseDiscussion || m.phase == PhaseKnowoff || m.phase == PhaseRunoff {
 		payload["remaining_votes"] = m.remainingVotes
 	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPhaseStarted, payload), -1)
+}
+
+// playerPayloads returns a seat-safe snapshot of player states for wire events.
+func (m *Match) playerPayloads() []map[string]any {
+	out := make([]map[string]any, 0, m.size)
+	for seat, p := range m.players {
+		entry := map[string]any{
+			"seat":       seat,
+			"connected":  p.Connected,
+			"eliminated": p.Eliminated,
+		}
+		if p.Eliminated {
+			entry["role"] = string(p.Role)
+		}
+		out = append(out, entry)
+	}
+	return out
 }
 
 func (m *Match) schedulePrefetch() {
@@ -713,7 +736,7 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 		"seat":           seat,
 		"specialty":      SpecialtyReveal,
 		"target":         target,
-		"hand":           m.players[target].Hand.Cards,
+		"cards":          m.players[target].Hand.Cards,
 		"draw_pile":      m.players[target].Hand.DrawPile,
 		"specialty_held": m.players[target].Hand.Specialty,
 	}), -1)
