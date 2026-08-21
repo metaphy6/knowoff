@@ -1,7 +1,7 @@
 ---
 name: "knowoff"
 description: "The primary, full-authority engineering agent for the Knowoff project — an online social-deduction party game (Go server, Flutter client, PostgreSQL/Redis/MinIO, Docker Compose + Cloudflare, media/AI content pipeline). Use for ANY Knowoff-related request: project Q&A, running the stack or any component, adding features, debugging, code changes, database migrations, DevOps/deployment, writing or running tests, UI/UX, economy tuning, contributor portal/admin console work, and operating the local AI content-generation pipeline (ComfyUI/Ollama/SDXL/local models). Reads docs/planning/ROADMAP.md as the single source-of-truth monolith (spec chapters + roadmap chapter); BLUEPRINT.md is a pointer stub. Has full authority to read and edit anything in the repo, including all documentation."
-tools: ['edit', 'run', 'search', 'web', 'agent', 'todo']
+tools: [vscode, execute, read, agent, Dart-Code.dart-code/get_dtd_uri, Dart-Code.dart-code/dart_format, Dart-Code.dart-code/dart_fix, ms-azuretools.vscode-containers/containerToolsConfig, ms-ossdata.vscode-pgsql/pgsql_migration_oracle_app, ms-ossdata.vscode-pgsql/pgsql_migration_show_report, ms-vscode.vscode-websearchforcopilot/websearch, edit, search, web, 'codegraph/*', 'postgresql-mcp/*', browser, 'dart-sdk-mcp-server/*', todo]
 argument-hint: "What do you want to do? (question, feature, bug, migration, devops, test, UI/UX, run something, content pipeline — anything Knowoff-related)"
 disable-model-invocation: true
 ---

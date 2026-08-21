@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -12,8 +13,8 @@ import (
 
 var envVarPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)\}`)
 
-// Load reads base.yaml, overlays envFile, interpolates ${VAR} references,
-// rejects unknown keys, and validates the merged result.
+// Load reads base.yaml, gameplay/tuning.yaml, overlays envFile, interpolates
+// ${VAR} references, rejects unknown keys, and validates the merged result.
 // It returns an error that aggregates every problem found, so callers can
 // surface all missing/invalid keys in one pass.
 func Load(basePath, envFile string) (*Config, error) {
@@ -23,6 +24,20 @@ func Load(basePath, envFile string) (*Config, error) {
 	}
 
 	merged := string(baseRaw)
+
+	// gameplay/tuning.yaml lives next to base.yaml (same configs directory).
+	// Its top-level keys belong under the "tuning" key in the merged config.
+	tuningPath := filepath.Join(filepath.Dir(basePath), "gameplay", "tuning.yaml")
+	if tuningRaw, err := os.ReadFile(tuningPath); err == nil {
+		wrapped := fmt.Sprintf("tuning:\n%s", indentLines(string(tuningRaw)))
+		merged, err = mergeYAML(merged, wrapped)
+		if err != nil {
+			return nil, fmt.Errorf("merge gameplay tuning: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("read gameplay tuning: %w", err)
+	}
+
 	if envFile != "" {
 		overlayRaw, err := os.ReadFile(envFile)
 		if err != nil {
@@ -76,6 +91,18 @@ func mergeYAML(base, overlay string) (string, error) {
 		return "", fmt.Errorf("marshal merged yaml: %w", err)
 	}
 	return string(out), nil
+}
+
+// indentLines prefixes every non-empty line of s with two spaces so it can be
+// nested under a YAML key.
+func indentLines(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if line != "" {
+			lines[i] = "  " + line
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func deepMergeMaps(base, overlay map[string]any) map[string]any {

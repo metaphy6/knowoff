@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,8 +12,9 @@ import 'presentation/state/game_session_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = await ClientConfig.load();
-  // Initialize auth in the background; a missing server must not block the UI.
-  unawaited(AppConfig.initialize(config));
+  // Ensure the device session exists before any screen can queue/join,
+  // so the access token is available on the first WebSocket intent.
+  await AppConfig.initialize(config);
   final transport = WebSocketTransport(url: config.websocketUrl);
   runApp(
     ProviderScope(

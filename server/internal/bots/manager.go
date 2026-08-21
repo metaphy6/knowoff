@@ -142,6 +142,7 @@ func (b *BotActor) act(m *game.Match) {
 		// Play the first non-empty card slot; if empty, draw once or pass.
 		if len(hand.Cards) > 0 {
 			cardID := hand.Cards[0]
+			b.logger.Debug("bot playing card", "card_id", cardID)
 			_ = m.HandleIntent(seat, &transport.Envelope{
 				Kind:    transport.IntentPlayCard,
 				Payload: map[string]any{"card_id": cardID},
@@ -149,12 +150,14 @@ func (b *BotActor) act(m *game.Match) {
 			return
 		}
 		if len(hand.DrawPile) > 0 {
+			b.logger.Debug("bot drawing card")
 			_ = m.HandleIntent(seat, &transport.Envelope{
 				Kind:    transport.IntentDrawCards,
 				Payload: map[string]any{"count": 1},
 			})
 			return
 		}
+		b.logger.Debug("bot passing turn")
 		_ = m.HandleIntent(seat, &transport.Envelope{
 			Kind:    transport.IntentUseSpecialty,
 			Payload: map[string]any{"specialty": "pass"},
@@ -163,6 +166,7 @@ func (b *BotActor) act(m *game.Match) {
 	}
 
 	if m.IsDiscussionReadyAllowed() {
+		b.logger.Debug("bot marking ready")
 		_ = m.HandleIntent(seat, &transport.Envelope{Kind: transport.IntentReady})
 	}
 
@@ -177,6 +181,7 @@ func (b *BotActor) act(m *game.Match) {
 		}
 		if len(targets) > 0 {
 			target := targets[b.rng.Intn(len(targets))]
+			b.logger.Debug("bot casting vote", "target", target)
 			_ = m.HandleIntent(seat, &transport.Envelope{
 				Kind:    transport.IntentCastVote,
 				Payload: map[string]any{"target_seat": target},

@@ -91,7 +91,15 @@ class HandDto {
 
 List<CardDto> cardList(dynamic value) {
   if (value is! List<dynamic>) return const [];
-  return value.whereType<Map<String, dynamic>>().map(CardDto.fromJson).toList();
+  return value.map((item) {
+    if (item is String) {
+      return CardDto(id: item, type: 'text');
+    }
+    if (item is Map<String, dynamic>) {
+      return CardDto.fromJson(item);
+    }
+    return const CardDto(id: '', type: 'text');
+  }).toList();
 }
 
 @immutable
@@ -114,6 +122,7 @@ class GameStateDto {
     this.nowns = const [],
     this.log = const [],
     this.matchPoints = 0,
+    this.roomCode = '',
   });
 
   final String phase;
@@ -133,6 +142,7 @@ class GameStateDto {
   final List<NownRefDto> nowns;
   final List<String> log;
   final int matchPoints;
+  final String roomCode;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
     return GameStateDto(
@@ -158,6 +168,7 @@ class GameStateDto {
       nowns: nownList(json['nowns']),
       log: stringList(json['log']),
       matchPoints: json['match_points'] as int? ?? 0,
+      roomCode: json['room_code'] as String? ?? '',
     );
   }
 
@@ -179,6 +190,7 @@ class GameStateDto {
     List<NownRefDto>? nowns,
     List<String>? log,
     int? matchPoints,
+    String? roomCode,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -198,6 +210,7 @@ class GameStateDto {
       nowns: nowns ?? this.nowns,
       log: log ?? this.log,
       matchPoints: matchPoints ?? this.matchPoints,
+      roomCode: roomCode ?? this.roomCode,
     );
   }
 }

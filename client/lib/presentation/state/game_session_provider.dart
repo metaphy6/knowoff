@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
 import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../domain/entities/game_session.dart';
@@ -34,6 +35,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     final payload = (message['payload'] as Map<String, dynamic>?) ?? const {};
 
     switch (kind) {
+      case 'joined':
+      case 'joined_joined':
+        _setDto(state.dto.copyWith(
+          seat: payload['seat'] as int? ?? state.dto.seat,
+          roomCode: payload['code'] as String? ?? state.dto.roomCode,
+        ));
+        break;
       case 'phase_started':
       case 'round_started':
       case 'turn_started':
@@ -127,6 +135,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       log:
           payload.containsKey('log') ? stringList(payload['log']) : current.log,
       matchPoints: payload['match_points'] as int? ?? current.matchPoints,
+      roomCode: payload['room_code'] as String? ?? current.roomCode,
     );
     state = state.copyWith(dto: updated, lastError: null);
   }
@@ -149,10 +158,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     });
   }
 
-  Future<void> queueQuickPlay(int size) =>
-      _send('queue_quickplay', {'size': size});
+  Future<void> queueQuickPlay(int size) => _send('queue_quickplay', {
+        'size': size,
+        'access_token': AppConfig.instance.authService.accessToken ?? '',
+      });
 
-  Future<void> joinRoom(String code) => _send('join_room', {'code': code});
+  Future<void> joinRoom(String code) => _send('join_room', {
+        'code': code,
+        'access_token': AppConfig.instance.authService.accessToken ?? '',
+      });
 
   Future<void> playCard(String cardId) =>
       _send('play_card', {'card_id': cardId});
