@@ -79,7 +79,8 @@ class AuthService {
   }
 
   String _deviceHash() {
-    final bytes = utf8.encode('knowoff-device-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1 << 30)}');
+    final bytes = utf8.encode(
+        'knowoff-device-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1 << 30)}');
     return base64Encode(sha256.convert(bytes).bytes);
   }
 }
