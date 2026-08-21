@@ -6,7 +6,8 @@ import 'auth_service.dart';
 
 /// HTTP API client for Phase 4 endpoints: profile and leaderboard.
 class ApiClient {
-  ApiClient({required String baseUrl, required AuthService auth, http.Client? client})
+  ApiClient(
+      {required String baseUrl, required AuthService auth, http.Client? client})
       : _baseUrl = baseUrl,
         _auth = auth,
         _client = client ?? http.Client();
