@@ -41,3 +41,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-21T12:32:16Z,run-20260821123216-176086,copilot,phase-5,commit,completed,"docs(launch): how-to-play clip storyboard, VPS migration runbook and localized store copy","docs/launch/HOW_TO_PLAY_CLIP.md,docs/launch/VPS_MIGRATION_RUNBOOK.md,docs/launch/STORE_COPY.md",pending
 2026-08-21T12:32:22Z,run-20260821123222-176235,copilot,phase-5,commit,completed,"feat(server/economy): Phase 5 economy core — wallet, ledger, entitlements, points conversion, purchases and tests","server/internal/economy,server/migrations/000003_phase5_economy_admin.up.sql",pending
 2026-08-21T12:34:01Z,run-20260821123401-179395,copilot,phase-5,commit,completed,build(make): run server tests sequentially (-p=1) to avoid shared-test-DB contention,Makefile,pending
+2026-08-21T12:43:42Z,run-20260821124342-191100,human,general,commit,completed,"feat(server/migrations): Phase 6 portal, community, challenge and guard-freeze schema",,pending
+2026-08-21T14:03:23Z,run-20260821140323-303293,human,phase-6,commit,completed,feat(portal): complete Phase 6 contributor portal and community features,,pending

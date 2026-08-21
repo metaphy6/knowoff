@@ -26,6 +26,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/notices"
+	"github.com/knowoff/knowoff/server/internal/portal"
 	"github.com/knowoff/knowoff/server/internal/profile"
 	"github.com/knowoff/knowoff/server/internal/reports"
 	"github.com/knowoff/knowoff/server/internal/store"
@@ -166,6 +167,20 @@ func run() error {
 	noticesManager := notices.NewManager(db, cfg, lobbyManager)
 	reportsManager := reports.NewManager(db)
 	avatarManager := avatar.NewManager(db, cfg, economyManager)
+	portalManager := portal.NewManager(portal.Deps{
+		DB:      db,
+		Config:  cfg,
+		Auth:    authManager,
+		Profile: profileManager,
+		Economy: economyManager,
+		Admin:   adminManager,
+		Media:   mediaManager,
+	})
+	if err := portalManager.EnsureActiveTermsVersion(context.Background()); err != nil {
+		logger.Error("failed to ensure active portal terms", "error", err)
+		return err
+	}
+	_ = portalManager.ExpireFreezes(context.Background())
 
 	publicMux := http.NewServeMux()
 	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
@@ -186,10 +201,16 @@ func run() error {
 		Auth:    authManager,
 		Economy: economyManager,
 	})
+	publicMux.Handle("/portal/", portalManager.Handler())
+	handler.RegisterChallengeRoutes(publicMux, handler.ChallengeDeps{
+		Auth:   authManager,
+		Portal: portalManager,
+	})
 
 	adminMux := http.NewServeMux()
 	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	adminMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
+	adminMux.Handle("/admin/portal/", adminManager.PortalHandler(portalManager))
 	adminMux.Handle("/admin/", adminManager.Handler(noticesManager))
 	if cfg.App.Env != "prod" {
 		ingestPath := cfg.Media.WorkbenchIngestPath

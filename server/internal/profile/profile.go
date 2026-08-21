@@ -234,6 +234,66 @@ func levelForXP(thresholds []int, xp int) int {
 	return level
 }
 
+// AddContributorCredit appends a credit to the profile's contributor_credits array.
+func (m *Manager) AddContributorCredit(ctx context.Context, accountID, credit string) error {
+	_, err := m.db.ExecContext(ctx,
+		`UPDATE profiles SET
+		 contributor_credits = array_append(contributor_credits, $2),
+		 updated_at = now()
+		 WHERE account_id = $1`,
+		accountID, credit,
+	)
+	if err != nil {
+		return fmt.Errorf("add contributor credit: %w", err)
+	}
+	return nil
+}
+
+// AddContributorCreditTx is the transaction-scoped variant of AddContributorCredit.
+func (m *Manager) AddContributorCreditTx(ctx context.Context, tx *sql.Tx, accountID, credit string) error {
+	_, err := tx.ExecContext(ctx,
+		`UPDATE profiles SET
+		 contributor_credits = array_append(contributor_credits, $2),
+		 updated_at = now()
+		 WHERE account_id = $1`,
+		accountID, credit,
+	)
+	if err != nil {
+		return fmt.Errorf("add contributor credit: %w", err)
+	}
+	return nil
+}
+
+// AddWeekWinnerTitle increments the week_winner_titles counter on a profile.
+func (m *Manager) AddWeekWinnerTitle(ctx context.Context, accountID string) error {
+	_, err := m.db.ExecContext(ctx,
+		`UPDATE profiles SET
+		 week_winner_titles = week_winner_titles + 1,
+		 updated_at = now()
+		 WHERE account_id = $1`,
+		accountID,
+	)
+	if err != nil {
+		return fmt.Errorf("add week winner title: %w", err)
+	}
+	return nil
+}
+
+// AddWeekWinnerTitleTx is the transaction-scoped variant of AddWeekWinnerTitle.
+func (m *Manager) AddWeekWinnerTitleTx(ctx context.Context, tx *sql.Tx, accountID string) error {
+	_, err := tx.ExecContext(ctx,
+		`UPDATE profiles SET
+		 week_winner_titles = week_winner_titles + 1,
+		 updated_at = now()
+		 WHERE account_id = $1`,
+		accountID,
+	)
+	if err != nil {
+		return fmt.Errorf("add week winner title: %w", err)
+	}
+	return nil
+}
+
 var profanityList = []string{
 	"fuck", "shit", "bitch", "asshole", "cunt", "damn", "dick", "pussy",
 }

@@ -88,6 +88,27 @@ func (w *Wallet) Grant(ctx context.Context, accountID string, eventType LedgerEv
 	}
 	defer tx.Rollback()
 
+	credited, err := w.GrantTx(ctx, tx, accountID, eventType, amount, reason, dailyCap)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit grant: %w", err)
+	}
+	return credited, nil
+}
+
+// GrantTx is the transaction-scoped implementation of Grant. Callers manage
+// the transaction lifecycle; GrantTx must be called inside an existing tx.
+func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64) (int, error) {
+	if amount <= 0 {
+		return 0, nil
+	}
+	if _, err := uuid.Parse(accountID); err != nil {
+		return 0, fmt.Errorf("invalid account id: %w", err)
+	}
+
 	day := serverDay(time.Now().UTC())
 	var dailyEarned int64
 	if err := tx.QueryRowContext(ctx,
@@ -142,9 +163,6 @@ func (w *Wallet) Grant(ctx context.Context, accountID string, eventType LedgerEv
 		return 0, fmt.Errorf("update daily earned: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit grant: %w", err)
-	}
 	return cappedAmount, nil
 }
 
