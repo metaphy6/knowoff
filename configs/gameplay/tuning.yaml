@@ -76,6 +76,8 @@ portal:
   min_account_level_to_apply: 2
   submissions_per_contributor_per_day: 10
   guard_freeze_max_h: 48
+  max_text_submission_length: 2000
+  terms_version: v1
 
 progression:                        # XP and account levels (Profiles §2)
   xp_base: 10                       # base XP for completing a match

@@ -623,7 +623,7 @@ chapter).
 | 3 — Realtime Game Loop | 18 | 18 | ✅ done |
 | 4 — Accounts, Quick Play & Hardening | 11 | 11 | ✅ done |
 | 5 — Noin Economy, Admin & Launch Polish | 12 | 12 | ✅ done |
-| 6 — Contributor Portal & Community | 5 | 0 | ⚪ planned |
+| 6 — Contributor Portal & Community | 5 | 5 | ✅ done |
 
 Phase 0 — the agent operating framework and this document — carries no
 checkboxes; it landed before phase work began.
@@ -1075,11 +1075,11 @@ crashed mid-run and re-run, it still yields exactly one Week Winner title,
 one payout, and one transfer at next close; admin routes are unreachable
 from the portal ingress.
 
-- [ ] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
-- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), Nown + deck authoring with the deal simulator; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
-- [ ] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
-- [ ] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
-- [ ] Gate: full Phase 6 proof tests pass on a clean tree.
+- [x] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
+- [x] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), Nown + deck authoring with the deal simulator; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
+- [x] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
+- [x] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
+- [x] Gate: full Phase 6 proof tests pass on a clean tree.
 
 ---
 

@@ -261,9 +261,11 @@ type LiveOpsTuning struct {
 
 // PortalTuning is contributor portal limits.
 type PortalTuning struct {
-	MinAccountLevelToApply          int `yaml:"min_account_level_to_apply"`
-	SubmissionsPerContributorPerDay int `yaml:"submissions_per_contributor_per_day"`
-	GuardFreezeMaxH                 int `yaml:"guard_freeze_max_h"`
+	MinAccountLevelToApply          int    `yaml:"min_account_level_to_apply"`
+	SubmissionsPerContributorPerDay int    `yaml:"submissions_per_contributor_per_day"`
+	GuardFreezeMaxH                 int    `yaml:"guard_freeze_max_h"`
+	MaxTextSubmissionLength         int    `yaml:"max_text_submission_length"`
+	TermsVersion                    string `yaml:"terms_version"`
 }
 
 // ProgressionTuning controls XP awards and level thresholds.
