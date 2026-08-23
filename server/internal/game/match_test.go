@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -241,7 +242,7 @@ func TestMatch_TurnOrderRandomizesEachRound(t *testing.T) {
 	target := m.activeSeats()[0]
 	for _, s := range m.activeSeats() {
 		if s != target {
-			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target": float64(target)}))
+			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(target)}))
 		}
 	}
 	m.resolveBallot()
@@ -334,7 +335,7 @@ func TestMatch_RevoteNullifiesResult(t *testing.T) {
 	// Eliminate seat 0.
 	for _, s := range m.activeSeats() {
 		if s != 0 {
-			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target": float64(0)}))
+			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(0)}))
 		}
 	}
 	m.resolveBallot()
@@ -394,14 +395,14 @@ func TestMatch_TiedRunoffCountsAsSurvived(t *testing.T) {
 	// Use a rotation so no one votes for themselves.
 	voteTarget := func(s int) int { return (s + 1) % m.size }
 	for _, s := range m.activeSeats() {
-		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target": float64(voteTarget(s))}))
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(voteTarget(s))}))
 	}
 	if m.phase != PhaseRunoff {
 		t.Fatalf("expected runoff phase, got %s", m.phase)
 	}
 	// Split runoff the same way.
 	for _, s := range m.activeSeats() {
-		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target": float64(voteTarget(s))}))
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(voteTarget(s))}))
 	}
 	if m.phase != PhaseResult {
 		t.Fatalf("expected result phase after tied runoff, got %s", m.phase)
@@ -515,7 +516,7 @@ func TestMatch_ReplayHarness_ReproducesEvents(t *testing.T) {
 	voteOut := func(m *Match, target int) {
 		for _, s := range m.activeSeats() {
 			if s != target {
-				_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target": float64(target)}))
+				_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(target)}))
 			}
 		}
 	}
@@ -641,6 +642,119 @@ func TestMatch_Specialty_ShuffleOnlyAtRoundStart(t *testing.T) {
 	err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{"specialty": SpecialtyShuffle}))
 	if err == nil {
 		t.Fatal("expected shuffle rejected after first play")
+	}
+}
+
+func TestMatch_CastVote_RejectsWrongPayloadKey(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	m.beginKnowoff()
+
+	// Regression: the handler used to read `target`, which nothing sends.
+	// Every ballot silently resolved to seat 0 instead of the chosen seat.
+	if err := m.HandleIntent(0, transport.NewIntent(
+		transport.IntentCastVote,
+		map[string]any{"target": float64(2)},
+	)); err == nil {
+		t.Fatal("expected a vote without target_seat to be rejected")
+	}
+
+	if err := m.HandleIntent(0, transport.NewIntent(
+		transport.IntentCastVote,
+		map[string]any{"target_seat": float64(2)},
+	)); err != nil {
+		t.Fatalf("cast vote: %v", err)
+	}
+	if got := m.ballots[0]; got != 2 {
+		t.Fatalf("expected seat 0 to have voted for 2, got %d", got)
+	}
+}
+
+func TestMatch_KnowoffResolved_CarriesTheClientResultShape(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+
+	// Play through the round, then ready up so the Knowoff ballot opens.
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(
+			transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	for _, s := range m.activeSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	bcast.clear()
+
+	// Everyone but the target names the target, so the target goes out.
+	target := m.activeSeats()[0]
+	for _, s := range m.activeSeats() {
+		if s == target {
+			continue
+		}
+		if err := m.HandleIntent(s, transport.NewIntent(
+			transport.IntentCastVote,
+			map[string]any{"target_seat": float64(target)},
+		)); err != nil {
+			t.Fatalf("seat %d vote: %v", s, err)
+		}
+	}
+	// The target never votes, so the ballot closes on its timer in production;
+	// drive it directly here.
+	m.resolveBallot()
+
+	events := bcast.findEvents(0, transport.EventKnowoffResolved)
+	if len(events) == 0 {
+		t.Fatal("expected a knowoff_resolved event")
+	}
+	result, ok := events[len(events)-1].Payload["result"].(map[string]any)
+	if !ok {
+		t.Fatal("knowoff_resolved must carry a result object the client can render")
+	}
+	if result["eliminated_seat"] != target {
+		t.Fatalf("expected eliminated_seat %d, got %v", target,
+			result["eliminated_seat"])
+	}
+	tally, ok := result["tally"].(map[string]int)
+	if !ok {
+		t.Fatalf("expected a tally map, got %T", result["tally"])
+	}
+	if want := len(m.activeSeats()) - 1; tally[strconv.Itoa(target)] != want {
+		t.Fatalf("expected %d votes against seat %d, got %d", want, target,
+			tally[strconv.Itoa(target)])
+	}
+	// The role stays hidden while the result is still cancellable by a Revote.
+	if _, leaked := result["role"]; leaked {
+		t.Fatal("a pending result must not reveal a role")
+	}
+}
+
+func TestMatch_PhaseStarted_AlwaysCarriesVoteBudget(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+
+	events := bcast.findEvents(0, transport.EventPhaseStarted)
+	if len(events) == 0 {
+		t.Fatal("expected at least one phase_started event")
+	}
+	for _, env := range events {
+		votes, ok := env.Payload["remaining_votes"]
+		if !ok {
+			t.Fatalf("phase %v: remaining_votes missing", env.Payload["phase"])
+		}
+		if votes != 2 {
+			t.Fatalf("phase %v: expected 2 votes at 4 players, got %v",
+				env.Payload["phase"], votes)
+		}
 	}
 }
 

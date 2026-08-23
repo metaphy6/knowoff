@@ -578,5 +578,249 @@
         "type": "String"
       }
     }
+  },
+  "botSeatLabel": "Bot",
+  "@botSeatLabel": {
+    "description": "Badge on a labeled backfill-bot seat."
+  },
+  "seatOnTheClock": "On the clock",
+  "@seatOnTheClock": {
+    "description": "Badge on the seat whose turn it currently is."
+  },
+  "seatDisconnected": "Offline",
+  "@seatDisconnected": {
+    "description": "Badge on a disconnected seat inside its grace window."
+  },
+  "handTitle": "Your hand",
+  "@handTitle": {
+    "description": "Heading above the player's cards."
+  },
+  "handCardCount": "{count, plural, =0{no cards} =1{1 card} other{{count} cards}}",
+  "@handCardCount": {
+    "description": "Count of cards held.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "drawPileCost": "{count} in pile · -{penalty} pts each",
+  "@drawPileCost": {
+    "description": "Draw pile size plus the per-draw match-point penalty.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "penalty": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "Selected",
+  "@cardSelected": {
+    "description": "Label on the currently selected hand card."
+  },
+  "cardTypeText": "Text",
+  "@cardTypeText": {
+    "description": "Card media type: plain text."
+  },
+  "cardTypeImage": "Image",
+  "@cardTypeImage": {
+    "description": "Card media type: image."
+  },
+  "cardTypeGif": "GIF",
+  "@cardTypeGif": {
+    "description": "Card media type: animated GIF."
+  },
+  "evidenceTableTitle": "On the table",
+  "@evidenceTableTitle": {
+    "description": "Heading over the played-card evidence surface."
+  },
+  "nownLabel": "Nown",
+  "@nownLabel": {
+    "description": "Caption rail label over a visible Nown."
+  },
+  "nownHiddenLabel": "Nown — hidden",
+  "@nownHiddenLabel": {
+    "description": "Caption rail label when Nown is not visible to the viewer."
+  },
+  "roleCardHint": "Nobody can tell you looked",
+  "@roleCardHint": {
+    "description": "Hint under the unrevealed role card."
+  },
+  "roleNowerHint": "You see Nown. Find the Donowers.",
+  "@roleNowerHint": {
+    "description": "Hint shown while a Nower holds their role card revealed."
+  },
+  "roleDonowerHint": "You can't see Nown. Blend in.",
+  "@roleDonowerHint": {
+    "description": "Hint shown while a Donower holds their role card revealed."
+  },
+  "yourVoteLabel": "Your vote",
+  "@yourVoteLabel": {
+    "description": "Stamp on the ballot row the local player voted for."
+  },
+  "mainMenuTagline": "One of you can't see this.",
+  "@mainMenuTagline": {
+    "description": "Main menu hero tagline."
+  },
+  "mainMenuPlaySub": "Strangers, 4 or 6 seats",
+  "@mainMenuPlaySub": {
+    "description": "Sub-label under the Quick Play button."
+  },
+  "mainMenuLocalRoomSub": "Same room, one code",
+  "@mainMenuLocalRoomSub": {
+    "description": "Sub-label under the Local Room button."
+  },
+  "queueHint": "Bot seats are always labeled.",
+  "@queueHint": {
+    "description": "Reassurance shown while queueing."
+  },
+  "lobbySeats": "{filled} of {total} seats",
+  "@lobbySeats": {
+    "description": "Lobby seat fill progress.",
+    "placeholders": {
+      "filled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "roundLabel": "Round {round}",
+  "@roundLabel": {
+    "description": "Round header with its number.",
+    "placeholders": {
+      "round": {
+        "type": "int"
+      }
+    }
+  },
+  "turnOwnerLabel": "{name} is playing",
+  "@turnOwnerLabel": {
+    "description": "Status while another seat is on the clock.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "turnYoursLabel": "Your turn — play one card",
+  "@turnYoursLabel": {
+    "description": "Status while the local player is on the clock."
+  },
+  "turnWaitLabel": "Waiting for the table",
+  "@turnWaitLabel": {
+    "description": "Status when no seat is on the clock."
+  },
+  "spectatingLabel": "You're out",
+  "@spectatingLabel": {
+    "description": "Banner heading for an eliminated player."
+  },
+  "spectatingHint": "Stay to the end to collect your points in full.",
+  "@spectatingHint": {
+    "description": "Explains that staying connected still scores."
+  },
+  "selectCardHint": "Pick a card, then play it.",
+  "@selectCardHint": {
+    "description": "Hint on the round screen before a card is selected."
+  },
+  "voteBudgetLabel": "Votes left",
+  "@voteBudgetLabel": {
+    "description": "Label for the match's remaining Knowoff votes."
+  },
+  "knowoffPrompt": "Who can't see Nown?",
+  "@knowoffPrompt": {
+    "description": "Ballot heading."
+  },
+  "knowoffBlindBallot": "Blind ballot. Votes stay hidden until the window closes.",
+  "@knowoffBlindBallot": {
+    "description": "Explains ballot secrecy."
+  },
+  "knowoffLockedLabel": "Vote locked in",
+  "@knowoffLockedLabel": {
+    "description": "Status once the local player has voted."
+  },
+  "runoffTitle": "Runoff",
+  "@runoffTitle": {
+    "description": "Title for the tie-break ballot."
+  },
+  "resultWindowTitle": "Result",
+  "@resultWindowTitle": {
+    "description": "Title of the 15-second result window."
+  },
+  "resultMissLabel": "Nobody eliminated",
+  "@resultMissLabel": {
+    "description": "Shown when a vote eliminates no one."
+  },
+  "resultEliminated": "{name} is out",
+  "@resultEliminated": {
+    "description": "Announces the eliminated player.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "revoteHint": "Only a Nower can cancel this result.",
+  "@revoteHint": {
+    "description": "Explains who may play the Revote card."
+  },
+  "discussionReadyHint": "When everyone is Ready the window ends early.",
+  "@discussionReadyHint": {
+    "description": "Hint under the Ready button."
+  },
+  "quickChatTitle": "Quick Chat",
+  "@quickChatTitle": {
+    "description": "Heading over the canned-phrase bar."
+  },
+  "pokeHint": "Poke anyone who hasn't acted.",
+  "@pokeHint": {
+    "description": "Hint over the poke row."
+  },
+  "verdictPointsLabel": "Match points",
+  "@verdictPointsLabel": {
+    "description": "Label over the local player's match point total."
+  },
+  "verdictNownsTitle": "Every Nown",
+  "@verdictNownsTitle": {
+    "description": "Heading over the post-match Nown reveal."
+  },
+  "verdictBackToMenu": "Back to menu",
+  "@verdictBackToMenu": {
+    "description": "Verdict screen exit button."
+  },
+  "verdictNowerBlurb": "Every Donower was caught.",
+  "@verdictNowerBlurb": {
+    "description": "Verdict subtitle after a Nower win."
+  },
+  "verdictDonowerBlurb": "The votes ran out. Donowers win together.",
+  "@verdictDonowerBlurb": {
+    "description": "Verdict subtitle after a Donower win."
+  },
+  "noticesEmpty": "Nothing to report.",
+  "@noticesEmpty": {
+    "description": "Empty state for the notice inbox."
+  },
+  "leaderboardEmpty": "No standings yet this week.",
+  "@leaderboardEmpty": {
+    "description": "Empty state for the weekly leaderboard."
+  },
+  "profileStatsTitle": "Career",
+  "@profileStatsTitle": {
+    "description": "Heading over the profile statistics grid."
+  },
+  "storeBalanceLabel": "Noin",
+  "@storeBalanceLabel": {
+    "description": "Unit label next to a Noin amount."
+  },
+  "storePremiumBlurb": "No daily cap, ever.",
+  "@storePremiumBlurb": {
+    "description": "One-line Premium value proposition."
+  },
+  "loadingLabel": "Loading…",
+  "@loadingLabel": {
+    "description": "Generic loading label."
   }
 }

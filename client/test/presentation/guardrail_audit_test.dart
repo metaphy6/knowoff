@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 
 import '../helpers/guardrail_audit.dart';
 
@@ -55,5 +56,50 @@ void main() {
     );
 
     expect(violations, isEmpty);
+  });
+
+  testWidgets("GuardrailAudit counts a Container's gradient exactly once",
+      (tester) async {
+    final violations = await auditWidget(
+      tester,
+      MaterialApp(
+        home: Scaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: KoColors.revealGradient,
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(violations, isEmpty);
+  });
+
+  testWidgets('GuardrailAudit still catches two separate gradient containers',
+      (tester) async {
+    final violations = await auditWidget(
+      tester,
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: <Widget>[
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: KoColors.revealGradient,
+                ),
+              ),
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: KoColors.revealGradient,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(violations, contains('More than one gradient found'));
   });
 }

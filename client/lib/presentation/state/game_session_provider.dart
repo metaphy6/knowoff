@@ -44,6 +44,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'phase_started':
         _mergeState(payload);
+        _applyPhaseWindow(payload);
         break;
       case 'turn_started':
         _mergeState(payload);
@@ -59,9 +60,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'round_resolved':
       case 'shuffle_occurred':
       case 'vote_result_pending':
-      case 'vote_nullified':
       case 'knowoff_resolved':
         _mergeState(payload);
+        break;
+      case 'vote_nullified':
+        // A Revote cancels the shown result outright: it reveals nobody and
+        // eliminates nobody (Rules §5).
+        _mergeState(payload);
+        _setDto(state.dto.copyWith(clearResult: true, voteTarget: -1));
         break;
       case 'quick_chat':
         _appendChatEvent(payload);
@@ -80,7 +86,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'error':
         final code = payload['code'] as String?;
-        state = state.copyWith(lastError: code);
+        // A rejected ballot has to release the local lock, or the row stays
+        // stamped for a vote the server never accepted. Scoped to the voting
+        // phases so an unrelated error can't wipe a ballot that did land.
+        final voting = state.phase == 'knowoff' || state.phase == 'runoff';
+        state = state.copyWith(
+          dto: voting ? state.dto.copyWith(voteTarget: -1) : state.dto,
+          lastError: code,
+        );
         break;
       case 'system_notice':
       default:
@@ -120,7 +133,33 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     final timeoutSeconds = payload['timeout'] as int?;
     if (timeoutSeconds == null) return;
     _setDto(state.dto.copyWith(
-        turnDeadline: DateTime.now().add(Duration(seconds: timeoutSeconds))));
+      turnDeadline: DateTime.now().add(Duration(seconds: timeoutSeconds)),
+      phaseWindow: timeoutSeconds,
+    ));
+  }
+
+  /// Starts the display-only clock for a server-driven phase window, and
+  /// clears the previous ballot when a fresh one opens.
+  ///
+  /// Without the reset a finished Knowoff's result stayed in the DTO forever —
+  /// every later ballot then rendered as an already-resolved result window and
+  /// refused votes.
+  void _applyPhaseWindow(Map<String, dynamic> payload) {
+    final phase = payload['phase'] as String?;
+    final window = payload['window_seconds'] as int?;
+    final opensBallot = phase == 'knowoff' || phase == 'runoff';
+
+    var dto = state.dto;
+    if (opensBallot) {
+      dto = dto.copyWith(voteTarget: -1, clearResult: true);
+    }
+    dto = window == null || window <= 0
+        ? dto.copyWith(clearTurnDeadline: true, phaseWindow: 0)
+        : dto.copyWith(
+            turnDeadline: DateTime.now().add(Duration(seconds: window)),
+            phaseWindow: window,
+          );
+    _setDto(dto);
   }
 
   void _appendChatEvent(Map<String, dynamic> payload) {
@@ -182,6 +221,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           payload.containsKey('log') ? stringList(payload['log']) : current.log,
       matchPoints: payload['match_points'] as int? ?? current.matchPoints,
       roomCode: payload['room_code'] as String? ?? current.roomCode,
+      // Locally-owned fields the wire never carries: a merge must not drop
+      // them, or the countdown resets and the chat feed empties on every
+      // phase change.
+      turnDeadline: current.turnDeadline,
+      phaseWindow: current.phaseWindow,
+      chatEvents: current.chatEvents,
     );
     state = state.copyWith(dto: updated, lastError: null);
   }
@@ -227,8 +272,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
   Future<void> drawCards(int count) => _send('draw_cards', {'count': count});
 
-  Future<void> castVote(int targetSeat) =>
-      _send('cast_vote', {'target_seat': targetSeat});
+  /// Sends the ballot and locks it locally.
+  ///
+  /// The vote stays blind to the rest of the table (Rules §4), so the server
+  /// never echoes it back — without the local lock the voter gets no feedback
+  /// at all and can tap every row in turn.
+  Future<void> castVote(int targetSeat) async {
+    _setDto(state.dto.copyWith(voteTarget: targetSeat));
+    await _send('cast_vote', {'target_seat': targetSeat});
+  }
 
   Future<void> ready() => _send('ready', const {});
 

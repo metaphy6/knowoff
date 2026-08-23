@@ -283,15 +283,24 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 
 Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
 
+> **Implementing or redesigning any client UI against this chapter?** Load
+> [`.agents/skills/neo-brutalism-ui-design/SKILL.md`](../../.agents/skills/neo-brutalism-ui-design/SKILL.md)
+> first — it's the execution playbook for this matrix: neo-brutalism
+> background/research, a per-component redesign guide mapped to the actual
+> `client/lib/presentation/` files, the token/shadow/typography upgrade path,
+> and the accessibility/guardrail checks a redesign must keep passing.
+
 * Palette tokens (Flutter constants; light theme only at v1):
   * `canvas` `#DCC8F7` — lavender field with a faint low-contrast grid tile; `surface` `#F7F2E9` warm cream for cards and sheets; `#FFFFFF` content wells inside them.
   * `ink` `#141414` — every border and every glyph; text is never gray-on-gray.
   * `violet` `#B49AF5` — the neutral interactive: buttons, selected tiles, timers, progress fills.
   * `lime` `#D4F04C` — the truth/reward signal: Nower catches, match points, Noin grants.
   * `pink` `#FF9ED2` — the risk/accusation signal: votes, the Knowoff board, Donower reveals. The palette's single permitted gradient (`#FFD9EC → #FF9ED2`) is reserved for the Knowoff reveal header.
-* Structure: every container carries `Border.all(width: 3, color: ink)` and a hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`. Corners rounded — radius 16 for cards and sheets, 12 for buttons, full pill for stat chips. Pressing a control collapses its shadow to zero offset while the control translates onto its own shadow footprint: the signature brutalist click.
-* Typography: a chunky rounded display face for headings, timers, and Noin numbers (Baloo 2 / Fredoka class — both OFL; lock one after a diacritics render check), a plain geometric sans for body. **Highlighter emphasis is the house style:** the revealed role, a Noin delta, the clip caption — key phrases sit on a lime marker sweep, not bold-only.
-* Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (~12 glyphs: sparkle, static-burst, eye, cloud) reserved for empty states, win moments, and the Donower-side placeholder.
+  * **Support accents** (ADR-008) — categorical only, never a verdict signal: `canvasDeep` `#C4A8F0` for header bands and rails, `tangerine` `#FFB020` for currency, streaks and heat, `aqua` `#7FE7DC` for time, connection and neutral information. Ten colours total is the ceiling; a further hue is another ADR.
+* Structure: every container carries `Border.all(width: 3, color: ink)` and a hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`. Corners rounded — radius 16 for cards and sheets, 12 for buttons, full pill for stat chips. Pressing a control collapses its shadow to zero offset while the control translates onto its own shadow footprint: the signature brutalist click. Shadows come from a **named tier scale** — `sm` (3,3) for chips and badges, `md` (4,4) for cards and buttons, `lg` (8,8) for overlays and hero moments, `lift` (7,7) for pointer hover — plus tinted `limeGlow`/`pinkGlow`/`violetGlow` reserved for celebration. Blur is always `0`.
+* **Structured disruption:** decorative and celebratory surfaces (the hand fan, the evidence table, empty-state stickers, verdict banners) sit at a small rotation drawn from a closed set (`KoTilt`: ~1.1°, ~2°, ~2.9°). Ballots, timers, forms, and anything a fairness rule depends on stay mechanically aligned — never rotated.
+* Typography: **Baloo 2** (SIL OFL, bundled under `client/assets/fonts/` — ADR-007) is the locked display face for headings, timers, room codes, tallies, and Noin numbers; body copy stays on a plain geometric sans. **Highlighter emphasis is the house style:** the revealed role, a Noin delta, the clip caption — key phrases sit on a lime marker sweep, not bold-only.
+* Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (13 glyphs: sparkle, static-burst, eye, cloud, placeholder, crown, coin, cards, check, cross, poke, mask, clock) reserved for empty states, win moments, state badges, and the Donower-side placeholder.
 * Fixed color semantics: violet = interact, lime = truth/reward, pink = accuse/risk, ink = information. No verdict leans on hue alone — color always pairs with icon + label (colorblind-safe by construction).
 * Performance guardrails: flat fills (the one gradient exception above), zero blur radii, no stacked translucency — low-end devices are the norm.
 * Asset strategy — code first, raster last: UI chrome is 100% widgets/`CustomPainter`s (borders, hard shadows, grid tile, highlighter sweep, press animation); doodles ship as hand-authored SVG paths. True raster — preset avatars, app icon, store art — is produced offline in curated batches via the **nano banana (Gemini image) API**, prompts derived from this matrix; candidates → human curation → consistency pass → committed like any asset. API keys live under the config discipline (📦 §3). In-game *media content* comes exclusively from media packs (⚙️) — the design system and the content pipeline never mix.
@@ -845,7 +854,9 @@ match screen consumes it.
 **Skills.** `security-by-default` (role-scoped rendering is the critical
 surface), `code-review` (secrecy code reviewed before anything builds on
 it), `systematic-debugging` (seeded replay of failing matches),
-`flaky-test-triage` (timers + concurrency are flake bait).
+`flaky-test-triage` (timers + concurrency are flake bait),
+`neo-brutalism-ui-design` (the 🎨 design-system bullets below and any later
+visual redesign work — background, per-component guide, guardrails).
 
 **Spec (required reading).** 🕹️ Game Rules §1–8 in full — the
 normative behavior spec this phase implements; 🌐 (protocol + wire
