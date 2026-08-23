@@ -1,6 +1,6 @@
 ---
 agent: ask
-description: Run the mechanical verification gate on the staged diff — tests, lint, doctor, diff hygiene, tracking — and return PASS / FAIL.
+description: Run the mechanical verification gate on the staged diff — tests, lint, diff hygiene, tracking — and return PASS / FAIL.
 ---
 
 # Verify changes
@@ -16,7 +16,7 @@ Switch to the [`verifier` custom agent](../agents/verifier.agent.md).
 ## Steps
 
 1. Load [`.agents/skills/verification-before-completion/SKILL.md`](../../.agents/skills/verification-before-completion/SKILL.md).
-2. Run `make verify` (full test suite + `make doctor`) on a clean process.
+2. Run the server and client test targets on a clean process.
 3. Run the project lint / type-check gate, if any.
 4. Read `git diff --cached` for hygiene — no debug artefacts, secrets, or stray files.
 5. Confirm tests moved with code, the tracking row exists with a Conventional

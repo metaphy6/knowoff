@@ -31,14 +31,6 @@
       "args": ["git"],
       "presentation": { "reveal": "always" },
       "problemMatcher": []
-    },
-    {
-      "label": "Doctor: Verify framework",
-      "type": "shell",
-      "command": "make",
-      "args": ["doctor"],
-      "presentation": { "reveal": "always" },
-      "problemMatcher": []
     }
   ],
   "inputs": [

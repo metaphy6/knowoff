@@ -77,10 +77,7 @@ WebSocket echo on Android + Web.
 
 ```bash
 make help           # all targets
-make doctor         # sanity-check framework install
 make git.dry        # preview pending commits (read-only)
 make git            # commit + push (human runs this)
 make track.add ACTION=note SUMMARY="..."   # append tracking row
-make skills.find TAG=<tag>                 # search skill library
-make skills.status                         # skill index with line counts
 ```

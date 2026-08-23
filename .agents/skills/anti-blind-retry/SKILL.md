@@ -1,6 +1,6 @@
 ---
 name: anti-blind-retry
-description: "Blind Retry. A `make test` run exited non-zero. The agent re-ran it. It failed again. The"
+description: "Blind Retry. A test run exited non-zero. The agent re-ran it. It failed again. The"
 user-invocable: false
 ---
 
@@ -10,7 +10,7 @@ user-invocable: false
 
 ## The failure story
 
-A `make test` run exited non-zero. The agent re-ran it. It failed again. The
+A test run exited non-zero. The agent re-ran it. It failed again. The
 agent re-ran it a third time. The terminal output was lost. The agent wrote
 "the tests seem to be passing" and staged the files. The tests were not passing.
 

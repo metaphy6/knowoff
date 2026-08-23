@@ -93,7 +93,7 @@ if [[ -f "$CSV" ]]; then
   log_info "rows: $row_count"
   tail -n 5 "$CSV" | sed 's/^/    /' >&2
 else
-  log_warn "tracking.csv missing — run 'xops/init/scaffold.sh --target .' to create it"
+  log_warn "tracking.csv missing — create docs/tracking/tracking.csv before continuing"
 fi
 echo >&2
 

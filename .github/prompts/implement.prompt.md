@@ -106,7 +106,7 @@ small" or "I'm confident" is not a waiver.
    [`verifier.agent.md`](../agents/verifier.agent.md): delegate to the
    `verifier` subagent, or load
    [`verification-before-completion`](../../.agents/skills/verification-before-completion/SKILL.md)
-   and run inline. It runs `make verify` cold, checks diff hygiene,
+   and run inline. It runs the test and lint gates cold, checks diff hygiene,
    tests-moved-with-code, the tracking row + Conventional Commits, and that
    every bullet is `[x]`. It returns **✅ PASS** or **❌ FAIL**.
    - On **FAIL**, loop back to implementer, fix, then re-run reviewer + verifier.
