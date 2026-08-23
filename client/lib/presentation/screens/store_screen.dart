@@ -3,14 +3,18 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
 import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
+import '../theme/knowoff_typography.dart';
 import '../widgets/convert_points_dialog.dart';
 import '../widgets/ko_button.dart';
-import '../widgets/ko_chip.dart';
 import '../widgets/ko_container.dart';
+import '../widgets/ko_scaffold.dart';
+import '../widgets/ko_stat_tile.dart';
+import '../widgets/noin_badge.dart';
 
 /// The player-facing store: Noin balance, Play Passes, Noin bulks, unlocks,
-/// Premium subscription, and points-to-Noin conversion.
+/// Premium subscription, and points-to-Noin conversion (💰).
 class StoreScreen extends StatefulWidget {
   const StoreScreen({this.api, super.key});
 
@@ -41,6 +45,7 @@ class _StoreScreenState extends State<StoreScreen> {
     try {
       final wallet = await _api.getWallet();
       final catalog = await _api.getStoreCatalog();
+      if (!mounted) return;
       setState(() {
         _wallet = wallet;
         _catalog = catalog;
@@ -48,6 +53,7 @@ class _StoreScreenState extends State<StoreScreen> {
         _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e;
         _loading = false;
@@ -55,13 +61,11 @@ class _StoreScreenState extends State<StoreScreen> {
     }
   }
 
-  Future<void> _buyPlayPass(String type) async {
-    await _purchase(() => _api.purchasePlayPass(type));
-  }
+  Future<void> _buyPlayPass(String type) =>
+      _purchase(() => _api.purchasePlayPass(type));
 
-  Future<void> _buyUnlock(String type, {String value = ''}) async {
-    await _purchase(() => _api.purchaseUnlock(type, value: value));
-  }
+  Future<void> _buyUnlock(String type, {String value = ''}) =>
+      _purchase(() => _api.purchaseUnlock(type, value: value));
 
   Future<void> _purchase(Future<void> Function() call) async {
     final l10n = AppLocalizations.of(context);
@@ -73,7 +77,7 @@ class _StoreScreenState extends State<StoreScreen> {
           SnackBar(content: Text(l10n.storeBought)),
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.storeError)),
@@ -86,9 +90,7 @@ class _StoreScreenState extends State<StoreScreen> {
     final pointsToNoin = (_catalog?['points_to_noin'] as num?)?.toInt() ?? 100;
     showDialog<void>(
       context: context,
-      builder: (context) => ConvertPointsDialog(
-        pointsToNoin: pointsToNoin,
-      ),
+      builder: (context) => ConvertPointsDialog(pointsToNoin: pointsToNoin),
     ).then((_) => _load());
   }
 
@@ -109,159 +111,275 @@ class _StoreScreenState extends State<StoreScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: KoColors.canvas,
-      appBar: AppBar(title: Text(l10n.storeTitle)),
+    return KoScaffold(
+      title: l10n.storeTitle,
+      accent: KoColors.pink,
+      leadingGlyph: const DoodleIcon(Doodle.coin, size: 30),
+      actions: _loading || _error != null
+          ? const <Widget>[]
+          : <Widget>[
+              NoinBadge(
+                balance: _noinBalance(),
+                label: l10n.storeBalanceLabel,
+                compact: true,
+              ),
+            ],
       body: _body(context, l10n),
     );
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return KoLoading(label: l10n.loadingLabel);
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(l10n.genericError),
-            const SizedBox(height: 12),
-            KoButton(label: l10n.retry, onTap: _load),
-          ],
-        ),
+      return KoEmptyState(
+        doodle: Doodle.cross,
+        message: l10n.genericError,
+        accent: KoColors.pink,
+        action: KoButton(label: l10n.retry, onTap: _load),
       );
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+
+    return ListView(
+      children: <Widget>[
+        KoButton(
+          label: l10n.convertPointsTitle,
+          subLabel: l10n.convertPointsHint,
+          size: KoButtonSize.large,
+          expand: true,
+          backgroundColor: KoColors.lime,
+          shadow: KoShadows.lg,
+          icon: const DoodleIcon(Doodle.sparkle, size: 26),
+          trailing: const Icon(Icons.arrow_forward, size: 24),
+          onTap: _showConvertDialog,
+        ),
+        const SizedBox(height: KoSpace.xl),
+        KoSectionHeader(
+          label: l10n.storePlayPasses,
+          glyph: const DoodleIcon(Doodle.clock, size: 20),
+          accent: KoColors.violet,
+        ),
+        _OfferRow(
+          label: l10n.storePlayPassDay1,
+          price: (_playPassPrices()['day_1'] as num?)?.toInt(),
+          accent: KoColors.surface,
+          glyph: Doodle.clock,
+          onBuy: () => _buyPlayPass('day_1'),
+        ),
+        _OfferRow(
+          label: l10n.storePlayPassDay3,
+          price: (_playPassPrices()['day_3'] as num?)?.toInt(),
+          accent: KoColors.surface,
+          glyph: Doodle.clock,
+          onBuy: () => _buyPlayPass('day_3'),
+        ),
+        _OfferRow(
+          label: l10n.storePlayPassDay7,
+          price: (_playPassPrices()['day_7'] as num?)?.toInt(),
+          accent: KoColors.aqua,
+          glyph: Doodle.clock,
+          onBuy: () => _buyPlayPass('day_7'),
+        ),
+        const SizedBox(height: KoSpace.lg),
+        KoSectionHeader(
+          label: l10n.storeNoinBulks,
+          glyph: const DoodleIcon(Doodle.coin, size: 20),
+          accent: KoColors.tangerine,
+        ),
+        GridView.count(
+          crossAxisCount: 3,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: KoSpace.md,
+          crossAxisSpacing: KoSpace.md,
+          childAspectRatio: 1.05,
+          children: <Widget>[
+            for (var i = 0; i < _noinBundles().length; i++)
+              KoStatTile(
+                value: '${(_noinBundles()[i] as num).toInt()}',
+                label: l10n.storeBalanceLabel,
+                accent: KoColors.tangerine,
+                glyph: Doodle.coin,
+                numeralSize: 24,
+                rotation: KoTilt.alternating(i),
+              ),
+          ],
+        ),
+        const SizedBox(height: KoSpace.lg),
+        KoSectionHeader(
+          label: l10n.storeUnlocks,
+          glyph: const DoodleIcon(Doodle.sparkle, size: 20),
+          accent: KoColors.lime,
+        ),
+        _OfferRow(
+          label: l10n.storeUnlockCustomAvatar,
+          price: (_unlockPrices()['custom_avatar'] as num?)?.toInt(),
+          accent: KoColors.surface,
+          glyph: Doodle.eye,
+          onBuy: () => _buyUnlock('custom_avatar'),
+        ),
+        _OfferRow(
+          label: l10n.storeUnlockPokeStyle,
+          price: (_unlockPrices()['poke_style'] as num?)?.toInt(),
+          accent: KoColors.surface,
+          glyph: Doodle.poke,
+          onBuy: () => _buyUnlock('poke_style'),
+        ),
+        _OfferRow(
+          label: l10n.storeUnlockThemePack,
+          price: (_unlockPrices()['theme_pack'] as num?)?.toInt(),
+          accent: KoColors.surface,
+          glyph: Doodle.cards,
+          onBuy: () => _buyUnlock('theme_pack'),
+        ),
+        const SizedBox(height: KoSpace.lg),
+        KoSectionHeader(
+          label: l10n.storePremium,
+          glyph: const DoodleIcon(Doodle.crown, size: 20),
+          accent: KoColors.pink,
+        ),
+        _PremiumCard(
+          monthly: l10n.storePremiumMonthly,
+          yearly: l10n.storePremiumYearly,
+          discount: l10n.storePremiumYearlyDiscount(_yearlyDiscount()),
+          blurb: l10n.storePremiumBlurb,
+        ),
+      ],
+    );
+  }
+}
+
+class _OfferRow extends StatelessWidget {
+  const _OfferRow({
+    required this.label,
+    required this.price,
+    required this.accent,
+    required this.glyph,
+    required this.onBuy,
+  });
+
+  final String label;
+  final int? price;
+  final Color accent;
+  final Doodle glyph;
+  final VoidCallback onBuy;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: KoSpace.sm),
+      child: KoContainer(
+        backgroundColor: accent,
+        padding: const EdgeInsets.all(KoSpace.md),
+        child: Row(
+          children: <Widget>[
+            DoodleIcon(glyph, size: 24),
+            const SizedBox(width: KoSpace.md),
+            Expanded(
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            if (price != null)
+              KoButton(
+                label: l10n.storeBuyPrice(price!),
+                size: KoButtonSize.small,
+                backgroundColor: KoColors.tangerine,
+                icon: const DoodleIcon(Doodle.coin, size: 16),
+                onTap: onBuy,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumCard extends StatelessWidget {
+  const _PremiumCard({
+    required this.monthly,
+    required this.yearly,
+    required this.discount,
+    required this.blurb,
+  });
+
+  final String monthly;
+  final String yearly;
+  final String discount;
+  final String blurb;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return KoContainer(
+      backgroundColor: KoColors.violet,
+      borderWidth: KoBorders.thick,
+      shadow: KoShadows.lg,
+      padding: const EdgeInsets.all(KoSpace.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _balanceChip(l10n),
-          const SizedBox(height: 8),
-          KoButton(
-            label: l10n.convertPointsTitle,
-            backgroundColor: KoColors.lime,
-            onTap: _showConvertDialog,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Transform.rotate(
+                angle: KoTilt.loud,
+                child: const DoodleIcon(Doodle.crown, size: 30),
+              ),
+              const SizedBox(width: KoSpace.md),
+              Expanded(
+                child: Text(blurb, style: text.headlineSmall),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
-          _sectionTitle(l10n.storePlayPasses),
-          _playPassTile(l10n.storePlayPassDay1, 'day_1'),
-          _playPassTile(l10n.storePlayPassDay3, 'day_3'),
-          _playPassTile(l10n.storePlayPassDay7, 'day_7'),
-          const SizedBox(height: 24),
-          _sectionTitle(l10n.storeNoinBulks),
-          ..._noinBundles().map((size) => _bulkTile((size as num).toInt())),
-          const SizedBox(height: 24),
-          _sectionTitle(l10n.storeUnlocks),
-          _unlockTile(
-            l10n.storeUnlockCustomAvatar,
-            'custom_avatar',
+          const SizedBox(height: KoSpace.lg),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _PlanTile(name: monthly, note: null),
+              ),
+              const SizedBox(width: KoSpace.md),
+              Expanded(
+                child: _PlanTile(name: yearly, note: discount),
+              ),
+            ],
           ),
-          _unlockTile(
-            l10n.storeUnlockPokeStyle,
-            'poke_style',
-          ),
-          _unlockTile(
-            l10n.storeUnlockThemePack,
-            'theme_pack',
-          ),
-          const SizedBox(height: 24),
-          _sectionTitle(l10n.storePremium),
-          _premiumCard(l10n),
         ],
       ),
     );
   }
+}
 
-  Widget _balanceChip(AppLocalizations l10n) {
-    return KoChip(
-      icon: const Icon(Icons.monetization_on, size: 16),
-      label: l10n.storeNoinBalance(_noinBalance()),
-      color: KoColors.lime,
-    );
-  }
+class _PlanTile extends StatelessWidget {
+  const _PlanTile({required this.name, required this.note});
 
-  Widget _sectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  final String name;
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+
+    return Container(
+      padding: const EdgeInsets.all(KoSpace.md),
+      decoration: BoxDecoration(
+        color: note == null ? KoColors.whiteWell : KoColors.lime,
+        border: Border.all(width: KoBorders.regular, color: KoColors.ink),
+        borderRadius: BorderRadius.circular(KoRadii.card),
+        boxShadow: const <BoxShadow>[KoShadows.sm],
       ),
-    );
-  }
-
-  Widget _playPassTile(String label, String type) {
-    final l10n = AppLocalizations.of(context);
-    final price = (_playPassPrices()[type] as num?)?.toInt();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: KoContainer(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            if (price != null)
-              KoButton(
-                label: l10n.storeBuyPrice(price),
-                onTap: () => _buyPlayPass(type),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _bulkTile(int size) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: KoContainer(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(l10n.storeBulkSize(size)),
-            const Icon(Icons.shopping_cart_outlined),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _unlockTile(String label, String type) {
-    final l10n = AppLocalizations.of(context);
-    final price = (_unlockPrices()[type] as num?)?.toInt();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: KoContainer(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label),
-            if (price != null)
-              KoButton(
-                label: l10n.storeBuyPrice(price),
-                onTap: () => _buyUnlock(type),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _premiumCard(AppLocalizations l10n) {
-    final discount = _yearlyDiscount();
-    return KoContainer(
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(l10n.storePremiumMonthly),
-          Text(l10n.storePremiumYearly),
-          Text(l10n.storePremiumYearlyDiscount(discount)),
+        children: <Widget>[
+          Text(name, style: koDisplayStyle(size: 22, height: 1.0)),
+          if (note != null) ...<Widget>[
+            const SizedBox(height: KoSpace.xs),
+            Text(note!, style: text.labelMedium),
+          ],
         ],
       ),
     );

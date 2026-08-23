@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 
@@ -466,11 +467,42 @@ func (m *Match) broadcastPhase() {
 		"phase":   m.phase,
 		"round":   m.round,
 		"players": m.playerPayloads(),
+		// Sent in every started-match phase, not just the voting ones: the
+		// vote budget is a fixed rule (§1) the client renders from role reveal
+		// onwards, and omitting it left clients showing a stale zero.
+		"remaining_votes": m.remainingVotes,
 	}
-	if m.phase == PhasePlay || m.phase == PhaseDiscussion || m.phase == PhaseKnowoff || m.phase == PhaseRunoff {
-		payload["remaining_votes"] = m.remainingVotes
+	if window := m.phaseWindowSeconds(); window > 0 {
+		payload["window_seconds"] = window
 	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPhaseStarted, payload), -1)
+}
+
+// phaseWindowSeconds is the wall-clock length of the current phase, or 0 for
+// phases with no clock. The server still owns the clock; this is display-only
+// data so a client can draw an honest countdown instead of guessing.
+func (m *Match) phaseWindowSeconds() int {
+	t := m.deps.Config.Tuning.Timers
+	switch m.phase {
+	case PhasePrefetch:
+		return t.PrefetchCountdown
+	case PhasePlay:
+		return t.PlayTurn
+	case PhaseDiscussion:
+		active := m.activeConnectedCount()
+		if active < 1 {
+			active = 1
+		}
+		return active * t.DiscussionPerPlayer
+	case PhaseKnowoff:
+		return t.KnowoffBallot
+	case PhaseRunoff:
+		return t.KnowoffRunoff
+	case PhaseResult:
+		return t.VoteResultWindow
+	default:
+		return 0
+	}
 }
 
 // playerPayloads returns a seat-safe snapshot of player states for wire events.
@@ -980,7 +1012,12 @@ func (m *Match) handleCastVote(seat int, payload map[string]any) error {
 	if m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
 		return fmt.Errorf("not voting phase")
 	}
-	targetF, _ := payload["target"].(float64)
+	// `target_seat` is the wire field every other seat-addressed intent uses
+	// (poke, reveal) and the one clients and backfill bots actually send.
+	targetF, ok := payload["target_seat"].(float64)
+	if !ok {
+		return fmt.Errorf("missing target_seat")
+	}
 	target := int(targetF)
 	if target == seat {
 		return fmt.Errorf("cannot vote self")
@@ -1086,6 +1123,14 @@ func (m *Match) afterBallot(eliminatedSomeone bool) {
 		"round":    m.round,
 		"votes":    m.ballots,
 		"resolved": eliminatedSomeone,
+		// The client renders the 15 s result window from this object. The role
+		// is deliberately absent: the result is not final yet, and a Revote
+		// cancels it without revealing anybody (§5). Roles reach clients on the
+		// next phase broadcast, after elimination applies.
+		"result": map[string]any{
+			"eliminated_seat": m.eliminatedThisRound,
+			"tally":           m.ballotTally(),
+		},
 	}
 	if eliminatedSomeone {
 		payload["eliminated"] = m.eliminatedThisRound
@@ -1093,6 +1138,18 @@ func (m *Match) afterBallot(eliminatedSomeone bool) {
 	m.bcast.Broadcast(transport.NewEvent(transport.EventKnowoffResolved, payload), -1)
 
 	m.scheduleResultWindow()
+}
+
+// ballotTally counts the current ballot per targeted seat, keyed by seat so it
+// survives JSON's string-only map keys.
+func (m *Match) ballotTally() map[string]int {
+	counts := map[string]int{}
+	for _, s := range m.activeSeats() {
+		if t := m.ballots[s]; t >= 0 {
+			counts[strconv.Itoa(t)]++
+		}
+	}
+	return counts
 }
 
 func (m *Match) scheduleResultWindow() {

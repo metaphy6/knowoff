@@ -148,6 +148,7 @@ class GameStateDto {
     this.matchPoints = 0,
     this.roomCode = '',
     this.turnDeadline,
+    this.phaseWindow = 0,
     this.chatEvents = const [],
   });
 
@@ -170,6 +171,10 @@ class GameStateDto {
   final int matchPoints;
   final String roomCode;
   final DateTime? turnDeadline;
+
+  /// Wall-clock length of the current server-driven window, in seconds.
+  /// Display-only: the server owns the phase clock.
+  final int phaseWindow;
   final List<ChatEventDto> chatEvents;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
@@ -220,7 +225,10 @@ class GameStateDto {
     int? matchPoints,
     String? roomCode,
     DateTime? turnDeadline,
+    int? phaseWindow,
     List<ChatEventDto>? chatEvents,
+    bool clearResult = false,
+    bool clearTurnDeadline = false,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -235,13 +243,15 @@ class GameStateDto {
       plays: plays ?? this.plays,
       discussionReady: discussionReady ?? this.discussionReady,
       voteTarget: voteTarget ?? this.voteTarget,
-      result: result ?? this.result,
+      result: clearResult ? null : (result ?? this.result),
       winner: winner ?? this.winner,
       nowns: nowns ?? this.nowns,
       log: log ?? this.log,
       matchPoints: matchPoints ?? this.matchPoints,
       roomCode: roomCode ?? this.roomCode,
-      turnDeadline: turnDeadline ?? this.turnDeadline,
+      turnDeadline:
+          clearTurnDeadline ? null : (turnDeadline ?? this.turnDeadline),
+      phaseWindow: phaseWindow ?? this.phaseWindow,
       chatEvents: chatEvents ?? this.chatEvents,
     );
   }

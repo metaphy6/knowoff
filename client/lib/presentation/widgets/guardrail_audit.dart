@@ -17,7 +17,10 @@ class GuardrailAudit {
     final violations = <String>[];
     var gradientCount = 0;
 
-    void visit(Element element) {
+    // A `Container` builds its own `DecoratedBox` carrying the identical
+    // decoration object. Counting both would report one painted gradient as
+    // two, so the container's decoration is skipped once on the way down.
+    void visit(Element element, Decoration? skip) {
       final w = element.widget;
 
       if (w is BackdropFilter) {
@@ -31,8 +34,18 @@ class GuardrailAudit {
       }
 
       Decoration? decoration;
-      if (w is Container) decoration = w.decoration;
-      if (w is DecoratedBox) decoration = w.decoration;
+      var handedDown = skip;
+      if (w is Container) {
+        decoration = w.decoration;
+        handedDown = decoration;
+      } else if (w is DecoratedBox) {
+        if (identical(w.decoration, skip)) {
+          decoration = null;
+          handedDown = null;
+        } else {
+          decoration = w.decoration;
+        }
+      }
 
       if (decoration is BoxDecoration) {
         if (decoration.gradient != null) {
@@ -48,10 +61,10 @@ class GuardrailAudit {
         }
       }
 
-      element.visitChildren(visit);
+      element.visitChildren((child) => visit(child, handedDown));
     }
 
-    visit(root);
+    visit(root, null);
     return violations;
   }
 }

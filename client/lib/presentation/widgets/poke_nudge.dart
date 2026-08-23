@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'ko_chip.dart';
+import 'seat_tile.dart';
 
 /// Row of chips for poking active players who have not yet acted or readied.
 class PokeNudge extends StatelessWidget {
@@ -26,21 +28,17 @@ class PokeNudge extends StatelessWidget {
 
     if (targets.isEmpty) return const SizedBox.shrink();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: targets.map((player) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: KoChip(
-              icon: const Icon(Icons.touch_app, size: 16),
-              label: '${l10n.pokeLabel} ${player.name}',
-              color: KoColors.pink,
-              onTap: onPoke != null ? () => onPoke!(player.seat) : null,
-            ),
-          );
-        }).toList(),
-      ),
+    return Wrap(
+      spacing: KoSpace.sm,
+      runSpacing: KoSpace.sm,
+      children: targets.map((player) {
+        return KoChip(
+          icon: const DoodleIcon(Doodle.poke, size: 16),
+          label: '${l10n.pokeLabel} ${seatDisplayName(player)}',
+          color: KoColors.pink,
+          onTap: onPoke != null ? () => onPoke!(player.seat) : null,
+        );
+      }).toList(),
     );
   }
 }
