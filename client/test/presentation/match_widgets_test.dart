@@ -165,6 +165,18 @@ void main() {
 
       expect(find.byIcon(Icons.close), findsNWidgets(2));
     });
+
+    testWidgets('draws nothing until the server reports a budget',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const KoVoteBudget(remaining: 0, total: 2, label: 'Votes left'),
+        ),
+      );
+
+      expect(find.text('Votes left'), findsNothing);
+      expect(find.byIcon(Icons.close), findsNothing);
+    });
   });
 
   group('SeatTile', () {
