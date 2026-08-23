@@ -9,6 +9,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPOSE="docker compose -f ${SCRIPT_DIR}/docker-compose.yaml --profile core"
 
+set -a
+source "$SCRIPT_DIR/config/redis/environment.env"
+source "$SCRIPT_DIR/config/minio/environment.env"
+source "$SCRIPT_DIR/config/migrate/environment.env"
+set +a
+
 cmd="${1:-}"
 dir="${2:-}"
 
@@ -28,11 +34,11 @@ case "$cmd" in
     echo "postgres: $(stat -c%s "$dir/postgres.dump") bytes"
 
     # Redis: background save and copy RDB.
-    $COMPOSE exec -T redis redis-cli -a "${KNOWOFF_REDIS_PASSWORD:-knowoff}" BGSAVE
+    $COMPOSE exec -T redis redis-cli -a "$KNOWOFF_REDIS_PASSWORD" BGSAVE
     # Wait for BGSAVE to complete.
     while true; do
-      status=$($COMPOSE exec -T redis redis-cli -a "${KNOWOFF_REDIS_PASSWORD:-knowoff}" LASTSAVE || true)
-      bgsave_status=$($COMPOSE exec -T redis redis-cli -a "${KNOWOFF_REDIS_PASSWORD:-knowoff}" INFO Persistence | grep rdb_bgsave_in_progress || true)
+      status=$($COMPOSE exec -T redis redis-cli -a "$KNOWOFF_REDIS_PASSWORD" LASTSAVE || true)
+      bgsave_status=$($COMPOSE exec -T redis redis-cli -a "$KNOWOFF_REDIS_PASSWORD" INFO Persistence | grep rdb_bgsave_in_progress || true)
       if echo "$bgsave_status" | grep -q ":0"; then
         break
       fi
@@ -44,10 +50,10 @@ case "$cmd" in
     # MinIO: mirror buckets (create the bucket first if this is a fresh stack).
     mkdir -p "$dir/minio"
     docker run --rm --network knowoff_default \
-      -e MC_HOST_knowoff="http://${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}:${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}@minio:9000" \
+      -e MC_HOST_knowoff="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
       minio/mc:latest mb knowoff/knowoff >/dev/null 2>&1 || true
     docker run --rm --network knowoff_default \
-      -e MC_HOST_knowoff="http://${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}:${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}@minio:9000" \
+      -e MC_HOST_knowoff="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
       minio/mc:latest mirror knowoff/knowoff "$dir/minio" >/dev/null
     echo "minio: $(du -sb "$dir/minio" | cut -f1) bytes"
 
@@ -77,7 +83,7 @@ case "$cmd" in
     done
 
     # Restore PostgreSQL.
-    $COMPOSE exec -T -e PGPASSWORD="${KNOWOFF_DB_PASSWORD:-knowoff}" postgres pg_restore -h postgres -U knowoff -d knowoff --clean --if-exists < "$dir/postgres.dump"
+    $COMPOSE exec -T -e PGPASSWORD="$KNOWOFF_DB_PASSWORD" postgres pg_restore -h postgres -U knowoff -d knowoff --clean --if-exists < "$dir/postgres.dump"
 
     # Restore Redis.
     $COMPOSE stop redis
@@ -87,10 +93,10 @@ case "$cmd" in
 
     # Restore MinIO.
     docker run --rm --network knowoff_default \
-      -e MC_HOST_knowoff="http://${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}:${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}@minio:9000" \
+      -e MC_HOST_knowoff="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
       minio/mc:latest mb knowoff/knowoff >/dev/null 2>&1 || true
     docker run --rm --network knowoff_default \
-      -e MC_HOST_knowoff="http://${KNOWOFF_STORAGE_ACCESS_KEY:-minioadmin}:${KNOWOFF_STORAGE_SECRET_KEY:-minioadmin}@minio:9000" \
+      -e MC_HOST_knowoff="http://${MINIO_ROOT_USER}:${MINIO_ROOT_PASSWORD}@minio:9000" \
       -v "$(realpath "$dir"):/snapshot" \
       minio/mc:latest mirror --overwrite /snapshot/minio knowoff/knowoff >/dev/null
 
