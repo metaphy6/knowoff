@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'ko_button.dart';
 
 /// Brutalist ready button that sends a ready intent.
+///
+/// Once Ready the control locks into a lime, checked, un-tappable state — the
+/// icon changes with the colour so the state never rides on hue alone.
 class ReadyButton extends StatelessWidget {
   const ReadyButton({required this.onReady, this.ready = false, super.key});
 
@@ -15,8 +19,11 @@ class ReadyButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return KoButton(
-      label: ready ? l10n.readyLabel : l10n.readyLabel,
+      label: l10n.readyLabel,
+      size: KoButtonSize.large,
       backgroundColor: ready ? KoColors.lime : KoColors.violet,
+      shadow: ready ? KoShadows.md : KoShadows.lg,
+      icon: DoodleIcon(ready ? Doodle.check : Doodle.sparkle, size: 24),
       onTap: ready ? null : onReady,
     );
   }

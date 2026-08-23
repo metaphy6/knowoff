@@ -12,6 +12,9 @@ import 'package:knowoff_client/presentation/screens/queue_screen.dart';
 import 'package:knowoff_client/presentation/screens/round_screen.dart';
 import 'package:knowoff_client/presentation/screens/verdict_screen.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
+import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
+import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
+import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
   return GameSession(
@@ -60,6 +63,7 @@ Widget _wrapWithSession(Widget child, GameSession session) {
       ),
     ],
     child: MaterialApp(
+      theme: knowoffTheme(),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: child,
@@ -105,7 +109,8 @@ void main() {
         home: LobbyScreen(code: 'ABCDEF', players: []),
       ),
     );
-    expect(find.text('Room code: ABCDEF'), findsOneWidget);
+    expect(find.text('Room code'), findsOneWidget);
+    expect(find.text('ABCDEF'), findsOneWidget);
   });
 
   testWidgets('RoundScreen renders without exception', (tester) async {
@@ -126,14 +131,20 @@ void main() {
     expect(find.text('Argue. Accuse. Bluff.'), findsOneWidget);
   });
 
-  testWidgets('KnowoffScreen renders without exception', (tester) async {
+  testWidgets('KnowoffScreen renders the blind ballot', (tester) async {
     await tester.pumpWidget(
       _wrapWithSession(
         const KnowoffScreen(),
         _sampleSession(phase: 'knowoff'),
       ),
     );
-    expect(find.text('Waiting for votes...'), findsOneWidget);
+    await tester.pump();
+    expect(find.text("Who can't see Nown?"), findsWidgets);
+    expect(find.textContaining('Blind ballot'), findsOneWidget);
+    // One ballot row per candidate: 4 seats minus the local player.
+    expect(find.text('Beta'), findsOneWidget);
+    expect(find.text('Gamma'), findsOneWidget);
+    expect(find.text('Delta'), findsOneWidget);
   });
 
   testWidgets('VerdictScreen renders winner and nowns', (tester) async {
@@ -144,6 +155,83 @@ void main() {
       ),
     );
     expect(find.text('Nowers win'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('A dog on a skateboard'), 300);
     expect(find.text('A dog on a skateboard'), findsOneWidget);
+  });
+
+  group('design guardrails hold on every live match screen', () {
+    final screens = <String, (Widget, String)>{
+      'round': (const RoundScreen(), 'play'),
+      'discussion': (const DiscussionScreen(), 'discussion'),
+      'knowoff': (const KnowoffScreen(), 'knowoff'),
+      'verdict': (const VerdictScreen(), 'verdict'),
+    };
+
+    screens.forEach((name, entry) {
+      testWidgets('$name: no blur, no extra gradient, no translucency',
+          (tester) async {
+        await tester.pumpWidget(
+          _wrapWithSession(entry.$1, _sampleSession(phase: entry.$2)),
+        );
+        await tester.pump();
+
+        final violations = <String>[];
+        tester.binding.rootElement?.visitChildren((element) {
+          violations.addAll(GuardrailAudit.auditElement(element));
+        });
+        expect(violations, isEmpty);
+      });
+
+      testWidgets('$name: renders no unstyled stock Material widget',
+          (tester) async {
+        await tester.pumpWidget(
+          _wrapWithSession(entry.$1, _sampleSession(phase: entry.$2)),
+        );
+        await tester.pump();
+
+        expect(find.byType(ChoiceChip), findsNothing);
+        expect(find.byType(MaterialBanner), findsNothing);
+        expect(find.byType(Card), findsNothing);
+        expect(find.byType(ListTile), findsNothing);
+      });
+    });
+  });
+
+  testWidgets('the reveal gradient is spent on the Knowoff result window only',
+      (tester) async {
+    final session = _sampleSession(phase: 'result');
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const KnowoffScreen(),
+        GameSession(
+          myRole: session.myRole,
+          dto: session.dto.copyWith(
+            phase: 'result',
+            result: const VoteResultDto(
+              eliminatedSeat: 1,
+              role: 'donower',
+              tally: {'1': 3},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Exactly one painted gradient, and it is the reveal gradient.
+    final violations = <String>[];
+    tester.binding.rootElement?.visitChildren((element) {
+      violations.addAll(GuardrailAudit.auditElement(element));
+    });
+    expect(violations, isEmpty);
+
+    final gradientContainers = tester
+        .widgetList<Container>(find.byType(Container))
+        .where((c) => (c.decoration as BoxDecoration?)?.gradient != null);
+    expect(gradientContainers, hasLength(1));
+    expect(
+      (gradientContainers.single.decoration! as BoxDecoration).gradient,
+      equals(KoColors.revealGradient),
+    );
   });
 }

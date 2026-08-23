@@ -1,7 +1,7 @@
 # ADR-006: v1 Typography — Heaviest Default-Font Weights as Display Stand-In
 
 ## Status
-Accepted — reversible before public launch.
+Superseded by [ADR-007](ADR-007-display-typeface.md) — all three reversal criteria below were met and Baloo 2 is now bundled.
 
 ## Context
 The design matrix calls for a chunky rounded display face (Baloo 2 or Fredoka class) for headings, timers, and Noin numbers, plus a plain geometric sans for body.

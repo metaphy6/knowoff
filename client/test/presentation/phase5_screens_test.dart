@@ -104,12 +104,21 @@ void main() {
     await _pump(tester, StoreScreen(api: api));
     await tester.pump();
     await tester.pump();
-    expect(find.text('1234 Noin'), findsOneWidget);
+    expect(find.text('1234'), findsOneWidget);
     expect(find.text('Play Passes'), findsOneWidget);
-    expect(find.text('Noin Bulks'), findsOneWidget);
-    expect(find.text('Unlocks'), findsOneWidget);
-    expect(find.text('Premium'), findsOneWidget);
     expect(find.text('Buy 250'), findsOneWidget);
+
+    // Sections below the fold live in the outer ListView; the nested bundle
+    // grid is non-scrollable, so target the outer scrollable explicitly.
+    final outer = find.byType(Scrollable).first;
+    for (final section in <String>['Noin Bulks', 'Unlocks', 'Premium']) {
+      await tester.scrollUntilVisible(
+        find.text(section),
+        200,
+        scrollable: outer,
+      );
+      expect(find.text(section), findsOneWidget);
+    }
   });
 
   testWidgets('StoreScreen play pass purchase refreshes wallet',
@@ -192,7 +201,9 @@ void main() {
         ),
       ),
     );
-    expect(find.text('Maintenance'), findsOneWidget);
+    // The banner stamps the notice kind on its rail and the title in the
+    // body; this fixture uses the same word for both.
+    expect(find.text('Maintenance'), findsNWidgets(2));
     expect(find.textContaining('Maintenance in'), findsOneWidget);
   });
 

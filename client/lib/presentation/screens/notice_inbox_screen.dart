@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
 import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../widgets/ko_button.dart';
-import '../widgets/ko_container.dart';
+import '../widgets/ko_scaffold.dart';
+import '../widgets/ko_stat_tile.dart';
+import '../widgets/notice_banner.dart';
 
-/// Screen listing all active system notices.
+/// Screen listing all active system notices (🎮 §4). Never a blocking gate.
 class NoticeInboxScreen extends StatefulWidget {
   const NoticeInboxScreen({this.api, super.key});
 
@@ -36,12 +39,14 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
   Future<void> _load() async {
     try {
       final notices = await _api.getNotices();
+      if (!mounted) return;
       setState(() {
         _notices = notices;
         _loading = false;
         _error = null;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e;
         _loading = false;
@@ -49,78 +54,46 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
     }
   }
 
-  String _typeLabel(AppLocalizations l10n, String? type) {
-    switch (type) {
-      case 'maintenance':
-        return l10n.noticeTypeMaintenance;
-      case 'downtime':
-        return l10n.noticeTypeDowntime;
-      case 'announcement':
-      default:
-        return l10n.noticeTypeAnnouncement;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      backgroundColor: KoColors.canvas,
-      appBar: AppBar(title: Text(l10n.noticeInboxTitle)),
+    return KoScaffold(
+      title: l10n.noticeInboxTitle,
+      accent: KoColors.surface,
+      leadingGlyph: const DoodleIcon(Doodle.cloud, size: 30),
       body: _body(context, l10n),
     );
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return KoLoading(label: l10n.loadingLabel);
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(l10n.genericError),
-            const SizedBox(height: 12),
-            KoButton(label: l10n.retry, onTap: _load),
-          ],
-        ),
+      return KoEmptyState(
+        doodle: Doodle.cross,
+        message: l10n.genericError,
+        accent: KoColors.pink,
+        action: KoButton(label: l10n.retry, onTap: _load),
       );
     }
-    final notices = _notices ?? [];
+
+    final notices =
+        (_notices ?? const <dynamic>[]).whereType<Map<String, dynamic>>();
     if (notices.isEmpty) {
-      return Center(child: Text(l10n.noticeTypeAnnouncement));
+      return KoEmptyState(
+        doodle: Doodle.sparkle,
+        message: l10n.noticesEmpty,
+        accent: KoColors.lime,
+      );
     }
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: notices.length,
-      itemBuilder: (context, index) {
-        final n = notices[index] as Map<String, dynamic>;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: KoContainer(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        n['title']?.toString() ?? '',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ),
-                    Text(_typeLabel(l10n, n['type']?.toString())),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(n['body']?.toString() ?? ''),
-              ],
-            ),
+
+    return ListView(
+      children: <Widget>[
+        for (final notice in notices)
+          Padding(
+            padding: const EdgeInsets.only(bottom: KoSpace.md),
+            child: NoticeBanner(notice: notice),
           ),
-        );
-      },
+      ],
     );
   }
 }

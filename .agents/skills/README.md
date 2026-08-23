@@ -39,6 +39,10 @@ saves whole rewrites.
 - [`/adr-writing`](adr-writing/SKILL.md) — How to capture an architectural decision.
 - [`/changelog-discipline`](changelog-discipline/SKILL.md) — One CHANGELOG entry per user-visible change.
 
+### Design
+
+- [`/neo-brutalism-ui-design`](neo-brutalism-ui-design/SKILL.md) — Redesign/beautify the Knowoff client against the 🎨 Soft Neo-Brutalism Design Matrix.
+
 ### Collaboration
 
 - [`/clarifying-questions`](clarifying-questions/SKILL.md) — Ask one good question, not five bad ones.

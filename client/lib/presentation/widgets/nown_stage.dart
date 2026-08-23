@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'ko_container.dart';
 import 'report_dialog.dart';
 
 /// Displays the current round's Nown — or the Donower placeholder — in a
-/// brutalist frame.
+/// heavyweight brutalist frame.
+///
+/// Read-fast surface: no tilt, no motion. Only the frame is loud (`lg` shadow,
+/// thick border, stamped caption rail) so Nowers can parse it in one glance.
+/// The Donower placeholder is byte-identical to the still-loading state, so
+/// loading leaks nothing (⚙️ §4).
 class NownStage extends StatelessWidget {
   const NownStage({
     required this.nown,
@@ -21,22 +27,23 @@ class NownStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final blind = decoy || nown == null;
 
     Widget content;
-    if (decoy || nown == null) {
-      content = Center(
-        child: Text(
-          l10n.donowerPlaceholder,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-      );
+    if (blind) {
+      content = _Placeholder(message: l10n.donowerPlaceholder);
     } else if (nown!.type == 'text') {
-      content = Center(
-        child: Text(
-          nown!.content ?? '',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall,
+      content = Padding(
+        padding: const EdgeInsets.all(KoSpace.lg),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              nown!.content ?? '',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
+          ),
         ),
       );
     } else {
@@ -45,40 +52,93 @@ class NownStage extends StatelessWidget {
         fit: BoxFit.contain,
         loadingBuilder: (context, child, progress) {
           if (progress == null) return child;
-          return Center(
-            child: Text(
-              l10n.donowerPlaceholder,
-              textAlign: TextAlign.center,
-            ),
-          );
+          return _Placeholder(message: l10n.donowerPlaceholder);
         },
-        errorBuilder: (context, error, stack) => Center(
-          child: Text(l10n.donowerPlaceholder),
-        ),
+        errorBuilder: (context, error, stack) =>
+            _Placeholder(message: l10n.donowerPlaceholder),
       );
     }
 
     return KoContainer(
       backgroundColor: KoColors.whiteWell,
-      child: Stack(
-        children: [
-          AspectRatio(
-            aspectRatio: 4 / 3,
-            child: content,
-          ),
-          if (!decoy && nown != null)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.flag_outlined, size: 18),
-                tooltip: l10n.reportNownAction,
-                onPressed: () => showDialog<void>(
-                  context: context,
-                  builder: (context) => ReportDialog(targetMediaID: nown!.id),
-                ),
+      borderWidth: KoBorders.thick,
+      shadow: KoShadows.lg,
+      padding: EdgeInsets.zero,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: KoSpace.md,
+              vertical: KoSpace.sm,
+            ),
+            decoration: BoxDecoration(
+              color: blind ? KoColors.canvasDeep : KoColors.aqua,
+              border: const Border(
+                bottom:
+                    BorderSide(width: KoBorders.regular, color: KoColors.ink),
+              ),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(KoRadii.card - KoBorders.thick),
               ),
             ),
+            child: Row(
+              children: <Widget>[
+                DoodleIcon(blind ? Doodle.mask : Doodle.eye, size: 18),
+                const SizedBox(width: KoSpace.sm),
+                Expanded(
+                  child: Text(
+                    blind ? l10n.nownHiddenLabel : l10n.nownLabel,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                if (!blind)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (context) =>
+                          ReportDialog(targetMediaID: nown!.id),
+                    ),
+                    child: Semantics(
+                      button: true,
+                      label: l10n.reportNownAction,
+                      child: const Icon(Icons.flag_outlined, size: 18),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          AspectRatio(aspectRatio: 4 / 3, child: content),
+        ],
+      ),
+    );
+  }
+}
+
+class _Placeholder extends StatelessWidget {
+  const _Placeholder({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: KoColors.surface,
+      padding: const EdgeInsets.all(KoSpace.lg),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Transform.rotate(
+            angle: KoTilt.subtle,
+            child: const DoodleIcon(Doodle.staticBurst, size: 56),
+          ),
+          const SizedBox(height: KoSpace.md),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ],
       ),
     );
