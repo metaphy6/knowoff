@@ -14,6 +14,11 @@ cd deploy/compose
 docker compose --profile core up --build
 ```
 
+Local service configuration lives in `compose/config/<service>/environment.env`.
+The files contain the complete development environment, including the visible
+dev secrets used by the stack. Edit the Cloudflared token before using the
+`edge` profile; production secrets must come from a deployment secret store.
+
 Profiles:
 
 - `core` — server, postgres, redis, minio, adminer
