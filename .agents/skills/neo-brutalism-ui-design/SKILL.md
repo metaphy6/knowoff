@@ -156,67 +156,61 @@ into the loud end of the spectrum than the average product, not less.
 ## §2. The house rule for this project
 
 **Softness was always meant to be the *palette temperature*, not an excuse
-for a timid execution.** The fixed 7-color palette, the 3px ink border, the
-zero-blur hard shadow, and the press-collapses-into-its-shadow motion are
-**locked brand grammar** (snapshot-tested — see §6). What was never locked,
-and is where the current UI actually falls short, is:
+for a timid execution.** The fixed palette, the 3px ink border, the zero-blur
+hard shadow, and the press-collapses-into-its-shadow motion are **locked brand
+grammar** (snapshot-tested — see §6). What was never locked is *intensity of
+use*: scale, shadow hierarchy, typographic voice, motion, illustration.
 
-- **intensity of use** — a single flat shadow tier applied uniformly instead
-  of a named scale that builds hierarchy,
-- **typographic voice** — [ADR-006](../../../docs/design/ADR-006-typography.md)
-  deliberately punted on a real display face for v1; the app still renders
-  headings in the *system font*, bold. This is very likely the single
-  biggest reason the UI reads as generic.
-- **illustration** — the doodle-glyph set (`client/lib/presentation/icons/doodles.dart`)
-  ships 5 of the ~12 glyphs the design matrix calls for, and they're barely
-  used.
-- **motion and physicality** — no rotation, no scatter, no hover-lift; every
-  surface is a static rectangle.
-- **grammar coverage** — two components (found by this skill's own audit,
-  §3) render as bare stock Material widgets, breaking the "every component
-  is a stamped, bordered object" rule mid-screen.
+**Status: the v1 build spent none of that budget; a full rebuild has since
+spent it.** A named shadow tier scale, a bundled display face, 13 doodle
+glyphs, hover/press/shake motion, structured disruption on decorative
+surfaces, and total grammar coverage all landed — see §3 for the standing
+rules that keep them, and
+[`UI_REDESIGN_PLAYBOOK.md`](../../../docs/guides/UI_REDESIGN_PLAYBOOK.md) for
+the method and the fail-and-learns.
 
 **Conclusion for the agent: don't reach for new colors first.** The palette
-already passes accessibility with room to spare (§4). The fix is turning up
-scale, shadow hierarchy, typography, motion, and illustration — the things
-that were left at their v1 "safe" defaults — not repainting the app.
+passes accessibility with room to spare (§4). Reach for scale, shadow
+hierarchy, typography, motion, and illustration before repainting anything.
 
-If, after reading this, a genuinely new hue or a second gradient is still
-wanted, that is allowed — but it is a **locked-token change**: it goes through
-[`adr-writing`](../adr-writing/SKILL.md) (supersede, never edit, the ADRs in
-`docs/design/`), updates the token snapshot tests, and updates
-`guardrail_audit.dart` deliberately (§6). It is never a silent drive-by edit.
+A genuinely new hue or a second gradient is allowed, but it is a **locked-token
+change**: it goes through [`adr-writing`](../adr-writing/SKILL.md) (supersede,
+never edit, the ADRs in `docs/design/`), updates the token snapshot tests,
+updates `guardrail_audit.dart` deliberately (§6), and syncs the ROADMAP
+design-matrix chapter in the same change — exactly the path
+[ADR-008](../../../docs/design/ADR-008-support-accents.md) took. It is never a
+silent drive-by edit.
 
 ---
 
-## §3. Known offenders in this codebase — fix these first
+## §3. Standing rules (the offender list, and how it stays empty)
 
-Concrete, already-verified gaps (highest leverage → lowest):
+The original audit found seven concrete gaps. **All seven are closed.** They
+are kept here as the standing rules that keep them closed — a diff that
+reintroduces any of them should be rejected in review.
 
-1. **`presentation/widgets/hand_fan.dart`** wraps `CardFace` in a bare
-   Flutter `ChoiceChip` — no ink border, no hard shadow, no press motion. The
-   most-looked-at widget in the game (your own hand) is the least on-brand.
-2. **`presentation/widgets/notice_banner.dart`** renders a raw
-   `MaterialBanner` — completely outside the design system.
-3. **[ADR-006](../../../docs/design/ADR-006-typography.md)** — headings use
-   `FontWeight.bold` on the platform default font. No chunky display face is
-   loaded at all yet.
-4. **`presentation/theme/knowoff_tokens.dart`** — one shadow (`KoShadows.hard`
-   / `KoShadows.pressed`), no named tiers, no colored-shadow variant.
-5. **`presentation/icons/doodles.dart`** — 5 of the ~12 glyphs the spec calls
-   for (`sparkle`, `staticBurst`, `eye`, `cloud`, `placeholder`); barely
-   referenced from screens.
-6. **No structured disruption anywhere** — `play_table.dart`, `hand_fan.dart`,
-   verdict/menu screens all render perfectly upright, perfectly aligned
-   rectangles. Zero rotation, zero overlap, zero scatter — the one layout
-   technique that gives neubrutalism its "hand-built" energy is entirely
-   unused.
-7. **No hover state** — `KoButton`/`KoContainer` only handle
-   `GestureDetector` press; the PWA target (a real deploy surface, per the
-   roadmap) has mouse pointers and currently gets no hover-lift feedback.
+1. **No bare stock Material widget in a styled tree.** `hand_fan.dart` once
+   wrapped `CardFace` in a `ChoiceChip` and `notice_banner.dart` rendered a raw
+   `MaterialBanner`. Both are now `Ko*`-based, and `screens_test.dart` asserts
+   no `ChoiceChip` / `MaterialBanner` / `Card` / `ListTile` survives on any live
+   match screen.
+2. **Headings use the bundled display face**, not a bold system font
+   ([ADR-007](../../../docs/design/ADR-007-display-typeface.md)). `design_system_test.dart`
+   asserts every display slot resolves to `KoFonts.display` and that body copy
+   does *not*.
+3. **Shadows come from the named tier scale** (`sm`/`md`/`lg`/`lift` plus the
+   tinted celebration glows), never an ad-hoc `BoxShadow`. Snapshot-tested.
+4. **The doodle set carries brand glyphs**, not `Icons.*`. 13 glyphs ship;
+   Material icons are for utility chrome only (back, close, flag, wifi-off).
+5. **Decorative surfaces are disrupted; fairness surfaces are not.** Tilt comes
+   from the closed `KoTilt` set — hand fan, evidence table, stickers, banners
+   yes; ballots, timers, forms, the Nown stage never.
+6. **Pointer devices get a hover state.** `KoButton` lifts to `KoShadows.lift`
+   and translates `(-2,-2)`; the PWA is a real deploy surface.
+7. **New components are built on `Ko*` from day one** — not retrofitted later.
 
-Treat this list as the default backlog when asked to "redesign the UI" absent
-more specific direction.
+When asked to "redesign the UI" absent more specific direction, audit against
+these seven, then reach for the per-component guide in §7.
 
 ---
 
@@ -273,10 +267,11 @@ exercised in tests — a redesign must pass, not route around, this file:
 
 ---
 
-## §6. Extending the token system (the concrete edits)
+## §6. The token system (as shipped — extend it the same way)
 
-Extend `presentation/theme/knowoff_tokens.dart` — **add, don't replace** the
-existing constants (they're brand-locked and snapshot-tested):
+`presentation/theme/knowoff_tokens.dart` now carries the full scale below. The
+rule that produced it still governs every future change: **add, don't replace**
+the existing constants (they're brand-locked and snapshot-tested).
 
 ```dart
 abstract final class KoShadows {
@@ -308,10 +303,16 @@ abstract final class KoTilt {
 }
 ```
 
-Then wire `KoContainer`/`KoButton` to accept an optional `shadowTier` (default
+Then wire `KoContainer`/`KoButton` to accept an optional `shadow` tier (default
 `KoShadows.md`, i.e. today's behavior unchanged) and an optional `rotation`
 (default `KoTilt.none`) so existing call sites keep compiling and opting in is
-additive, not a breaking rewrite.
+additive, not a breaking rewrite. Both do; `KoTilt.alternating(index)` gives a
+deterministic tilt for a run of decorative items — never `Random()`, which
+would make snapshot and golden tests impossible.
+
+Also shipped: `KoBorders` (`thin`/`regular`/`thick`), `KoSpace` (a 4–32 scale),
+`KoMotion` (`press`/`hover`/`pop`/`shake` durations) and `KoShadows.violetGlow`
+alongside the lime and pink glows.
 
 ---
 
@@ -339,42 +340,43 @@ mechanically aligned.**
 
 ---
 
-## §8. Typography — the actual fix for ADR-006
+## §8. Typography — landed (ADR-007)
 
-The system-font stand-in is the single highest-leverage fix available. Steps:
+The system-font stand-in was the single highest-leverage fix, and it is done:
+**Baloo 2**, SIL OFL, bundled at `client/assets/fonts/Baloo2-Variable.ttf`
+with its `OFL.txt`, wired through `KoFonts.display` and `koDisplayStyle()`.
+See [ADR-007](../../../docs/design/ADR-007-display-typeface.md).
 
-1. Pick a display face per the design matrix: **Baloo 2** or **Fredoka**
-   (both OFL-licensed, per the matrix). Vendor via `google_fonts` (pulls at
-   build time — verify the CI app-size budget from Phase 1 still passes) or
-   bundle the OFL `.ttf` directly under `client/assets/fonts/` if offline
-   determinism matters more than package convenience.
-2. Body stays a plain geometric sans (the current default is acceptable;
-   Inter/DM Sans are the reference choices if you want to swap it too).
-3. Wire the new display face into `knowoffTextTheme()` in
-   `presentation/theme/knowoff_typography.dart` for `display*`/`headline*`
-   and the Noin/timer numeral styles specifically — that's where the payoff
-   is concentrated, not on every `bodySmall`.
-4. Run the **diacritics render check across every launch locale** (this is
-   exactly ADR-006's own reversal criterion #1) — Phase 1 has a pseudo-locale
-   CI gate; reuse it.
-5. Confirm OFL license + the CI app-size budget (ADR-006 criteria #2–3).
-6. **Supersede ADR-006** — do not edit it. Follow
-   [`adr-writing`](../adr-writing/SKILL.md): new ADR, `Status: proposed →
-   accepted`, links back to ADR-006, states the decision and consequences.
+Two implementation facts worth carrying into any future face change:
+
+- **Bundle the TTF; don't fetch at runtime.** `google_fonts` pulls from
+  `fonts.gstatic.com` on first use — a network dependency, a third-party
+  request, and a non-deterministic offline first launch. A committed TTF plus
+  its licence file has none of those properties.
+- **Variable fonts need the axis set explicitly.** `fontWeight` alone yields a
+  synthesised weight; set `fontWeight` *and*
+  `fontVariations: [FontVariation('wght', N)]`. `koDisplayStyle()` does both.
+
+If you ever swap the face, the steps are unchanged: keep body copy on the plain
+geometric sans, wire only `display*`/`headline*`/`titleLarge`/`labelLarge` and
+the numeral styles, re-run the diacritics render check across every launch
+locale plus the `en_XA` pseudo-locale, confirm the licence and size, and
+**supersede the ADR — never edit it** ([`adr-writing`](../adr-writing/SKILL.md)).
 
 ---
 
-## §9. Illustration — finish the doodle set
+## §9. Illustration — the doodle set
 
-`presentation/icons/doodles.dart` has `sparkle`, `staticBurst`, `eye`,
-`cloud`, `placeholder` (5 of ~12 called for by the design matrix). When
-redesigning empty states, win moments, or the Donower placeholder, prefer
-**adding to this enum and its `CustomPainter`** over reaching for a raster
-asset or a `Material` icon — single-weight, ink-stroke, no gradient fill (at
-most one flat accent fill), consistent with the border grammar. Good
-candidates to add: a card-suit-like glyph for the hand/table motif, a vote
-checkmark/X pair, a crown (Week Winner), a poke/buzz burst distinct from
-`staticBurst`.
+`presentation/icons/doodles.dart` ships 13 glyphs: `sparkle`, `staticBurst`,
+`eye`, `cloud`, `placeholder`, `crown`, `coin`, `cards`, `check`, `cross`,
+`poke`, `mask`, `clock` — the ~12 the design matrix calls for.
+
+When you need a brand glyph, **add to this enum and its `CustomPainter`**
+rather than reaching for a raster asset or a `Material` icon: single-weight,
+ink-stroke, no gradient fill (at most one flat accent fill), consistent with
+the border grammar. `Icons.*` is for utility chrome only — back, close, flag,
+wifi-off, QR — and note that `uses-material-design: true` must stay on in
+`pubspec.yaml` or every one of those renders as an empty box.
 
 ---
 
@@ -448,7 +450,9 @@ NEVER         color-only signal · blur · >1 gradient · rotated forms/votes/ti
 ## Related
 
 - [🎨 Visual Identity: Soft Neo-Brutalism Design Matrix](../../../docs/planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix) — the normative spec this skill implements.
-- [ADR-006 — Typography](../../../docs/design/ADR-006-typography.md) — supersede when landing a real display face (§8).
+- [`UI_REDESIGN_PLAYBOOK.md`](../../../docs/guides/UI_REDESIGN_PLAYBOOK.md) — the execution companion: order of operations, verification ladder, tooling, and the fail-and-learns from the rebuild that landed this matrix.
+- [ADR-006 — Typography](../../../docs/design/ADR-006-typography.md) — superseded by [ADR-007](../../../docs/design/ADR-007-display-typeface.md), which locked Baloo 2 as the bundled display face (§8).
+- [ADR-008 — Support accents](../../../docs/design/ADR-008-support-accents.md) — the `canvasDeep`/`tangerine`/`aqua` palette extension (§4).
 - [`adr-writing`](../adr-writing/SKILL.md) — how to record any locked-token change (§2, §6, §8).
 - [`self-review`](../self-review/SKILL.md), [`verification-before-completion`](../verification-before-completion/SKILL.md) — gates before staging (§10).
 - [`minimal-change`](../minimal-change/SKILL.md) — extend tokens/primitives additively (§6), don't rewrite the theme.
