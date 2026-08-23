@@ -17,8 +17,7 @@ Before the human runs `make git`, audit your own staged change:
 3. Verify [`docs/tracking/tracking.csv`](../../docs/tracking/tracking.csv) has a `pending`
    row whose `summary` matches what the diff actually does (Conventional
    Commits format).
-4. Run the project's local test gate one more time (whatever `make test`
-   or equivalent looks like).
+4. Run the project's server and client test gates one more time.
 
 Report findings in three buckets: **🚨 must-fix**, **⚠️ should-fix**,
 **💡 nits**. Stop and ask before fixing any 🚨 if the fix would push the

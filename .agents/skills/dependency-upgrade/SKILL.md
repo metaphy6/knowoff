@@ -10,7 +10,7 @@ description: "Dependency Upgrade. A dependency has a known CVE or security advis
 - A dependency has a known CVE or security advisory.
 - A minor or patch version bump is routine maintenance.
 - A major version bump is required for a feature or compatibility reason.
-- Running `make doctor` or a dependency audit tool reports outdated packages.
+- Running a dependency audit tool reports outdated packages.
 
 ## Procedure
 
@@ -57,7 +57,7 @@ description: "Dependency Upgrade. A dependency has a known CVE or security advis
 ## Vendor-tag overlays
 
 claude: |
-  Claude: after upgrading, run `make test` and paste the full output before
+   Claude: after upgrading, run the relevant test targets and paste the full output before
   declaring success. Do not guess that tests pass.
 
 gpt: |

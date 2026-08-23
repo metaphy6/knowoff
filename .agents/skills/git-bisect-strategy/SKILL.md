@@ -26,7 +26,7 @@ description: "Git Bisect Strategy. You need to find which commit introduced a bu
    ```
    Git checks out the midpoint automatically.
 
-3. **Test each checkout.** Run your reproducer (unit test, `make test`, smoke
+3. **Test each checkout.** Run your reproducer (unit test, smoke
    script). Then:
    ```bash
    git bisect good   # this commit is fine

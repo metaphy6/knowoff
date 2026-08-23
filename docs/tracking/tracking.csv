@@ -55,3 +55,7 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-23T11:18:38Z,run-20260823111823-194878,copilot,codegraph,note,completed,chore(codegraph): initialize repository index and verify MCP queries,.codegraph/; .mcp.json,
 2026-08-23T11:21:28Z,run-20260823112114-196714,copilot,codegraph,commit,completed,feat(codegraph): add make target for index updates,Makefile,pending
 2026-08-23T11:24:22Z,run-20260823112412-199049,copilot,codegraph,commit,completed,refactor(codegraph): move update logic into Python dispatcher,Makefile;xops/makefile/codegraph_ops.py;xops/makefile/doctor.py,pending
+2026-08-23T11:52:18Z,run-20260823115214-260774,copilot,general,commit,completed,chore(build): remove obsolete framework make targets,Makefile;xops/makefile;xops/README.md;README.md;docs; .github;.agents;.vscode,pending
+2026-08-23T11:54:13Z,run-20260823115406-265513,copilot,codegraph,commit,completed,fix(codegraph): restore make codeg index command,Makefile;xops/makefile/codegraph_ops.py;xops/README.md,pending
+2026-08-23T11:54:13Z,run-20260823115406-265513,copilot,codegraph,note,completed,chore(codegraph): sync index after command restoration,.codegraph/,
+2026-08-23T11:58:01Z,run-20260823115737-270000,copilot,general,commit,completed,docs(agent): remove stale framework command reference,.github/prompts/verify.prompt.md,pending

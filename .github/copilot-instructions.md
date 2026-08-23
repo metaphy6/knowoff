@@ -83,7 +83,7 @@ in the monolith.
 | `planner` | Decomposing a request into a roadmap or implementation plan | [`agents/planner.agent.md`](agents/planner.agent.md) |
 | `implementer` | Executing a plan / phase end-to-end with tracking + staging | [`agents/implementer.agent.md`](agents/implementer.agent.md) |
 | `reviewer` | Reviewing a phase's staged diff (middle stage of the per-phase gate) | [`agents/reviewer.agent.md`](agents/reviewer.agent.md) |
-| `verifier` | Final mechanical gate per phase: `make verify` cold + invariant checks | [`agents/verifier.agent.md`](agents/verifier.agent.md) |
+| `verifier` | Final mechanical gate per phase: test and lint gates + invariant checks | [`agents/verifier.agent.md`](agents/verifier.agent.md) |
 
 `knowoff` handles day-to-day work directly; for roadmap-phase-sized work it
 delegates into the same **`implementer → reviewer → verifier`** gate below
@@ -96,7 +96,7 @@ rather than reinventing it — no exceptions, and no phase skips the gate.
 | `/plan` | Produce a written plan (no code) for a request. |
 | `/implement` | Execute a plan / phase end-to-end, ending in `staged` / `reverted` / `no-op` / `blocked`. |
 | `/review` | Self-review or peer-review staged or recent changes against AGENTS.md rules. |
-| `/verify` | Run the mechanical verification gate (`make verify` + invariants) and return PASS / FAIL. |
+| `/verify` | Run the mechanical verification gate (tests, lint, and invariants) and return PASS / FAIL. |
 | `/track` | Append a tracking row (used implicitly by `/implement`). |
 | `/roadmap-status` | Summarize ROADMAP checkbox progress. |
 

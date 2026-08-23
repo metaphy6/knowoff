@@ -22,7 +22,7 @@ CHECKBOX_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.*)$")
 def cmd_status(_args: List[str]) -> None:
     step("🗺  make roadmap.status")
     if not ROADMAP_MD.exists():
-        err(f"{ROADMAP_MD} not found — run `make scaffold` or create the file")
+        err(f"{ROADMAP_MD} not found — create the file before using roadmap.status")
         sys.exit(66)
 
     current_section = "(no heading)"

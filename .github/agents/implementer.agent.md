@@ -61,7 +61,7 @@ phase, run the two read-only gates and act on them as implementer:
    🚨 Blocker**, re-stage, re-review until none remain.
 2. **Verifier** — delegate to the [`verifier`](verifier.agent.md) (subagent or
    inline via [`verification-before-completion`](../../.agents/skills/verification-before-completion/SKILL.md));
-   it runs `make verify` cold and the invariant checks, returning PASS / FAIL.
+   it runs the server and client test and lint gates cold with the invariant checks, returning PASS / FAIL.
    On **FAIL**, fix and re-run both gates.
 
 Advance only when the reviewer has zero open blockers **and** the verifier

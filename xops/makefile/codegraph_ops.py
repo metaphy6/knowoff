@@ -1,4 +1,4 @@
-"""xops/makefile/codegraph_ops.py - `make codeg.update`.
+"""xops/makefile/codegraph_ops.py - `make codeg`.
 
 Initializes or synchronizes the repository-local CodeGraph index. Uses the
 installed CLI when available and falls back to npx without invoking a shell.
@@ -35,7 +35,7 @@ def _run_codegraph(action: str) -> int:
 
 
 def cmd_update(_args: List[str]) -> None:
-    step("make codeg.update")
+    step("make codeg")
     action = _action()
     result = _run_codegraph(action)
 
