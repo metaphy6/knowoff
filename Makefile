@@ -26,7 +26,7 @@ TAG ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help git git.dry track.add track.list roadmap.status doctor scaffold skills.status skills.find test verify \
+.PHONY: help git git.dry track.add track.list roadmap.status doctor scaffold codeg.update skills.status skills.find test verify \
   server.build server.test server.lint client.build client.test client.lint \
   compose.up compose.down compose.snap.create compose.snap.restore
 
@@ -64,6 +64,10 @@ doctor:
 ## scaffold          Print bootstrapper usage (run xops/init/scaffold.sh --help for real)
 scaffold:
 	@xops/init/scaffold.sh --help
+
+## codeg.update      Initialize or refresh the local CodeGraph index
+codeg:
+	@$(XOPS)/codegraph_ops.py update
 
 ## skills.status     List all skills with line count, last-modified, and AGENTS.md refs
 skills.status:

@@ -39,6 +39,7 @@ CHECKS_REQUIRED = [
     "xops/makefile/git_ops.py",
     "xops/makefile/track_ops.py",
     "xops/makefile/roadmap_ops.py",
+    "xops/makefile/codegraph_ops.py",
     "xops/makefile/doctor.py",
     "docs/planning/ROADMAP.md",
     ".agents/skills/README.md",

@@ -1,5 +1,4 @@
 {
-  "$schema": "https://modelcontextprotocol.io/schema/mcp.json",
   "$comment": "Repo-level MCP server configuration. Read by Claude Code, Cursor, and other MCP-aware clients. Mirrored to .vscode/mcp.json for VS Code Copilot and to .cursor/mcp.json for Cursor.",
   "mcpServers": {
     "codegraph": {
