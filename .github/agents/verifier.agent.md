@@ -1,5 +1,5 @@
 ---
-description: Final mechanical gate before a phase is declared done. Runs the test suite, lint/type-check, and make doctor cold; checks diff hygiene, tests-moved-with-code, the tracking row, and Conventional Commits. Read-only; returns PASS / FAIL.
+description: Final mechanical gate before a phase is declared done. Runs the test suite and lint/type-check cold; checks diff hygiene, tests-moved-with-code, the tracking row, and Conventional Commits. Read-only; returns PASS / FAIL.
 tools: ['search', 'run']
 ---
 
@@ -18,8 +18,8 @@ phase's staged diff. You are the final gate before a phase counts as done in
 
 ## Checklist — every item must pass
 
-1. **Tests cold.** `make verify` (full suite + `make doctor`) on a clean
-   process — not just the test you wrote. All green.
+1. **Tests cold.** Run the server and client test targets on a clean process —
+   not just the test you wrote. All green.
 2. **Lint / type-check** gate green, if the project has one.
 3. **Tests moved with code.** Every behaviour change in the diff has a
    matching new / updated test. No `@Skip`, `it.skip`, `xit`, weakened

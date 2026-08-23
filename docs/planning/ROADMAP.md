@@ -747,7 +747,7 @@ first, sockets close cleanly, exit 0; stopping Postgres or Redis flips
 drill restores onto fresh volumes with verified parity. A fresh database
 migrates to head and a re-run is a no-op. The pseudo-locale build renders
 every user-facing string transformed — one hardcoded string fails the
-gate. `make doctor` exits 0; CI is green including lint and the app-size
+gate. CI is green including lint and the app-size
 budget.
 
 - [x] Monorepo tree per 🏛️ taxonomy: `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/`; the three founding ADRs (server-authoritative over P2P, Flutter everywhere, home-server-first behind Cloudflare — 🧱) recorded in `docs/design/`.
@@ -1110,7 +1110,7 @@ A phase is **done** when:
 
 1. Every `[ ]` bullet under its heading is `[x]`.
 2. The phase's *Proof tests* pass on a clean tree.
-3. `make doctor` exits 0.
+3. Project-specific verification checks exit 0.
 4. The status snapshot at the top of this chapter has been updated.
 5. The phase's run produced one or more `commit` tracking rows whose
    `[run-id]` trailers all appear in `git log`.

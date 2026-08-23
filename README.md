@@ -33,7 +33,6 @@ scaffold — is next. See the status snapshot in the roadmap chapter of
 ## Quickstart
 
 ```bash
-make doctor          # sanity-check the agent framework wiring
 make roadmap.status  # roadmap checkbox progress
 make server.build    # build the Go server
 make server.test     # run Go unit tests

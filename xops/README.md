@@ -10,8 +10,6 @@ runs via Git Bash / WSL).
 ```
 xops/
 ├── README.md         ← you are here
-├── init/             ← the scaffolder (framework-only; stripped from scaffolded projects)
-│   └── scaffold.sh
 ├── agent/            ← runtime scripts agents call directly
 │   ├── tracking_append.sh
 │   ├── safe-run.sh
@@ -20,12 +18,11 @@ xops/
 ├── lib/              ← shared bash helpers (emoji logger)
 │   └── log.sh
 └── makefile/         ← python3 dispatchers the Makefile calls
-    ├── _common.py
-    ├── git_ops.py
-    ├── track_ops.py
-    ├── roadmap_ops.py
-    ├── skills_ops.py
-    └── doctor.py
+  ├── _common.py
+  ├── git_ops.py
+  ├── track_ops.py
+  ├── roadmap_ops.py
+  └── codegraph_ops.py
 ```
 
 ## Conventions
@@ -52,7 +49,7 @@ xops/
 | [`makefile/git_ops.py`](makefile/git_ops.py) | `make git` / `make git.dry`. |
 | [`makefile/track_ops.py`](makefile/track_ops.py) | `make track.add` / `make track.list`. |
 | [`makefile/roadmap_ops.py`](makefile/roadmap_ops.py) | `make roadmap.status`. |
-| [`makefile/doctor.py`](makefile/doctor.py) | `make doctor` — verify the framework is wired correctly. |
+| [`makefile/codegraph_ops.py`](makefile/codegraph_ops.py) | `make codeg` — initialize or update the local CodeGraph index. |
 
 ## Add a new Makefile target
 
