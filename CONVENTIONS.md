@@ -1,26 +1,19 @@
 <!--
-CONVENTIONS.md — entry point for Aider (and any agent that reads
-CONVENTIONS.md by convention). Delegates to AGENTS.md.
+CONVENTIONS.md — vendor entry point that delegates to AGENTS.md.
 -->
 
 # 📐 CONVENTIONS.md
 
-This file is the entry point Aider (and a handful of other tools) reads by
-convention. The authoritative rulebook for **every** AI coding assistant in
-this repository — including Aider — is [`AGENTS.md`](AGENTS.md). Please
-read it first.
+The authoritative rulebook for every AI coding assistant in this repository
+is [`AGENTS.md`](AGENTS.md). Please read it first.
 
-## ⚡ Critical conventions (mirrored from AGENTS.md so Aider sees them)
+## ⚡ Critical conventions (mirrored from AGENTS.md)
 
 1. **Agents never `git commit` / `git push`.** Append a row to
    [`docs/tracking/tracking.csv`](docs/tracking/tracking.csv) via
    [`xops/agent/tracking_append.sh`](xops/agent/tracking_append.sh) with
    `action=commit, status=completed, commit_sha=pending`, then `git add -A`,
    then stop. The human runs `make git`.
-
-   > **Aider note:** disable Aider's auto-commit (`--no-auto-commits`) when
-   > running it in this repo, or set `auto-commits: false` in
-   > [`.aider.conf.yml`](.aider.conf.yml). The repo ships this default.
 
 2. **Conventional Commits** in every tracking-row `summary`:
    `type(scope): description`. Valid types: `feat, fix, docs, style,

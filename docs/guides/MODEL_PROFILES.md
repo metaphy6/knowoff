@@ -39,14 +39,6 @@ once it's in context.
 - Plugin discovery: ensure `AGENTS.md` is in the read-on-start set.
 - Auto-commit settings: **disable them all** — humans push via `make git`.
 
-## Aider
-
-**Strengths.** Repo-aware, edit-by-instruction.
-**Critical.** Auto-commits are ON by default; we ship
-[`.aider.conf.yml`](../../.aider.conf.yml) with `auto-commits: false,
-dirty-commits: false`. Verify after upgrade — Aider has changed defaults
-mid-release before.
-
 ## Local models (Ollama / LM Studio)
 
 **Strengths.** Privacy, offline.

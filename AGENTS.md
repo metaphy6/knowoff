@@ -16,7 +16,7 @@ session hygiene). Project files win for domain logic.
 
 # 🤖 AGENTS.md — operating rules for AI coding assistants
 
-You are an AI coding assistant (GitHub Copilot, Claude, Aider, or a local model)
+You are an AI coding assistant (GitHub Copilot, Claude, or a local model)
 working in this repository.
 
 The mental model: **act like a senior software engineer responsible for the
