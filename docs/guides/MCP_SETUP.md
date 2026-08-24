@@ -2,18 +2,18 @@
 
 > Model Context Protocol servers extend an agent's capabilities (file-system
 > indexes, code-graph lookups, search, browser, ...). This repo wires them
-> in three places so every assistant sees the same set.
+> in two places so every assistant sees the same set.
 
 ## Files
 
 | Path | Read by |
 |---|---|
-| [`.mcp.json`](../../.mcp.json) | Claude Code, generic MCP clients. |
+| [`.mcp.json`](../../.mcp.json) | Claude Code, Cursor, generic MCP clients. |
 | [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot. |
-| [`.cursor/mcp.json`](../../.cursor/mcp.json) | Cursor. |
 
-Keep the `mcpServers` block synchronised across the three for any
-**project-scoped** servers you add.
+Keep the `mcpServers` block synchronised across both for any
+**project-scoped** servers you add. There is no `.cursor/mcp.json` in this
+repo — Cursor reads `.mcp.json` directly, same as Claude Code.
 
 ## CodeGraph
 
@@ -33,13 +33,12 @@ included in the repo MCP configs with the correct invocation:
 
 | File | Used by | Path strategy |
 |---|---|---|
-| `.vscode/mcp.json` | VS Code Copilot | `${workspaceFolder}` — VS Code expands it at runtime |
-| `.mcp.json` | Claude Code, generic clients | Absolute path baked in by `scaffold.sh` |
-| `.cursor/mcp.json` | Cursor | `${workspaceFolder}` — Cursor expands it |
+| `.vscode/mcp.json` | VS Code Copilot | No `codegraph` entry — relies on a global/user-level registration so it isn't loaded twice alongside `.mcp.json` |
+| `.mcp.json` | Claude Code, Cursor, generic clients | Absolute path — edit by hand for your machine/clone |
 
-`scaffold.sh` generates a project-specific `.mcp.json` with the absolute target
-path embedded. **Never copy `.mcp.json` from this framework repo into a project
-by hand** — run `scaffold.sh` so the path gets substituted correctly.
+This repo has no `scaffold.sh`. If `.mcp.json`'s `--path` is ever wrong (a
+fresh clone, a move to a new machine or directory), edit it by hand — there
+is no regeneration command to run instead.
 
 ### Works alongside a global install
 
@@ -91,14 +90,14 @@ re-index in the tracking log.
 | `mcp_codegraph_*` tools missing from picker | Server failed to start, no `.codegraph/` | Run `codegraph init .` |
 | Stale results after a rename | Index lag or partial update | Full re-init |
 | `npx -y @colbymchenry/codegraph` prints help | Missing `serve --mcp` args | Check the `args` array in your MCP config |
-| MCP entry shows the wrong project's symbols | `--path` not absolute (non-VS Code clients don't expand `${workspaceFolder}`) | `scaffold.sh --force` to bake the right path into `.mcp.json` |
+| MCP entry shows the wrong project's symbols | `--path` not absolute, or stale for this machine | Edit `--path` in `.mcp.json` by hand (no `scaffold.sh` in this repo) |
 
 ## Adding a project-scoped server
 
 If you have an MCP server that is specific to this project (e.g. a custom
 tool server living under `xops/`), add it to all three files:
 
-1. Add the server block to `.mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json`.
+1. Add the server block to `.mcp.json` and `.vscode/mcp.json`.
 2. Document its purpose + when to use it in this file.
 3. If it requires secrets, document the env vars (never commit the values).
 4. Add an entry to [`.agents/skills/mcp-usage/SKILL.md`](../../.agents/skills/mcp-usage/SKILL.md).
@@ -116,7 +115,7 @@ both fail, depending on the version). To avoid this:
 ## Anti-patterns
 
 - Using `npx -y @pkg` without `serve --mcp` → launches the interactive installer instead of the server.
-- Adding an MCP server only to `.mcp.json` → VS Code & Cursor users won't see it.
+- Adding an MCP server only to `.mcp.json` → VS Code Copilot users won't see it.
 - Committing API keys in the `env` block.
 - Wiring a write-capable server without a skill file explaining the blast radius.
 

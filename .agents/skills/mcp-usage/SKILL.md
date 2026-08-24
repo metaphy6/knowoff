@@ -25,8 +25,9 @@ browser, etc.) instead of a built-in tool.
    — it covers when to re-index, the exact command, and how to record it.
 5. **One server per concern.** Don't stack three filesystem servers for
    the same job.
-6. **Configure in all three places** (`.mcp.json`, `.vscode/mcp.json`,
-   `.cursor/mcp.json`) so every assistant sees the same servers.
+6. **Configure in both places that matter** (`.mcp.json` for Claude Code/
+   Cursor/generic clients, `.vscode/mcp.json` for VS Code Copilot) so every
+   assistant sees the same servers.
 
 ## Anti-patterns
 
