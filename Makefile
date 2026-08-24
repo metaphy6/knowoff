@@ -78,7 +78,7 @@ server.lint:
 
 ## server.seed-admin Seed a dev-only Admin Console login (vars: KNOWOFF_SEED_ADMIN_EMAIL KNOWOFF_SEED_ADMIN_PASSWORD)
 server.seed-admin:
-	@cd deploy/compose && docker compose --profile tools run --rm --build seed-admin
+	@cd infra/compose && docker compose --profile tools run --rm --build seed-admin
 
 ## client.build      Build Flutter for Android and Web (CI also builds iOS)
 client.build:
@@ -96,19 +96,19 @@ client.lint:
 
 ## compose.up        Start the local Docker Compose stack
 compose.up:
-	@cd deploy/compose && docker compose --profile core up --build -d
+	@cd infra/compose && docker compose --profile core up --build -d
 
 ## compose.down      Stop the local Docker Compose stack
 compose.down:
-	@cd deploy/compose && docker compose --profile core down
+	@cd infra/compose && docker compose --profile core down
 
 ## compose.snap.create <dir>  Snapshot running Compose volumes
 compose.snap.create:
-	@cd deploy/compose && ./snapshot.sh create "$(dir)"
+	@cd infra/compose && ./snapshot.sh create "$(dir)"
 
 ## compose.snap.restore <dir> Restore snapshot onto fresh Compose volumes
 compose.snap.restore:
-	@cd deploy/compose && ./snapshot.sh restore "$(dir)"
+	@cd infra/compose && ./snapshot.sh restore "$(dir)"
 
 ## containers.label.version Bump a Dockerfile's org.opencontainers.image.version (vars: SERVICE VERSION)
 containers.label.version:

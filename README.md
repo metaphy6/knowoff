@@ -53,7 +53,7 @@ make compose.down    # stop the local stack
 | [`.agents/skills/`](.agents/skills/README.md) | Skill library for AI coding agents |
 | [`xops/`](xops/README.md) | Ops scripts (tracking, safe-run, make dispatchers) |
 | [`nginx/`](nginx/README.md) | Local reverse proxy for `*.knowoff.local` (dev convenience, not the public ingress) |
-| `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/` | The game monorepo — created in Phase 1 per the [spec taxonomy](BLUEPRINT.md) |
+| `client/`, `server/`, `infra/`, `tools/`, `content/`, `configs/` | The game monorepo — created in Phase 1 per the [spec taxonomy](BLUEPRINT.md) |
 
 ## Documentation
 

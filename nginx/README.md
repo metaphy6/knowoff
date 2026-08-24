@@ -4,7 +4,7 @@ Containerized nginx in front of the Flutter web client and the Go game
 server, publishing everything under friendly `*.knowoff.local` names with
 TLS and a strong security-header baseline. This is a **local-development**
 convenience layer — it is not the public ingress (that's Cloudflare Tunnel;
-see `deploy/compose/config/cloudflared/` and BLUEPRINT.md 📦 §2).
+see `infra/compose/config/cloudflared/` and BLUEPRINT.md 📦 §2).
 
 ## Domains
 
