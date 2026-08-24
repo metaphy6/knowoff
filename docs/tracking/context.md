@@ -18,9 +18,9 @@
 
 | Concern | Path |
 |---|---|
-| **Normative product + tech spec** | `docs/planning/ROADMAP.md` — spec chapters of the monolith (`BLUEPRINT.md` is a stub) |
+| **Normative product + tech spec** | `BLUEPRINT.md` — game rules, tech stack, architecture, economy, product baseline |
 | Master rulebook (agents) | `AGENTS.md` |
-| Project plan | `docs/planning/ROADMAP.md` — spec + roadmap monolith, 6 phases (BLUEPRINT.md is a stub) |
+| Project plan | `docs/planning/ROADMAP.md` — roadmap chapter only, 6 phases |
 | Terminology | `docs/project/GLOSSARY.md` |
 | Tracking log | `docs/tracking/tracking.csv` |
 | Skills library | `.agents/skills/` |
@@ -54,9 +54,9 @@ WebSocket echo on Android + Web.
 
 ## Out-of-scope / do not touch
 
-- The monolith's game rules, economy values, and terminology (spec
-  chapters of `docs/planning/ROADMAP.md`) change **only
-  on explicit owner instruction** — agents propose, never unilaterally edit.
+- `BLUEPRINT.md`'s game rules, economy values, and terminology change
+  **only on explicit owner instruction** — agents propose, never
+  unilaterally edit.
 - No pay-to-win mechanics of any kind: nothing purchasable may affect
   dealing, roles, votes, or scoring.
 - Content policy line (suggestive OK, never pornographic; adult media only

@@ -24,8 +24,9 @@ RUN_ID  ?=
 .DEFAULT_GOAL := help
 
 .PHONY: help git git.dry track.add track.list roadmap.status codeg \
-  server.build server.test server.lint client.build client.test client.lint \
-  compose.up compose.down compose.snap.create compose.snap.restore
+  server.build server.test server.lint server.seed-admin client.build client.test client.lint \
+  compose.up compose.down compose.snap.create compose.snap.restore \
+  containers.label.version containers.label.list hosts.add hosts.remove hosts.status
 
 ## help              List all available targets
 help:
@@ -75,6 +76,10 @@ server.lint:
 		go vet ./...; \
 	fi
 
+## server.seed-admin Seed a dev-only Admin Console login (vars: KNOWOFF_SEED_ADMIN_EMAIL KNOWOFF_SEED_ADMIN_PASSWORD)
+server.seed-admin:
+	@cd deploy/compose && docker compose --profile tools run --rm --build seed-admin
+
 ## client.build      Build Flutter for Android and Web (CI also builds iOS)
 client.build:
 	@cd client && flutter build apk --debug
@@ -104,3 +109,23 @@ compose.snap.create:
 ## compose.snap.restore <dir> Restore snapshot onto fresh Compose volumes
 compose.snap.restore:
 	@cd deploy/compose && ./snapshot.sh restore "$(dir)"
+
+## containers.label.version Bump a Dockerfile's org.opencontainers.image.version (vars: SERVICE VERSION)
+containers.label.version:
+	@$(XOPS)/labels_ops.py version
+
+## containers.label.list    List every service Dockerfile's current image label version
+containers.label.list:
+	@$(XOPS)/labels_ops.py list
+
+## hosts.add         Resolve *.knowoff.local to 127.0.0.1 in the OS hosts file (needs elevated privileges)
+hosts.add:
+	@$(XOPS)/hosts_ops.py add
+
+## hosts.remove      Remove the *.knowoff.local block from the OS hosts file (needs elevated privileges)
+hosts.remove:
+	@$(XOPS)/hosts_ops.py remove
+
+## hosts.status      Show whether the *.knowoff.local hosts block is present
+hosts.status:
+	@$(XOPS)/hosts_ops.py status

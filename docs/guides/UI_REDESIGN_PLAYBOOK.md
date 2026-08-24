@@ -13,7 +13,7 @@ actually done, in what order, with which tools, and what went wrong.
 **Audience:** any agent (or human) about to do a large, cross-cutting UI change
 in this repo.
 **Companion docs:** [`neo-brutalism-ui-design`](../../.agents/skills/neo-brutalism-ui-design/SKILL.md)
-(the normative *rules*), [🎨 Visual Identity](../planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix)
+(the normative *rules*), [🎨 Visual Identity](../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
 (the *spec*), [ADR-007](../design/ADR-007-display-typeface.md) and
 [ADR-008](../design/ADR-008-support-accents.md) (the locked-token *decisions*).
 

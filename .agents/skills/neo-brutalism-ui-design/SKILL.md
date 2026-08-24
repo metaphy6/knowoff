@@ -11,7 +11,7 @@ description: "Neo-brutalism UI design. The Knowoff client UI (or any new screen/
   to "redesign" / "beautify" / "make it pop".
 - Building a **new** screen or widget under `client/lib/presentation/`.
 - Reviewing a diff that touches `presentation/theme/`, `presentation/widgets/`, or
-  `presentation/screens/` against the [🎨 Visual Identity chapter](../../../docs/planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix)
+  `presentation/screens/` against the [🎨 Visual Identity chapter](../../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
   of the roadmap.
 - Any task that would otherwise reach for a stock `Card`, `Chip`, `MaterialBanner`,
   `AppBar`, or default `ThemeData` widget without a design-system-approved reason.
@@ -449,7 +449,7 @@ NEVER         color-only signal · blur · >1 gradient · rotated forms/votes/ti
 
 ## Related
 
-- [🎨 Visual Identity: Soft Neo-Brutalism Design Matrix](../../../docs/planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix) — the normative spec this skill implements.
+- [🎨 Visual Identity: Soft Neo-Brutalism Design Matrix](../../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix) — the normative spec this skill implements.
 - [`UI_REDESIGN_PLAYBOOK.md`](../../../docs/guides/UI_REDESIGN_PLAYBOOK.md) — the execution companion: order of operations, verification ladder, tooling, and the fail-and-learns from the rebuild that landed this matrix.
 - [ADR-006 — Typography](../../../docs/design/ADR-006-typography.md) — superseded by [ADR-007](../../../docs/design/ADR-007-display-typeface.md), which locked Baloo 2 as the bundled display face (§8).
 - [ADR-008 — Support accents](../../../docs/design/ADR-008-support-accents.md) — the `canvasDeep`/`tangerine`/`aqua` palette extension (§4).

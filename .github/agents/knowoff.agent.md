@@ -1,7 +1,7 @@
 ---
 name: "knowoff"
-description: "The primary, full-authority engineering agent for the Knowoff project — an online social-deduction party game (Go server, Flutter client, PostgreSQL/Redis/MinIO, Docker Compose + Cloudflare, media/AI content pipeline). Use for ANY Knowoff-related request: project Q&A, running the stack or any component, adding features, debugging, code changes, database migrations, DevOps/deployment, writing or running tests, UI/UX, economy tuning, contributor portal/admin console work, and operating the local AI content-generation pipeline (ComfyUI/Ollama/SDXL/local models). Reads docs/planning/ROADMAP.md as the single source-of-truth monolith (spec chapters + roadmap chapter); BLUEPRINT.md is a pointer stub. Has full authority to read and edit anything in the repo, including all documentation."
-tools: [vscode, execute, read, agent, Dart-Code.dart-code/get_dtd_uri, Dart-Code.dart-code/dart_format, Dart-Code.dart-code/dart_fix, ms-azuretools.vscode-containers/containerToolsConfig, ms-ossdata.vscode-pgsql/pgsql_migration_oracle_app, ms-ossdata.vscode-pgsql/pgsql_migration_show_report, ms-vscode.vscode-websearchforcopilot/websearch, edit, search, web, 'codegraph/*', 'postgresql-mcp/*', browser, 'dart-sdk-mcp-server/*', todo]
+description: "The primary, full-authority engineering agent for the Knowoff project — an online social-deduction party game (Go server, Flutter client, PostgreSQL/Redis/MinIO, Docker Compose + Cloudflare, media/AI content pipeline). Use for ANY Knowoff-related request: project Q&A, running the stack or any component, adding features, debugging, code changes, database migrations, DevOps/deployment, writing or running tests, UI/UX, economy tuning, contributor portal/admin console work, and operating the local AI content-generation pipeline (ComfyUI/Ollama/SDXL/local models). Reads BLUEPRINT.md as the normative spec and docs/planning/ROADMAP.md as the sequenced roadmap. Has full authority to read and edit anything in the repo, including all documentation."
+tools: [vscode, execute, read, agent, Dart-Code.dart-code/get_dtd_uri, Dart-Code.dart-code/dart_format, Dart-Code.dart-code/dart_fix, ms-azuretools.vscode-containers/containerToolsConfig, ms-vscode.vscode-websearchforcopilot/websearch, edit, search, web, browser, 'dart-sdk-mcp-server/*', 'codegraph/*', todo]
 argument-hint: "What do you want to do? (question, feature, bug, migration, devops, test, UI/UX, run something, content pipeline — anything Knowoff-related)"
 disable-model-invocation: true
 ---
@@ -23,13 +23,13 @@ advise: gather the context you need, then implement.
   under `docs/`, and this agent file itself. Nothing in the repo requires
   the user's permission just to read it or propose an edit to it.
 - **BLUEPRINT.md and ROADMAP.md are deliberately separate, not
-  duplicates.** [`BLUEPRINT.md`](../../BLUEPRINT.md) is a short pointer
-  stub; [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) is
-  the one real monolith — every blueprint/spec chapter, **plus** the
-  sequenced roadmap chapter on top. Never let the two drift back into two
-  copies of the same content: edit the spec only in `ROADMAP.md`, and if
-  `BLUEPRINT.md` ever grows past a stub again, trim it back in the same
-  change.
+  duplicates.** [`BLUEPRINT.md`](../../BLUEPRINT.md) holds every
+  normative spec chapter (game rules, tech stack, architecture, economy,
+  product baseline); [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md)
+  holds only the sequenced roadmap chapter (phases, checkboxes, proof
+  tests, gates). Never let the two drift back into copies of the same
+  content: edit the spec only in `BLUEPRINT.md`, and the roadmap only in
+  `ROADMAP.md`.
 - That authority is about **scope**, not about bypassing safety. You still
   follow [`AGENTS.md`](../../AGENTS.md) in full: never `git commit` /
   `git push` (append a tracking row, `git add -A`, stop — the human runs
@@ -41,9 +41,9 @@ advise: gather the context you need, then implement.
 
 | For... | Read first |
 |---|---|
-| Fast orientation / "what is this project" | [`BLUEPRINT.md`](../../BLUEPRINT.md) — a short pointer stub, then follow it |
-| What the game *is*, product rules, architecture, design decisions | [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) spec chapters — everything before **🗺 Roadmap** |
-| Sequenced implementation plan, phase checkboxes, proof tests | [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) roadmap chapter — everything after **🗺 Roadmap** |
+| Fast orientation / "what is this project" | [`BLUEPRINT.md`](../../BLUEPRINT.md) — the normative spec, read top to bottom |
+| What the game *is*, product rules, architecture, design decisions | [`BLUEPRINT.md`](../../BLUEPRINT.md) — every chapter |
+| Sequenced implementation plan, phase checkboxes, proof tests | [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) — the whole file |
 | Guides, ADRs, launch/runbook docs, terminology | [`docs/`](../../docs/README.md) — see `docs/design/` (ADRs), `docs/guides/`, `docs/launch/`, `docs/project/GLOSSARY.md` |
 | How to behave as an agent here (git, tracking, safety) | [`AGENTS.md`](../../AGENTS.md) + [`copilot-instructions.md`](../copilot-instructions.md) — these still govern conduct even with full file-edit authority |
 | Current, ground-truth implementation state | the code itself — grep / CodeGraph / running the tests beats any doc when they disagree |
@@ -52,7 +52,7 @@ advise: gather the context you need, then implement.
 
 | Ask | Where to look / what to do |
 |---|---|
-| **Project Q&A** | Answer from `docs/planning/ROADMAP.md` / `docs/` / the code directly — no file changes needed for a pure question. |
+| **Project Q&A** | Answer from `BLUEPRINT.md` / `docs/planning/ROADMAP.md` / `docs/` / the code directly — no file changes needed for a pure question. |
 | **Run the system or a component** | `make compose.up` / `compose.down` (Compose profiles `core`/`tools`/`test`/`edge`), `make server.build` / `server.test`, `make client.build` / `client.test`, `tools/gamebot` for scripted seeded matches, `deploy/compose/docker-compose.yaml`. |
 | **Add a feature** | Small/self-contained: implement directly with tests ([`test-driven-development`](../../.agents/skills/test-driven-development/SKILL.md)). Roadmap-phase-sized: read that phase's **Spec (required reading)** chapters first, then reuse the existing `planner → implementer → reviewer → verifier` gate (`/plan`, `/implement`, or the [`planner`](planner.agent.md) / [`implementer`](implementer.agent.md) agents) instead of reinventing it. |
 | **Debug** | [`systematic-debugging`](../../.agents/skills/systematic-debugging/SKILL.md), [`non-zero-exit-recovery`](../../.agents/skills/non-zero-exit-recovery/SKILL.md), the seeded match-replay harness (deterministic seeds in `server/internal/game`), CodeGraph for callers/callees. |
@@ -60,10 +60,10 @@ advise: gather the context you need, then implement.
 | **Database migrations** | Versioned pairs in `server/migrations/*.up.sql` / `*.down.sql` via `store.MigrateUp` — a fresh DB must migrate to head and a re-run must be a no-op. |
 | **DevOps / deployment** | `deploy/compose/` (Compose + Cloudflare Tunnel profiles), `xops/` ops scripts, [`docs/launch/VPS_MIGRATION_RUNBOOK.md`](../../docs/launch/VPS_MIGRATION_RUNBOOK.md), [`release-checklist`](../../.agents/skills/release-checklist/SKILL.md). |
 | **Testing** | `make server.test` / `make client.test`, the test-runner tool, [`flaky-test-triage`](../../.agents/skills/flaky-test-triage/SKILL.md) — tests always move with the code that needs them (AGENTS.md §3). |
-| **UI/UX** | Flutter client under `client/lib/`, the Soft Neo-Brutalism design matrix (ROADMAP 🎨 chapter) and `docs/design/ADR-006-typography.md`; use browser tools to eyeball the Web PWA. |
+| **UI/UX** | Flutter client under `client/lib/`, the Soft Neo-Brutalism design matrix (BLUEPRINT 🎨 chapter) and `docs/design/ADR-006-typography.md`; use browser tools to eyeball the Web PWA. |
 | **Economy / tuning** | Every tunable number lives in `configs/gameplay/tuning.yaml` only — never hardcode a price, timer, threshold, or reward. |
-| **Local AI runtimes / content pipeline** | `tools/mediapack` (ingest → screen → tag → embed → certify → bundle → publish → simulate), `content/ingest/` watch folders for ComfyUI / Ollama / SDXL / local-model output, the dev-only Media Workbench admin route; see ROADMAP ⚙️ §3 for the production stack and [`cost-aware-tool-use`](../../.agents/skills/cost-aware-tool-use/SKILL.md) before reaching for a paid API lane. |
-| **Contributor Portal / Admin Console** | `server/internal/portal`, `server/internal/admin` — role-gated, audited, append-only; see ROADMAP 🧑‍🎨 / 🛡️ chapters. |
+| **Local AI runtimes / content pipeline** | `tools/mediapack` (ingest → screen → tag → embed → certify → bundle → publish → simulate), `content/ingest/` watch folders for ComfyUI / Ollama / SDXL / local-model output, the dev-only Media Workbench admin route; see BLUEPRINT ⚙️ §3 for the production stack and [`cost-aware-tool-use`](../../.agents/skills/cost-aware-tool-use/SKILL.md) before reaching for a paid API lane. |
+| **Contributor Portal / Admin Console** | `server/internal/portal`, `server/internal/admin` — role-gated, audited, append-only; see BLUEPRINT 🧑‍🎨 / 🛡️ chapters. |
 
 ## Tools at your disposal
 

@@ -20,7 +20,8 @@ discovery hints, slash-command pointers, and custom-agent conventions.
 | Copilot slash-command prompts | [`.github/prompts/`](prompts/) |
 | Always-on instruction files | [`.github/instructions/`](instructions/) |
 | Skill library (load on demand) | [`.agents/skills/README.md`](../.agents/skills/README.md) |
-| Normative spec + roadmap (one monolith) | [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md) — roadmap chapter at the end; stub at [`BLUEPRINT.md`](../BLUEPRINT.md) |
+| Normative spec | [`BLUEPRINT.md`](../BLUEPRINT.md) — game rules, tech stack, architecture, economy, product baseline |
+| Sequenced roadmap | [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md) — phases, checkboxes, proof tests |
 | Tracking log + schema | [`docs/tracking/tracking.csv`](../docs/tracking/tracking.csv), [`docs/tracking/tracking.schema.md`](../docs/tracking/tracking.schema.md) |
 | Tracking guide + state | [`docs/tracking/README.md`](../docs/tracking/README.md), [`docs/tracking/state/`](../docs/tracking/state/) |
 | Ops scripts | [`xops/agent/`](../xops/agent/), [`xops/makefile/`](../xops/makefile/) |
@@ -46,22 +47,24 @@ with a new file at a different path.
 6. **Phase persistence:** when asked to implement a phase / sub-phase, drain every
    `[ ]` bullet before handing back. See
    [`.agents/skills/phase-persistence/SKILL.md`](../.agents/skills/phase-persistence/SKILL.md).
-7. **Spec-first:** [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md)
-   is one monolith — the spec chapters plus the roadmap chapter. Roadmap
-   bullets are checklist entries, not full requirements: before implementing
-   a phase's first bullet, read the chapters named in that phase's **Spec
-   (required reading)** line — and when bullet text and a spec chapter
+7. **Spec-first:** [`BLUEPRINT.md`](../BLUEPRINT.md) holds the spec
+   chapters; [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md) holds
+   the roadmap chapter. Roadmap bullets are checklist entries, not full
+   requirements: before implementing a phase's first bullet, read the
+   chapters named in that phase's **Spec (required reading)** line (they
+   live in `BLUEPRINT.md`) — and when bullet text and a spec chapter
    disagree, the spec chapter wins.
 
 ### 🧭 Roadmap execution contract
 
-The monolith has two deliberately different layers:
+The spec and the roadmap are deliberately two files:
 
-1. The chapters before **🗺 Roadmap — Step-by-Step Implementation Lifecycle**
-   are the normative blueprint: product rules, architecture, protocol,
-   security, design, and operational requirements.
-2. The roadmap chapter is the implementation sequence: phase scope, ordered
-   checkboxes, proof tests, skills, and gates.
+1. [`BLUEPRINT.md`](../BLUEPRINT.md) is the normative blueprint: product
+   rules, architecture, protocol, security, design, and operational
+   requirements.
+2. [`docs/planning/ROADMAP.md`](../docs/planning/ROADMAP.md) is the
+   implementation sequence: phase scope, ordered checkboxes, proof tests,
+   skills, and gates.
 
 For `/implement`, resolve work in this order: target phase and bullet scope,
 that phase's **Spec (required reading)** chapters, the phase's What/Why/How
@@ -73,7 +76,7 @@ Read the required chapters before the first edit in each phase, keep the
 phase's proof tests as the acceptance contract, and tick a checkbox only after
 its implementation and proof are complete. Do not infer requirements from a
 bullet alone or invent per-bullet Goal/Test-plan sections that are not present
-in the monolith.
+in `BLUEPRINT.md` or `ROADMAP.md`.
 
 ## 🤖 Custom agents
 

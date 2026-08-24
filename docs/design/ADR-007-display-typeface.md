@@ -12,7 +12,7 @@ noted that swapping in a real face later would be "a drop-in replacement".
 
 That stand-in turned out to be the single largest reason the client read as
 generic Material rather than as the [Soft Neo-Brutalism Design
-Matrix](../planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix).
+Matrix](../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix).
 The matrix names type as one of the three carriers of personality ("personality
 comes from tiles, type, and color"); with a system font at `w700` doing all the
 heading work, only two of the three were actually shipping. Oversized,
