@@ -7,6 +7,10 @@ deploy/
 └── terraform/  # Future Terraform modules (provider-agnostic)
 ```
 
+The local reverse proxy lives at [`nginx/`](../nginx/README.md) (repo root,
+alongside `client/` and `server/`), not under `deploy/` — it's built and
+versioned like the other service images, not a deployment artifact.
+
 ## Local stack
 
 ```bash
@@ -14,14 +18,39 @@ cd deploy/compose
 docker compose --profile core up --build
 ```
 
+Opening this workspace in VS Code also runs this automatically (the
+"Compose: Up (core)" task has `runOn: folderOpen` — see
+[`.vscode/tasks.json`](../.vscode/tasks.json); port 443 is configured to
+auto-open in VS Code's browser preview once nginx is reachable (see
+[`.vscode/settings.json`](../.vscode/settings.json)).
+
+Then resolve the local domains once (see [`nginx/README.md`](../nginx/README.md)):
+
+```bash
+make hosts.add   # adds *.knowoff.local -> 127.0.0.1 to your hosts file
+```
+
+Open `https://app.knowoff.local` for the Flutter web client. The browser
+will warn about the self-signed certificate on first visit — see
+[`nginx/README.md`](../nginx/README.md#tls-certificates).
+
+Seed a dev-only Admin Console login (`https://admin.knowoff.local`):
+
+```bash
+make server.seed-admin
+```
+
 Local service configuration lives in `compose/config/<service>/environment.env`.
 The files contain the complete development environment, including the visible
-dev secrets used by the stack. Edit the Cloudflared token before using the
-`edge` profile; production secrets must come from a deployment secret store.
+dev secrets used by the stack — see
+[`docs/guides/DEV_CREDENTIALS.md`](../../docs/guides/DEV_CREDENTIALS.md) for
+the full list. Edit the Cloudflared token before using the `edge` profile;
+production secrets must come from a deployment secret store.
 
 Profiles:
 
-- `core` — server, postgres, redis, minio, adminer
+- `core` — server, postgres, redis, minio, adminer, client-web, nginx
 - `tools` — dev tooling
 - `test` — test runners
 - `edge` — adds cloudflared (beta-at-home only)
+

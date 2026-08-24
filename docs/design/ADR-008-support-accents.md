@@ -5,7 +5,7 @@ Accepted.
 
 ## Context
 
-The [Soft Neo-Brutalism Design Matrix](../planning/ROADMAP.md#-visual-identity-soft-neo-brutalism-design-matrix)
+The [Soft Neo-Brutalism Design Matrix](../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
 locks seven colours and assigns fixed semantics to three of them: `violet` =
 interact, `lime` = truth/reward, `pink` = accuse/risk, `ink` = information.
 Those semantics are load-bearing — a player learns them in their first match and

@@ -1,5 +1,26 @@
 # Dev stage: live-reload server using cosmtrek/air.
 FROM golang:1.25-alpine
+
+# ── OCI image labels ────────────────────────────────────────────────────
+# Bump org.opencontainers.image.version with:
+#   make containers.label.version SERVICE=server-dev VERSION=X.Y.Z
+ARG IMAGE_VERSION=0.1.0
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.title="knowoff-server-dev" \
+      org.opencontainers.image.description="Knowoff Go game server — live-reload dev container (air)" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.vendor="Knowoff" \
+      org.opencontainers.image.authors="Knowoff" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/metaphy6/knowoff" \
+      org.opencontainers.image.url="https://github.com/metaphy6/knowoff" \
+      org.opencontainers.image.documentation="https://github.com/metaphy6/knowoff/blob/main/server/README.md" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.ref.name="knowoff-server-dev" \
+      org.opencontainers.image.base.name="golang:1.25-alpine"
+
 RUN apk add --no-cache git gcc musl-dev libwebp-dev
 RUN go install github.com/air-verse/air@v1.61.7
 WORKDIR /app

@@ -16,6 +16,16 @@
     "**/docs/tracking/state/log.jsonl": true,
     "**/tmp/agent-runs": true
   },
+  "remote.portsAttributes": {
+    "443": {
+      "label": "Knowoff web app (nginx, app.knowoff.local)",
+      "onAutoForward": "openPreview"
+    },
+    "80": {
+      "label": "Knowoff web app (nginx, http redirect)",
+      "onAutoForward": "ignore"
+    }
+  },
   "chat.agentSkillsLocations": {
     ".agents/skills": true
   },

@@ -36,8 +36,10 @@ does not already exist. The canonical map for this kind of repo is:
 
 - `README.md` — what this project is and how to run it.
 - `docs/README.md` — documentation index.
-- `docs/planning/ROADMAP.md` — spec + roadmap monolith; **the** plan lives
-  in its roadmap chapter (`BLUEPRINT.md` is a pointer stub).
+- `BLUEPRINT.md` — the normative spec (game rules, tech stack,
+  architecture, economy, product baseline).
+- `docs/planning/ROADMAP.md` — **the** plan: the sequenced roadmap chapter
+  (phases, checkboxes, proof tests).
 - `docs/tracking/README.md` + `docs/tracking/tracking.schema.md` — tracking model.
 - `.agents/skills/README.md` — curated skill library; load the relevant skill
   before doing the kind of work it covers.
@@ -53,14 +55,13 @@ recurring failure mode and is forbidden.
 
 ### Roadmap source of truth
 
-[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) is a two-layer
-monolith. The chapters before **🗺 Roadmap — Step-by-Step Implementation
-Lifecycle** are the normative blueprint/specification; the final chapter is
-the sequenced implementation plan with checkboxes, Proof tests, and gates.
-For roadmap work, read each phase's **Spec (required reading)** chapters
-before its first edit, then use the phase's What/Why/How, Proof tests, and
-ordered checkboxes. The blueprint wins any conflict, and discovered drift is
-corrected in the same change.
+[`BLUEPRINT.md`](BLUEPRINT.md) is the normative blueprint/specification;
+[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) is the sequenced
+implementation plan with checkboxes, Proof tests, and gates. For roadmap
+work, read each phase's **Spec (required reading)** chapters in
+`BLUEPRINT.md` before its first edit, then use the phase's What/Why/How,
+Proof tests, and ordered checkboxes in `ROADMAP.md`. The blueprint wins any
+conflict, and discovered drift is corrected in the same change.
 
 ---
 

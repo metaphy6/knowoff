@@ -1,0 +1,45 @@
+# Dev stage: Flutter web-server target with live source mount (mirrors
+# server/Dockerfile.dev's pattern — the toolchain lives in the image, the
+# source is bind-mounted by deploy/compose/docker-compose.yaml so edits on
+# the host are picked up without a rebuild).
+FROM debian:bookworm-slim
+
+# ── OCI image labels ────────────────────────────────────────────────────
+# Bump org.opencontainers.image.version with:
+#   make containers.label.version SERVICE=client-web-dev VERSION=X.Y.Z
+ARG IMAGE_VERSION=0.1.0
+ARG BUILD_DATE=unknown
+ARG VCS_REF=unknown
+LABEL org.opencontainers.image.title="knowoff-client-web-dev" \
+      org.opencontainers.image.description="Knowoff Flutter client — dev web-server target with live source mount" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.vendor="Knowoff" \
+      org.opencontainers.image.authors="Knowoff" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.source="https://github.com/metaphy6/knowoff" \
+      org.opencontainers.image.url="https://github.com/metaphy6/knowoff" \
+      org.opencontainers.image.documentation="https://github.com/metaphy6/knowoff/blob/main/client/README.md" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.ref.name="knowoff-client-web-dev" \
+      org.opencontainers.image.base.name="debian:bookworm-slim"
+
+ARG FLUTTER_VERSION=3.47.1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git curl ca-certificates unzip xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --depth 1 --branch ${FLUTTER_VERSION} https://github.com/flutter/flutter.git /opt/flutter
+ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
+RUN git config --global --add safe.directory /opt/flutter \
+    && flutter config --no-analytics --enable-web \
+    && flutter precache --web \
+    && flutter --version
+
+WORKDIR /app
+EXPOSE 8000
+
+# pub get runs at container start (against the bind-mounted /app) so a
+# `pubspec.yaml` change on the host doesn't need an image rebuild.
+CMD ["sh", "-c", "flutter pub get && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8000"]

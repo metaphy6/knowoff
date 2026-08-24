@@ -66,6 +66,9 @@ func run() error {
 	if len(os.Args) > 1 && (os.Args[1] == "close-week" || os.Args[1] == "nightly") {
 		return closeWeek(cfg, logger)
 	}
+	if len(os.Args) > 1 && os.Args[1] == "seed-admin" {
+		return seedAdmin(cfg, logger)
+	}
 
 	registry := prometheus.NewRegistry()
 	registry.MustRegister(collectors.NewBuildInfoCollector())
@@ -324,6 +327,74 @@ func closeWeek(cfg *config.Config, logger *slog.Logger) error {
 	}
 	logger.Info("weekly leaderboard closed", "week_id", weekID)
 	return nil
+}
+
+// seedAdmin creates (or reports) a dev-only admin_accounts row so a fresh
+// local stack has a working Admin Console login without hand-writing SQL.
+// Refuses to run against a prod config; email/password are overridable via
+// env vars so CI or a second developer can seed a non-default login.
+func seedAdmin(cfg *config.Config, logger *slog.Logger) error {
+	if cfg.App.Env == "prod" {
+		return fmt.Errorf("seed-admin refuses to run with app.env=prod")
+	}
+
+	email := os.Getenv("KNOWOFF_SEED_ADMIN_EMAIL")
+	if email == "" {
+		email = "admin@knowoff.local"
+	}
+	password := os.Getenv("KNOWOFF_SEED_ADMIN_PASSWORD")
+	if password == "" {
+		password = "knowoff-dev-admin"
+	}
+
+	db, err := openDB(cfg)
+	if err != nil {
+		return fmt.Errorf("open database: %w", err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	adminManager := admin.NewManager(db, cfg, nil)
+
+	if secret, otpauthURL, err := adminManager.TOTPSecretForEmail(ctx, email); err == nil {
+		logger.Info("admin account already seeded", "email", email)
+		printSeededAdmin(email, "(unchanged — see previous seed output for the password)", secret, otpauthURL)
+		return nil
+	}
+
+	authManager := auth.NewManager(db, []byte(cfg.Security.JWTSigningKey), cfg.Security.JWTIssuer, cfg.Security.JWTAudience,
+		time.Duration(cfg.Security.AccessTokenTTLM)*time.Minute,
+		time.Duration(cfg.Security.RefreshTokenTTLH)*time.Hour,
+		auth.OAuthProviders{})
+	tokens, err := authManager.CreateAnonymousAccount(ctx, "dev-admin-seed:"+email)
+	if err != nil {
+		return fmt.Errorf("create backing account: %w", err)
+	}
+
+	if err := adminManager.CreateAdmin(ctx, tokens.AccountID, email, password, "admin"); err != nil {
+		return fmt.Errorf("create admin: %w", err)
+	}
+
+	secret, otpauthURL, err := adminManager.TOTPSecretForEmail(ctx, email)
+	if err != nil {
+		return fmt.Errorf("read totp secret: %w", err)
+	}
+
+	logger.Info("seeded dev admin account", "email", email)
+	printSeededAdmin(email, password, secret, otpauthURL)
+	return nil
+}
+
+func printSeededAdmin(email, password, totpSecret, otpauthURL string) {
+	fmt.Println("--- knowoff admin console dev login ---")
+	fmt.Printf("email:       %s\n", email)
+	fmt.Printf("password:    %s\n", password)
+	fmt.Printf("totp secret: %s\n", totpSecret)
+	fmt.Printf("otpauth url: %s\n", otpauthURL)
+	fmt.Println("scan the otpauth url with an authenticator app, or compute a code with: oathtool --totp -b \"" + totpSecret + "\"")
+	fmt.Println("----------------------------------------")
 }
 
 func runMigrations(cfg *config.Config, logger *slog.Logger) error {
