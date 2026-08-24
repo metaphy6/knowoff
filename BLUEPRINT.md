@@ -356,7 +356,7 @@ knowoff/
 │   │   ├── portal/              # Contributor Portal + Media Workbench (server-rendered) + Admin Console
 │   │   └── store/               # Postgres repositories, Redis queues/presence/routing, object-storage client
 │   └── migrations/
-├── deploy/
+├── infra/
 │   ├── compose/                 # server + postgres + redis + minio + cloudflared — one command up
 │   ├── k8s/                     # Future — scaffolded, not required to run
 │   └── terraform/               # Future — provider-agnostic modules
@@ -558,13 +558,13 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 
 ### 4. Local Development — Docker Compose
 
-* `deploy/compose/docker-compose.yaml` brings up the full stack in one command: server (live-reload in dev profile), PostgreSQL with auto-migrations, Redis, MinIO with seeded dev pack, adminer. Profiles: `core`, `tools`, `test`, `edge` (adds `cloudflared` — beta-at-home only; dev needs no tunnel).
+* `infra/compose/docker-compose.yaml` brings up the full stack in one command: server (live-reload in dev profile), PostgreSQL with auto-migrations, Redis, MinIO with seeded dev pack, adminer. Profiles: `core`, `tools`, `test`, `edge` (adds `cloudflared` — beta-at-home only; dev needs no tunnel).
 * A full 6-player match — four `gamebot` seats plus two real clients (one native, one PWA) — must be playable against the local stack with zero cloud dependencies, including media prefetch from MinIO.
 
 ### 5. Kubernetes & Terraform Readiness (Future, Designed-For Now)
 
 * `/healthz`, `/readyz` (checks Postgres/Redis/storage), Prometheus metrics on a separate port; graceful shutdown drains in-flight matches on SIGTERM; WebSocket routing later uses sticky sessions at the ingress — rooms never span nodes, so no mesh, no distributed state layer.
-* `deploy/terraform/` as provider-agnostic modules; hosting strategy: home server → small VPS → orchestration, each step a config change, not a rewrite.
+* `infra/terraform/` as provider-agnostic modules; hosting strategy: home server → small VPS → orchestration, each step a config change, not a rewrite.
 * Rule: no k8s/TF-blocking decisions in application code — no local file writes, no in-container state, no hardcoded hostnames.
 
 ---
