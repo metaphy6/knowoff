@@ -21,8 +21,8 @@ We treat the agent as a **fast, narrow-context junior engineer** with full
 access to the repo. To survive that, the repo owns the operating policy:
 
 1. **One rulebook** at the top — [`AGENTS.md`](../../AGENTS.md). Every
-   vendor-specific entry point (`CLAUDE.md`, `GEMINI.md`, `.cursor/rules`,
-   `.github/copilot-instructions.md`, ...) delegates to it.
+   vendor-specific entry point (`CLAUDE.md`, `CONVENTIONS.md`,
+   `.github/copilot-instructions.md`) delegates to it.
 
 2. **Tracking layer** — [`docs/tracking/tracking.csv`](../tracking/tracking.csv) is
    the agent's external memory. Every action that *would* be committed,

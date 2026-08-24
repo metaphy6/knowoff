@@ -1,6 +1,6 @@
 ---
 description: Execute a plan produced by the planner mode. Implements one numbered bullet at a time, with tests, until the plan is drained or a real blocker is hit.
-tools: ['edit', 'run', 'search']
+tools: ['edit', 'execute', 'search']
 ---
 
 # 🛠 Implementer agent

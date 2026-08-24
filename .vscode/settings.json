@@ -34,14 +34,9 @@
     ".github/instructions": true
   },
   "github.copilot.chat.promptFileContextProvider.enabled": true,
-  "github.copilot.chat.codeGeneration.instructions": [
-    { "file": "AGENTS.md" },
-    { "file": ".github/copilot-instructions.md" },
-    { "file": "docs/planning/ROADMAP.md" }
-  ],
-  "github.copilot.chat.testGeneration.instructions": [
-    { "file": ".agents/skills/test-driven-development/SKILL.md" }
-  ],
+  // codeGeneration/testGeneration instructions settings are deprecated (VS Code 1.102).
+  // AGENTS.md + .github/copilot-instructions.md load automatically; test rules moved to
+  // .github/instructions/tests.instructions.md so they only apply to test files.
   "github.copilot.chat.reviewSelection.instructions": [
     { "file": ".agents/skills/code-review/SKILL.md" }
   ]

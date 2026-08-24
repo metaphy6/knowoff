@@ -12,8 +12,7 @@
 | [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot. |
 
 Keep the `mcpServers` block synchronised across both for any
-**project-scoped** servers you add. There is no `.cursor/mcp.json` in this
-repo — Cursor reads `.mcp.json` directly, same as Claude Code.
+**project-scoped** servers you add. All MCP clients read `.mcp.json` directly.
 
 ## CodeGraph
 

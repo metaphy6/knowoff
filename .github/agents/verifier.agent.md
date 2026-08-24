@@ -1,6 +1,6 @@
 ---
 description: Final mechanical gate before a phase is declared done. Runs the test suite and lint/type-check cold; checks diff hygiene, tests-moved-with-code, the tracking row, and Conventional Commits. Read-only; returns PASS / FAIL.
-tools: ['search', 'run']
+tools: ['search', 'execute']
 ---
 
 # ✅ Verifier agent
