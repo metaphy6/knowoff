@@ -76,8 +76,8 @@ fi
 [[ "$run_id" =~ ^[a-z0-9-]{4,40}$ ]] || die "invalid --run-id: '$run_id' (need [a-z0-9-]{4,40})" 65
 
 case "$agent" in
-  copilot|claude|aider|local|human) ;;
-  *) die "invalid --agent: '$agent' (one of copilot|claude|aider|local|human)" 65 ;;
+  copilot|claude|local|human) ;;
+  *) die "invalid --agent: '$agent' (one of copilot|claude|local|human)" 65 ;;
 esac
 
 case "$action" in
