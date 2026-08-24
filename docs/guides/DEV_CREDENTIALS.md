@@ -1,6 +1,6 @@
 # 🔑 Local dev credentials
 
-All values below are **local-only defaults** from `deploy/compose/config/**/environment.env` —
+All values below are **local-only defaults** from `infra/compose/config/**/environment.env` —
 they never apply to `staging`/`prod` (those get secrets from a deployment
 secret store per [`AGENTS.md`](../../AGENTS.md) §4). Safe to keep visible in
 this doc because they only ever unlock a throwaway local Docker stack.

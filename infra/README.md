@@ -1,20 +1,20 @@
 # Deployment artifacts
 
 ```text
-deploy/
+infra/
 ├── compose/    # Docker Compose local stack
 ├── k8s/        # Future Kubernetes manifests (scaffolded, not required to run)
 └── terraform/  # Future Terraform modules (provider-agnostic)
 ```
 
 The local reverse proxy lives at [`nginx/`](../nginx/README.md) (repo root,
-alongside `client/` and `server/`), not under `deploy/` — it's built and
+alongside `client/` and `server/`), not under `infra/` — it's built and
 versioned like the other service images, not a deployment artifact.
 
 ## Local stack
 
 ```bash
-cd deploy/compose
+cd infra/compose
 docker compose --profile core up --build
 ```
 

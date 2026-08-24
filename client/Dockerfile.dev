@@ -1,6 +1,6 @@
 # Dev stage: Flutter web-server target with live source mount (mirrors
 # server/Dockerfile.dev's pattern — the toolchain lives in the image, the
-# source is bind-mounted by deploy/compose/docker-compose.yaml so edits on
+# source is bind-mounted by infra/compose/docker-compose.yaml so edits on
 # the host are picked up without a rebuild).
 FROM debian:bookworm-slim
 

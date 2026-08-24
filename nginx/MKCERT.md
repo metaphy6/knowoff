@@ -25,7 +25,7 @@ mkcert -cert-file fullchain.pem -key-file privkey.pem knowoff.local "*.knowoff.l
 cd -
 
 # 4. Make nginx pick it up
-docker compose -f deploy/compose/docker-compose.yaml restart nginx
+docker compose -f infra/compose/docker-compose.yaml restart nginx
 ```
 
 Open `https://app.knowoff.local` — no warning, green padlock.
@@ -106,7 +106,7 @@ entirely" — pick the one that matches what you actually want:
 
 ```bash
 rm nginx/certs/external/fullchain.pem nginx/certs/external/privkey.pem
-docker compose -f deploy/compose/docker-compose.yaml restart nginx
+docker compose -f infra/compose/docker-compose.yaml restart nginx
 ```
 
 `entrypoint.sh` falls back to its self-signed certificate automatically —
