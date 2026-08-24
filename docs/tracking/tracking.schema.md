@@ -20,7 +20,7 @@
 |---|---|---|---|---|
 | 1 | `ts_utc` | ISO-8601 UTC, `YYYY-MM-DDTHH:MM:SSZ` | yes | Wall clock at row append. Strictly ≥ previous row's `ts_utc`. |
 | 2 | `run_id` | `[a-z0-9-]{4,40}` | yes | Stable id for this agent run / slash-command invocation. Reused across every row from the same run. Used by `make git` for idempotency. |
-| 3 | `agent` | enum | yes | `copilot \| claude \| aider \| local \| human`. |
+| 3 | `agent` | enum | yes | `copilot \| claude \| local \| human`. |
 | 4 | `scope` | string (≤ 40 chars) | yes | What the work touches — a phase id (`phase-1.2`), module slug (`auth`), area (`docs`), or chore tag (`tooling`). Free-form but short. |
 | 5 | `action` | enum | yes | `plan \| implement \| test \| review \| commit \| revert \| note \| block`. |
 | 6 | `status` | enum | yes | `started \| in_progress \| passed \| failed \| blocked \| completed`. |
