@@ -14,14 +14,13 @@ a session if `.codegraph/` exists, and **always** after a large refactor.
 
 ## Access — how the index gets wired
 
-CodeGraph runs as a stdio MCP server. The repo wires it in three places so
+CodeGraph runs as a stdio MCP server. The repo wires it in two places so
 every assistant sees it:
 
 | File | Client | Path strategy |
 |---|---|---|
-| [`.mcp.json`](../../.mcp.json) | Claude Code, generic MCP clients | Absolute path baked in by `scaffold.sh` |
-| [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot | `${workspaceFolder}` (expanded at runtime) |
-| [`.cursor/mcp.json`](../../.cursor/mcp.json) | Cursor | `${workspaceFolder}` |
+| [`.mcp.json`](../../.mcp.json) | Claude Code, Cursor, generic MCP clients | Absolute path — edit by hand for your machine/clone (no `scaffold.sh` in this repo) |
+| [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot | No `codegraph` entry — relies on a global/user-level registration instead |
 
 The on-disk index lives under [`.codegraph/`](../../.codegraph/) (gitignored
 except for `.gitignore` itself). If the directory doesn't exist, the server
@@ -100,7 +99,8 @@ and explains any subsequent behaviour change to the next session.
   handles the reset internally and writes proper file permissions).
 - ❌ Committing `.codegraph/` contents. Only `.codegraph/.gitignore` is tracked.
 - ❌ Putting `codegraph` in `.vscode/mcp.json` *and* `.mcp.json` — VS Code
-  starts both, the second one stays inactive, tools silently fail. The
-  scaffolder writes a `.vscode/mcp.json` without `codegraph` for this reason.
+  starts both, the second one stays inactive, tools silently fail.
+  `.vscode/mcp.json` intentionally carries no `codegraph` entry for this
+  reason — leave it that way.
 - ❌ Running `codegraph init` without a tracking row — the next session
   can't tell whether stale results are from a bug or a missed re-index.
