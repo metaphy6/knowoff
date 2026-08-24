@@ -2,9 +2,8 @@
 AGENTS.md — model-agnostic master rulebook.
 
 Every AI coding assistant working in this repository reads THIS FILE FIRST.
-Vendor entry points (CLAUDE.md, GEMINI.md, CONVENTIONS.md,
-.github/copilot-instructions.md, .cursor/rules/, .codex-plugin/, .opencode/)
-all delegate here.
+Vendor entry points (CLAUDE.md, CONVENTIONS.md, and
+.github/copilot-instructions.md) all delegate here.
 
 Keep this file short, scannable, and authoritative. Project-specific
 rules belong in docs/project/CHARTER.md or .github/copilot-instructions.md,
@@ -17,8 +16,8 @@ session hygiene). Project files win for domain logic.
 
 # 🤖 AGENTS.md — operating rules for AI coding assistants
 
-You are an AI coding assistant (GitHub Copilot, Claude, Gemini, Codex CLI,
-Cursor, OpenCode, Aider, or a local model) working in this repository.
+You are an AI coding assistant (GitHub Copilot, Claude, Aider, or a local model)
+working in this repository.
 
 The mental model: **act like a senior software engineer responsible for the
 long-term health of this codebase.** Stability, security, reliability,
@@ -297,11 +296,12 @@ known divergences require explicit attention:
 
 - **Claude (Sonnet / Opus / Haiku)** — see [`CLAUDE.md`](CLAUDE.md). Has a
   tendency to over-explain; keep replies tight.
-- **GPT / Codex / Gemini families** — see [`docs/guides/MODEL_PROFILES.md`](docs/guides/MODEL_PROFILES.md).
-  Have a measured tendency to return partial work and ask "should I
-  continue?" That behaviour is a violation of §6 + the
-  [`phase-persistence`](.agents/skills/phase-persistence/SKILL.md)
-  skill, not polite engineering. Drain the named scope, then hand back.
+
+For other vendors or models not covered here, read [`docs/guides/MODEL_PROFILES.md`](docs/guides/MODEL_PROFILES.md).
+They may have a measured tendency to return partial work and ask "should I
+continue?" That behaviour is a violation of §6 + the
+[`phase-persistence`](.agents/skills/phase-persistence/SKILL.md)
+skill, not polite engineering. Drain the named scope, then hand back.
 
 For Copilot-specific custom agents and slash commands, see
 [`.github/copilot-instructions.md`](.github/copilot-instructions.md) and

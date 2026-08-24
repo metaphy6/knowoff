@@ -15,7 +15,7 @@ discovery hints, slash-command pointers, and custom-agent conventions.
 | Concern | Path |
 |---|---|
 | Master rulebook | [`AGENTS.md`](../AGENTS.md) |
-| Vendor entry points | [`CLAUDE.md`](../CLAUDE.md), [`GEMINI.md`](../GEMINI.md), [`CONVENTIONS.md`](../CONVENTIONS.md) |
+| Vendor entry points | [`CLAUDE.md`](../CLAUDE.md), [`CONVENTIONS.md`](../CONVENTIONS.md) |
 | Copilot custom agents | [`.github/agents/`](agents/) |
 | Copilot slash-command prompts | [`.github/prompts/`](prompts/) |
 | Always-on instruction files | [`.github/instructions/`](instructions/) |
