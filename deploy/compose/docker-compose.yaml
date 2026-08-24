@@ -138,11 +138,6 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ../../client:/app
-      # Container-local .dart_tool — keeps the container's own `flutter pub
-      # get` (its own SDK version, container-root paths) from overwriting
-      # the host's .dart_tool/package_config.json, which the host-side Dart
-      # analyzer/IDE reads directly.
-      - client_dart_tool:/app/.dart_tool
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/"]
       interval: 10s
@@ -197,4 +192,3 @@ volumes:
   pg_data:
   redis_data:
   minio_data:
-  client_dart_tool:
