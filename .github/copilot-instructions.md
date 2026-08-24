@@ -116,6 +116,7 @@ Load the relevant one before the matching kind of work. Especially:
 - [`self-review`](../.agents/skills/self-review/SKILL.md)
 - [`phase-persistence`](../.agents/skills/phase-persistence/SKILL.md)
 - [`parallel-subagents`](../.agents/skills/parallel-subagents/SKILL.md)
+- [`codegraph-management`](../.agents/skills/codegraph-management/SKILL.md) — and follow the CodeGraph-first rule in [`AGENTS.md`](../AGENTS.md) §9.
 
 ## 💬 Communication discipline
 

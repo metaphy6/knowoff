@@ -276,6 +276,17 @@ The repo ships a curated, model-agnostic skill library at
 *when-to-use* trigger, read that skill file before proceeding. Skills are
 short — one read costs you nothing and saves entire rewrites.
 
+**CodeGraph-first rule.** This repository is indexed by CodeGraph. For any
+question about source code — how a symbol works, where it is defined, what
+calls it, or what it affects — use the appropriate `mcp_codegraph_*` tool
+first (`explore`, `search`, `node`, or `callers`). Do not start with
+`read_file` or `grep_search` for symbol lookup, call-graph questions, or
+understanding how code works. Fall back to raw reads/searches only for files
+CodeGraph does not index (configs, docs, build scripts) or when a tool
+response flags the file as stale. See
+[`codegraph-management`](.agents/skills/codegraph-management/SKILL.md) for the
+tool-to-intent mapping and re-index rules.
+
 Especially load before the matching work:
 
 - [`test-driven-development`](.agents/skills/test-driven-development/SKILL.md) — before adding behavior.
@@ -285,6 +296,7 @@ Especially load before the matching work:
 - [`phase-persistence`](.agents/skills/phase-persistence/SKILL.md) — when implementing a multi-bullet phase.
 - [`non-zero-exit-recovery`](.agents/skills/non-zero-exit-recovery/SKILL.md) — on any command failure.
 - [`parallel-subagents`](.agents/skills/parallel-subagents/SKILL.md) — when fanning out reads / searches.
+- [`codegraph-management`](.agents/skills/codegraph-management/SKILL.md) — before using, troubleshooting, or re-indexing CodeGraph.
 - **ROADMAP discipline**: read [`.agents/instructions/ROADMAP_DISCIPLINE.md`](.agents/instructions/ROADMAP_DISCIPLINE.md) — tick boxes immediately as each deliverable completes; do not leave incomplete sub-phases unchecked.
 
 ---
