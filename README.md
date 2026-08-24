@@ -7,7 +7,9 @@
 **Nowers** (who see Nown) win by voting out every **Donower**; Donowers win
 — together — if the votes run out first. Matches run ~5–8 minutes in
 **Quick Play** with strangers worldwide (the main product) or in **Local
-Rooms** with the people around your table.
+Rooms** with the people around your table. Role secrecy is enforced
+server-side: a Donower's device is never sent Nown at all, so there's
+nothing to leak even if you inspect the traffic yourself.
 
 📖 The normative spec lives in [`BLUEPRINT.md`](BLUEPRINT.md) — game rules,
 tech stack, architecture, economy, and the product baseline. The sequenced
@@ -25,9 +27,11 @@ build plan — phases, checkboxes, proof tests — lives in
 
 ## Status
 
-Pre-implementation. The blueprint and roadmap are written; **Phase 1
-(Foundation)** — monorepo tree, config loader, Compose stack, Flutter
-scaffold — is next. See the status snapshot in the roadmap chapter of
+All 6 roadmap phases are built and passing their proof tests —
+foundation, media engine, realtime game loop, accounts & Quick Play, the
+Noin economy & Admin Console, and the Contributor Portal. `make
+compose.up` gets you a full 6-player match with zero cloud dependencies.
+See the phase-by-phase snapshot in
 [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md).
 
 ## Quickstart
@@ -43,6 +47,27 @@ make client.lint     # flutter analyze + dart format check
 make compose.up      # start the local Docker Compose stack
 make compose.down    # stop the local stack
 ```
+
+## Local stack
+
+`make compose.up` brings up server + postgres + redis + minio + adminer +
+client-web, fronted by a local **nginx** reverse proxy that terminates TLS
+and publishes friendly `*.knowoff.local` names (dev convenience only — the
+public ingress is a Cloudflare Tunnel, see [`nginx/README.md`](nginx/README.md)).
+Run `make hosts.add` once to resolve those names, then:
+
+| URL | What |
+|---|---|
+| `https://app.knowoff.local` | Flutter web client |
+| `https://api.knowoff.local` | Game server — REST + `/ws` WebSocket |
+| `https://admin.knowoff.local` | Admin Console / Contributor Portal (dev-only, never expose this) |
+| `https://adminer.knowoff.local` | Postgres browser |
+| `https://minio.knowoff.local` | MinIO console |
+
+Prefer to skip nginx? Every service also publishes straight to
+`127.0.0.1`: server `8080`/`9090`/`9091`, postgres `5432`, redis `6379`,
+minio `9000`/`9001`, adminer `8081`. See [`infra/README.md`](infra/README.md)
+for Compose profiles, volume snapshots, and per-service config.
 
 ## Repository layout
 
