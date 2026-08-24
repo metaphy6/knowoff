@@ -11,7 +11,7 @@ Switch to the [`implementer` custom agent](../agents/implementer.agent.md).
 
 **`/implement` MUST drain every `[ ]` bullet in the requested scope before the
 turn ends — whether that scope is a single sub-phase, several phases, or the
-whole [roadmap chapter of the monolith](../../docs/planning/ROADMAP.md).** Phase boundaries are **not**
+whole [roadmap](../../docs/planning/ROADMAP.md).** Phase boundaries are **not**
 stop points: the moment one phase's bullets are all `[x]`, immediately start
 the next unchecked phase in ROADMAP order and keep going until the whole
 requested scope is complete.
@@ -36,21 +36,20 @@ to proceed; you need no permission between bullets **or between phases**.
 - A plan (in chat, in `docs/planning/`), or a requested phase in the roadmap
    chapter of [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md). If
    no plan or phase scope exists, run [`plan`](plan.prompt.md) first.
-- Treat the roadmap monolith as two layers: the chapters before
-   **🗺 Roadmap — Step-by-Step Implementation Lifecycle** are the normative
-   blueprint/specification; the final chapter supplies the implementation
-   order, checkboxes, proof tests, and gates.
+- The spec and the roadmap are two files: [`BLUEPRINT.md`](../../BLUEPRINT.md)
+   is the normative blueprint/specification; [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md)
+   supplies the implementation order, checkboxes, proof tests, and gates.
 - Resolve the **target scope** from the invocation:
   - `/implement #phase <id>` (e.g. `0a.1`, `1`, `2.3`) → that one sub-phase / phase.
   - `/implement #phase <a>..<b>` or a list → every phase in that range / list, in order.
   - `/implement` with no phase (or "the roadmap" / "everything") → **every phase
-    in the [roadmap chapter of the monolith](../../docs/planning/ROADMAP.md) that still has `[ ]` bullets**,
+    in [`docs/planning/ROADMAP.md`](../../docs/planning/ROADMAP.md) that still has `[ ]` bullets**,
     top to bottom.
 - Build the full ordered list of `[ ]` bullets across **all** targeted phases
   before you start. That list is your work queue; you are done only when it is
   empty (or a real blocker is documented).
 - Before touching the first bullet of each phase, read every chapter named by
-   that phase's **Spec (required reading)** line in the same monolith. Resolve
+   that phase's **Spec (required reading)** line in `BLUEPRINT.md`. Resolve
    requirements in this order: blueprint/spec chapters, then phase What/Why/How
    and Proof tests, then checklist wording. If they conflict, the blueprint
    wins and the discrepancy must be corrected in the same change.

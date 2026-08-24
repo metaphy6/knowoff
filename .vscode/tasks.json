@@ -2,6 +2,15 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Compose: Up (core)",
+      "type": "shell",
+      "command": "make",
+      "args": ["compose.up"],
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "runOptions": { "runOn": "folderOpen" },
+      "problemMatcher": []
+    },
+    {
       "label": "Agent: Session Bootstrap",
       "type": "shell",
       "command": "xops/agent/session-bootstrap.sh",

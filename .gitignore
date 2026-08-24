@@ -47,3 +47,10 @@ client/untranslated.json
 # Generated Dart files
 client/lib/l10n/app_localizations*.dart
 
+# nginx: generated/mounted TLS certs — never commit key material
+
+nginx/certs/selfsigned/
+nginx/certs/active/
+nginx/certs/external/*
+!nginx/certs/external/.gitkeep
+

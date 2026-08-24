@@ -9,10 +9,10 @@
 **Quick Play** with strangers worldwide (the main product) or in **Local
 Rooms** with the people around your table.
 
-📖 The full normative spec **and** the sequenced build plan live in one
-monolith: [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) — spec
-chapters first, the roadmap chapter (phases, checkboxes, proof tests) at
-the end. [`BLUEPRINT.md`](BLUEPRINT.md) is a pointer stub.
+📖 The normative spec lives in [`BLUEPRINT.md`](BLUEPRINT.md) — game rules,
+tech stack, architecture, economy, and the product baseline. The sequenced
+build plan — phases, checkboxes, proof tests — lives in
+[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md).
 
 ## Tech stack
 
@@ -48,16 +48,18 @@ make compose.down    # stop the local stack
 
 | Path | Purpose |
 |---|---|
-| [`BLUEPRINT.md`](BLUEPRINT.md) | Pointer stub → the spec + roadmap monolith at [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) |
+| [`BLUEPRINT.md`](BLUEPRINT.md) | The normative spec — game rules, tech stack, architecture, economy, product baseline |
 | [`docs/`](docs/README.md) | Roadmap, tracking, design docs, guides |
 | [`.agents/skills/`](.agents/skills/README.md) | Skill library for AI coding agents |
 | [`xops/`](xops/README.md) | Ops scripts (tracking, safe-run, make dispatchers) |
-| `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/` | The game monorepo — created in Phase 1 per the [spec taxonomy](docs/planning/ROADMAP.md) |
+| [`nginx/`](nginx/README.md) | Local reverse proxy for `*.knowoff.local` (dev convenience, not the public ingress) |
+| `client/`, `server/`, `deploy/`, `tools/`, `content/`, `configs/` | The game monorepo — created in Phase 1 per the [spec taxonomy](BLUEPRINT.md) |
 
 ## Documentation
 
 - [`AGENTS.md`](AGENTS.md) — rules every AI coding assistant follows in this repo.
-- [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) — the spec + the plan in one monolith (roadmap chapter at the end; stub at [`BLUEPRINT.md`](BLUEPRINT.md)).
+- [`BLUEPRINT.md`](BLUEPRINT.md) — the normative spec (game rules, tech stack, architecture, economy, product baseline).
+- [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md) — the sequenced implementation plan (phases, checkboxes, proof tests).
 - [`docs/tracking/README.md`](docs/tracking/README.md) — how the tracking log works.
 - [`docs/tracking/context.md`](docs/tracking/context.md) — project context pack.
 - [`docs/project/GLOSSARY.md`](docs/project/GLOSSARY.md) — Knowoff terminology (normative).

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -131,6 +132,24 @@ func (m *Manager) GenerateTOTPSecret(accountName string) (secret, url string, er
 // VerifyTOTP validates a TOTP code against a secret.
 func VerifyTOTP(secret, code string) bool {
 	return totp.Validate(code, secret)
+}
+
+// TOTPSecretForEmail returns an existing admin's stored secret plus a fresh
+// otpauth:// URL built from it, for dev/ops tooling (e.g. the seed-admin CLI
+// command) that needs to print something scannable without minting a new,
+// unrelated secret via GenerateTOTPSecret.
+func (m *Manager) TOTPSecretForEmail(ctx context.Context, email string) (secret, otpauthURL string, err error) {
+	if err := m.db.QueryRowContext(ctx,
+		`SELECT totp_secret FROM admin_accounts WHERE email = $1`, email,
+	).Scan(&secret); err != nil {
+		return "", "", fmt.Errorf("lookup totp secret: %w", err)
+	}
+	label := fmt.Sprintf("%s:%s", m.cfg.Security.AdminTOTPIssuer, email)
+	v := url.Values{}
+	v.Set("secret", secret)
+	v.Set("issuer", m.cfg.Security.AdminTOTPIssuer)
+	otpauthURL = fmt.Sprintf("otpauth://totp/%s?%s", url.PathEscape(label), v.Encode())
+	return secret, otpauthURL, nil
 }
 
 // CreateSession issues a new admin session and CSRF token.
