@@ -8,10 +8,10 @@ import '../theme/ko_breakpoints.dart';
 /// Press-and-hold square that reveals the player's secret role while pressed.
 ///
 /// Rules §2: everyone performs the same check, so nothing about it stands out.
-/// The chip therefore looks identical for Nower and Donower until held — only
-/// the revealed face differs, and it carries an icon plus a label, never a
-/// colour alone. Fixed-size and compact so it can sit right above the draw
-/// pile instead of spending a full row of its own.
+/// The square looks identical for Nower and Donower until held. The idle face
+/// is bright and clearly labeled so players know it is tappable; the revealed
+/// face swaps to the role icon and role name. It stays square and sits right
+/// above the draw pile instead of spending a full row of its own.
 class RoleCard extends StatefulWidget {
   const RoleCard({required this.role, super.key});
 
@@ -36,19 +36,20 @@ class _RoleCardState extends State<RoleCard> {
     // Edge length comes from the shared breakpoint table so the draw pile
     // underneath always keeps the vertical room its own face needs.
     final double size = KoLayout.of(context).roleSquareSize;
+    final double iconSize = (size * 0.42).clamp(36.0, 76.0);
     final isDonower = widget.role == 'donower';
     final visible = _pressed && widget.role != null;
 
     final Color face = !visible
-        ? KoColors.canvasDeep
+        ? KoColors.aqua
         : isDonower
             ? KoColors.pink
             : KoColors.lime;
-    // The idle face carries no label — "Reveal your role" reads fine in a
-    // wide chip but not a square, and idle never needs to communicate role
-    // anyway. Only the revealed face, which does, gets a word next to it.
-    final label = !visible
-        ? null
+    // Idle shows the action prompt so the square is obviously tappable;
+    // the revealed face swaps to the role name so colour never carries the
+    // meaning alone.
+    final String? label = !visible
+        ? l10n.revealYourRoleAction
         : isDonower
             ? l10n.roleDonower
             : l10n.roleNower;
@@ -87,15 +88,21 @@ class _RoleCardState extends State<RoleCard> {
                     : isDonower
                         ? Doodle.cloud
                         : Doodle.eye,
-                size: 18,
+                size: iconSize,
               ),
               if (label != null) ...<Widget>[
                 const SizedBox(height: 2),
                 Text(
                   label,
-                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: text.labelSmall?.copyWith(height: 1.0),
+                  style: (size >= 120 ? text.labelLarge : text.labelMedium)
+                      ?.copyWith(
+                    height: 1.0,
+                    fontWeight: FontWeight.w600,
+                    color: KoColors.ink,
+                  ),
                 ),
               ],
             ],

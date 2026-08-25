@@ -76,7 +76,7 @@ class HandFan extends StatelessWidget {
         SizedBox(
           height: layout.handFanHeight,
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Expanded(
                 child: cards.isEmpty && specialty == null
@@ -86,7 +86,7 @@ class HandFan extends StatelessWidget {
                         specialty: specialty,
                         selectedCardId: selectedCardId,
                         onSelect: onSelect,
-                        maxCardWidth: layout.handCardWidth,
+                        maxCardWidth: layout.handCardSize,
                       ),
               ),
               const SizedBox(width: KoSpace.md),
@@ -108,8 +108,9 @@ class HandFan extends StatelessWidget {
                       CardPile(
                         count: drawPile.length,
                         penalty: drawPenalty,
+                        width: layout.roleSquareSize,
                         height: layout.handFanHeight -
-                            34 -
+                            40 -
                             layout.roleSquareSize -
                             KoSpace.xs,
                         onDraw: onDraw,
@@ -163,9 +164,10 @@ class _HandRail extends StatelessWidget {
         final fitted = itemCount == 0
             ? maxCardWidth
             : (constraints.maxWidth - totalSpacing) / itemCount;
-        // Only an upper clamp: a hand this large only happens deep into a
-        // round, and a thin-but-whole card beats one lost to a scrollbar.
-        final cardWidth = fitted.clamp(0.0, maxCardWidth);
+        // Cards are square; clamp to the rail height so a tall hand never
+        // overflows its row.
+        final cardWidth = fitted.clamp(0.0, maxCardWidth)
+            .clamp(0.0, constraints.maxHeight);
 
         final items = <Widget>[
           if (specialty != null)
@@ -297,6 +299,7 @@ class _SpecialtyCard extends StatelessWidget {
       label: label,
       child: Container(
         width: width,
+        height: width - 4,
         padding:
             EdgeInsets.all(width < _narrowCardWidth ? KoSpace.sm : KoSpace.md),
         decoration: BoxDecoration(
@@ -317,8 +320,8 @@ class _SpecialtyCard extends StatelessWidget {
                       specialtyIcon(specialty),
                       size: width < _narrowCardWidth ? 20 : 28,
                     ),
-                    const SizedBox(height: KoSpace.xs),
-                    if (width >= _narrowCardWidth)
+                    if (width >= _narrowCardWidth) ...<Widget>[
+                      const SizedBox(height: KoSpace.xs),
                       Text(
                         label,
                         textAlign: TextAlign.center,
@@ -326,6 +329,7 @@ class _SpecialtyCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
+                    ],
                   ],
                 ),
               ),
@@ -397,6 +401,7 @@ class _HandCardState extends State<_HandCard> {
               duration: KoMotion.press,
               curve: Curves.easeOut,
               width: widget.width,
+              height: widget.width - 4,
               transform: Matrix4.translationValues(
                 _pressed ? 4 : 0,
                 selected ? -8 : 0,
