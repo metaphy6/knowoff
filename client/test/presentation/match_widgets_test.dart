@@ -9,6 +9,7 @@ import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/card_pile.dart';
 import 'package:knowoff_client/presentation/widgets/hand_fan.dart';
 import 'package:knowoff_client/presentation/widgets/ko_meters.dart';
+import 'package:knowoff_client/presentation/widgets/role_card.dart';
 import 'package:knowoff_client/presentation/widgets/seat_sheet.dart';
 import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
@@ -114,6 +115,28 @@ void main() {
       expect(votes, equals(0));
     });
 
+    testWidgets('long-pressing a row opens the seat sheet instead of voting',
+        (tester) async {
+      var votes = 0;
+      await tester.pumpWidget(
+        _wrap(
+          VoteBoard(
+            players: _players,
+            localSeat: 0,
+            votedSeat: -1,
+            onVote: (_) => votes++,
+          ),
+        ),
+      );
+
+      await tester.longPress(find.text('Beta'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SeatSheet), findsOneWidget);
+      expect(find.text('Report player'), findsOneWidget);
+      expect(votes, equals(0));
+    });
+
     testWidgets('reveals the tally after the window closes', (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -188,6 +211,99 @@ void main() {
       await tester.pump();
       expect(tapped, equals('c2'));
     });
+
+    testWidgets(
+        'fits a tuned starting hand (5 cards + specialty) without scrolling',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const HandFan(
+            cards: <CardDto>[
+              CardDto(id: 'c1', type: 'text', content: 'one'),
+              CardDto(id: 'c2', type: 'text', content: 'two'),
+              CardDto(id: 'c3', type: 'text', content: 'three'),
+              CardDto(id: 'c4', type: 'text', content: 'four'),
+              CardDto(id: 'c5', type: 'text', content: 'five'),
+            ],
+            drawPile: <CardDto>[
+              CardDto(id: 'd1', type: 'text'),
+              CardDto(id: 'd2', type: 'text'),
+              CardDto(id: 'd3', type: 'text'),
+            ],
+            specialty: 'shuffle',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Scrollbar), findsNothing);
+
+      // The pile rides at the end of the rail, not the start.
+      final pileX = tester.getTopLeft(find.byType(CardPile)).dx;
+      final lastCardX = tester.getTopLeft(find.text('five')).dx;
+      expect(pileX, greaterThan(lastCardX));
+
+      // The role chip now rides above the pile instead of its own row.
+      final roleY = tester.getTopLeft(find.byType(RoleCard)).dy;
+      final pileY = tester.getTopLeft(find.byType(CardPile)).dy;
+      expect(roleY, lessThan(pileY));
+    });
+
+    testWidgets(
+        'fits the largest reachable hand (base + full draw pile + '
+        'specialty) on the narrowest supported phone without scrolling',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        _wrap(
+          const HandFan(
+            cards: <CardDto>[
+              CardDto(id: 'c1', type: 'text', content: 'one'),
+              CardDto(id: 'c2', type: 'text', content: 'two'),
+              CardDto(id: 'c3', type: 'text', content: 'three'),
+              CardDto(id: 'c4', type: 'text', content: 'four'),
+              CardDto(id: 'c5', type: 'text', content: 'five'),
+              CardDto(id: 'c6', type: 'text', content: 'six'),
+              CardDto(id: 'c7', type: 'text', content: 'seven'),
+              CardDto(id: 'c8', type: 'text', content: 'eight'),
+            ],
+            drawPile: <CardDto>[],
+            specialty: 'shuffle',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byType(Scrollbar), findsNothing);
+    });
+
+    testWidgets(
+        'renders the specialty ability in the same card shape as '
+        'regular cards', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const HandFan(
+            cards: cards,
+            drawPile: [CardDto(id: 'd1', type: 'text')],
+            specialty: 'shuffle',
+          ),
+        ),
+      );
+
+      // Same container primitives as _HandCard: no stock Material chip/pill,
+      // and the ability now carries the shared "Specialty" footer label
+      // instead of being surfaced as a separate title-row pill.
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.byType(Chip), findsNothing);
+      expect(find.text('Shuffle'), findsOneWidget);
+      expect(find.text('Specialty'), findsOneWidget);
+    });
   });
 
   group('KoVoteBudget', () {
@@ -199,7 +315,16 @@ void main() {
         ),
       );
 
-      expect(find.byIcon(Icons.close), findsNWidgets(2));
+      bool isDoodle(Widget w, Doodle doodle) =>
+          w is DoodleIcon && w.doodle == doodle;
+      expect(
+        find.byWidgetPredicate((w) => isDoodle(w, Doodle.check)),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate((w) => isDoodle(w, Doodle.cross)),
+        findsNWidgets(2),
+      );
     });
 
     testWidgets('draws nothing until the server reports a budget',
@@ -211,7 +336,7 @@ void main() {
       );
 
       expect(find.text('Votes left'), findsNothing);
-      expect(find.byIcon(Icons.close), findsNothing);
+      expect(find.byType(DoodleIcon), findsNothing);
     });
   });
 
@@ -360,8 +485,9 @@ void main() {
   });
 
   group('SeatSheet', () {
-    testWidgets('explains a bot seat instead of fetching a profile',
-        (tester) async {
+    testWidgets(
+        'offers stat placeholders and the flag for a bot seat too '
+        '(dev tables run bots-only)', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const SeatSheet(
@@ -376,8 +502,9 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('Backfill bot'), findsOneWidget);
-      expect(find.text('Report player'), findsNothing);
+      expect(find.text('Career'), findsOneWidget);
+      expect(find.text('—'), findsWidgets);
+      expect(find.text('Report player'), findsOneWidget);
     });
 
     testWidgets('shows career stats and the flag for a human seat',
