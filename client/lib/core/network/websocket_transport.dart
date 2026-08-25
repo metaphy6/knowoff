@@ -26,6 +26,11 @@ class WebSocketTransport implements GameTransport {
   bool _connected = false;
   bool _disposed = false;
 
+  // Bumped by reconnect() so a pending auto-reconnect timer scheduled by the
+  // socket it just discarded can recognise it's stale and bail out instead
+  // of clobbering the fresh connection with a third socket.
+  int _generation = 0;
+
   @override
   Stream<Map<String, dynamic>> get messages => _messageController.stream;
 
@@ -41,18 +46,34 @@ class WebSocketTransport implements GameTransport {
     await _connectWithBackoff(
       initialDelay: Duration.zero,
       attempt: 0,
+      generation: _generation,
+    );
+  }
+
+  @override
+  Future<void> reconnect() async {
+    if (_disposed) return;
+    _generation++;
+    await _channel?.sink.close();
+    _channel = null;
+    _connected = false;
+    await _connectWithBackoff(
+      initialDelay: Duration.zero,
+      attempt: 0,
+      generation: _generation,
     );
   }
 
   Future<void> _connectWithBackoff({
     required Duration initialDelay,
     required int attempt,
+    required int generation,
   }) async {
-    if (_disposed) return;
+    if (_disposed || generation != _generation) return;
     if (initialDelay > Duration.zero) {
       await Future<void>.delayed(initialDelay);
     }
-    if (_disposed) return;
+    if (_disposed || generation != _generation) return;
 
     _setState(attempt == 0
         ? ConnectionState.connecting
@@ -75,9 +96,9 @@ class WebSocketTransport implements GameTransport {
         },
         onDone: () {
           _connected = false;
-          if (!_disposed) {
+          if (!_disposed && generation == _generation) {
             _setState(ConnectionState.disconnected);
-            _scheduleReconnect(attempt + 1);
+            _scheduleReconnect(attempt + 1, generation);
           }
         },
         onError: (Object error) {
@@ -88,17 +109,18 @@ class WebSocketTransport implements GameTransport {
       _connected = false;
       _setState(ConnectionState.disconnected);
       _messageController.addError(e);
-      _scheduleReconnect(attempt + 1);
+      _scheduleReconnect(attempt + 1, generation);
     }
   }
 
-  void _scheduleReconnect(int attempt) {
-    if (_disposed) return;
+  void _scheduleReconnect(int attempt, int generation) {
+    if (_disposed || generation != _generation) return;
     final base = reconnectDelay.inMilliseconds * pow(2, attempt).toInt();
     final capped = min(base, maxReconnectDelay.inMilliseconds);
     final jitter = (capped * reconnectJitter * _rand.nextDouble()).toInt();
     final delay = Duration(milliseconds: capped + jitter);
-    _connectWithBackoff(initialDelay: delay, attempt: attempt);
+    _connectWithBackoff(
+        initialDelay: delay, attempt: attempt, generation: generation);
   }
 
   @override

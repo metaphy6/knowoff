@@ -2,13 +2,18 @@ package handler
 
 import (
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/lobby"
+	"github.com/knowoff/knowoff/server/internal/ratelimit"
 	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
@@ -19,6 +24,65 @@ func testLobby(t *testing.T) *lobby.Manager {
 		Pack:   &media.Pack{},
 	})
 }
+
+// TestRealtimeHandler_RejectsOverCapacity verifies the ConnLimiter is
+// enforced at upgrade time: once at capacity, further connections are
+// rejected with HTTP 503 instead of being accepted and exhausting resources.
+func TestRealtimeHandler_RejectsOverCapacity(t *testing.T) {
+	deps := HandlerDeps{
+		Config:      &config.Config{},
+		Logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Lobby:       testLobby(t),
+		ConnLimiter: ratelimit.NewConnLimiter(2),
+	}
+	srv := httptest.NewServer(RealtimeHandler(deps))
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	var conns []*websocket.Conn
+	defer func() {
+		for _, c := range conns {
+			c.Close()
+		}
+	}()
+
+	for i := 0; i < 2; i++ {
+		c, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+		if err != nil {
+			t.Fatalf("connection %d: expected upgrade to succeed, got %v", i, err)
+		}
+		conns = append(conns, c)
+	}
+
+	_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err == nil {
+		t.Fatal("expected the 3rd connection to be rejected once at capacity")
+	}
+	if resp == nil || resp.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("expected HTTP 503, got %+v (err=%v)", resp, err)
+	}
+
+	// Freeing a slot must allow the next connection through. The server-side
+	// release happens asynchronously after the close is observed, so retry
+	// briefly rather than racing it.
+	conns[0].Close()
+	conns = conns[1:]
+	var c *websocket.Conn
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		var dialErr error
+		c, _, dialErr = websocket.DefaultDialer.Dial(wsURL, nil)
+		if dialErr == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("expected a connection to succeed after a slot freed up, got %v", dialErr)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	conns = append(conns, c)
+}
+
 
 func TestRoomJoinHandler_JSON(t *testing.T) {
 	mgr := testLobby(t)
