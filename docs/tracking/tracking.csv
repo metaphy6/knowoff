@@ -101,3 +101,6 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-25T13:46:54Z,run-20260825134654-1222774,human,client,commit,completed,fix(client): shrink Nown stage to a square and move it above the hand,,pending
 2026-08-25T13:51:19Z,run-20260825135119-1231686,human,client,commit,completed,"fix(client): revert Nown stage layout, shrink reveal-your-role chip only",,pending
 2026-08-25T14:15:36Z,run-20260825141536-1274825,human,client,commit,completed,fix(client): square the Nown stage and enlarge the reveal-role button,,pending
+2026-08-25T14:28:45Z,run-20260825142845-1298280,human,client,commit,completed,"fix(client): enlarge reveal-role square, add Reveal your role label, bright idle color, keep square shape",,pending
+2026-08-25T14:36:06Z,run-20260825143606-1313248,human,client,commit,completed,fix(client): double the reveal-role square size and scale its contents,,pending
+2026-08-25T14:59:48Z,run-20260825145948-1354982,human,client,commit,completed,"fix(client): make hand cards large squares, double role square again, widen draw pile to match",,pending
