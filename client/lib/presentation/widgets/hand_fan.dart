@@ -92,14 +92,16 @@ class HandFan extends StatelessWidget {
               const SizedBox(width: KoSpace.md),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: KoSpace.sm),
-                // IntrinsicWidth gives the stretching Column a real (bounded)
-                // width to work with — a bare Row child is laid out with an
-                // unbounded max width, which blows up `stretch` into an
-                // infinite-width constraint on the role chip below it.
+                // IntrinsicWidth gives the Column a real (bounded) width to
+                // work with — a bare Row child is laid out with an unbounded
+                // max width, which the Column can't resolve on its own.
                 child: IntrinsicWidth(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    // The role square is fixed-size and narrower than the
+                    // pile; centring keeps both readable instead of
+                    // stretching the square into a rectangle.
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: <Widget>[
                       RoleCard(role: myRole),
                       const SizedBox(height: KoSpace.xs),
@@ -108,7 +110,7 @@ class HandFan extends StatelessWidget {
                         penalty: drawPenalty,
                         height: layout.handFanHeight -
                             34 -
-                            RoleCard.height -
+                            layout.roleSquareSize -
                             KoSpace.xs,
                         onDraw: onDraw,
                       ),

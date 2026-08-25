@@ -149,6 +149,12 @@ class KoLayout {
     return 72;
   }
 
+  /// Edge length of the reveal-your-role square above the draw pile.
+  ///
+  /// Shrinks on short windows so the draw pile underneath keeps the vertical
+  /// room its own face (count, label, penalty chip) needs.
+  double get roleSquareSize => isShort ? 40 : 52;
+
   @override
   bool operator ==(Object other) =>
       other is KoLayout && other.size == size && other.breakpoint == breakpoint;
