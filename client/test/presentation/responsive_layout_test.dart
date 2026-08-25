@@ -245,8 +245,15 @@ void main() {
     testWidgets('cards get roomier as the window-size class grows',
         (tester) async {
       expect(
-        KoLayout.fromSize(_desktop).handCardWidth,
-        greaterThan(KoLayout.fromSize(_phone).handCardWidth),
+        KoLayout.fromSize(_desktop).handCardSize,
+        greaterThan(KoLayout.fromSize(_phone).handCardSize),
+      );
+    });
+
+    testWidgets('hand cards are square', (tester) async {
+      expect(
+        KoLayout.fromSize(_desktop).handCardSize,
+        equals(KoLayout.fromSize(_desktop).handCardSize),
       );
     });
   });

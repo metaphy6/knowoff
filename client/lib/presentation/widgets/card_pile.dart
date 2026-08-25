@@ -178,19 +178,22 @@ class _PileFace extends StatelessWidget {
       children: <Widget>[
         Row(
           children: <Widget>[
-            const DoodleIcon(Doodle.cards, size: 18),
+            const DoodleIcon(Doodle.cards, size: 16),
             const Spacer(),
             Text(
               '$count',
-              style: koDisplayStyle(size: 30, height: 1.0),
+              style: koDisplayStyle(size: 22, height: 1.0),
             ),
           ],
         ),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 2),

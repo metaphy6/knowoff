@@ -93,12 +93,12 @@ class NownStage extends StatelessWidget {
                 ),
                 child: Row(
                   children: <Widget>[
-                    DoodleIcon(blind ? Doodle.mask : Doodle.eye, size: 18),
+                    DoodleIcon(blind ? Doodle.mask : Doodle.eye, size: 26),
                     const SizedBox(width: KoSpace.sm),
                     Expanded(
                       child: Text(
                         blind ? l10n.nownHiddenLabel : l10n.nownLabel,
-                        style: Theme.of(context).textTheme.labelMedium,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
                     ),
                     if (!blind)
@@ -125,7 +125,7 @@ class NownStage extends StatelessWidget {
                               borderRadius: BorderRadius.circular(KoRadii.chip),
                               boxShadow: const <BoxShadow>[KoShadows.sm],
                             ),
-                            child: const Icon(Icons.flag_outlined, size: 16),
+                            child: const Icon(Icons.flag_outlined, size: 18),
                           ),
                         ),
                       ),

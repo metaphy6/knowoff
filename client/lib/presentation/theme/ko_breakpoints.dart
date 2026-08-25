@@ -118,28 +118,28 @@ class KoLayout {
     }
   }
 
-  /// Width of one card in the hand fan.
-  double get handCardWidth {
-    if (isTight) return 112;
-    if (isCompact) return 124;
-    if (isMedium) return 134;
-    return 146;
+  /// Size of one card in the hand fan — cards are square, so this is both
+  /// width and height. Deliberately enlarged so image/text cards read well.
+  double get handCardSize {
+    if (isTight) return 136;
+    if (isCompact) return 152;
+    if (isMedium) return 168;
+    return 184;
   }
 
   /// Height of the hand-fan rail, including the lift room a selected card
-  /// needs and the hard shadow underneath it.
-  double get handFanHeight => isShort ? 158 : 186;
+  /// needs, the hard shadow underneath it, and the now-much-larger role square.
+  double get handFanHeight => isShort ? 300 : 380;
 
   /// Ceiling for the Nown stage's picture area.
   ///
-  /// Nown is the round's reference, not the round's content — the hand and the
-  /// turn action have to stay reachable without a scroll, so the stage is
-  /// capped rather than allowed to grow with the content column.
+  /// Nown is the round's reference, so it gets more real estate than before,
+  /// but the hand and turn action still have to stay reachable without scroll.
   double get nownStageMaxHeight {
-    if (isShort) return 180;
-    if (isTight) return 200;
-    if (isCompact) return 240;
-    return 260;
+    if (isShort) return 220;
+    if (isTight) return 260;
+    if (isCompact) return 320;
+    return 380;
   }
 
   /// Edge length of a seat avatar in the turn rail.
@@ -151,9 +151,9 @@ class KoLayout {
 
   /// Edge length of the reveal-your-role square above the draw pile.
   ///
-  /// Shrinks on short windows so the draw pile underneath keeps the vertical
-  /// room its own face (count, label, penalty chip) needs.
-  double get roleSquareSize => isShort ? 40 : 52;
+  /// Scaled back slightly from the oversized 208dp but still large; it shrinks
+  /// on short windows so the draw pile underneath keeps room for its own face.
+  double get roleSquareSize => isShort ? 136 : 168;
 
   @override
   bool operator ==(Object other) =>
