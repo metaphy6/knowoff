@@ -79,6 +79,11 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getProfile() => _get('/api/profile');
 
+  /// Another player's public career profile. Unconverted points are omitted
+  /// server-side for non-owners.
+  Future<Map<String, dynamic>> getPublicProfile(String accountID) =>
+      _get('/api/profile/$accountID');
+
   Future<void> updateNickname(String nickname) =>
       _patch('/api/profile/nickname', {'nickname': nickname});
 
@@ -125,7 +130,7 @@ class ApiClient {
     String? description,
   }) =>
       _post('/api/reports', {
-        'type': reportType,
+        'report_type': reportType,
         if (targetAccountID != null) 'target_account_id': targetAccountID,
         if (targetMediaID != null) 'target_media_id': targetMediaID,
         'reason': reason,

@@ -208,10 +208,14 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 	if s.Auth != nil {
 		if at, _ := env.Payload["access_token"].(string); at != "" {
 			accountID, err := s.Auth.ValidateAccessToken(context.Background(), at)
-			if err == nil {
-				s.AccountID = accountID
-				s.accessToken = at
+			if err != nil {
+				// Continuing anonymously here hides the real problem: the
+				// join then fails downstream as a bogus economy denial
+				// ("daily quickplay limit reached") against the empty account.
+				return fmt.Errorf("invalid access token")
 			}
+			s.AccountID = accountID
+			s.accessToken = at
 		}
 	}
 	switch env.Kind {

@@ -4,6 +4,7 @@ import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
+import '../theme/ko_breakpoints.dart';
 import 'ko_container.dart';
 import 'report_dialog.dart';
 
@@ -109,7 +110,24 @@ class NownStage extends StatelessWidget {
               ],
             ),
           ),
-          AspectRatio(aspectRatio: 4 / 3, child: content),
+          Builder(
+            builder: (context) {
+              // The Nown is the round's subject, not its wallpaper. Capping
+              // both axes keeps it a card-sized 16:10 picture on a desktop
+              // window instead of a full-width band of empty white, while a
+              // phone still gets the full column width.
+              final maxH = KoLayout.of(context).nownStageMaxHeight;
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: maxH,
+                    maxWidth: maxH * 16 / 10,
+                  ),
+                  child: AspectRatio(aspectRatio: 16 / 10, child: content),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );

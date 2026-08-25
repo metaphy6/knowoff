@@ -47,6 +47,7 @@ type Room struct {
 	match      *game.Match
 	conns      map[int]*websocket.Conn
 	bindings   map[int]*SeatBinding
+	identities map[int]game.SeatIdentity
 	nextSeat   int
 	boundCount int
 	onStart    func(r *Room) error
@@ -59,15 +60,16 @@ type Room struct {
 // NewRoom creates a room in the waiting phase.
 func NewRoom(id, code string, size int, hostSeat int, quickPlay bool, deps Deps) *Room {
 	return &Room{
-		ID:        id,
-		Code:      code,
-		Size:      size,
-		HostSeat:  hostSeat,
-		QuickPlay: quickPlay,
-		deps:      deps,
-		conns:     make(map[int]*websocket.Conn),
-		bindings:  make(map[int]*SeatBinding),
-		nextSeat:  0,
+		ID:         id,
+		Code:       code,
+		Size:       size,
+		HostSeat:   hostSeat,
+		QuickPlay:  quickPlay,
+		deps:       deps,
+		conns:      make(map[int]*websocket.Conn),
+		bindings:   make(map[int]*SeatBinding),
+		identities: make(map[int]game.SeatIdentity),
+		nextSeat:   0,
 	}
 }
 
@@ -97,6 +99,7 @@ func (r *Room) StartMatch(deps game.Dependencies) error {
 	r.mu.Unlock()
 
 	r.deps.Logger.Info("creating match", "room_id", r.ID)
+	r.LoadIdentities()
 	bcast := &roomBcast{room: r}
 	m := game.NewMatch(r.Size, deps, bcast)
 	r.deps.Logger.Info("starting match engine", "room_id", r.ID)
@@ -171,6 +174,50 @@ func (r *Room) ClaimSeat(accountID string, bot bool) (int, string, bool) {
 		r.boundCount++
 	}
 	return seat, token, true
+}
+
+// LoadIdentities snapshots every seat's public identity once, at match start.
+// Nicknames and avatars are read here rather than per broadcast so a wire
+// event never costs a database round trip, and so a mid-match nickname change
+// cannot shuffle the table's mental model of who is who.
+func (r *Room) LoadIdentities() {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	r.mu.RLock()
+	bindings := make(map[int]*SeatBinding, len(r.bindings))
+	for seat, b := range r.bindings {
+		bindings[seat] = b
+	}
+	r.mu.RUnlock()
+
+	out := make(map[int]game.SeatIdentity, len(bindings))
+	for seat, b := range bindings {
+		id := game.SeatIdentity{Bot: b.Bot, AccountID: b.AccountID}
+		if b.Bot {
+			id.Name = b.BotName
+		} else if b.AccountID != "" && r.deps.Profile != nil {
+			p, err := r.deps.Profile.Get(ctx, b.AccountID, false)
+			if err != nil {
+				r.deps.Logger.Warn("seat identity lookup failed", "error", err, "room_id", r.ID, "seat", seat)
+			} else {
+				id.Name = p.Nickname
+				id.Avatar = p.Avatar
+			}
+		}
+		out[seat] = id
+	}
+
+	r.mu.Lock()
+	r.identities = out
+	r.mu.Unlock()
+}
+
+// SeatIdentity returns the public identity snapshot for a seat.
+func (r *Room) SeatIdentity(seat int) game.SeatIdentity {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.identities[seat]
 }
 
 // ReclaimSeat returns a previously assigned seat when a session token matches.

@@ -10,11 +10,14 @@ import '../theme/knowoff_tokens.dart';
 /// about reading people.
 const String kBotNicknamePrefix = 'Bot_';
 
-bool isBotSeat(PlayerDto player) => player.name.startsWith(kBotNicknamePrefix);
+/// The server sends an explicit `bot` flag; the nickname prefix stays as a
+/// fallback for payloads that predate it.
+bool isBotSeat(PlayerDto player) =>
+    player.bot || player.name.startsWith(kBotNicknamePrefix);
 
 String seatDisplayName(PlayerDto player) {
-  if (player.name.isEmpty) return 'P${player.seat}';
   if (isBotSeat(player)) return 'Bot ${player.seat}';
+  if (player.name.isEmpty) return 'P${player.seat}';
   return player.name;
 }
 
@@ -31,11 +34,35 @@ Color seatAccent(int seat) {
   return palette[seat.abs() % palette.length];
 }
 
-/// Square ink-bordered seat disc carrying the player's initial.
+/// Doodle standing in for one of the server's curated avatar presets
+/// (`profile.AvatarPresets`). Returns null when the seat has no preset, in
+/// which case the avatar falls back to the player's initial.
+Doodle? avatarDoodle(String preset) {
+  switch (preset) {
+    case 'nower':
+      return Doodle.eye;
+    case 'donower':
+      return Doodle.mask;
+    case 'detective':
+      return Doodle.clock;
+    case 'party':
+      return Doodle.sparkle;
+    case 'default':
+      return Doodle.cloud;
+    default:
+      return null;
+  }
+}
+
+/// Square ink-bordered seat disc carrying the player's avatar.
+///
+/// Bots get the robot doodle on a fixed aqua field instead of a seat colour +
+/// initial, so a bot seat is readable at a glance without reading its name
+/// (🎮 §1: no bot is ever disguised).
 class SeatAvatar extends StatelessWidget {
   const SeatAvatar({
     required this.player,
-    this.size = 44,
+    this.size = 56,
     this.dimmed = false,
     super.key,
   });
@@ -49,25 +76,39 @@ class SeatAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bot = isBotSeat(player);
     final name = seatDisplayName(player);
     final initial = name.isEmpty ? '?' : name.substring(0, 1).toUpperCase();
+    final doodle = bot ? Doodle.robot : avatarDoodle(player.avatar);
+
+    final Widget child;
+    if (dimmed) {
+      child = DoodleIcon(Doodle.cross, size: size * 0.55);
+    } else if (doodle != null) {
+      child = DoodleIcon(doodle, size: size * 0.62);
+    } else {
+      child = FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(initial, style: Theme.of(context).textTheme.headlineSmall),
+      );
+    }
 
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
+      padding: EdgeInsets.all(size * 0.08),
       decoration: BoxDecoration(
-        color: dimmed ? KoColors.surface : seatAccent(player.seat),
+        color: dimmed
+            ? KoColors.surface
+            : bot
+                ? KoColors.aqua
+                : seatAccent(player.seat),
         border: Border.all(width: KoBorders.regular, color: KoColors.ink),
         borderRadius: BorderRadius.circular(KoRadii.well),
         boxShadow: const <BoxShadow>[KoShadows.sm],
       ),
-      child: dimmed
-          ? DoodleIcon(Doodle.cross, size: size * 0.55)
-          : Text(
-              initial,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+      child: child,
     );
   }
 }

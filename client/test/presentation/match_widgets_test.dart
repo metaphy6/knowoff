@@ -1,12 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:knowoff_client/data/api_client.dart';
+import 'package:knowoff_client/data/auth_service.dart';
 import 'package:knowoff_client/data/models/game_state_dto.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
+import 'package:knowoff_client/presentation/icons/doodles.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
+import 'package:knowoff_client/presentation/widgets/card_pile.dart';
 import 'package:knowoff_client/presentation/widgets/hand_fan.dart';
 import 'package:knowoff_client/presentation/widgets/ko_meters.dart';
+import 'package:knowoff_client/presentation/widgets/seat_sheet.dart';
 import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
+
+class _StubAuthService extends AuthService {
+  _StubAuthService() : super(baseUrl: 'http://test');
+
+  @override
+  String? get accessToken => 'fake-token';
+
+  @override
+  Future<void> ensureSession() async {}
+
+  @override
+  Future<void> refresh() async {}
+}
+
+class _StubApiClient extends ApiClient {
+  _StubApiClient() : super(baseUrl: 'http://test', auth: _StubAuthService());
+
+  @override
+  Future<Map<String, dynamic>> getPublicProfile(String accountID) async => {
+        'account_id': accountID,
+        'nickname': 'Beta',
+        'level': 7,
+        'matches_played': 42,
+        'matches_won_nower': 20,
+        'matches_won_donower': 6,
+        'correct_votes': 31,
+        'overall_points': 900,
+      };
+}
 
 const _players = <PlayerDto>[
   PlayerDto(seat: 0, name: 'Alpha', connected: true, eliminated: false),
@@ -133,7 +167,9 @@ void main() {
       );
 
       expect(find.text('Selected'), findsOneWidget);
-      expect(find.textContaining('-5 pts each'), findsOneWidget);
+      expect(find.byType(CardPile), findsOneWidget);
+      expect(find.text('Draw pile'), findsOneWidget);
+      expect(find.text('-5'), findsOneWidget);
     });
 
     testWidgets('reports the tapped card id', (tester) async {
@@ -216,6 +252,13 @@ void main() {
       expect(seatDisplayName(human), equals('Beta'));
     });
 
+    test('trusts the server bot flag even without a bot nickname', () {
+      const bot = PlayerDto(
+          seat: 3, name: '', connected: true, eliminated: false, bot: true);
+      expect(isBotSeat(bot), isTrue);
+      expect(seatDisplayName(bot), equals('Bot 3'));
+    });
+
     test('gives every seat a stable accent from the house palette', () {
       const palette = <Color>[
         KoColors.violet,
@@ -229,6 +272,157 @@ void main() {
         expect(palette, contains(seatAccent(seat)));
         expect(seatAccent(seat), equals(seatAccent(seat)));
       }
+    });
+
+    test('maps every server avatar preset to a doodle', () {
+      for (final preset in <String>[
+        'default',
+        'nower',
+        'donower',
+        'detective',
+        'party',
+      ]) {
+        expect(avatarDoodle(preset), isNotNull);
+      }
+      expect(avatarDoodle(''), isNull);
+    });
+  });
+
+  group('SeatAvatar', () {
+    testWidgets('marks a bot seat with the robot doodle, not an initial',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SeatAvatar(
+            player: PlayerDto(
+              seat: 2,
+              name: '',
+              connected: true,
+              eliminated: false,
+              bot: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(DoodleIcon), findsOneWidget);
+      final icon = tester.widget<DoodleIcon>(find.byType(DoodleIcon));
+      expect(icon.doodle, equals(Doodle.robot));
+      expect(find.text('B'), findsNothing);
+    });
+
+    testWidgets('renders the seat avatar preset when one is set',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SeatAvatar(
+            player: PlayerDto(
+              seat: 1,
+              name: 'Beta',
+              connected: true,
+              eliminated: false,
+              avatar: 'detective',
+            ),
+          ),
+        ),
+      );
+
+      final icon = tester.widget<DoodleIcon>(find.byType(DoodleIcon));
+      expect(icon.doodle, equals(Doodle.clock));
+    });
+  });
+
+  group('CardPile', () {
+    testWidgets('draws on tap and stamps the penalty', (tester) async {
+      var draws = 0;
+      await tester.pumpWidget(
+        _wrap(CardPile(count: 3, penalty: 5, onDraw: () => draws++)),
+      );
+
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('-5'), findsOneWidget);
+      await tester.tap(find.byType(CardPile));
+      await tester.pump();
+      expect(draws, equals(1));
+    });
+
+    testWidgets('refuses to draw once the pile is empty', (tester) async {
+      var draws = 0;
+      await tester.pumpWidget(
+        _wrap(CardPile(count: 0, penalty: 5, onDraw: () => draws++)),
+      );
+
+      expect(find.text('Pile empty'), findsOneWidget);
+      await tester.tap(find.byType(CardPile));
+      await tester.pump();
+      expect(draws, equals(0));
+    });
+  });
+
+  group('SeatSheet', () {
+    testWidgets('explains a bot seat instead of fetching a profile',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const SeatSheet(
+            player: PlayerDto(
+              seat: 2,
+              name: '',
+              connected: true,
+              eliminated: false,
+              bot: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Backfill bot'), findsOneWidget);
+      expect(find.text('Report player'), findsNothing);
+    });
+
+    testWidgets('shows career stats and the flag for a human seat',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SeatSheet(
+            player: const PlayerDto(
+              seat: 1,
+              name: 'Beta',
+              connected: true,
+              eliminated: false,
+              accountId: 'acc-1',
+            ),
+            api: _StubApiClient(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Beta'), findsOneWidget);
+      expect(find.text('Seat 1'), findsOneWidget);
+      expect(find.text('42'), findsOneWidget);
+      expect(find.text('Report player'), findsOneWidget);
+    });
+
+    testWidgets('never offers to flag your own seat', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          SeatSheet(
+            player: const PlayerDto(
+              seat: 1,
+              name: 'Beta',
+              connected: true,
+              eliminated: false,
+              accountId: 'acc-1',
+            ),
+            isLocal: true,
+            api: _StubApiClient(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Report player'), findsNothing);
     });
   });
 }

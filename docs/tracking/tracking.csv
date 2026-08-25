@@ -92,3 +92,6 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-25T10:36:35Z,run-20260825103635-880084,human,infra,note,completed,"chore(infra): raise host sysctl somaxconn=16384 and ephemeral port range 1024-65535 (user-confirmed, /etc/sysctl.d/99-knowoff.conf)",,
 2026-08-25T10:40:45Z,run-20260825104045-887188,human,docs,commit,completed,docs(guides): add SCALING.md for raising concurrent-connection ceiling and horizontal-scaling path,,pending
 2026-08-25T10:49:54Z,run-20260825104954-902474,human,xops,commit,completed,fix(xops): make git now pushes outstanding local commits even when tracking rows already match,,pending
+2026-08-25T11:40:55Z,run-20260825114055-997518,copilot,server,commit,completed,feat(server): publish seat identity and add public profile endpoint,,pending
+2026-08-25T11:40:55Z,run-20260825114055-997545,copilot,client,commit,completed,"feat(client): resize nown stage, enlarge seat avatars, add card pile and seat sheet",,pending
+2026-08-25T11:55:06Z,run-20260825115506-1024170,copilot,auth,commit,completed,fix(auth): refresh the session before the socket handshake and reject stale tokens,,pending

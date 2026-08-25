@@ -9,6 +9,9 @@ class PlayerDto {
     required this.name,
     required this.connected,
     required this.eliminated,
+    this.avatar = '',
+    this.bot = false,
+    this.accountId = '',
     this.role,
   });
 
@@ -16,6 +19,16 @@ class PlayerDto {
   final String name;
   final bool connected;
   final bool eliminated;
+
+  /// Preset avatar id from the server's curated gallery, or empty.
+  final String avatar;
+
+  /// Server-declared backfill bot. Rules §1: a bot seat is never disguised.
+  final bool bot;
+
+  /// Pseudonymous account id, used to open the seat's public profile and to
+  /// target a conduct report. Empty for bots.
+  final String accountId;
   final String? role;
 
   factory PlayerDto.fromJson(Map<String, dynamic> json) {
@@ -24,6 +37,9 @@ class PlayerDto {
       name: json['name'] as String? ?? '',
       connected: json['connected'] as bool? ?? true,
       eliminated: json['eliminated'] as bool? ?? false,
+      avatar: json['avatar'] as String? ?? '',
+      bot: json['bot'] as bool? ?? false,
+      accountId: json['account_id'] as String? ?? '',
       role: json['role'] as String?,
     );
   }
