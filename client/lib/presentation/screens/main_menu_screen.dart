@@ -6,13 +6,14 @@ import '../../data/api_client.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../theme/ko_breakpoints.dart';
 import '../theme/ko_canvas_grid.dart';
 import '../widgets/feedback_dialog.dart';
 import '../widgets/highlighter.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/noin_badge.dart';
 import '../widgets/notice_banner.dart';
-import '../widgets/ko_scaffold.dart';
 import 'leaderboard_screen.dart';
 import 'lobby_screen.dart';
 import 'notice_inbox_screen.dart';
@@ -197,109 +198,103 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
             child: CustomPaint(painter: KoCanvasGridPainter()),
           ),
           SafeArea(
-            child: KoPageWidth(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  KoSpace.lg,
-                  KoSpace.lg,
-                  KoSpace.lg,
-                  KoSpace.xxl,
+            child: KoBody(
+              children: [
+                _Wordmark(
+                  title: l10n.appTitle,
+                  tagline: l10n.mainMenuTagline,
+                  noin: _noin,
+                  noinLabel: l10n.storeBalanceLabel,
+                  onNoinTap: () => _open(const StoreScreen()),
                 ),
-                children: [
-                  _Wordmark(
-                    title: l10n.appTitle,
-                    tagline: l10n.mainMenuTagline,
-                    noin: _noin,
-                    noinLabel: l10n.storeBalanceLabel,
-                    onNoinTap: () => _open(const StoreScreen()),
-                  ),
-                  const SizedBox(height: KoSpace.xl),
-                  for (final notice in activeNotices)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: KoSpace.md),
-                      child: NoticeBanner(
-                        notice: notice,
-                        onDismiss: () => setState(
-                          () => _dismissed.add(notice['id']?.toString() ?? ''),
-                        ),
-                      ),
-                    ),
-                  KoButton(
-                    label: l10n.mainMenuPlay,
-                    subLabel: l10n.mainMenuPlaySub,
-                    size: KoButtonSize.large,
-                    expand: true,
-                    icon: const DoodleIcon(Doodle.staticBurst, size: 34),
-                    trailing: const Icon(Icons.arrow_forward, size: 28),
-                    shadow: KoShadows.lg,
-                    onTap: () => _open(const QueueScreen()),
-                  ),
-                  const SizedBox(height: KoSpace.md),
-                  KoButton(
-                    label: l10n.mainMenuLocalRoom,
-                    subLabel: l10n.mainMenuLocalRoomSub,
-                    size: KoButtonSize.large,
-                    expand: true,
-                    backgroundColor: KoColors.lime,
-                    icon: const DoodleIcon(Doodle.cards, size: 34),
-                    trailing: const Icon(Icons.qr_code_2, size: 28),
-                    onTap: () => _showLocalRoomChooser(context),
-                  ),
-                  const SizedBox(height: KoSpace.xl),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: KoSpace.md,
-                    crossAxisSpacing: KoSpace.md,
-                    childAspectRatio: 1.45,
-                    children: [
-                      _MenuTile(
-                        label: l10n.mainMenuProfile,
-                        doodle: Doodle.eye,
-                        accent: KoColors.aqua,
-                        tilt: KoTilt.subtle,
-                        onTap: () => _open(const ProfileScreen()),
-                      ),
-                      _MenuTile(
-                        label: l10n.mainMenuLeaderboard,
-                        doodle: Doodle.crown,
-                        accent: KoColors.tangerine,
-                        tilt: KoTilt.soft,
-                        onTap: () => _open(const LeaderboardScreen()),
-                      ),
-                      _MenuTile(
-                        label: l10n.mainMenuStore,
-                        doodle: Doodle.coin,
-                        accent: KoColors.pink,
-                        tilt: KoTilt.soft,
-                        onTap: () => _open(const StoreScreen()),
-                      ),
-                      _MenuTile(
-                        label: l10n.mainMenuNotices,
-                        doodle: Doodle.cloud,
-                        accent: KoColors.surface,
-                        tilt: KoTilt.subtle,
-                        badge: activeNotices.length,
-                        onTap: () => _open(const NoticeInboxScreen()),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: KoSpace.lg),
-                  Center(
-                    child: KoButton(
-                      label: l10n.mainMenuFeedback,
-                      size: KoButtonSize.small,
-                      backgroundColor: KoColors.surface,
-                      icon: const DoodleIcon(Doodle.sparkle, size: 18),
-                      onTap: () => showDialog<void>(
-                        context: context,
-                        builder: (context) => const FeedbackDialog(),
+                const SizedBox(height: KoSpace.xl),
+                for (final notice in activeNotices)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: KoSpace.md),
+                    child: NoticeBanner(
+                      notice: notice,
+                      onDismiss: () => setState(
+                        () => _dismissed.add(notice['id']?.toString() ?? ''),
                       ),
                     ),
                   ),
-                ],
-              ),
+                KoButton(
+                  label: l10n.mainMenuPlay,
+                  subLabel: l10n.mainMenuPlaySub,
+                  size: KoButtonSize.large,
+                  expand: true,
+                  icon: const DoodleIcon(Doodle.staticBurst, size: 34),
+                  trailing: const Icon(Icons.arrow_forward, size: 28),
+                  shadow: KoShadows.lg,
+                  onTap: () => _open(const QueueScreen()),
+                ),
+                const SizedBox(height: KoSpace.md),
+                KoButton(
+                  label: l10n.mainMenuLocalRoom,
+                  subLabel: l10n.mainMenuLocalRoomSub,
+                  size: KoButtonSize.large,
+                  expand: true,
+                  backgroundColor: KoColors.lime,
+                  icon: const DoodleIcon(Doodle.cards, size: 34),
+                  trailing: const Icon(Icons.qr_code_2, size: 28),
+                  onTap: () => _showLocalRoomChooser(context),
+                ),
+                const SizedBox(height: KoSpace.xl),
+                GridView.count(
+                  crossAxisCount:
+                      KoLayout.of(context).columns(compact: 2, medium: 3),
+                  shrinkWrap: true,
+                  primary: false,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: KoSpace.md,
+                  crossAxisSpacing: KoSpace.md,
+                  childAspectRatio: 1.45,
+                  children: [
+                    _MenuTile(
+                      label: l10n.mainMenuProfile,
+                      doodle: Doodle.eye,
+                      accent: KoColors.aqua,
+                      tilt: KoTilt.subtle,
+                      onTap: () => _open(const ProfileScreen()),
+                    ),
+                    _MenuTile(
+                      label: l10n.mainMenuLeaderboard,
+                      doodle: Doodle.crown,
+                      accent: KoColors.tangerine,
+                      tilt: KoTilt.soft,
+                      onTap: () => _open(const LeaderboardScreen()),
+                    ),
+                    _MenuTile(
+                      label: l10n.mainMenuStore,
+                      doodle: Doodle.coin,
+                      accent: KoColors.pink,
+                      tilt: KoTilt.soft,
+                      onTap: () => _open(const StoreScreen()),
+                    ),
+                    _MenuTile(
+                      label: l10n.mainMenuNotices,
+                      doodle: Doodle.cloud,
+                      accent: KoColors.surface,
+                      tilt: KoTilt.subtle,
+                      badge: activeNotices.length,
+                      onTap: () => _open(const NoticeInboxScreen()),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: KoSpace.lg),
+                Center(
+                  child: KoButton(
+                    label: l10n.mainMenuFeedback,
+                    size: KoButtonSize.small,
+                    backgroundColor: KoColors.surface,
+                    icon: const DoodleIcon(Doodle.sparkle, size: 18),
+                    onTap: () => showDialog<void>(
+                      context: context,
+                      builder: (context) => const FeedbackDialog(),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

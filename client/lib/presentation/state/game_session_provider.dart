@@ -27,10 +27,40 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
   final GameTransport _transport;
   StreamSubscription<Map<String, dynamic>>? _subscription;
+  final List<Map<String, dynamic>> _bufferedMessages = [];
 
   static GameStateDto _initialDto() => const GameStateDto();
 
+  /// Developer-only freeze toggle: while frozen, incoming server events are
+  /// buffered instead of applied, so the current screen stops advancing for
+  /// UI/UX inspection. Unfreezing replays the buffered events in order.
+  void setFrozen(bool value) {
+    if (state.frozen == value) return;
+    state = state.copyWith(frozen: value);
+    if (!value) {
+      final pending = List<Map<String, dynamic>>.of(_bufferedMessages);
+      _bufferedMessages.clear();
+      for (final message in pending) {
+        _onMessage(message);
+      }
+    }
+  }
+
+  /// Developer-only: discards any buffered/frozen state and resets the local
+  /// session back to its initial (pre-match) shape, mirroring what the
+  /// screen looks like before a match is joined. This does not notify the
+  /// server or close the transport — the next server event simply overwrites
+  /// these defaults, same as after a real match ends.
+  void restart() {
+    _bufferedMessages.clear();
+    state = GameSession(dto: _initialDto());
+  }
+
   void _onMessage(Map<String, dynamic> message) {
+    if (state.frozen) {
+      _bufferedMessages.add(message);
+      return;
+    }
     final kind = message['kind'] as String?;
     final payload = (message['payload'] as Map<String, dynamic>?) ?? const {};
 

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
+import 'package:knowoff_client/presentation/theme/ko_breakpoints.dart';
+import 'package:knowoff_client/presentation/widgets/ko_body.dart';
 import 'package:knowoff_client/presentation/widgets/ko_button.dart';
 import 'package:knowoff_client/presentation/widgets/ko_scaffold.dart';
 
@@ -23,8 +25,8 @@ void main() {
         KoScaffold(
           title: 'Verdict',
           bottomBar: KoButton(label: 'Back', onTap: () {}),
-          body: ListView(
-            children: const <Widget>[Text('body content')],
+          body: const KoBody(
+            children: <Widget>[Text('body content')],
           ),
         ),
       ),
@@ -45,17 +47,22 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        KoScaffold(
+        const KoScaffold(
           title: 'Wide',
-          body: ListView(children: const <Widget>[Text('wide body')]),
+          body: KoBody(children: <Widget>[Text('wide body')]),
         ),
       ),
     );
     await tester.pump();
 
+    // The scroll view stays viewport-wide — that is what keeps the scrollbar
+    // lane off the content — while the content itself is capped.
+    final layout = KoLayout.fromSize(const Size(2400, 1400));
+    expect(tester.getSize(find.byType(ListView)).width, 2400);
     expect(
-      tester.getSize(find.byType(ListView)).width,
-      lessThanOrEqualTo(kKoContentMaxWidth),
+      tester.getSize(find.byType(ListView)).width -
+          layout.contentPadding.horizontal,
+      lessThanOrEqualTo(layout.contentMaxWidth),
     );
   });
 

@@ -50,6 +50,59 @@ void main() {
     transport.close();
   });
 
+  test('freezing buffers incoming events instead of applying them',
+      () async {
+    notifier.setFrozen(true);
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'discussion',
+      'window_seconds': 40,
+    });
+    await _settle();
+
+    expect(notifier.state.frozen, isTrue);
+    expect(notifier.state.dto.phase, equals('waiting'));
+  });
+
+  test('unfreezing replays buffered events in order', () async {
+    notifier.setFrozen(true);
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'knowoff'});
+    await _settle();
+    expect(notifier.state.dto.phase, equals('waiting'));
+
+    notifier.setFrozen(false);
+    await _settle();
+
+    expect(notifier.state.frozen, isFalse);
+    expect(notifier.state.dto.phase, equals('knowoff'));
+  });
+
+  test('restarting resets state to initial and drops buffered events',
+      () async {
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'play',
+      'round': 3,
+    });
+    await _settle();
+    expect(notifier.state.dto.phase, equals('play'));
+
+    notifier.setFrozen(true);
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    await _settle();
+
+    notifier.restart();
+
+    expect(notifier.state.frozen, isFalse);
+    expect(notifier.state.dto.phase, equals('waiting'));
+    expect(notifier.state.dto.round, equals(0));
+
+    // The buffered 'discussion' event must not resurface after a restart.
+    notifier.setFrozen(true);
+    notifier.setFrozen(false);
+    await _settle();
+    expect(notifier.state.dto.phase, equals('waiting'));
+  });
+
   test('a fresh ballot clears the previous result and vote', () async {
     transport.emit('phase_started', <String, dynamic>{
       'phase': 'result',

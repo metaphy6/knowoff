@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
@@ -63,7 +64,7 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
       title: l10n.queueTitle,
       subtitle: l10n.queueHint,
       accent: KoColors.violet,
-      body: Center(
+      body: KoBody.single(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[

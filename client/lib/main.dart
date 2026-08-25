@@ -5,10 +5,13 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 
 import 'core/config/app_config.dart';
 import 'core/config/client_config.dart';
+import 'core/navigation/root_navigator_key.dart';
 import 'core/network/websocket_transport.dart';
 import 'presentation/screens/main_menu_screen.dart';
 import 'presentation/state/game_session_provider.dart';
 import 'presentation/theme/knowoff_theme.dart';
+import 'presentation/theme/ko_scroll_behavior.dart';
+import 'presentation/widgets/dev_tools_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -38,6 +41,7 @@ class KnowoffApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Knowoff',
+      navigatorKey: rootNavigatorKey,
       locale: Locale(config.defaultLocale),
       supportedLocales:
           config.supportedLocales.map((code) => Locale(code)).toList(),
@@ -48,7 +52,23 @@ class KnowoffApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: knowoffTheme(),
+      scrollBehavior: const KoScrollBehavior(),
       home: const MainMenuScreen(),
+      // The dev tools overlay needs its own Overlay ancestor (for its FAB
+      // tooltips): builder's `child` is the Navigator, which owns its own
+      // Overlay that this sibling Stack sits outside of.
+      builder: (context, child) => Overlay(
+        initialEntries: [
+          OverlayEntry(
+            builder: (context) => Stack(
+              children: [
+                if (child != null) child,
+                const DevToolsOverlay(),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
