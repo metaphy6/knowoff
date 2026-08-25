@@ -6,7 +6,9 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../theme/ko_breakpoints.dart';
 import '../widgets/convert_points_dialog.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
@@ -129,17 +131,21 @@ class _StoreScreenState extends State<StoreScreen> {
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return KoLoading(label: l10n.loadingLabel);
+    if (_loading) {
+      return KoBody.single(child: KoLoading(label: l10n.loadingLabel));
+    }
     if (_error != null) {
-      return KoEmptyState(
-        doodle: Doodle.cross,
-        message: l10n.genericError,
-        accent: KoColors.pink,
-        action: KoButton(label: l10n.retry, onTap: _load),
+      return KoBody.single(
+        child: KoEmptyState(
+          doodle: Doodle.cross,
+          message: l10n.genericError,
+          accent: KoColors.pink,
+          action: KoButton(label: l10n.retry, onTap: _load),
+        ),
       );
     }
 
-    return ListView(
+    return KoBody(
       children: <Widget>[
         KoButton(
           label: l10n.convertPointsTitle,
@@ -186,8 +192,9 @@ class _StoreScreenState extends State<StoreScreen> {
           accent: KoColors.tangerine,
         ),
         GridView.count(
-          crossAxisCount: 3,
+          crossAxisCount: KoLayout.of(context).columns(compact: 3, medium: 4),
           shrinkWrap: true,
+          primary: false,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: KoSpace.md,
           crossAxisSpacing: KoSpace.md,

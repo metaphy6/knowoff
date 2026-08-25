@@ -1,3 +1,4 @@
+import '../widgets/ko_body.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -32,7 +33,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
   void initState() {
     super.initState();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && !ref.read(gameSessionProvider).frozen) setState(() {});
     });
   }
 
@@ -86,7 +87,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
             ),
           ],
         ),
-        body: ListView(
+        body: KoBody(
           children: <Widget>[
             KoContainer(
               backgroundColor:

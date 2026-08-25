@@ -5,6 +5,7 @@ import '../../data/api_client.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_stat_tile.dart';
@@ -66,27 +67,33 @@ class _NoticeInboxScreenState extends State<NoticeInboxScreen> {
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return KoLoading(label: l10n.loadingLabel);
+    if (_loading) {
+      return KoBody.single(child: KoLoading(label: l10n.loadingLabel));
+    }
     if (_error != null) {
-      return KoEmptyState(
-        doodle: Doodle.cross,
-        message: l10n.genericError,
-        accent: KoColors.pink,
-        action: KoButton(label: l10n.retry, onTap: _load),
+      return KoBody.single(
+        child: KoEmptyState(
+          doodle: Doodle.cross,
+          message: l10n.genericError,
+          accent: KoColors.pink,
+          action: KoButton(label: l10n.retry, onTap: _load),
+        ),
       );
     }
 
     final notices =
         (_notices ?? const <dynamic>[]).whereType<Map<String, dynamic>>();
     if (notices.isEmpty) {
-      return KoEmptyState(
-        doodle: Doodle.sparkle,
-        message: l10n.noticesEmpty,
-        accent: KoColors.lime,
+      return KoBody.single(
+        child: KoEmptyState(
+          doodle: Doodle.sparkle,
+          message: l10n.noticesEmpty,
+          accent: KoColors.lime,
+        ),
       );
     }
 
-    return ListView(
+    return KoBody(
       children: <Widget>[
         for (final notice in notices)
           Padding(

@@ -6,6 +6,7 @@ import '../../data/api_client.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
@@ -70,20 +71,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return KoLoading(label: l10n.loadingLabel);
+    if (_loading) {
+      return KoBody.single(child: KoLoading(label: l10n.loadingLabel));
+    }
     if (_error != null) {
-      return KoEmptyState(
-        doodle: Doodle.cross,
-        message: l10n.genericError,
-        accent: KoColors.pink,
-        action: KoButton(label: l10n.retry, onTap: _load),
+      return KoBody.single(
+        child: KoEmptyState(
+          doodle: Doodle.cross,
+          message: l10n.genericError,
+          accent: KoColors.pink,
+          action: KoButton(label: l10n.retry, onTap: _load),
+        ),
       );
     }
 
     final rows = _top ?? const <dynamic>[];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return KoBody(
       children: <Widget>[
         if (_own != null)
           Padding(
@@ -119,28 +123,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
             ),
           ),
-        Expanded(
-          child: rows.isEmpty
-              ? KoEmptyState(
-                  doodle: Doodle.clock,
-                  message: l10n.leaderboardEmpty,
-                  accent: KoColors.aqua,
-                )
-              : ListView.separated(
-                  itemCount: rows.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: KoSpace.sm),
-                  itemBuilder: (context, index) {
-                    final row = rows[index] as Map<String, dynamic>;
-                    return _RankRow(
-                      rank: '${row['rank']}',
-                      name: _shortId(row['account_id']),
-                      points: '${row['points']}',
-                      podium: index < 3,
-                    );
-                  },
+        if (rows.isEmpty)
+          KoEmptyState(
+            doodle: Doodle.clock,
+            message: l10n.leaderboardEmpty,
+            accent: KoColors.aqua,
+          )
+        else
+          for (var index = 0; index < rows.length; index++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: KoSpace.sm),
+              child: _RankRow(
+                rank: '${(rows[index] as Map<String, dynamic>)['rank']}',
+                name: _shortId(
+                  (rows[index] as Map<String, dynamic>)['account_id'],
                 ),
-        ),
+                points: '${(rows[index] as Map<String, dynamic>)['points']}',
+                podium: index < 3,
+              ),
+            ),
       ],
     );
   }

@@ -1,3 +1,4 @@
+import '../widgets/ko_body.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -36,9 +37,10 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
   @override
   void initState() {
     super.initState();
-    // Rebuilds once a second so the turn countdown stays live.
+    // Rebuilds once a second so the turn countdown stays live, unless the
+    // developer freeze is active.
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && !ref.read(gameSessionProvider).frozen) setState(() {});
     });
   }
 
@@ -179,7 +181,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
             ),
           ],
         ),
-        body: ListView(
+        body: KoBody(
           children: <Widget>[
             RoleCard(role: session.myRole),
             const SizedBox(height: KoSpace.lg),

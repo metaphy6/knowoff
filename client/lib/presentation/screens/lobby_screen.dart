@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_stat_tile.dart';
@@ -35,7 +36,7 @@ class LobbyScreen extends StatelessWidget {
       subtitle: l10n.lobbySeats(players.length, total),
       accent: KoColors.lime,
       leadingGlyph: const DoodleIcon(Doodle.cards, size: 30),
-      body: ListView(
+      body: KoBody(
         children: <Widget>[
           if (code.isNotEmpty) _CodeCard(code: code, hint: l10n.lobbyQRHint),
           const SizedBox(height: KoSpace.xl),
