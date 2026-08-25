@@ -4,7 +4,7 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 import 'package:knowoff_client/presentation/widgets/role_card.dart';
 
 void main() {
-  Widget _wrap(Widget child) => MaterialApp(
+  Widget wrap(Widget child) => MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(body: Center(child: child)),
@@ -14,7 +14,7 @@ void main() {
     testWidgets(
         'idle square is square, large enough, and shows the reveal prompt',
         (tester) async {
-      await tester.pumpWidget(_wrap(const RoleCard(role: null)));
+      await tester.pumpWidget(wrap(const RoleCard(role: null)));
       await tester.pumpAndSettle();
 
       final size = tester.getSize(find.byType(RoleCard));
@@ -29,7 +29,7 @@ void main() {
     });
 
     testWidgets('pressing the square reveals the role label', (tester) async {
-      await tester.pumpWidget(_wrap(const RoleCard(role: 'nower')));
+      await tester.pumpWidget(wrap(const RoleCard(role: 'nower')));
       await tester.pumpAndSettle();
 
       expect(find.text('Reveal your role'), findsOneWidget);

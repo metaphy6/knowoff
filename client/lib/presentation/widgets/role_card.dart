@@ -48,7 +48,7 @@ class _RoleCardState extends State<RoleCard> {
     // Idle shows the action prompt so the square is obviously tappable;
     // the revealed face swaps to the role name so colour never carries the
     // meaning alone.
-    final String? label = !visible
+    final String label = !visible
         ? l10n.revealYourRoleAction
         : isDonower
             ? l10n.roleDonower
