@@ -166,6 +166,10 @@
   "@pressAndHoldRole": {
     "description": "Hint on the role card."
   },
+  "revealYourRoleAction": "Reveal your role",
+  "@revealYourRoleAction": {
+    "description": "Label on the compact role chip above the draw pile, unpressed state."
+  },
   "donowerPlaceholder": "You cannot see this Nown.",
   "@donowerPlaceholder": {
     "description": "Placeholder prompt shown to Donowers."
@@ -660,6 +664,10 @@
   "cardTypeGif": "GIF",
   "@cardTypeGif": {
     "description": "Card media type: animated GIF."
+  },
+  "cardTypeSpecialty": "Specialty",
+  "@cardTypeSpecialty": {
+    "description": "Footer label on the specialty card in hand, in place of a media type."
   },
   "evidenceTableTitle": "On the table",
   "@evidenceTableTitle": {

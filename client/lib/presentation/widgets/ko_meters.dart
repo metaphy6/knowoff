@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 
 /// Hard-edged countdown bar. Display-only: the server owns the phase clock.
@@ -99,18 +100,22 @@ class KoVoteBudget extends StatelessWidget {
         const SizedBox(width: KoSpace.sm),
         for (var i = 0; i < pips; i++)
           Padding(
-            padding: const EdgeInsets.only(right: KoSpace.xs),
+            padding: const EdgeInsets.only(right: KoSpace.sm),
             child: Container(
-              width: 18,
-              height: 18,
+              width: 32,
+              height: 32,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: i < remaining ? KoColors.pink : KoColors.whiteWell,
-                border: Border.all(width: KoBorders.thin, color: KoColors.ink),
-                borderRadius: BorderRadius.circular(4),
+                border:
+                    Border.all(width: KoBorders.regular, color: KoColors.ink),
+                shape: BoxShape.circle,
+                boxShadow: const <BoxShadow>[KoShadows.md],
               ),
-              child: i < remaining
-                  ? null
-                  : const Icon(Icons.close, size: 12, color: KoColors.ink),
+              child: DoodleIcon(
+                i < remaining ? Doodle.check : Doodle.cross,
+                size: 18,
+              ),
             ),
           ),
       ],

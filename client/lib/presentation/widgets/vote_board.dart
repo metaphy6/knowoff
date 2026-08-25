@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import 'seat_sheet.dart';
 import 'seat_tile.dart';
 
 /// The Knowoff ballot.
@@ -144,6 +145,9 @@ class _BallotRowState extends State<_BallotRow> {
                   widget.onVote!();
                 }
               : null,
+          // Voting is the tap; the seat sheet (stats + flag) is a long-press
+          // so the two never fight over the same gesture (👤 §3).
+          onLongPress: () => showSeatSheet(context, player: widget.player),
           child: AnimatedContainer(
             duration: KoMotion.press,
             curve: Curves.easeOut,

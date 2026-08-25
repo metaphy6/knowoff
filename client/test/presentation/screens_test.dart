@@ -150,6 +150,23 @@ void main() {
     expect(find.text('Delta'), findsOneWidget);
   });
 
+  testWidgets(
+      'KnowoffScreen opens the seat sheet on long-press without casting a '
+      'vote', (tester) async {
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const KnowoffScreen(),
+        _sampleSession(phase: 'knowoff'),
+      ),
+    );
+    await tester.pump();
+
+    await tester.longPress(find.text('Beta'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Report player'), findsOneWidget);
+  });
+
   testWidgets('VerdictScreen renders winner and nowns', (tester) async {
     await tester.pumpWidget(
       _wrapWithSession(
@@ -160,6 +177,22 @@ void main() {
     expect(find.text('Nowers win'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('A dog on a skateboard'), 300);
     expect(find.text('A dog on a skateboard'), findsOneWidget);
+  });
+
+  testWidgets('VerdictScreen opens the seat sheet when a seat is tapped',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const VerdictScreen(),
+        _sampleSession(phase: 'verdict'),
+      ),
+    );
+
+    await tester.scrollUntilVisible(find.text('Beta'), 300);
+    await tester.tap(find.text('Beta'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Report player'), findsOneWidget);
   });
 
   group('design guardrails hold on every live match screen', () {

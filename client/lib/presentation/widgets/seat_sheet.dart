@@ -102,7 +102,6 @@ class _SeatSheetState extends State<SeatSheet> {
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final player = widget.player;
-    final bot = isBotSeat(player);
 
     return SafeArea(
       top: false,
@@ -156,13 +155,12 @@ class _SeatSheetState extends State<SeatSheet> {
                 isReady: widget.isReady,
               ),
               const SizedBox(height: KoSpace.lg),
-              if (bot)
-                _Note(message: l10n.seatSheetBotNote, accent: KoColors.aqua)
-              else if (!_hasProfile)
-                _Note(message: l10n.seatSheetNoStats, accent: KoColors.surface)
-              else if (_loading)
+              // Bots and profile-less seats show the same grid with dash
+              // placeholders — dev needs every option visible with bots-only
+              // tables, and this is the same UI real seats will use later.
+              if (_hasProfile && _loading)
                 _Note(message: l10n.loadingLabel, accent: KoColors.surface)
-              else if (_failed)
+              else if (_hasProfile && _failed)
                 _Note(message: l10n.genericError, accent: KoColors.pink)
               else
                 _Stats(
@@ -217,7 +215,7 @@ class _SeatSheetState extends State<SeatSheet> {
                 spacing: KoSpace.md,
                 runSpacing: KoSpace.md,
                 children: <Widget>[
-                  if (!bot && !widget.isLocal && _hasProfile)
+                  if (!widget.isLocal)
                     KoButton(
                       label: l10n.reportPlayerAction,
                       backgroundColor: KoColors.pink,

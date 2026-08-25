@@ -104,7 +104,21 @@ class NownStage extends StatelessWidget {
                     child: Semantics(
                       button: true,
                       label: l10n.reportNownAction,
-                      child: const Icon(Icons.flag_outlined, size: 18),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: KoColors.pink,
+                          border: Border.all(
+                            width: KoBorders.regular,
+                            color: KoColors.ink,
+                          ),
+                          borderRadius: BorderRadius.circular(KoRadii.chip),
+                          boxShadow: const <BoxShadow>[KoShadows.sm],
+                        ),
+                        child: const Icon(Icons.flag_outlined, size: 16),
+                      ),
                     ),
                   ),
               ],
@@ -121,9 +135,9 @@ class NownStage extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     maxHeight: maxH,
-                    maxWidth: maxH * 16 / 10,
+                    maxWidth: maxH * 4 / 3,
                   ),
-                  child: AspectRatio(aspectRatio: 16 / 10, child: content),
+                  child: AspectRatio(aspectRatio: 4 / 3, child: content),
                 ),
               );
             },
