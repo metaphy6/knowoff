@@ -282,14 +282,22 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     });
   }
 
-  Future<void> queueQuickPlay(int size) => _send('queue_quickplay', {
+  /// The access token expires after 15 minutes and the socket handshake is
+  /// often the first thing an idle tab does, so refresh before sending it.
+  Future<String> _freshAccessToken() async {
+    final auth = AppConfig.instance.authService;
+    await auth.ensureSession();
+    return auth.accessToken ?? '';
+  }
+
+  Future<void> queueQuickPlay(int size) async => _send('queue_quickplay', {
         'size': size,
-        'access_token': AppConfig.instance.authService.accessToken ?? '',
+        'access_token': await _freshAccessToken(),
       });
 
-  Future<void> joinRoom(String code) => _send('join_room', {
+  Future<void> joinRoom(String code) async => _send('join_room', {
         'code': code,
-        'access_token': AppConfig.instance.authService.accessToken ?? '',
+        'access_token': await _freshAccessToken(),
       });
 
   Future<void> playCard(String cardId) =>

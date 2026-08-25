@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/avatar"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
@@ -178,6 +179,34 @@ func RegisterProfileRoutes(mux *http.ServeMux, deps ProfileDeps, authMgr *auth.M
 			return
 		}
 		writeJSON(w, map[string]any{"avatars": profile.AvatarPresets})
+	})
+
+	// Registered without a method so it cannot conflict with the literal
+	// /api/profile/* routes above: ServeMux only orders two patterns when one
+	// is unambiguously more specific, and "more specific path, fewer methods"
+	// is a tie it refuses to break (it panics at registration).
+	mux.HandleFunc("/api/profile/{accountID}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if _, ok := bearerAccount(r, authMgr); !ok {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		target := r.PathValue("accountID")
+		if _, err := uuid.Parse(target); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		// owner=false: the viewer is somebody else, so unconverted match
+		// points stay private (👤 §1).
+		p, err := deps.Profile.Get(r.Context(), target, false)
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		writeJSON(w, p)
 	})
 
 	mux.HandleFunc("/api/leaderboard", func(w http.ResponseWriter, r *http.Request) {

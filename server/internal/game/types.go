@@ -103,12 +103,26 @@ type PlayerResult struct {
 // MatchFinishCallback is invoked once when a match reaches verdict.
 type MatchFinishCallback func(winner Role, result MatchResult)
 
+// SeatIdentity is everything the whole table is allowed to know about who is
+// sitting in a seat. It carries no role, hand, or ballot information.
+type SeatIdentity struct {
+	Name      string
+	Avatar    string
+	Bot       bool
+	AccountID string
+}
+
+// SeatIdentityFunc resolves a seat's public identity. A nil func leaves seats
+// anonymous, which is what tests and replays want.
+type SeatIdentityFunc func(seat int) SeatIdentity
+
 // Dependencies bundles the external services a Match needs.
 type Dependencies struct {
 	Config   *config.Config
 	Pack     *media.Pack
 	Renderer *PayloadRenderer
 	OnFinish MatchFinishCallback
+	Identity SeatIdentityFunc
 }
 
 // MatchOption customises Match construction.

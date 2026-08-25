@@ -130,6 +130,25 @@ class KoLayout {
   /// needs and the hard shadow underneath it.
   double get handFanHeight => isShort ? 158 : 186;
 
+  /// Ceiling for the Nown stage's picture area.
+  ///
+  /// Nown is the round's reference, not the round's content — the hand and the
+  /// turn action have to stay reachable without a scroll, so the stage is
+  /// capped rather than allowed to grow with the content column.
+  double get nownStageMaxHeight {
+    if (isShort) return 180;
+    if (isTight) return 200;
+    if (isCompact) return 240;
+    return 260;
+  }
+
+  /// Edge length of a seat avatar in the turn rail.
+  double get seatAvatarSize {
+    if (isTight) return 56;
+    if (isCompact) return 64;
+    return 72;
+  }
+
   @override
   bool operator ==(Object other) =>
       other is KoLayout && other.size == size && other.breakpoint == breakpoint;

@@ -1,9 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:knowoff_client/core/config/app_config.dart';
+import 'package:knowoff_client/core/config/client_config.dart';
 import 'package:knowoff_client/core/network/game_transport.dart' as gt;
+import 'package:knowoff_client/data/auth_service.dart';
 import 'package:knowoff_client/data/models/game_state_dto.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
+
+class _StubAuthService extends AuthService {
+  _StubAuthService() : super(baseUrl: 'http://test');
+
+  int ensureCalls = 0;
+  String? _token = 'expired-token';
+
+  @override
+  String? get accessToken => _token;
+
+  @override
+  Future<void> ensureSession() async {
+    ensureCalls++;
+    _token = 'fresh-token';
+  }
+}
 
 class _FakeTransport implements gt.GameTransport {
   final StreamController<Map<String, dynamic>> _controller =
@@ -270,5 +289,26 @@ void main() {
     await _settle();
 
     expect(notifier.state.dto.voteTarget, equals(2));
+  });
+
+  test('the queue handshake refreshes the session before sending its token',
+      () async {
+    // Regression: the socket sent whatever token was in memory, so an idle
+    // tab handshaked with an expired one. The server then dropped the
+    // connection to an anonymous account and rejected the join as a
+    // quickplay-limit failure.
+    final auth = _StubAuthService();
+    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
+    final before = auth.ensureCalls;
+
+    await notifier.queueQuickPlay(4);
+
+    expect(auth.ensureCalls, equals(before + 1));
+    expect(transport.sent.single['kind'], equals('queue_quickplay'));
+    expect(
+      (transport.sent.single['payload']
+          as Map<String, dynamic>)['access_token'],
+      equals('fresh-token'),
+    );
   });
 }

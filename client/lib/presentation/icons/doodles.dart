@@ -20,6 +20,7 @@ enum Doodle {
   poke,
   mask,
   clock,
+  robot,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -85,6 +86,8 @@ class _DoodlePainter extends CustomPainter {
         _mask(canvas, size, paint);
       case Doodle.clock:
         _clock(canvas, size, paint);
+      case Doodle.robot:
+        _robot(canvas, size, paint);
     }
   }
 
@@ -269,6 +272,27 @@ class _DoodlePainter extends CustomPainter {
     canvas.drawCircle(c, r, paint);
     canvas.drawLine(c, Offset(c.dx, c.dy - r * 0.6), paint);
     canvas.drawLine(c, Offset(c.dx + r * 0.45, c.dy), paint);
+  }
+
+  void _robot(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(w * 0.20, h * 0.34, w * 0.80, h * 0.82),
+        Radius.circular(w * 0.12),
+      ),
+      paint,
+    );
+    // Antenna: the one line that stops the head reading as a plain box.
+    canvas.drawLine(
+        Offset(w * 0.50, h * 0.34), Offset(w * 0.50, h * 0.18), paint);
+    canvas.drawCircle(Offset(w * 0.50, h * 0.14), w * 0.06, paint);
+    canvas.drawCircle(Offset(w * 0.38, h * 0.52), w * 0.05, paint);
+    canvas.drawCircle(Offset(w * 0.62, h * 0.52), w * 0.05, paint);
+    canvas.drawLine(
+        Offset(w * 0.36, h * 0.68), Offset(w * 0.64, h * 0.68), paint);
   }
 
   @override

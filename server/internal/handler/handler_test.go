@@ -11,9 +11,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/ratelimit"
+	"github.com/knowoff/knowoff/server/internal/transport"
 	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
@@ -83,6 +85,30 @@ func TestRealtimeHandler_RejectsOverCapacity(t *testing.T) {
 	conns = append(conns, c)
 }
 
+// TestHandleJoinIntent_RejectsInvalidToken pins the failure behind a
+// "join_failed: daily quickplay limit reached" report on a healthy account:
+// an expired token used to fall through anonymously, and the empty account
+// then tripped the quickplay eligibility check instead of the auth check.
+func TestHandleJoinIntent_RejectsInvalidToken(t *testing.T) {
+	s := &ConnectionState{
+		Auth: auth.NewManager(nil, []byte("test-signing-key"), "knowoff",
+			"knowoff", time.Minute, time.Hour, auth.OAuthProviders{}),
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+	env := &transport.Envelope{
+		Version: transport.ProtocolVersion,
+		Kind:    transport.IntentQueueQuickPlay,
+		Payload: map[string]any{"size": float64(4), "access_token": "expired.not.a.jwt"},
+	}
+
+	err := s.handleJoinIntent(env)
+	if err == nil || !strings.Contains(err.Error(), "invalid access token") {
+		t.Fatalf("expected an invalid access token error, got %v", err)
+	}
+	if s.AccountID != "" {
+		t.Fatalf("expected no account to be bound, got %q", s.AccountID)
+	}
+}
 
 func TestRoomJoinHandler_JSON(t *testing.T) {
 	mgr := testLobby(t)
