@@ -4,16 +4,20 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 
-/// Press-and-hold card that reveals the player's secret role while pressed.
+/// Press-and-hold chip that reveals the player's secret role while pressed.
 ///
 /// Rules §2: everyone performs the same check, so nothing about it stands out.
-/// The card therefore looks identical for Nower and Donower until held — only
+/// The chip therefore looks identical for Nower and Donower until held — only
 /// the revealed face differs, and it carries an icon plus a label, never a
-/// colour alone.
+/// colour alone. Fixed-height and compact so it can sit right above the draw
+/// pile instead of spending a full row of its own.
 class RoleCard extends StatefulWidget {
   const RoleCard({required this.role, super.key});
 
   final String? role;
+
+  /// Fixed height so callers can budget the space around it precisely.
+  static const double height = 40;
 
   @override
   State<RoleCard> createState() => _RoleCardState();
@@ -40,19 +44,14 @@ class _RoleCardState extends State<RoleCard> {
             ? KoColors.pink
             : KoColors.lime;
     final label = !visible
-        ? l10n.pressAndHoldRole
+        ? l10n.revealYourRoleAction
         : isDonower
             ? l10n.roleDonower
             : l10n.roleNower;
-    final hint = !visible
-        ? l10n.roleCardHint
-        : isDonower
-            ? l10n.roleDonowerHint
-            : l10n.roleNowerHint;
 
     return Semantics(
       button: true,
-      label: l10n.pressAndHoldRole,
+      label: l10n.revealYourRoleAction,
       child: GestureDetector(
         onTapDown: (_) => _set(true),
         onTapUp: (_) => _set(false),
@@ -62,8 +61,8 @@ class _RoleCardState extends State<RoleCard> {
         child: AnimatedContainer(
           duration: KoMotion.pop,
           curve: Curves.easeOut,
-          width: double.infinity,
-          padding: const EdgeInsets.all(KoSpace.lg),
+          height: RoleCard.height,
+          padding: const EdgeInsets.symmetric(horizontal: KoSpace.sm),
           decoration: BoxDecoration(
             color: face,
             border: Border.all(
@@ -71,31 +70,26 @@ class _RoleCardState extends State<RoleCard> {
               color: KoColors.ink,
             ),
             borderRadius: BorderRadius.circular(KoRadii.card),
-            boxShadow: <BoxShadow>[visible ? KoShadows.lg : KoShadows.md],
+            boxShadow: <BoxShadow>[visible ? KoShadows.md : KoShadows.sm],
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Transform.rotate(
-                angle: visible ? KoTilt.none : KoTilt.soft,
-                child: DoodleIcon(
-                  !visible
-                      ? Doodle.mask
-                      : isDonower
-                          ? Doodle.cloud
-                          : Doodle.eye,
-                  size: 38,
-                ),
+              DoodleIcon(
+                !visible
+                    ? Doodle.mask
+                    : isDonower
+                        ? Doodle.cloud
+                        : Doodle.eye,
+                size: 18,
               ),
-              const SizedBox(width: KoSpace.lg),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(label, style: text.headlineSmall),
-                    const SizedBox(height: 2),
-                    Text(hint, style: text.bodySmall),
-                  ],
+              const SizedBox(width: KoSpace.xs),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.labelMedium,
                 ),
               ),
             ],

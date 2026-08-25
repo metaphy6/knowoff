@@ -19,7 +19,6 @@ import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_shake.dart';
 import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
-import '../widgets/role_card.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 
@@ -185,8 +184,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
         ),
         body: KoBody(
           children: <Widget>[
-            RoleCard(role: session.myRole),
-            const SizedBox(height: KoSpace.lg),
             NownStage(nown: dto.nown, decoy: session.showDecoy),
             const SizedBox(height: KoSpace.lg),
             _TurnRail(session: session, dto: dto),
@@ -202,6 +199,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               drawPile: dto.hand.drawPile,
               specialty: dto.hand.specialty,
               selectedCardId: session.selectedCardId,
+              myRole: session.myRole,
               onSelect:
                   session.isMyTurn ? (id) => notifier.selectCard(id) : null,
               onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,

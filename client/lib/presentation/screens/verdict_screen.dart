@@ -13,6 +13,7 @@ import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_stat_tile.dart';
+import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 
 /// Match verdict: who won, every Nown revealed to everyone, and the match's
@@ -92,6 +93,11 @@ class VerdictScreen extends ConsumerWidget {
               child: SeatTile(
                 player: player,
                 isLocal: player.seat == session.seat,
+                onTap: () => showSeatSheet(
+                  context,
+                  player: player,
+                  isLocal: player.seat == session.seat,
+                ),
               ),
             ),
           const SizedBox(height: KoSpace.xl),
