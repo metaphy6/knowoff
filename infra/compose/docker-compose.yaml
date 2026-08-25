@@ -1,8 +1,34 @@
 name: knowoff
 
+# ── Resource limits ──────────────────────────────────────────────────────
+# `deploy.resources.limits` is honored by `docker compose up` outside swarm
+# mode (translated to `--cpus`/`--memory` on container create) and is the
+# mechanism used below to size every service for a single dedicated home-
+# server box: 16 cores / 30GiB RAM (see `nproc --all` / `free -h`). CPU
+# limits are soft ceilings (not reservations — the kernel scheduler still
+# time-shares idle cores), so the nominal sum across services can exceed 16
+# without harm. Memory limits ARE hard (a container that exceeds its limit
+# is OOM-killed), so the sum across services actually running together is
+# kept well under 30GiB, leaving headroom for the host kernel/Docker daemon
+# and any interactive use of this same box. Lower these if running on
+# smaller hardware, or raise `server`'s once this box is a dedicated,
+# headless home server with no other workload.
+
 services:
   postgres:
     image: postgres:16-alpine
+    # Tuned for the 3g memory limit below: shared_buffers ~25% of that,
+    # effective_cache_size ~75% (a hint, not an allocation), max_connections
+    # generous enough for the app pool (see database.max_open_conns in
+    # configs/base.yaml) plus adminer/migrate/seed-admin's transient conns.
+    command:
+      - postgres
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=768MB
+      - -c
+      - effective_cache_size=2GB
     env_file:
       - ./config/postgres/environment.env
     volumes:
@@ -12,6 +38,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "3"
+          memory: 3g
     ports:
       - "127.0.0.1:5432:5432"
     profiles: [core, tools, test, edge]
@@ -20,7 +51,10 @@ services:
     image: redis:7-alpine
     env_file:
       - ./config/redis/environment.env
-    command: ["sh", "-c", "exec redis-server --requirepass \"$$KNOWOFF_REDIS_PASSWORD\""]
+    # maxmemory matches the 1g limit below (with headroom for Redis's own
+    # overhead); allkeys-lru evicts instead of erroring once full, so a
+    # burst of concurrent sessions degrades gracefully rather than OOMing.
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$KNOWOFF_REDIS_PASSWORD\" --maxmemory 768mb --maxmemory-policy allkeys-lru"]
     volumes:
       - redis_data:/data
     healthcheck:
@@ -28,6 +62,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
     ports:
       - "127.0.0.1:6379:6379"
     profiles: [core, tools, test, edge]
@@ -44,6 +83,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1g
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:9001:9001"
@@ -61,6 +105,11 @@ services:
       - ../../content/packs:/data/packs:ro
       - ../../content/ingest:/data/ingest:ro
     entrypoint: ["/knowoffd", "migrate"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +129,11 @@ services:
     volumes:
       - ../../configs:/app/configs:ro
     entrypoint: ["/knowoffd", "seed-admin"]
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -91,6 +145,13 @@ services:
       dockerfile: Dockerfile.dev
     env_file:
       - ./config/server/environment.env
+    environment:
+      # GOMAXPROCS pins the scheduler to the cpus limit below instead of the
+      # host's full core count. GOMEMLIMIT sets a soft heap target under the
+      # hard memory limit so the GC works harder (not the OOM killer) as
+      # concurrent connections/rooms push memory up.
+      - GOMAXPROCS=8
+      - GOMEMLIMIT=7000MiB
     volumes:
       - ../../server:/app
       - ../../configs:/app/configs:ro
@@ -102,6 +163,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "8"
+          memory: 8g
+    # Docker's default of 1024 open files is the real ceiling on concurrent
+    # WebSocket connections (one fd each) — well below server.max_connections
+    # in configs/base.yaml. Raised so that config value is the actual cap.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     ports:
       - "127.0.0.1:8080:8080"
       - "127.0.0.1:9090:9090"
@@ -125,6 +198,11 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
     ports:
       - "127.0.0.1:8081:8080"
     depends_on:
@@ -149,6 +227,11 @@ services:
       timeout: 5s
       retries: 6
       start_period: 120s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
     profiles: [core, edge]
 
   nginx:
@@ -163,6 +246,18 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1g
+    # A proxied WebSocket holds 2 fds (client leg + upstream leg); Docker's
+    # default of 1024 open files capped concurrency far below any of the
+    # app-level limits. worker_rlimit_nofile in nginx.conf uses this headroom.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     ports:
       - "127.0.0.1:80:80"
       - "127.0.0.1:443:443"
@@ -188,6 +283,11 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
     depends_on:
       server:
         condition: service_healthy

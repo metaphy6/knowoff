@@ -52,6 +52,10 @@ type ServerConfig struct {
 	WriteTimeoutS   int      `yaml:"write_timeout_s"`
 	IdleTimeoutS    int      `yaml:"idle_timeout_s"`
 	AllowedOrigins  []string `yaml:"allowed_origins"`
+	// MaxConnections caps concurrent live WebSocket connections so a burst of
+	// clients degrades gracefully (HTTP 503 at upgrade time) instead of
+	// exhausting host CPU/memory. 0 means unlimited.
+	MaxConnections int `yaml:"max_connections"`
 }
 
 // WebSocketConfig tunes the WebSocket codec and keepalive.

@@ -59,6 +59,11 @@ type HandlerDeps struct {
 	Redis       interface {
 		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
 	}
+	// ConnLimiter caps concurrent live WebSocket connections; nil means unlimited.
+	ConnLimiter *ratelimit.ConnLimiter
+	// ConnLimiterRejections counts upgrades rejected because ConnLimiter was
+	// at capacity; nil is fine (no metric recorded).
+	ConnLimiterRejections interface{ Inc() }
 }
 
 // RealtimeHandler upgrades HTTP requests to WebSockets and routes Knowoff
@@ -68,10 +73,27 @@ func RealtimeHandler(deps HandlerDeps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logger := deps.Logger.With("conn_id", uuid.NewString())
 
+		// Reject before the (relatively expensive) upgrade handshake so a burst
+		// of clients past capacity fails fast with a plain HTTP response.
+		if deps.ConnLimiter != nil && !deps.ConnLimiter.TryAcquire() {
+			http.Error(w, "server at capacity", http.StatusServiceUnavailable)
+			logger.Warn("websocket connection rejected: at capacity")
+			if deps.ConnLimiterRejections != nil {
+				deps.ConnLimiterRejections.Inc()
+			}
+			return
+		}
+
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
+			if deps.ConnLimiter != nil {
+				deps.ConnLimiter.Release()
+			}
 			logger.Warn("websocket upgrade failed", "error", err)
 			return
+		}
+		if deps.ConnLimiter != nil {
+			defer deps.ConnLimiter.Release()
 		}
 
 		if g, ok := deps.Connections.(interface {

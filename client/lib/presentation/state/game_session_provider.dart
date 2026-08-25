@@ -48,12 +48,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
   /// Developer-only: discards any buffered/frozen state and resets the local
   /// session back to its initial (pre-match) shape, mirroring what the
-  /// screen looks like before a match is joined. This does not notify the
-  /// server or close the transport — the next server event simply overwrites
-  /// these defaults, same as after a real match ends.
+  /// screen looks like before a match is joined. The server only accepts a
+  /// queue/join intent as a connection's *first* message, so a stale
+  /// connection left over from the previous match would reject the next
+  /// queue attempt with `expected_intent` — reconnecting gives the next
+  /// queue call a fresh handshake to join on.
   void restart() {
     _bufferedMessages.clear();
     state = GameSession(dto: _initialDto());
+    unawaited(_transport.reconnect());
   }
 
   void _onMessage(Map<String, dynamic> message) {

@@ -9,6 +9,8 @@ import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/widgets/dev_tools_overlay.dart';
 
 class _FakeTransport implements gt.GameTransport {
+  int reconnectCount = 0;
+
   @override
   Stream<Map<String, dynamic>> get messages => const Stream.empty();
 
@@ -26,17 +28,22 @@ class _FakeTransport implements gt.GameTransport {
   Future<void> connect() async {}
 
   @override
+  Future<void> reconnect() async => reconnectCount++;
+
+  @override
   Future<void> send(Map<String, dynamic> message) async {}
 }
 
 late WidgetRef _capturedRef;
+late _FakeTransport _transport;
 
 Widget _wrap() {
+  _transport = _FakeTransport();
   return ProviderScope(
     overrides: [
       gameSessionProvider.overrideWith(
         (ref) => GameSessionNotifier(
-          transport: _FakeTransport(),
+          transport: _transport,
           initialState: const GameSession(dto: GameStateDto(phase: 'play')),
         ),
       ),
@@ -101,5 +108,9 @@ void main() {
     expect(find.text('pushed'), findsNothing);
     expect(_capturedRef.read(gameSessionProvider).dto.phase, equals('waiting'));
     expect(_capturedRef.read(gameSessionProvider).frozen, isFalse);
+
+    // A stale connection from the previous match would otherwise reject the
+    // next queue attempt server-side; restart must force a fresh handshake.
+    expect(_transport.reconnectCount, equals(1));
   });
 }
