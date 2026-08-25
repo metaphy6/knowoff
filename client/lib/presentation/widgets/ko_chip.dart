@@ -44,13 +44,30 @@ class KoChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(KoRadii.chip),
         boxShadow: <BoxShadow>[shadow],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          icon,
-          const SizedBox(width: KoSpace.sm),
-          Text(label, style: style),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final label = Text(
+            this.label,
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+          );
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              icon,
+              const SizedBox(width: KoSpace.sm),
+              // A long label on a narrow screen has to give, not overflow —
+              // but `Flexible` needs a bound to divide, and chips are also
+              // used in slots that hand down an unbounded width.
+              if (constraints.hasBoundedWidth)
+                Flexible(child: label)
+              else
+                label,
+            ],
+          );
+        },
       ),
     );
 

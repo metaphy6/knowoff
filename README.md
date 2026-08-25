@@ -46,6 +46,7 @@ make client.test     # Flutter unit/widget tests
 make client.lint     # flutter analyze + dart format check
 make compose.up      # start the local Docker Compose stack
 make compose.down    # stop the local stack
+make client.web.rebuild  # force-rebuild + recreate the client-web dev container, cache-bust the browser
 ```
 
 ## Local stack

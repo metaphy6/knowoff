@@ -1,3 +1,4 @@
+import '../widgets/ko_body.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -31,9 +32,10 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
   @override
   void initState() {
     super.initState();
-    // Display-only countdown; the server owns the phase clock.
+    // Display-only countdown; the server owns the phase clock. Skipped while
+    // the developer freeze is active.
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (mounted && !ref.read(gameSessionProvider).frozen) setState(() {});
     });
   }
 
@@ -87,7 +89,7 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
           ),
         ],
       ),
-      body: ListView(
+      body: KoBody(
         children: <Widget>[
           if (inResultWindow && result != null)
             _ResultCard(

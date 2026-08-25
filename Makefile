@@ -25,6 +25,7 @@ RUN_ID  ?=
 
 .PHONY: help git git.dry track.add track.list roadmap.status codeg \
   server.build server.test server.lint server.seed-admin client.build client.test client.lint \
+  client.web.rebuild \
   compose.up compose.down compose.snap.create compose.snap.restore \
   containers.label.version containers.label.list hosts.add hosts.remove hosts.status
 
@@ -93,6 +94,10 @@ client.test:
 client.lint:
 	@cd client && flutter analyze
 	@cd client && dart format --output=none --set-exit-if-changed .
+
+## client.web.rebuild Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window
+client.web.rebuild:
+	@$(XOPS)/client_web_ops.py rebuild
 
 ## compose.up        Start the local Docker Compose stack
 compose.up:

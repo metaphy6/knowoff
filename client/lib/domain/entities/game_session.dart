@@ -12,6 +12,7 @@ class GameSession {
     this.myRole,
     this.lastError,
     this.selectedCardId,
+    this.frozen = false,
   });
 
   final GameStateDto dto;
@@ -19,17 +20,23 @@ class GameSession {
   final String? lastError;
   final String? selectedCardId;
 
+  /// Developer-only: while true, incoming server events are buffered instead
+  /// of applied, so the screen stops advancing for UI/UX inspection.
+  final bool frozen;
+
   GameSession copyWith({
     GameStateDto? dto,
     String? myRole,
     String? lastError,
     String? selectedCardId,
+    bool? frozen,
   }) {
     return GameSession(
       dto: dto ?? this.dto,
       myRole: myRole ?? this.myRole,
       lastError: lastError,
       selectedCardId: selectedCardId ?? this.selectedCardId,
+      frozen: frozen ?? this.frozen,
     );
   }
 

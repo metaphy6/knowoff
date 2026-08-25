@@ -8,6 +8,7 @@ import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
 import '../widgets/highlighter.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
@@ -43,7 +44,7 @@ class VerdictScreen extends ConsumerWidget {
         icon: const DoodleIcon(Doodle.cards, size: 24),
         onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
       ),
-      body: ListView(
+      body: KoBody(
         children: <Widget>[
           _WinnerBanner(
             headline: nowerWin ? l10n.nowerWin : l10n.donowerWin,

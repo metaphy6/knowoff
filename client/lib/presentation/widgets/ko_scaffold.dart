@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../theme/knowoff_tokens.dart';
+import '../theme/ko_breakpoints.dart';
 import '../theme/ko_canvas_grid.dart';
 
-/// Knowoff is a phone-first game; on a desktop browser the PWA centres its
-/// content in a phone-shaped column instead of stretching tiles across 2000 px.
-const double kKoContentMaxWidth = 620;
-
 /// Centres [child] inside the house content column.
+///
+/// Used for page *chrome* — the header band, the status bar, the bottom bar.
+/// Page content goes through `KoBody`, which folds the same measurement into
+/// its scroll view's padding so the scrollbar stays at the window edge.
 ///
 /// [hugHeight] must be set wherever the column sits in a slot that hands down
 /// a loose height — a header band, a bottom bar — otherwise the centring
@@ -16,11 +17,15 @@ class KoPageWidth extends StatelessWidget {
   const KoPageWidth({
     required this.child,
     this.hugHeight = false,
+    this.maxWidth,
     super.key,
   });
 
   final Widget child;
   final bool hugHeight;
+
+  /// Overrides the window-size class default.
+  final double? maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +33,9 @@ class KoPageWidth extends StatelessWidget {
       alignment: Alignment.center,
       heightFactor: hugHeight ? 1.0 : null,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: kKoContentMaxWidth),
+        constraints: BoxConstraints(
+          maxWidth: maxWidth ?? KoLayout.of(context).contentMaxWidth,
+        ),
         child: child,
       ),
     );
@@ -53,12 +60,6 @@ class KoScaffold extends StatelessWidget {
     this.statusBar,
     this.bottomBar,
     this.showBack = true,
-    this.padding = const EdgeInsets.fromLTRB(
-      KoSpace.lg,
-      KoSpace.lg,
-      KoSpace.lg,
-      KoSpace.xl,
-    ),
     super.key,
   });
 
@@ -76,11 +77,11 @@ class KoScaffold extends StatelessWidget {
   final Widget? statusBar;
   final Widget? bottomBar;
   final bool showBack;
-  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final canPop = showBack && Navigator.of(context).canPop();
+    final layout = KoLayout.of(context);
 
     return Scaffold(
       backgroundColor: canvasColor,
@@ -106,20 +107,18 @@ class KoScaffold extends StatelessWidget {
                   KoPageWidth(
                     hugHeight: true,
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        KoSpace.lg,
+                      padding: EdgeInsets.fromLTRB(
+                        layout.gutter,
                         KoSpace.md,
-                        KoSpace.lg,
+                        layout.gutter,
                         0,
                       ),
                       child: statusBar,
                     ),
                   ),
-                Expanded(
-                  child: KoPageWidth(
-                    child: Padding(padding: padding, child: body),
-                  ),
-                ),
+                // Full-bleed on purpose: the body owns its own content column
+                // so its scrollbar lane lands at the window edge.
+                Expanded(child: body),
               ],
             ),
           ),
@@ -142,7 +141,10 @@ class KoScaffold extends StatelessWidget {
                 child: KoPageWidth(
                   hugHeight: true,
                   child: Padding(
-                    padding: const EdgeInsets.all(KoSpace.md),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: layout.gutter,
+                      vertical: KoSpace.md,
+                    ),
                     child: bottomBar,
                   ),
                 ),
@@ -172,13 +174,12 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final layout = KoLayout.of(context);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        KoSpace.lg,
-        KoSpace.md,
-        KoSpace.lg,
-        KoSpace.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: layout.gutter,
+        vertical: layout.isShort ? KoSpace.sm : KoSpace.md,
       ),
       decoration: BoxDecoration(
         color: accent,
@@ -198,8 +199,8 @@ class _Header extends StatelessWidget {
                 semanticLabel:
                     MaterialLocalizations.of(context).backButtonTooltip,
               ),
-              const SizedBox(width: KoSpace.md),
-            ] else if (glyph != null) ...<Widget>[
+              SizedBox(width: layout.isTight ? KoSpace.sm : KoSpace.md),
+            ] else if (glyph != null && !layout.isTight) ...<Widget>[
               Transform.rotate(angle: KoTilt.soft, child: glyph),
               const SizedBox(width: KoSpace.md),
             ],
@@ -210,7 +211,9 @@ class _Header extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     title,
-                    style: text.headlineMedium,
+                    style: layout.isTight
+                        ? text.headlineSmall
+                        : text.headlineMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -218,7 +221,7 @@ class _Header extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: text.bodyMedium,
-                      maxLines: 2,
+                      maxLines: layout.isShort ? 1 : 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                 ],

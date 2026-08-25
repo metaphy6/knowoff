@@ -4,6 +4,7 @@ import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
+import '../theme/ko_breakpoints.dart';
 import 'card_face.dart';
 import 'ko_chip.dart';
 
@@ -36,46 +37,82 @@ class HandFan extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    final layout = KoLayout.of(context);
+
+    final title = Text(
+      l10n.handTitle,
+      style: text.headlineSmall,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+    final count =
+        Text(l10n.handCardCount(cards.length), style: text.labelMedium);
+    final chips = <Widget>[
+      KoChip(
+        icon: const Icon(Icons.layers, size: 15, color: KoColors.ink),
+        label: l10n.drawPileCost(drawPile.length, drawPenalty),
+        color: KoColors.aqua,
+        dense: true,
+      ),
+      if (specialty != null)
+        KoChip(
+          icon: const DoodleIcon(Doodle.sparkle, size: 15),
+          label: specialtyLabel(l10n, specialty!),
+          color: KoColors.tangerine,
+          dense: true,
+          rotation: KoTilt.soft,
+        ),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Row(
-          children: <Widget>[
-            Text(l10n.handTitle, style: text.headlineSmall),
-            const SizedBox(width: KoSpace.sm),
-            Text(
-              l10n.handCardCount(cards.length),
-              style: text.labelMedium,
-            ),
-            const Spacer(),
-            KoChip(
-              icon: const Icon(Icons.layers, size: 15, color: KoColors.ink),
-              label: l10n.drawPileCost(drawPile.length, drawPenalty),
-              color: KoColors.aqua,
-              dense: true,
-            ),
-            if (specialty != null) ...<Widget>[
-              const SizedBox(width: KoSpace.xs),
-              KoChip(
-                icon: const DoodleIcon(Doodle.sparkle, size: 15),
-                label: specialtyLabel(l10n, specialty!),
-                color: KoColors.tangerine,
-                dense: true,
-                rotation: KoTilt.soft,
+        // Below the tight breakpoint the title and the chips cannot share a
+        // line without one of them being clipped, so they stack instead.
+        if (layout.isTight)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Flexible(child: title),
+                  const SizedBox(width: KoSpace.sm),
+                  count,
+                ],
+              ),
+              const SizedBox(height: KoSpace.sm),
+              Wrap(
+                  spacing: KoSpace.xs, runSpacing: KoSpace.xs, children: chips),
+            ],
+          )
+        else
+          Row(
+            children: <Widget>[
+              Flexible(child: title),
+              const SizedBox(width: KoSpace.sm),
+              count,
+              const SizedBox(width: KoSpace.sm),
+              Expanded(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: KoSpace.xs,
+                  runSpacing: KoSpace.xs,
+                  children: chips,
+                ),
               ),
             ],
-          ],
-        ),
+          ),
         const SizedBox(height: KoSpace.md),
         if (cards.isEmpty)
           _EmptyHand(message: l10n.emptyHand)
         else
           SizedBox(
-            height: 186,
+            height: layout.handFanHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              primary: false,
               padding: const EdgeInsets.symmetric(
                 horizontal: KoSpace.sm,
                 vertical: KoSpace.sm,
@@ -87,6 +124,7 @@ class HandFan extends StatelessWidget {
                 return _HandCard(
                   card: card,
                   index: index,
+                  width: layout.handCardWidth,
                   selected: card.id == selectedCardId,
                   onTap: onSelect == null ? null : () => onSelect!(card.id),
                 );
@@ -132,12 +170,14 @@ class _HandCard extends StatefulWidget {
   const _HandCard({
     required this.card,
     required this.index,
+    required this.width,
     required this.selected,
     required this.onTap,
   });
 
   final CardDto card;
   final int index;
+  final double width;
   final bool selected;
   final VoidCallback? onTap;
 
@@ -179,7 +219,7 @@ class _HandCardState extends State<_HandCard> {
             child: AnimatedContainer(
               duration: KoMotion.press,
               curve: Curves.easeOut,
-              width: 128,
+              width: widget.width,
               transform: Matrix4.translationValues(
                 _pressed ? 4 : 0,
                 selected ? -8 : 0,

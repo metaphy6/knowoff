@@ -6,7 +6,9 @@ import '../../data/api_client.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../theme/ko_breakpoints.dart';
 import '../widgets/avatar_upload_sheet.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
@@ -79,19 +81,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _body(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return KoLoading(label: l10n.loadingLabel);
+    if (_loading) {
+      return KoBody.single(child: KoLoading(label: l10n.loadingLabel));
+    }
     if (_error != null) {
-      return KoEmptyState(
-        doodle: Doodle.cross,
-        message: l10n.genericError,
-        accent: KoColors.pink,
-        action: KoButton(label: l10n.retry, onTap: _load),
+      return KoBody.single(
+        child: KoEmptyState(
+          doodle: Doodle.cross,
+          message: l10n.genericError,
+          accent: KoColors.pink,
+          action: KoButton(label: l10n.retry, onTap: _load),
+        ),
       );
     }
 
     final nickname = _profile?['nickname']?.toString() ?? '';
 
-    return ListView(
+    return KoBody(
       children: <Widget>[
         _IdentityCard(
           nickname: nickname,
@@ -109,8 +115,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           accent: KoColors.tangerine,
         ),
         GridView.count(
-          crossAxisCount: 2,
+          crossAxisCount: KoLayout.of(context).columns(compact: 2, medium: 3),
           shrinkWrap: true,
+          primary: false,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: KoSpace.md,
           crossAxisSpacing: KoSpace.md,
