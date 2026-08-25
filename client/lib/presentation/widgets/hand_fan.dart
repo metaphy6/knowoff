@@ -166,8 +166,8 @@ class _HandRail extends StatelessWidget {
             : (constraints.maxWidth - totalSpacing) / itemCount;
         // Cards are square; clamp to the rail height so a tall hand never
         // overflows its row.
-        final cardWidth = fitted.clamp(0.0, maxCardWidth)
-            .clamp(0.0, constraints.maxHeight);
+        final cardWidth =
+            fitted.clamp(0.0, maxCardWidth).clamp(0.0, constraints.maxHeight);
 
         final items = <Widget>[
           if (specialty != null)
