@@ -91,3 +91,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-25T10:35:48Z,run-20260825103548-878377,human,infra,commit,completed,fix(infra): raise container fd limits (65536) and nginx worker capacity for real concurrent-connection ceiling,,pending
 2026-08-25T10:36:35Z,run-20260825103635-880084,human,infra,note,completed,"chore(infra): raise host sysctl somaxconn=16384 and ephemeral port range 1024-65535 (user-confirmed, /etc/sysctl.d/99-knowoff.conf)",,
 2026-08-25T10:40:45Z,run-20260825104045-887188,human,docs,commit,completed,docs(guides): add SCALING.md for raising concurrent-connection ceiling and horizontal-scaling path,,pending
+2026-08-25T10:49:54Z,run-20260825104954-902474,human,xops,commit,completed,fix(xops): make git now pushes outstanding local commits even when tracking rows already match,,pending

@@ -118,6 +118,37 @@ def _working_tree_dirty() -> bool:
     return bool(out(["git", "status", "--porcelain"], check=False).strip())
 
 
+def _push_needed() -> bool:
+    """True if HEAD has commits the configured upstream doesn't have yet.
+
+    Covers the case where a prior `make git` committed locally but the
+    `git push` step itself failed (e.g. a transient network/SSH error) —
+    the tracking rows already match existing commits on re-run, so without
+    this check the commits would be silently left unpushed forever.
+    """
+    upstream = out(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+        check=False,
+    ).strip()
+    if not upstream:
+        return True  # no upstream configured yet -> first push is needed
+    ahead = out(["git", "rev-list", "--count", f"{upstream}..HEAD"], check=False).strip()
+    return ahead.isdigit() and int(ahead) > 0
+
+
+def _push() -> None:
+    step("🚀 pushing to upstream")
+    branch = out(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
+    upstream_check = out(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+        check=False,
+    ).strip()
+    if not upstream_check:
+        run(["git", "push", "--set-upstream", "origin", branch])
+    else:
+        run(["git", "push"])
+
+
 # ── subcommands ───────────────────────────────────────────────────────────
 
 def cmd_dry(_args: List[str]) -> None:
@@ -167,6 +198,10 @@ def cmd_push(_args: List[str]) -> None:
     groups = _group_by_run_id(rows)
     new_groups = [g for g in groups if g[0]["run_id"] not in committed]
     if not new_groups:
+        if _push_needed():
+            ok("all pending rows already correspond to existing commits — pushing outstanding commits")
+            _push()
+            return
         ok("all pending rows already correspond to existing commits — nothing to do")
         return
 
@@ -200,14 +235,7 @@ def cmd_push(_args: List[str]) -> None:
         run(cmd)
         ok(f"committed [{rid}]")
 
-    step("🚀 pushing to upstream")
-    branch = out(["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
-    # --set-upstream-on-first-push, otherwise plain push.
-    upstream_check = out(["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], check=False).strip()
-    if not upstream_check:
-        run(["git", "push", "--set-upstream", "origin", branch])
-    else:
-        run(["git", "push"])
+    _push()
     ok("pushed")
 
 
