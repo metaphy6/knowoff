@@ -31,6 +31,18 @@ server:
   shutdown_grace_s: 15
   # Origins allowed for CORS. Empty disables CORS headers. Use ["*"] for dev.
   allowed_origins: []
+  # Caps concurrent live WebSocket connections; the upgrade is rejected with
+  # HTTP 503 once this many are open, so a burst of clients degrades
+  # gracefully instead of exhausting host CPU/memory. Sized for a 16-core/
+  # 30GB single-box home-server deployment (server container: ulimit -n
+  # 65536, 8 CPUs, 8GB, see infra/compose/docker-compose.yaml), leaving fd
+  # headroom for the DB/Redis pools and nginx's upstream legs. This is a
+  # realistic single-box ceiling, not a path to "millions" of concurrent
+  # players — that requires horizontal scaling (multiple server replicas
+  # behind a load balancer with match/session state shared via Redis), a
+  # separate architecture change. Lower this if running on smaller hardware.
+  # 0 means unlimited.
+  max_connections: 20000
 
 websocket:
   max_message_bytes: 65536
@@ -56,15 +68,17 @@ database:
   user: knowoff
   password: ${KNOWOFF_DB_PASSWORD}
   ssl_mode: disable
-  max_open_conns: 25
-  max_idle_conns: 5
+  # Postgres is started with max_connections=200 (infra/compose); this pool
+  # leaves headroom for adminer/migrate/seed-admin's own transient conns.
+  max_open_conns: 50
+  max_idle_conns: 10
   conn_max_lifetime_s: 1800
 
 redis:
   addr: redis:6379
   password: ${KNOWOFF_REDIS_PASSWORD}
   db: 0
-  pool_size: 10
+  pool_size: 50
 
 storage:
   driver: s3

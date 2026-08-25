@@ -24,11 +24,16 @@ class _FakeTransport implements gt.GameTransport {
   @override
   bool get isConnected => true;
 
+  int reconnectCount = 0;
+
   @override
   Future<void> close() async => _controller.close();
 
   @override
   Future<void> connect() async {}
+
+  @override
+  Future<void> reconnect() async => reconnectCount++;
 
   @override
   Future<void> send(Map<String, dynamic> message) async => sent.add(message);
@@ -50,8 +55,7 @@ void main() {
     transport.close();
   });
 
-  test('freezing buffers incoming events instead of applying them',
-      () async {
+  test('freezing buffers incoming events instead of applying them', () async {
     notifier.setFrozen(true);
     transport.emit('phase_started', <String, dynamic>{
       'phase': 'discussion',
@@ -95,6 +99,11 @@ void main() {
     expect(notifier.state.frozen, isFalse);
     expect(notifier.state.dto.phase, equals('waiting'));
     expect(notifier.state.dto.round, equals(0));
+
+    // The server only accepts a queue/join intent as a connection's first
+    // message, so the next queue attempt needs a fresh handshake.
+    await _settle();
+    expect(transport.reconnectCount, equals(1));
 
     // The buffered 'discussion' event must not resurface after a restart.
     notifier.setFrozen(true);

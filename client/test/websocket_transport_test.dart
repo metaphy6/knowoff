@@ -81,5 +81,35 @@ void main() {
 
       await transport.close();
     });
+
+    test('reconnect() opens a brand-new socket for a fresh handshake',
+        () async {
+      final transport = WebSocketTransport(
+        url: url,
+        reconnectDelay: const Duration(milliseconds: 50),
+        maxReconnectDelay: const Duration(milliseconds: 200),
+      );
+
+      await transport.connect();
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      final firstServerSocket = lastServerSocket;
+      expect(firstServerSocket, isNotNull);
+
+      await transport.reconnect();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+
+      expect(transport.isConnected, isTrue);
+      expect(lastServerSocket, isNot(same(firstServerSocket)));
+
+      // The first socket's own onDone handler would otherwise schedule an
+      // auto-reconnect that later clobbers the fresh connection with a
+      // third socket. Give that stale timer a chance to fire and confirm it
+      // didn't.
+      final settledSocket = lastServerSocket;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      expect(lastServerSocket, same(settledSocket));
+
+      await transport.close();
+    });
   });
 }

@@ -28,6 +28,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/notices"
 	"github.com/knowoff/knowoff/server/internal/portal"
 	"github.com/knowoff/knowoff/server/internal/profile"
+	"github.com/knowoff/knowoff/server/internal/ratelimit"
 	"github.com/knowoff/knowoff/server/internal/reports"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
@@ -81,6 +82,15 @@ func run() error {
 		Help: "Current number of open WebSocket connections.",
 	})
 	registry.MustRegister(connections)
+
+	// Caps concurrent live WebSocket connections; sized in configs/base.yaml
+	// for this deployment's hardware. 0 (unset) means unlimited.
+	connLimiter := ratelimit.NewConnLimiter(cfg.Server.MaxConnections)
+	connLimiterRejections := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "knowoff_websocket_connections_rejected_total",
+		Help: "Total WebSocket upgrade attempts rejected because the server was at its connection cap.",
+	})
+	registry.MustRegister(connLimiterRejections)
 
 	db, err := openDB(cfg)
 	if err != nil {
@@ -148,16 +158,18 @@ func run() error {
 	}
 
 	handlerDeps := handler.HandlerDeps{
-		Config:      cfg,
-		Logger:      logger,
-		Lobby:       lobbyManager,
-		Connections: connections,
-		Auth:        authManager,
-		Profile:     profileManager,
-		Audit:       auditLogger,
-		Leaderboard: leaderboardManager,
-		Economy:     economyManager,
-		Redis:       redisClient,
+		Config:                cfg,
+		Logger:                logger,
+		Lobby:                 lobbyManager,
+		Connections:           connections,
+		Auth:                  authManager,
+		Profile:               profileManager,
+		Audit:                 auditLogger,
+		Leaderboard:           leaderboardManager,
+		Economy:               economyManager,
+		Redis:                 redisClient,
+		ConnLimiter:           connLimiter,
+		ConnLimiterRejections: connLimiterRejections,
 	}
 
 	backfillManager := bots.NewBackfillManager(bots.Deps{

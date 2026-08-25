@@ -405,5 +405,8 @@ class _FakeTransport implements gt.GameTransport {
   Future<void> connect() async {}
 
   @override
+  Future<void> reconnect() async {}
+
+  @override
   Future<void> send(Map<String, dynamic> message) async {}
 }

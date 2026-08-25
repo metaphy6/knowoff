@@ -172,6 +172,9 @@ func validate(cfg *Config) []string {
 	if cfg.Server.MetricsPort <= 0 {
 		errs = append(errs, fmt.Sprintf("server.metrics_port must be > 0, got %d", cfg.Server.MetricsPort))
 	}
+	if cfg.Server.MaxConnections < 0 {
+		errs = append(errs, fmt.Sprintf("server.max_connections must be >= 0, got %d", cfg.Server.MaxConnections))
+	}
 	if cfg.Database.Host == "" {
 		errs = append(errs, "database.host is required")
 	}
