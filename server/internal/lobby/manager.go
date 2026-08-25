@@ -269,6 +269,7 @@ func (m *Manager) makeRoomLocked(size int) (*Room, error) {
 			Pack:     m.deps.Pack,
 			Renderer: renderer,
 			OnFinish: r.matchFinishCallback(),
+			Identity: r.SeatIdentity,
 		}
 		if err := r.StartMatch(deps); err != nil {
 			return err

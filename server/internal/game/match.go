@@ -514,6 +514,13 @@ func (m *Match) playerPayloads() []map[string]any {
 			"connected":  p.Connected,
 			"eliminated": p.Eliminated,
 		}
+		if m.deps.Identity != nil {
+			id := m.deps.Identity(seat)
+			entry["name"] = id.Name
+			entry["avatar"] = id.Avatar
+			entry["bot"] = id.Bot
+			entry["account_id"] = id.AccountID
+		}
 		if p.Eliminated {
 			entry["role"] = string(p.Role)
 		}

@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
+import '../theme/ko_breakpoints.dart';
 import '../widgets/hand_fan.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
@@ -19,6 +20,7 @@ import '../widgets/ko_shake.dart';
 import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
 import '../widgets/role_card.dart';
+import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
@@ -202,6 +204,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               selectedCardId: session.selectedCardId,
               onSelect:
                   session.isMyTurn ? (id) => notifier.selectCard(id) : null,
+              onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
             ),
             const SizedBox(height: KoSpace.lg),
             if (session.isMyTurn)
@@ -222,21 +225,12 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                         : null,
                   ),
                   const SizedBox(height: KoSpace.md),
-                  Wrap(
-                    spacing: KoSpace.md,
-                    runSpacing: KoSpace.md,
-                    children: <Widget>[
-                      KoButton(
-                        label: l10n.drawCards,
-                        backgroundColor: KoColors.aqua,
-                        icon: const DoodleIcon(Doodle.cards, size: 20),
-                        onTap: dto.hand.drawPile.isEmpty
-                            ? null
-                            : () => notifier.drawCards(1),
-                      ),
-                      if (specialty != null) specialty,
-                    ],
-                  ),
+                  if (specialty != null)
+                    Wrap(
+                      spacing: KoSpace.md,
+                      runSpacing: KoSpace.md,
+                      children: <Widget>[specialty],
+                    ),
                 ],
               )
             else
@@ -289,6 +283,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
 
 /// Turn order rail — Rules §3 re-randomizes it every round and reveals every
 /// play immediately, so who is next is public information worth showing.
+///
+/// Each seat is a tap target: the sheet behind it is where a player checks who
+/// they are up against and where the flag lives (👤 §3).
 class _TurnRail extends StatelessWidget {
   const _TurnRail({required this.session, required this.dto});
 
@@ -297,11 +294,14 @@ class _TurnRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final avatarSize = KoLayout.of(context).seatAvatarSize;
     final players = <PlayerDto>[...dto.players]
       ..sort((a, b) => a.seat.compareTo(b.seat));
 
     return SizedBox(
-      height: 80,
+      // Avatar + its selection frame + the caption line underneath.
+      height: avatarSize + 30,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: players.length,
@@ -309,39 +309,48 @@ class _TurnRail extends StatelessWidget {
         itemBuilder: (context, index) {
           final player = players[index];
           final isTurn = player.seat == dto.turnSeat && !player.eliminated;
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: isTurn ? KoColors.lime : Colors.transparent,
-                  border: Border.all(
-                    width: isTurn ? KoBorders.regular : 0,
-                    color: isTurn ? KoColors.ink : Colors.transparent,
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => showSeatSheet(
+              context,
+              player: player,
+              isLocal: player.seat == session.seat,
+              isTurn: isTurn,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: isTurn ? KoColors.lime : Colors.transparent,
+                    border: Border.all(
+                      width: isTurn ? KoBorders.regular : 0,
+                      color: isTurn ? KoColors.ink : Colors.transparent,
+                    ),
+                    borderRadius: BorderRadius.circular(KoRadii.card),
                   ),
-                  borderRadius: BorderRadius.circular(KoRadii.card),
+                  child: SeatAvatar(
+                    player: player,
+                    dimmed: player.eliminated,
+                    size: avatarSize,
+                  ),
                 ),
-                child: SeatAvatar(
-                  player: player,
-                  dimmed: player.eliminated,
-                  size: 42,
+                const SizedBox(height: 2),
+                SizedBox(
+                  width: avatarSize + 16,
+                  child: Text(
+                    player.seat == session.seat
+                        ? l10n.youLabel
+                        : seatDisplayName(player),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              SizedBox(
-                width: 62,
-                child: Text(
-                  player.seat == session.seat
-                      ? AppLocalizations.of(context).youLabel
-                      : seatDisplayName(player),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

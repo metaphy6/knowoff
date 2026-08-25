@@ -525,6 +525,35 @@
   "@reportNownAction": {
     "description": "Button to report the current round's Nown media."
   },
+  "reportPlayerAction": "Report player",
+  "@reportPlayerAction": {
+    "description": "Button in the seat sheet that opens a conduct report."
+  },
+  "seatNumberLabel": "Seat {seat}",
+  "@seatNumberLabel": {
+    "description": "Subtitle under a player's name in the seat sheet.",
+    "placeholders": {
+      "seat": {
+        "type": "int"
+      }
+    }
+  },
+  "seatSheetBotNote": "Backfill bot. It earns nothing and has no profile.",
+  "@seatSheetBotNote": {
+    "description": "Explains why a bot seat shows no career stats."
+  },
+  "seatSheetNoStats": "No public profile for this seat.",
+  "@seatSheetNoStats": {
+    "description": "Shown when a seat has no account to look stats up for."
+  },
+  "drawPileLabel": "Draw pile",
+  "@drawPileLabel": {
+    "description": "Caption on the draw pile object."
+  },
+  "drawPileEmpty": "Pile empty",
+  "@drawPileEmpty": {
+    "description": "Caption on the draw pile once every card is gone."
+  },
   "specialtyRevealAction": "Reveal a Hand",
   "@specialtyRevealAction": {
     "description": "Button to use the Reveal specialty card."

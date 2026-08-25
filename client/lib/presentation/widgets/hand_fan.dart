@@ -6,6 +6,7 @@ import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/ko_breakpoints.dart';
 import 'card_face.dart';
+import 'card_pile.dart';
 import 'ko_chip.dart';
 
 /// The player's hand, drawn as an actual fan of physical cards.
@@ -20,6 +21,7 @@ class HandFan extends StatelessWidget {
     this.specialty,
     this.selectedCardId,
     this.onSelect,
+    this.onDraw,
     this.drawPenalty = 5,
     super.key,
   });
@@ -29,6 +31,9 @@ class HandFan extends StatelessWidget {
   final String? specialty;
   final String? selectedCardId;
   final ValueChanged<String>? onSelect;
+
+  /// Draws one card from the pile. Null when drawing is not legal right now.
+  final VoidCallback? onDraw;
 
   /// `points.draw_penalty` — surfaced because Rules §3 prices panic-drawing.
   final int drawPenalty;
@@ -48,12 +53,6 @@ class HandFan extends StatelessWidget {
     final count =
         Text(l10n.handCardCount(cards.length), style: text.labelMedium);
     final chips = <Widget>[
-      KoChip(
-        icon: const Icon(Icons.layers, size: 15, color: KoColors.ink),
-        label: l10n.drawPileCost(drawPile.length, drawPenalty),
-        color: KoColors.aqua,
-        dense: true,
-      ),
       if (specialty != null)
         KoChip(
           icon: const DoodleIcon(Doodle.sparkle, size: 15),
@@ -105,32 +104,53 @@ class HandFan extends StatelessWidget {
             ],
           ),
         const SizedBox(height: KoSpace.md),
-        if (cards.isEmpty)
-          _EmptyHand(message: l10n.emptyHand)
-        else
-          SizedBox(
-            height: layout.handFanHeight,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              primary: false,
-              padding: const EdgeInsets.symmetric(
-                horizontal: KoSpace.sm,
-                vertical: KoSpace.sm,
+        // The pile leads the rail rather than scrolling with the hand: it is
+        // the one thing here that costs points, so it never scrolls away.
+        SizedBox(
+          height: layout.handFanHeight,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: KoSpace.sm),
+                child: CardPile(
+                  count: drawPile.length,
+                  penalty: drawPenalty,
+                  height: layout.handFanHeight - 34,
+                  onDraw: onDraw,
+                ),
               ),
-              itemCount: cards.length,
-              separatorBuilder: (_, __) => const SizedBox(width: KoSpace.md),
-              itemBuilder: (context, index) {
-                final card = cards[index];
-                return _HandCard(
-                  card: card,
-                  index: index,
-                  width: layout.handCardWidth,
-                  selected: card.id == selectedCardId,
-                  onTap: onSelect == null ? null : () => onSelect!(card.id),
-                );
-              },
-            ),
+              const SizedBox(width: KoSpace.md),
+              Expanded(
+                child: cards.isEmpty
+                    ? Center(child: _EmptyHand(message: l10n.emptyHand))
+                    : ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        primary: false,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KoSpace.sm,
+                          vertical: KoSpace.sm,
+                        ),
+                        itemCount: cards.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(width: KoSpace.md),
+                        itemBuilder: (context, index) {
+                          final card = cards[index];
+                          return _HandCard(
+                            card: card,
+                            index: index,
+                            width: layout.handCardWidth,
+                            selected: card.id == selectedCardId,
+                            onTap: onSelect == null
+                                ? null
+                                : () => onSelect!(card.id),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
+        ),
       ],
     );
   }

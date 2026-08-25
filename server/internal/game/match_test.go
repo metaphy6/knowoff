@@ -124,6 +124,60 @@ func newTestMatch(t *testing.T, size int, opts ...MatchOption) (*Match, *fakeBca
 	return m, bcast
 }
 
+// TestMatch_PlayerPayloads_Identity guards the wire contract the client's seat
+// rail depends on: a table can only tell a human from a backfill bot if the
+// match actually publishes who is sitting where.
+func TestMatch_PlayerPayloads_Identity(t *testing.T) {
+	m, _ := newTestMatch(t, 4)
+	for _, entry := range m.playerPayloads() {
+		if _, ok := entry["name"]; ok {
+			t.Fatalf("match without an identity resolver leaked a name: %v", entry)
+		}
+	}
+
+	cfg := testConfig(4)
+	pack := loadGoldenPack(t)
+	renderer := NewPayloadRenderer(media.NewManager(pack), media.NewSignedURLIssuer([]byte("test"), time.Minute), "")
+	withID := NewMatch(4, Dependencies{
+		Config:   cfg,
+		Pack:     pack,
+		Renderer: renderer,
+		Identity: func(seat int) SeatIdentity {
+			if seat == 1 {
+				return SeatIdentity{Name: "Bot_x_1", Bot: true}
+			}
+			return SeatIdentity{
+				Name:      "Human" + strconv.Itoa(seat),
+				Avatar:    "detective",
+				AccountID: "acc-" + strconv.Itoa(seat),
+			}
+		},
+	}, newFakeBcast(4))
+
+	entries := withID.playerPayloads()
+	if len(entries) != 4 {
+		t.Fatalf("expected 4 seat payloads, got %d", len(entries))
+	}
+	bot := entries[1]
+	if bot["name"] != "Bot_x_1" || bot["bot"] != true {
+		t.Fatalf("bot seat not published: %v", bot)
+	}
+	if bot["account_id"] != "" {
+		t.Fatalf("bot seat should carry no account id: %v", bot)
+	}
+	human := entries[0]
+	if human["name"] != "Human0" || human["bot"] != false {
+		t.Fatalf("human seat not published: %v", human)
+	}
+	if human["avatar"] != "detective" || human["account_id"] != "acc-0" {
+		t.Fatalf("human seat missing profile fields: %v", human)
+	}
+	// Roles stay hidden until elimination, identity or not (Rules §4).
+	if _, ok := human["role"]; ok {
+		t.Fatalf("identity payload leaked a role: %v", human)
+	}
+}
+
 func TestMatch_Start_RolesAndDealing(t *testing.T) {
 	m, _ := newTestMatch(t, 6, WithSeed(1))
 	if err := m.Start(); err != nil {
