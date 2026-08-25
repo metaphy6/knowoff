@@ -60,89 +60,82 @@ class NownStage extends StatelessWidget {
       );
     }
 
-    return KoContainer(
-      backgroundColor: KoColors.whiteWell,
-      borderWidth: KoBorders.thick,
-      shadow: KoShadows.lg,
-      padding: EdgeInsets.zero,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: KoSpace.md,
-              vertical: KoSpace.sm,
-            ),
-            decoration: BoxDecoration(
-              color: blind ? KoColors.canvasDeep : KoColors.aqua,
-              border: const Border(
-                bottom:
-                    BorderSide(width: KoBorders.regular, color: KoColors.ink),
-              ),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(KoRadii.card - KoBorders.thick),
-              ),
-            ),
-            child: Row(
-              children: <Widget>[
-                DoodleIcon(blind ? Doodle.mask : Doodle.eye, size: 18),
-                const SizedBox(width: KoSpace.sm),
-                Expanded(
-                  child: Text(
-                    blind ? l10n.nownHiddenLabel : l10n.nownLabel,
-                    style: Theme.of(context).textTheme.labelMedium,
+    // The Nown is the round's subject, not its wallpaper. Capping the whole
+    // card's width to its content's max height keeps the frame — header bar
+    // included — a square-ish block instead of a full-width band of mostly
+    // empty white on a wide window.
+    final double maxH = KoLayout.of(context).nownStageMaxHeight;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxH),
+        child: KoContainer(
+          backgroundColor: KoColors.whiteWell,
+          borderWidth: KoBorders.thick,
+          shadow: KoShadows.lg,
+          padding: EdgeInsets.zero,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: KoSpace.md,
+                  vertical: KoSpace.sm,
+                ),
+                decoration: BoxDecoration(
+                  color: blind ? KoColors.canvasDeep : KoColors.aqua,
+                  border: const Border(
+                    bottom: BorderSide(
+                        width: KoBorders.regular, color: KoColors.ink),
+                  ),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(KoRadii.card - KoBorders.thick),
                   ),
                 ),
-                if (!blind)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => showDialog<void>(
-                      context: context,
-                      builder: (context) =>
-                          ReportDialog(targetMediaID: nown!.id),
-                    ),
-                    child: Semantics(
-                      button: true,
-                      label: l10n.reportNownAction,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: KoColors.pink,
-                          border: Border.all(
-                            width: KoBorders.regular,
-                            color: KoColors.ink,
-                          ),
-                          borderRadius: BorderRadius.circular(KoRadii.chip),
-                          boxShadow: const <BoxShadow>[KoShadows.sm],
-                        ),
-                        child: const Icon(Icons.flag_outlined, size: 16),
+                child: Row(
+                  children: <Widget>[
+                    DoodleIcon(blind ? Doodle.mask : Doodle.eye, size: 18),
+                    const SizedBox(width: KoSpace.sm),
+                    Expanded(
+                      child: Text(
+                        blind ? l10n.nownHiddenLabel : l10n.nownLabel,
+                        style: Theme.of(context).textTheme.labelMedium,
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
-          Builder(
-            builder: (context) {
-              // The Nown is the round's subject, not its wallpaper. Capping
-              // both axes keeps it a card-sized 16:10 picture on a desktop
-              // window instead of a full-width band of empty white, while a
-              // phone still gets the full column width.
-              final maxH = KoLayout.of(context).nownStageMaxHeight;
-              return Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxHeight: maxH,
-                    maxWidth: maxH * 4 / 3,
-                  ),
-                  child: AspectRatio(aspectRatio: 4 / 3, child: content),
+                    if (!blind)
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => showDialog<void>(
+                          context: context,
+                          builder: (context) =>
+                              ReportDialog(targetMediaID: nown!.id),
+                        ),
+                        child: Semantics(
+                          button: true,
+                          label: l10n.reportNownAction,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: KoColors.pink,
+                              border: Border.all(
+                                width: KoBorders.regular,
+                                color: KoColors.ink,
+                              ),
+                              borderRadius: BorderRadius.circular(KoRadii.chip),
+                              boxShadow: const <BoxShadow>[KoShadows.sm],
+                            ),
+                            child: const Icon(Icons.flag_outlined, size: 16),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              );
-            },
+              ),
+              AspectRatio(aspectRatio: 1, child: content),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
