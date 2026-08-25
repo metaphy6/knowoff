@@ -3,21 +3,19 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
+import '../theme/ko_breakpoints.dart';
 
-/// Press-and-hold chip that reveals the player's secret role while pressed.
+/// Press-and-hold square that reveals the player's secret role while pressed.
 ///
 /// Rules §2: everyone performs the same check, so nothing about it stands out.
 /// The chip therefore looks identical for Nower and Donower until held — only
 /// the revealed face differs, and it carries an icon plus a label, never a
-/// colour alone. Fixed-height and compact so it can sit right above the draw
+/// colour alone. Fixed-size and compact so it can sit right above the draw
 /// pile instead of spending a full row of its own.
 class RoleCard extends StatefulWidget {
   const RoleCard({required this.role, super.key});
 
   final String? role;
-
-  /// Fixed height so callers can budget the space around it precisely.
-  static const double height = 40;
 
   @override
   State<RoleCard> createState() => _RoleCardState();
@@ -35,6 +33,9 @@ class _RoleCardState extends State<RoleCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
+    // Edge length comes from the shared breakpoint table so the draw pile
+    // underneath always keeps the vertical room its own face needs.
+    final double size = KoLayout.of(context).roleSquareSize;
     final isDonower = widget.role == 'donower';
     final visible = _pressed && widget.role != null;
 
@@ -43,8 +44,11 @@ class _RoleCardState extends State<RoleCard> {
         : isDonower
             ? KoColors.pink
             : KoColors.lime;
+    // The idle face carries no label — "Reveal your role" reads fine in a
+    // wide chip but not a square, and idle never needs to communicate role
+    // anyway. Only the revealed face, which does, gets a word next to it.
     final label = !visible
-        ? l10n.revealYourRoleAction
+        ? null
         : isDonower
             ? l10n.roleDonower
             : l10n.roleNower;
@@ -61,8 +65,9 @@ class _RoleCardState extends State<RoleCard> {
         child: AnimatedContainer(
           duration: KoMotion.pop,
           curve: Curves.easeOut,
-          height: RoleCard.height,
-          padding: const EdgeInsets.symmetric(horizontal: KoSpace.sm),
+          width: size,
+          height: size,
+          padding: const EdgeInsets.all(KoSpace.xs),
           decoration: BoxDecoration(
             color: face,
             border: Border.all(
@@ -72,8 +77,9 @@ class _RoleCardState extends State<RoleCard> {
             borderRadius: BorderRadius.circular(KoRadii.card),
             boxShadow: <BoxShadow>[visible ? KoShadows.md : KoShadows.sm],
           ),
-          child: Row(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               DoodleIcon(
                 !visible
@@ -83,15 +89,15 @@ class _RoleCardState extends State<RoleCard> {
                         : Doodle.eye,
                 size: 18,
               ),
-              const SizedBox(width: KoSpace.xs),
-              Flexible(
-                child: Text(
+              if (label != null) ...<Widget>[
+                const SizedBox(height: 2),
+                Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: text.labelMedium,
+                  style: text.labelSmall?.copyWith(height: 1.0),
                 ),
-              ),
+              ],
             ],
           ),
         ),

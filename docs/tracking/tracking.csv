@@ -98,3 +98,6 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-25T12:29:38Z,run-20260825122938-1087501,human,client,commit,completed,fix(client): make hand cards fit without scrolling and match specialty card shape,,pending
 2026-08-25T12:49:59Z,run-20260825124959-1124381,human,client,commit,completed,"fix(client): shrink-fit hand cards, move draw pile to hand end, always-visible bot options, bigger vote pips",,pending
 2026-08-25T13:26:27Z,run-20260825132627-1187458,human,client,commit,completed,"fix(client): compact role chip above draw pile, apparent Nown flag, squarer Nown stage, vibrant vote pips, tap-to-view seats in voting and post-game",,pending
+2026-08-25T13:46:54Z,run-20260825134654-1222774,human,client,commit,completed,fix(client): shrink Nown stage to a square and move it above the hand,,pending
+2026-08-25T13:51:19Z,run-20260825135119-1231686,human,client,commit,completed,"fix(client): revert Nown stage layout, shrink reveal-your-role chip only",,pending
+2026-08-25T14:15:36Z,run-20260825141536-1274825,human,client,commit,completed,fix(client): square the Nown stage and enlarge the reveal-role button,,pending
