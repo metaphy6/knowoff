@@ -225,8 +225,7 @@ void main() {
       expect(tapped, equals('c2'));
     });
 
-    testWidgets(
-        'shows a tap-to-play banner once a card is selected on my turn',
+    testWidgets('shows a tap-to-play banner once a card is selected on my turn',
         (tester) async {
       await tester.pumpWidget(
         _wrap(
@@ -335,7 +334,8 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byKey(const ValueKey<String>('hand-move-banner-cancel')));
+      await tester
+          .tap(find.byKey(const ValueKey<String>('hand-move-banner-cancel')));
       await tester.pump();
       expect(cancelled, isTrue);
     });

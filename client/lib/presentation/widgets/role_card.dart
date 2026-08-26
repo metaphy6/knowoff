@@ -91,20 +91,20 @@ class _RoleCardState extends State<RoleCard> {
                 size: iconSize,
               ),
               ...<Widget>[
-              const SizedBox(height: 2),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: (size >= 120 ? text.labelLarge : text.labelMedium)
-                    ?.copyWith(
-                  height: 1.0,
-                  fontWeight: FontWeight.w600,
-                  color: KoColors.ink,
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: (size >= 120 ? text.labelLarge : text.labelMedium)
+                      ?.copyWith(
+                    height: 1.0,
+                    fontWeight: FontWeight.w600,
+                    color: KoColors.ink,
+                  ),
                 ),
-              ),
-            ],
+              ],
             ],
           ),
         ),

@@ -22,6 +22,7 @@ import '../widgets/play_table.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/dev_tools_overlay.dart';
+import '../widgets/game_start_splash.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
 /// the one action a turn allows.
@@ -35,6 +36,11 @@ class RoundScreen extends ConsumerStatefulWidget {
 class _RoundScreenState extends ConsumerState<RoundScreen> {
   Timer? _ticker;
   int _pokeCount = 0;
+
+  /// Anchor for the game-start splash's landing dive, and whether that splash
+  /// already played out (prefetch fires once per match — never mid-match).
+  final GlobalKey _timerBarKey = GlobalKey();
+  bool _startSplashDone = false;
 
   @override
   void initState() {
@@ -173,137 +179,159 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
 
     final specialty = _specialtyAction(context, notifier, session, dto);
 
+    // The pre-match countdown announces itself with the game-start splash: a
+    // hero card that holds centre stage, then dives into the timer bar below.
+    final showStartSplash =
+        dto.phase == 'prefetch' && !_startSplashDone && window > 0;
+
     return KoShake(
       trigger: _pokeCount,
-      child: KoScaffold(
-        title: l10n.roundLabel(dto.round),
-        subtitle: _turnStatus(l10n, session, dto),
-        accent: session.isMyTurn ? KoColors.lime : KoColors.violet,
-        showBack: false,
-        leadingGlyph: const DoodleIcon(Doodle.cards, size: 30),
-        statusBar: Row(
-          children: <Widget>[
-            if (window > 0)
-              Expanded(
-                child: KoTimerBar(
-                  remainingSeconds: remaining,
-                  totalSeconds: window,
-                  label: l10n.turnTimeRemaining(remaining),
-                ),
-              )
-            else
-              const Spacer(),
-            const SizedBox(width: KoSpace.md),
-            KoVoteBudget(
-              remaining: dto.remainingVotes,
-              total: dto.players.length >= 6 ? 3 : 2,
-              label: l10n.voteBudgetLabel,
-            ),
-          ],
-        ),
-        body: KoBody(
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        children: <Widget>[
+          KoScaffold(
+            title: l10n.roundLabel(dto.round),
+            subtitle: _turnStatus(l10n, session, dto),
+            accent: session.isMyTurn ? KoColors.lime : KoColors.violet,
+            showBack: false,
+            leadingGlyph: const DoodleIcon(Doodle.cards, size: 30),
+            statusBar: Row(
               children: <Widget>[
-                _TurnRail(
-                  session: session,
-                  dto: dto,
-                  onPoke: (seat) {
-                    notifier.poke(seat);
-                    if (devEchoPokes.value) setState(() => _pokeCount++);
-                  },
-                ),
+                if (window > 0)
+                  Expanded(
+                    child: KoTimerBar(
+                      key: _timerBarKey,
+                      remainingSeconds: remaining,
+                      totalSeconds: window,
+                      label: l10n.turnTimeRemaining(remaining),
+                    ),
+                  )
+                else
+                  const Spacer(),
                 const SizedBox(width: KoSpace.md),
-                Expanded(
-                  child: NownStage(nown: dto.nown, decoy: session.showDecoy),
+                KoVoteBudget(
+                  remaining: dto.remainingVotes,
+                  total: dto.players.length >= 6 ? 3 : 2,
+                  label: l10n.voteBudgetLabel,
                 ),
               ],
             ),
-            const SizedBox(height: KoSpace.lg),
-            PlayTable(
-              players: dto.players,
-              plays: dto.plays,
-              highlightSeat: dto.turnSeat,
-            ),
-            const SizedBox(height: KoSpace.xl),
-            HandFan(
-              cards: dto.hand.cards,
-              drawPile: dto.hand.drawPile,
-              specialty: dto.hand.specialty,
-              selectedCardId: session.selectedCardId,
-              myRole: session.myRole,
-              isMyTurn: session.isMyTurn,
-              moveLocked: session.moveLocked,
-              onSelect:
-                  session.canPickCard ? (id) => notifier.selectCard(id) : null,
-              onConfirm: session.canPickCard
-                  ? (id) => _confirmSelection(notifier, session, id)
-                  : null,
-              onCancelSelection: session.selectedCardId != null
-                  ? () => notifier.clearSelection()
-                  : null,
-              onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
-            ),
-            const SizedBox(height: KoSpace.lg),
-            if (session.isMyTurn)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  if (specialty != null)
-                    Wrap(
-                      spacing: KoSpace.md,
-                      runSpacing: KoSpace.md,
-                      children: <Widget>[specialty],
-                    ),
-                ],
-              )
-            else
-              KoContainer(
-                backgroundColor: session.amEliminated
-                    ? KoColors.surface
-                    : KoColors.whiteWell,
-                padding: const EdgeInsets.all(KoSpace.lg),
-                child: Row(
+            body: KoBody(
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    DoodleIcon(
-                      session.amEliminated ? Doodle.cross : Doodle.clock,
-                      size: 26,
+                    _TurnRail(
+                      session: session,
+                      dto: dto,
+                      onPoke: (seat) {
+                        notifier.poke(seat);
+                        if (devEchoPokes.value) setState(() => _pokeCount++);
+                      },
                     ),
                     const SizedBox(width: KoSpace.md),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Text(
-                            _turnStatus(l10n, session, dto),
-                            style: text.titleLarge,
-                          ),
-                          if (session.amEliminated)
-                            Text(l10n.spectatingHint, style: text.bodySmall),
-                        ],
-                      ),
+                      child:
+                          NownStage(nown: dto.nown, decoy: session.showDecoy),
                     ),
-                    if (!session.amEliminated && dto.turnSeat >= 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: KoSpace.sm),
-                        child: KoButton(
-                          label: l10n.pokeLabel,
-                          size: KoButtonSize.small,
-                          backgroundColor: KoColors.pink,
-                          icon: const DoodleIcon(Doodle.poke, size: 18),
-                          onTap: () {
-                            notifier.poke(dto.turnSeat);
-                            setState(() => _pokeCount++);
-                          },
-                        ),
-                      ),
                   ],
                 ),
+                const SizedBox(height: KoSpace.lg),
+                PlayTable(
+                  players: dto.players,
+                  plays: dto.plays,
+                  highlightSeat: dto.turnSeat,
+                ),
+                const SizedBox(height: KoSpace.xl),
+                HandFan(
+                  cards: dto.hand.cards,
+                  drawPile: dto.hand.drawPile,
+                  specialty: dto.hand.specialty,
+                  selectedCardId: session.selectedCardId,
+                  myRole: session.myRole,
+                  isMyTurn: session.isMyTurn,
+                  moveLocked: session.moveLocked,
+                  onSelect: session.canPickCard
+                      ? (id) => notifier.selectCard(id)
+                      : null,
+                  onConfirm: session.canPickCard
+                      ? (id) => _confirmSelection(notifier, session, id)
+                      : null,
+                  onCancelSelection: session.selectedCardId != null
+                      ? () => notifier.clearSelection()
+                      : null,
+                  onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
+                ),
+                const SizedBox(height: KoSpace.lg),
+                if (session.isMyTurn)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      if (specialty != null)
+                        Wrap(
+                          spacing: KoSpace.md,
+                          runSpacing: KoSpace.md,
+                          children: <Widget>[specialty],
+                        ),
+                    ],
+                  )
+                else
+                  KoContainer(
+                    backgroundColor: session.amEliminated
+                        ? KoColors.surface
+                        : KoColors.whiteWell,
+                    padding: const EdgeInsets.all(KoSpace.lg),
+                    child: Row(
+                      children: <Widget>[
+                        DoodleIcon(
+                          session.amEliminated ? Doodle.cross : Doodle.clock,
+                          size: 26,
+                        ),
+                        const SizedBox(width: KoSpace.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text(
+                                _turnStatus(l10n, session, dto),
+                                style: text.titleLarge,
+                              ),
+                              if (session.amEliminated)
+                                Text(l10n.spectatingHint,
+                                    style: text.bodySmall),
+                            ],
+                          ),
+                        ),
+                        if (!session.amEliminated && dto.turnSeat >= 0)
+                          Padding(
+                            padding: const EdgeInsets.only(left: KoSpace.sm),
+                            child: KoButton(
+                              label: l10n.pokeLabel,
+                              size: KoButtonSize.small,
+                              backgroundColor: KoColors.pink,
+                              icon: const DoodleIcon(Doodle.poke, size: 18),
+                              onTap: () {
+                                notifier.poke(dto.turnSeat);
+                                setState(() => _pokeCount++);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (showStartSplash)
+            Positioned.fill(
+              child: GameStartSplash(
+                windowSeconds: window,
+                remainingSeconds: remaining,
+                anchor: _timerBarKey,
+                onDone: () => setState(() => _startSplashDone = true),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
