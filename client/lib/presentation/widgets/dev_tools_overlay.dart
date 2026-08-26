@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/navigation/root_navigator_key.dart';
 import '../state/game_session_provider.dart';
 
+final ValueNotifier<bool> devEchoPokes = ValueNotifier<bool>(false);
+
 /// Debug-build-only floating controls for investigating the current screen:
 /// freeze game flow (incoming server events + countdown redraws), and
 /// restart the local session back to its pre-match shape.
@@ -45,6 +47,22 @@ class DevToolsOverlay extends ConsumerWidget {
               child: Icon(
                 frozen ? Icons.play_arrow : Icons.pause,
                 color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<bool>(
+              valueListenable: devEchoPokes,
+              builder: (context, echoPokes, _) => FloatingActionButton.small(
+                heroTag: 'dev_echo_poke_fab',
+                tooltip: echoPokes
+                    ? 'Stop echoing pokes (dev)'
+                    : 'Echo pokes to self (dev)',
+                backgroundColor: echoPokes ? Colors.redAccent : Colors.black87,
+                onPressed: () => devEchoPokes.value = !echoPokes,
+                child: Icon(
+                  echoPokes ? Icons.vibration : Icons.vibration_outlined,
+                  color: Colors.white,
+                ),
               ),
             ),
           ],

@@ -17,6 +17,8 @@ import 'package:knowoff_client/presentation/widgets/hand_fan.dart';
 import 'package:knowoff_client/presentation/widgets/ko_body.dart';
 import 'package:knowoff_client/presentation/widgets/ko_chip.dart';
 import 'package:knowoff_client/presentation/widgets/ko_scaffold.dart';
+import 'package:knowoff_client/presentation/widgets/nown_stage.dart';
+import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 
 /// Viewports the client has to survive: the smallest phone we support, a
 /// short landscape phone, a tablet, and a maximised desktop browser.
@@ -335,6 +337,26 @@ void main() {
         }
       });
     }
+
+    testWidgets('round player rail sits vertically left of the Nown window',
+        (tester) async {
+      _sizeTo(tester, _desktop);
+      await tester.pumpWidget(
+        _wrapWithSession(const RoundScreen(), _sampleSession()),
+      );
+      await tester.pump();
+
+      final nown = tester.getRect(find.byType(NownStage));
+      final avatars = find.byType(SeatAvatar);
+      expect(tester.getRect(avatars.at(0)).right, lessThan(nown.left));
+      expect(
+          tester.getRect(avatars.at(1)).top,
+          greaterThan(
+            tester.getRect(avatars.at(0)).bottom,
+          ));
+      expect(find.byKey(const ValueKey<String>('poke-seat-0')), findsNothing);
+      expect(find.byKey(const ValueKey<String>('poke-seat-1')), findsOneWidget);
+    });
   });
 }
 

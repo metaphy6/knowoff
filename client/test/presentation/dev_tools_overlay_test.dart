@@ -89,6 +89,23 @@ void main() {
     expect(find.byIcon(Icons.pause), findsOneWidget);
   });
 
+  testWidgets('tapping echo pokes toggles the local shake helper',
+      (tester) async {
+    devEchoPokes.value = false;
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+
+    expect(find.byIcon(Icons.vibration_outlined), findsOneWidget);
+    await tester.tap(find.byTooltip('Echo pokes to self (dev)'));
+    await tester.pump();
+    expect(find.byIcon(Icons.vibration), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Stop echoing pokes (dev)'));
+    await tester.pump();
+    expect(find.byIcon(Icons.vibration_outlined), findsOneWidget);
+    devEchoPokes.value = false;
+  });
+
   testWidgets(
       'tapping restart resets the session and pops back to the first route',
       (tester) async {
