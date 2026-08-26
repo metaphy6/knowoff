@@ -193,6 +193,19 @@ void main() {
       expect(find.byType(CardPile), findsOneWidget);
       expect(find.text('Draw pile'), findsOneWidget);
       expect(find.text('-5'), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const ValueKey<String>('hand-card-c2'))),
+        tester.getSize(find.byType(RoleCard)),
+      );
+      final firstCard = tester.getRect(
+        find.byKey(const ValueKey<String>('hand-card-c1')),
+      );
+      final secondCard = tester.getRect(
+        find.byKey(const ValueKey<String>('hand-card-c2')),
+      );
+      expect(secondCard.left - firstCard.right, lessThan(20));
+      expect(secondCard.center.dy, closeTo(firstCard.center.dy, 2));
+      expect(secondCard.center.dx, greaterThan(firstCard.center.dx));
     });
 
     testWidgets('reports the tapped card id', (tester) async {
@@ -325,6 +338,10 @@ void main() {
         find.byWidgetPredicate((w) => isDoodle(w, Doodle.cross)),
         findsNWidgets(2),
       );
+      expect(
+        find.byKey(const ValueKey<String>('vote-budget-critical')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('draws nothing until the server reports a budget',
@@ -337,6 +354,30 @@ void main() {
 
       expect(find.text('Votes left'), findsNothing);
       expect(find.byType(DoodleIcon), findsNothing);
+    });
+
+    testWidgets('pulses once when the remaining budget changes',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const KoVoteBudget(remaining: 2, total: 3, label: 'Votes left'),
+        ),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(
+        _wrap(
+          const KoVoteBudget(remaining: 1, total: 3, label: 'Votes left'),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final transition = tester.widget<ScaleTransition>(
+        find.byType(ScaleTransition).first,
+      );
+      expect(transition.scale.value, greaterThan(1));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(transition.scale.value, closeTo(1, 0.01));
     });
   });
 

@@ -21,6 +21,7 @@ import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
+import '../widgets/dev_tools_overlay.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
 /// the one action a turn allows.
@@ -184,9 +185,23 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
         ),
         body: KoBody(
           children: <Widget>[
-            NownStage(nown: dto.nown, decoy: session.showDecoy),
-            const SizedBox(height: KoSpace.lg),
-            _TurnRail(session: session, dto: dto),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _TurnRail(
+                  session: session,
+                  dto: dto,
+                  onPoke: (seat) {
+                    notifier.poke(seat);
+                    if (devEchoPokes.value) setState(() => _pokeCount++);
+                  },
+                ),
+                const SizedBox(width: KoSpace.md),
+                Expanded(
+                  child: NownStage(nown: dto.nown, decoy: session.showDecoy),
+                ),
+              ],
+            ),
             const SizedBox(height: KoSpace.lg),
             PlayTable(
               players: dto.players,
@@ -285,10 +300,11 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
 /// Each seat is a tap target: the sheet behind it is where a player checks who
 /// they are up against and where the flag lives (👤 §3).
 class _TurnRail extends StatelessWidget {
-  const _TurnRail({required this.session, required this.dto});
+  const _TurnRail({required this.session, required this.dto, this.onPoke});
 
   final GameSession session;
   final GameStateDto dto;
+  final ValueChanged<int>? onPoke;
 
   @override
   Widget build(BuildContext context) {
@@ -298,12 +314,12 @@ class _TurnRail extends StatelessWidget {
       ..sort((a, b) => a.seat.compareTo(b.seat));
 
     return SizedBox(
-      // Avatar + its selection frame + the caption line underneath.
-      height: avatarSize + 30,
+      width: avatarSize + 16,
       child: ListView.separated(
-        scrollDirection: Axis.horizontal,
+        scrollDirection: Axis.vertical,
+        shrinkWrap: true,
         itemCount: players.length,
-        separatorBuilder: (_, __) => const SizedBox(width: KoSpace.md),
+        separatorBuilder: (_, __) => const SizedBox(height: KoSpace.md),
         itemBuilder: (context, index) {
           final player = players[index];
           final isTurn = player.seat == dto.turnSeat && !player.eliminated;
@@ -328,10 +344,46 @@ class _TurnRail extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(KoRadii.card),
                   ),
-                  child: SeatAvatar(
-                    player: player,
-                    dimmed: player.eliminated,
-                    size: avatarSize,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: <Widget>[
+                      SeatAvatar(
+                        player: player,
+                        dimmed: player.eliminated,
+                        size: avatarSize,
+                      ),
+                      if (onPoke != null &&
+                          player.seat != session.seat &&
+                          !player.eliminated)
+                        Positioned(
+                          right: -5,
+                          bottom: -5,
+                          child: GestureDetector(
+                            key: ValueKey<String>('poke-seat-${player.seat}'),
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => onPoke!(player.seat),
+                            child: Semantics(
+                              button: true,
+                              label:
+                                  '${l10n.pokeLabel} ${seatDisplayName(player)}',
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: KoColors.pink,
+                                  border: Border.all(
+                                    width: KoBorders.regular,
+                                    color: KoColors.ink,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const DoodleIcon(Doodle.poke, size: 16),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 2),
