@@ -9,11 +9,9 @@ import 'card_face.dart';
 import 'card_pile.dart';
 import 'role_card.dart';
 
-/// The player's hand, drawn as an actual fan of physical cards.
-///
-/// Unselected cards sit at a small alternating tilt (structured disruption,
-/// macro level); the selected card snaps upright, fills lime, and lifts to the
-/// `lg` shadow tier — so the chosen card is always the calm, obvious one.
+/// The player's hand, drawn as a physical card board rather than a horizontal
+/// rail. The board groups cards into two or three vertical stacks so the hand
+/// stays readable without consuming the whole width of the table.
 class HandFan extends StatelessWidget {
   const HandFan({
     required this.cards,
@@ -48,6 +46,7 @@ class HandFan extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final layout = KoLayout.of(context);
+    final groups = layout.columns(compact: 2, medium: 2, expanded: 3);
 
     final title = Text(
       l10n.handTitle,
@@ -70,74 +69,123 @@ class HandFan extends StatelessWidget {
           ],
         ),
         const SizedBox(height: KoSpace.md),
-        // The pile rides at the end of the rail rather than scrolling with
-        // the hand: it is the one thing here that costs points, so it never
-        // scrolls away and always reads as the last, deliberate option.
-        SizedBox(
-          height: layout.handFanHeight,
+        Container(
+          key: const ValueKey<String>('your-hand-board'),
+          padding: const EdgeInsets.all(KoSpace.md),
+          decoration: BoxDecoration(
+            color: KoColors.canvasDeep,
+            border: Border.all(width: KoBorders.thick, color: KoColors.ink),
+            borderRadius: BorderRadius.circular(KoRadii.card),
+            boxShadow: const <BoxShadow>[KoShadows.md],
+          ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Expanded(
                 child: cards.isEmpty && specialty == null
-                    ? Center(child: _EmptyHand(message: l10n.emptyHand))
-                    : _HandRail(
+                    ? _EmptyHand(message: l10n.emptyHand)
+                    : _HandGrid(
                         cards: cards,
                         specialty: specialty,
                         selectedCardId: selectedCardId,
                         onSelect: onSelect,
-                        maxCardWidth: layout.handCardSize,
+                        groups: groups,
+                        maxCardWidth: layout.roleSquareSize,
                       ),
               ),
-              const SizedBox(width: KoSpace.md),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: KoSpace.sm),
-                // IntrinsicWidth gives the Column a real (bounded) width to
-                // work with — a bare Row child is laid out with an unbounded
-                // max width, which the Column can't resolve on its own.
-                child: IntrinsicWidth(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    // The role square is fixed-size and narrower than the
-                    // pile; centring keeps both readable instead of
-                    // stretching the square into a rectangle.
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      RoleCard(role: myRole),
-                      const SizedBox(height: KoSpace.xs),
-                      CardPile(
-                        count: drawPile.length,
-                        penalty: drawPenalty,
-                        width: layout.roleSquareSize,
-                        height: layout.handFanHeight -
-                            40 -
-                            layout.roleSquareSize -
-                            KoSpace.xs,
-                        onDraw: onDraw,
-                      ),
-                    ],
-                  ),
+              if (!layout.isCompact) ...[
+                const SizedBox(width: KoSpace.md),
+                _HandSupport(
+                  myRole: myRole,
+                  drawCount: drawPile.length,
+                  drawPenalty: drawPenalty,
+                  onDraw: onDraw,
+                  layout: layout,
                 ),
+              ],
+            ],
+          ),
+        ),
+        if (layout.isCompact) ...[
+          const SizedBox(height: KoSpace.md),
+          _HandSupport(
+            myRole: myRole,
+            drawCount: drawPile.length,
+            drawPenalty: drawPenalty,
+            onDraw: onDraw,
+            layout: layout,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _HandSupport extends StatelessWidget {
+  const _HandSupport({
+    required this.myRole,
+    required this.drawCount,
+    required this.drawPenalty,
+    required this.onDraw,
+    required this.layout,
+  });
+
+  final String? myRole;
+  final int drawCount;
+  final int drawPenalty;
+  final VoidCallback? onDraw;
+  final KoLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    if (layout.isCompact) {
+      return SizedBox(
+        width: double.infinity,
+        height: layout.roleSquareSize,
+        child: FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              RoleCard(role: myRole),
+              const SizedBox(width: KoSpace.sm),
+              CardPile(
+                count: drawCount,
+                penalty: drawPenalty,
+                width: layout.roleSquareSize,
+                height: layout.roleSquareSize,
+                onDraw: onDraw,
               ),
             ],
           ),
+        ),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        RoleCard(role: myRole),
+        const SizedBox(height: KoSpace.xs),
+        CardPile(
+          count: drawCount,
+          penalty: drawPenalty,
+          width: layout.roleSquareSize,
+          height: layout.roleSquareSize,
+          onDraw: onDraw,
         ),
       ],
     );
   }
 }
 
-/// Lays every hand item — the specialty card (if any) first, then the
-/// playable cards — edge to edge across the available width so the whole
-/// hand always reads at a glance. It never scrolls: cards and their spacing
-/// shrink together as the hand grows, all the way down if it has to, because
-/// an off-screen or scrolled-away card is one you cannot play.
-class _HandRail extends StatelessWidget {
-  const _HandRail({
+class _HandGrid extends StatelessWidget {
+  const _HandGrid({
     required this.cards,
     required this.specialty,
     required this.selectedCardId,
     required this.onSelect,
+    required this.groups,
     required this.maxCardWidth,
   });
 
@@ -145,30 +193,17 @@ class _HandRail extends StatelessWidget {
   final String? specialty;
   final String? selectedCardId;
   final ValueChanged<String>? onSelect;
+  final int groups;
   final double maxCardWidth;
 
   @override
   Widget build(BuildContext context) {
-    final itemCount = cards.length + (specialty != null ? 1 : 0);
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Tighten the gutter as the hand grows so cards keep as much of their
-        // own width as possible before the gutter itself is what runs out.
-        final spacing = itemCount > 6
-            ? KoSpace.xs
-            : itemCount > 4
-                ? KoSpace.sm
-                : KoSpace.md;
-        final totalSpacing = spacing * (itemCount > 0 ? itemCount - 1 : 0);
-        final fitted = itemCount == 0
-            ? maxCardWidth
-            : (constraints.maxWidth - totalSpacing) / itemCount;
-        // Cards are square; clamp to the rail height so a tall hand never
-        // overflows its row.
+        const spacing = KoSpace.sm;
         final cardWidth =
-            fitted.clamp(0.0, maxCardWidth).clamp(0.0, constraints.maxHeight);
-
+            ((constraints.maxWidth - spacing * (groups - 1)) / groups)
+                .clamp(0.0, maxCardWidth);
         final items = <Widget>[
           if (specialty != null)
             _SpecialtyCard(specialty: specialty!, width: cardWidth),
@@ -182,16 +217,20 @@ class _HandRail extends StatelessWidget {
             ),
         ];
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: KoSpace.sm),
-          child: Row(
-            children: <Widget>[
-              for (var i = 0; i < items.length; i++) ...[
-                if (i > 0) SizedBox(width: spacing),
-                items[i],
-              ],
-            ],
-          ),
+        return Wrap(
+          key: const ValueKey<String>('your-hand-grid'),
+          spacing: spacing,
+          runSpacing: spacing,
+          alignment: WrapAlignment.start,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: cardWidth,
+                  height: cardWidth,
+                  child: item,
+                ),
+              )
+              .toList(),
         );
       },
     );
@@ -245,10 +284,6 @@ Doodle specialtyIcon(String specialty) {
   }
 }
 
-/// Below this, a card's footer drops its label and shows only the icon — a
-/// hand large enough to shrink this far is rare, but it must never overflow.
-const double _narrowCardWidth = 64;
-
 /// The icon + label strip every card in the hand shares, at its footer.
 /// Degrades to icon-only once [width] is too tight for a legible label.
 class _CardFooter extends StatelessWidget {
@@ -261,7 +296,7 @@ class _CardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (width < _narrowCardWidth) {
+    if (width < 140) {
       return Center(child: DoodleIcon(icon, size: 14));
     }
     return Row(
@@ -298,56 +333,65 @@ class _SpecialtyCard extends StatelessWidget {
     return Semantics(
       label: label,
       child: Container(
+        key: ValueKey<String>('hand-specialty-$specialty'),
         width: width,
-        height: width - 4,
-        padding:
-            EdgeInsets.all(width < _narrowCardWidth ? KoSpace.sm : KoSpace.md),
+        height: width,
+        padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
         decoration: BoxDecoration(
           color: KoColors.tangerine,
           border: Border.all(width: KoBorders.regular, color: KoColors.ink),
           borderRadius: BorderRadius.circular(KoRadii.card),
           boxShadow: const <BoxShadow>[KoShadows.md],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    DoodleIcon(
-                      specialtyIcon(specialty),
-                      size: width < _narrowCardWidth ? 20 : 28,
-                    ),
-                    if (width >= _narrowCardWidth) ...<Widget>[
-                      const SizedBox(height: KoSpace.xs),
-                      Text(
-                        label,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
+        child: width < 140
+            ? Stack(
+                children: <Widget>[
+                  Center(
+                    child: DoodleIcon(specialtyIcon(specialty), size: 20),
+                  ),
+                  const Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Center(child: DoodleIcon(Doodle.sparkle, size: 14)),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          DoodleIcon(specialtyIcon(specialty), size: 28),
+                          const SizedBox(height: KoSpace.xs),
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
                       ),
-                    ],
-                  ],
-                ),
+                    ),
+                  ),
+                  const SizedBox(height: KoSpace.sm),
+                  _CardFooter(
+                    width: width,
+                    icon: Doodle.sparkle,
+                    label: l10n.cardTypeSpecialty,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: KoSpace.sm),
-            _CardFooter(
-              width: width,
-              icon: Doodle.sparkle,
-              label: l10n.cardTypeSpecialty,
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _HandCard extends StatefulWidget {
+class _HandCard extends StatelessWidget {
   const _HandCard({
     required this.card,
     required this.index,
@@ -363,23 +407,12 @@ class _HandCard extends StatefulWidget {
   final VoidCallback? onTap;
 
   @override
-  State<_HandCard> createState() => _HandCardState();
-}
-
-class _HandCardState extends State<_HandCard> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    final playable = widget.onTap != null;
-    final selected = widget.selected;
-    final tilt = selected ? KoTilt.none : KoTilt.alternating(widget.index);
+    final playable = onTap != null;
+    final selected = this.selected;
+    final tilt = selected ? KoTilt.none : KoTilt.alternating(index);
 
-    final BoxShadow shadow = _pressed
-        ? KoShadows.pressed
-        : selected
-            ? KoShadows.lg
-            : KoShadows.md;
+    final BoxShadow shadow = selected ? KoShadows.lg : KoShadows.md;
 
     return Semantics(
       button: playable,
@@ -387,28 +420,15 @@ class _HandCardState extends State<_HandCard> {
       child: MouseRegion(
         cursor: playable ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: GestureDetector(
-          onTapDown: playable ? (_) => setState(() => _pressed = true) : null,
-          onTapCancel: () => setState(() => _pressed = false),
-          onTapUp: playable
-              ? (_) {
-                  setState(() => _pressed = false);
-                  widget.onTap!();
-                }
-              : null,
+          onTap: onTap,
           child: Transform.rotate(
             angle: tilt,
-            child: AnimatedContainer(
-              duration: KoMotion.press,
-              curve: Curves.easeOut,
-              width: widget.width,
-              height: widget.width - 4,
-              transform: Matrix4.translationValues(
-                _pressed ? 4 : 0,
-                selected ? -8 : 0,
-                0,
-              ),
-              padding: EdgeInsets.all(
-                  widget.width < _narrowCardWidth ? KoSpace.sm : KoSpace.md),
+            child: Container(
+              key: ValueKey<String>('hand-card-${card.id}'),
+              width: width,
+              height: width,
+              transform: Matrix4.translationValues(0, selected ? -8 : 0, 0),
+              padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
               decoration: BoxDecoration(
                 color: selected ? KoColors.lime : KoColors.whiteWell,
                 border: Border.all(
@@ -418,27 +438,44 @@ class _HandCardState extends State<_HandCard> {
                 borderRadius: BorderRadius.circular(KoRadii.card),
                 boxShadow: <BoxShadow>[shadow],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Center(
-                      child: CardFace(card: widget.card, compact: true),
-                    ),
-                  ),
-                  const SizedBox(height: KoSpace.sm),
-                  _CardFooter(
-                    width: widget.width,
-                    icon: selected ? Doodle.check : Doodle.cards,
-                    label: selected
-                        ? AppLocalizations.of(context).cardSelected
-                        : cardTypeLabel(
-                            AppLocalizations.of(context),
-                            widget.card.type,
+              child: width < 140
+                  ? Stack(
+                      children: <Widget>[
+                        Center(
+                          child: CardFace(
+                            card: card,
+                            compact: true,
+                            maxLines: 1,
                           ),
-                  ),
-                ],
-              ),
+                        ),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child:
+                              Center(child: DoodleIcon(Doodle.cards, size: 14)),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: Center(
+                            child: CardFace(card: card, compact: true),
+                          ),
+                        ),
+                        const SizedBox(height: KoSpace.sm),
+                        _CardFooter(
+                          width: width,
+                          icon: selected ? Doodle.check : Doodle.cards,
+                          label: selected
+                              ? AppLocalizations.of(context).cardSelected
+                              : cardTypeLabel(
+                                  AppLocalizations.of(context), card.type),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
