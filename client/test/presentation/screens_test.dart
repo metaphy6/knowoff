@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -52,12 +54,16 @@ GameSession _sampleSession({String phase = 'play'}) {
   );
 }
 
-Widget _wrapWithSession(Widget child, GameSession session) {
+Widget _wrapWithSession(
+  Widget child,
+  GameSession session, {
+  gt.GameTransport? transport,
+}) {
   return ProviderScope(
     overrides: [
       gameSessionProvider.overrideWith(
         (ref) => GameSessionNotifier(
-          transport: _FakeTransport(),
+          transport: transport ?? _FakeTransport(),
           initialState: session,
         ),
       ),
@@ -72,6 +78,8 @@ Widget _wrapWithSession(Widget child, GameSession session) {
 }
 
 class _FakeTransport implements gt.GameTransport {
+  final List<Map<String, dynamic>> sent = [];
+
   @override
   Stream<Map<String, dynamic>> get messages => const Stream.empty();
 
@@ -84,6 +92,41 @@ class _FakeTransport implements gt.GameTransport {
 
   @override
   Future<void> close() async {}
+
+  @override
+  Future<void> connect() async {}
+
+  @override
+  Future<void> reconnect() async {}
+
+  @override
+  Future<void> send(Map<String, dynamic> message) async {
+    sent.add(message);
+  }
+}
+
+/// A [_FakeTransport] whose `messages` stream can be fed server events on
+/// demand, for tests that need to react to an incoming broadcast.
+class _ControllableTransport implements gt.GameTransport {
+  final StreamController<Map<String, dynamic>> _controller =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  void emit(Map<String, dynamic> message) => _controller.add(message);
+
+  @override
+  Stream<Map<String, dynamic>> get messages => _controller.stream;
+
+  @override
+  Stream<gt.ConnectionState> get state =>
+      Stream.value(gt.ConnectionState.disconnected);
+
+  @override
+  bool get isConnected => false;
+
+  @override
+  Future<void> close() async {
+    await _controller.close();
+  }
 
   @override
   Future<void> connect() async {}
@@ -175,6 +218,123 @@ void main() {
     // discussion started, right when players need them to argue.
     expect(find.text('A dog on a skateboard'), findsOneWidget);
     expect(find.text('Beta'), findsOneWidget);
+  });
+
+  testWidgets(
+      'DiscussionScreen no longer shows a separate Poke section; the poke '
+      "doodle lives on the target's table box and sends a poke",
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const DiscussionScreen(),
+        _sampleSession(phase: 'discussion'),
+        transport: transport,
+      ),
+    );
+
+    expect(find.text('Poke'), findsNothing);
+
+    final badge = find.byKey(const ValueKey<String>('poke-badge-1'));
+    await tester.tap(badge);
+    await tester.pump();
+
+    expect(
+      transport.sent
+          .any((m) => m['kind'] == 'poke' && m['payload']['target_seat'] == 1),
+      isTrue,
+    );
+  });
+
+  testWidgets(
+      'DiscussionScreen tapping a table box opens the targeted Quick Chat '
+      'picker and sends the phrase with that seat as target', (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const DiscussionScreen(),
+        _sampleSession(phase: 'discussion'),
+        transport: transport,
+      ),
+    );
+
+    final tapTarget = find.byKey(const ValueKey<String>('played-card-tap-1'));
+    await tester.tap(tapTarget);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('I suspect you'), findsOneWidget);
+    expect(find.text('Trust me'), findsOneWidget);
+
+    await tester.tap(find.text('I suspect you'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(
+      transport.sent.any((m) =>
+          m['kind'] == 'quick_chat' &&
+          m['payload']['phrase_id'] == 'suspect' &&
+          m['payload']['target_seat'] == 1),
+      isTrue,
+    );
+  });
+
+  testWidgets(
+      'DiscussionScreen general Quick Chat bar excludes the targeted '
+      'suspect/trust phrases', (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const DiscussionScreen(),
+        _sampleSession(phase: 'discussion'),
+      ),
+    );
+
+    // The targeted phrases only ever appear inside the per-seat sheet, never
+    // in the general bar, since no sheet is open here.
+    expect(find.text('I suspect you'), findsNothing);
+    expect(find.text('Trust me'), findsNothing);
+    expect(find.text('My card fits'), findsOneWidget);
+    expect(find.text('Ha!'), findsOneWidget);
+  });
+
+  testWidgets(
+      'DiscussionScreen shows a dramatic accusation banner for a targeted '
+      'quick chat event', (tester) async {
+    final transport = _ControllableTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const DiscussionScreen(),
+        _sampleSession(phase: 'discussion'),
+        transport: transport,
+      ),
+    );
+    await tester.pump();
+
+    transport.emit({
+      'kind': 'quick_chat',
+      'payload': {
+        'kind': 'chat',
+        'from_seat': 0,
+        'phrase_id': 'suspect',
+        'target_seat': 1,
+      },
+    });
+    await tester.pump();
+
+    expect(find.textContaining('suspects'), findsOneWidget);
+
+    // The banner is a temporary overlay: it fades back out on its own.
+    await tester.pump(const Duration(milliseconds: 2000));
+    expect(find.textContaining('suspects'), findsNothing);
   });
 
   testWidgets('KnowoffScreen renders the blind ballot', (tester) async {

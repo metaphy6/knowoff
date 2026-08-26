@@ -162,6 +162,39 @@
   "@quickChatLaugh": {
     "description": "Canned chat reaction."
   },
+  "quickChatTargetHint": "Suspect or trust {name}",
+  "@quickChatTargetHint": {
+    "description": "Semantic hint on a table box that opens the targeted Quick Chat picker.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "quickChatSuspectLog": "{name} suspects {target}",
+  "@quickChatSuspectLog": {
+    "description": "Feed entry and accusation banner for a targeted \"I suspect you\" sent at another player.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "quickChatTrustLog": "{name} trusts {target}",
+  "@quickChatTrustLog": {
+    "description": "Feed entry and accusation banner for a targeted \"Trust me\" sent at another player.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
   "pressAndHoldRole": "Press and hold to check your role",
   "@pressAndHoldRole": {
     "description": "Hint on the role card."
@@ -835,10 +868,6 @@
   "quickChatTitle": "Quick Chat",
   "@quickChatTitle": {
     "description": "Heading over the canned-phrase bar."
-  },
-  "pokeHint": "Poke anyone who hasn't acted.",
-  "@pokeHint": {
-    "description": "Hint over the poke row."
   },
   "verdictPointsLabel": "Match points",
   "@verdictPointsLabel": {

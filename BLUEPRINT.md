@@ -341,7 +341,7 @@ knowoff/
 │       ├── presentation/
 │       │   ├── state/           # Riverpod state for the server-driven phases
 │       │   ├── screens/         # MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict, Profile, Leaderboard, Store, NoticeInbox
-│       │   └── widgets/         # NownStage, HandFan, PlayTable, VoteBoard, QuickChatBar, PokeNudge, ReadyButton, RoleCard, NoinBadge
+│       │   └── widgets/         # NownStage, HandFan, PlayTable, VoteBoard, QuickChatBar, AccusationBanner, ReadyButton, RoleCard, NoinBadge
 │       └── media/               # Client MediaEngine: pack metadata sync, signed-URL prefetch, LRU asset cache, Donower placeholder renderer
 ├── server/                      # Go authoritative game server
 │   ├── cmd/knowoffd/            # main.go — wiring, config load, graceful shutdown
