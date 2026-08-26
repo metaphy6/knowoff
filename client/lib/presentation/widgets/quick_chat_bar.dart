@@ -7,6 +7,9 @@ import 'ko_chip.dart';
 
 /// Canned Quick Chat phrase ids paired with their localized labels and the
 /// doodle glyph that carries the phrase without relying on colour.
+///
+/// `suspect` and `trust` are targeted phrases sent by tapping a seat's box on
+/// the table (see `showTargetedChatSheet`), not from this general bar.
 List<(String id, String label, Doodle glyph)> quickChatPhrases(
   AppLocalizations l10n,
 ) =>
@@ -19,6 +22,9 @@ List<(String id, String label, Doodle glyph)> quickChatPhrases(
       ('laugh', l10n.quickChatLaugh, Doodle.cloud),
     ];
 
+/// The two targeted phrase ids sendable at a specific seat.
+const List<String> kTargetedQuickChatIds = ['suspect', 'trust'];
+
 /// Resolves a Quick Chat phrase id to its localized label, for the received
 /// chat feed as well as the send bar.
 String quickChatPhraseLabel(AppLocalizations l10n, String? phraseId) {
@@ -29,6 +35,9 @@ String quickChatPhraseLabel(AppLocalizations l10n, String? phraseId) {
 }
 
 /// Grid of canned Quick Chat phrase chips. No free-text chat at v1.
+///
+/// Excludes the targeted `suspect`/`trust` phrases — those are sent by
+/// tapping a specific player's box on the table instead.
 class QuickChatBar extends StatelessWidget {
   const QuickChatBar({this.onPhrase, super.key});
 
@@ -37,7 +46,9 @@ class QuickChatBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final phrases = quickChatPhrases(l10n);
+    final phrases = quickChatPhrases(l10n)
+        .where((phrase) => !kTargetedQuickChatIds.contains(phrase.$1))
+        .toList();
 
     return Wrap(
       spacing: KoSpace.sm,

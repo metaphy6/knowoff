@@ -366,8 +366,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   Future<void> poke(int targetSeat) =>
       _send('poke', {'target_seat': targetSeat});
 
-  Future<void> quickChat(String phraseId) =>
-      _send('quick_chat', {'phrase_id': phraseId});
+  Future<void> quickChat(String phraseId, {int? targetSeat}) => _send(
+        'quick_chat',
+        {
+          'phrase_id': phraseId,
+          if (targetSeat != null) 'target_seat': targetSeat,
+        },
+      );
 
   @override
   void dispose() {
