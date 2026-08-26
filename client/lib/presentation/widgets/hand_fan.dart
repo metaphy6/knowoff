@@ -19,6 +19,10 @@ class HandFan extends StatelessWidget {
     this.specialty,
     this.selectedCardId,
     this.onSelect,
+    this.onConfirm,
+    this.onCancelSelection,
+    this.isMyTurn = true,
+    this.moveLocked = false,
     this.onDraw,
     this.drawPenalty = 5,
     this.myRole,
@@ -29,7 +33,22 @@ class HandFan extends StatelessWidget {
   final List<CardDto> drawPile;
   final String? specialty;
   final String? selectedCardId;
+
+  /// First tap on a card — selects it.
   final ValueChanged<String>? onSelect;
+
+  /// Second tap on the already-selected card — plays it now, or (before this
+  /// seat's turn) locks it in to auto-play the instant the turn starts.
+  final ValueChanged<String>? onConfirm;
+
+  /// Cancel affordance on the tap-to-confirm banner.
+  final VoidCallback? onCancelSelection;
+
+  /// Drives the tap-to-confirm banner's wording: "play now" vs "play early".
+  final bool isMyTurn;
+
+  /// True once the selected card is locked in to auto-play on this seat's turn.
+  final bool moveLocked;
 
   /// The role check now rides above the draw pile instead of its own row, so
   /// it costs no extra screen space (Rules §2).
@@ -68,6 +87,12 @@ class HandFan extends StatelessWidget {
             count,
           ],
         ),
+        if (selectedCardId != null)
+          _MoveActionBanner(
+            isMyTurn: isMyTurn,
+            moveLocked: moveLocked,
+            onCancel: onCancelSelection,
+          ),
         const SizedBox(height: KoSpace.md),
         Container(
           key: const ValueKey<String>('your-hand-board'),
@@ -89,6 +114,7 @@ class HandFan extends StatelessWidget {
                         specialty: specialty,
                         selectedCardId: selectedCardId,
                         onSelect: onSelect,
+                        onConfirm: onConfirm,
                         groups: groups,
                         maxCardWidth: layout.roleSquareSize,
                       ),
@@ -185,6 +211,7 @@ class _HandGrid extends StatelessWidget {
     required this.specialty,
     required this.selectedCardId,
     required this.onSelect,
+    required this.onConfirm,
     required this.groups,
     required this.maxCardWidth,
   });
@@ -193,8 +220,20 @@ class _HandGrid extends StatelessWidget {
   final String? specialty;
   final String? selectedCardId;
   final ValueChanged<String>? onSelect;
+  final ValueChanged<String>? onConfirm;
   final int groups;
   final double maxCardWidth;
+
+  /// First tap on a card selects it; a second tap on the already-selected
+  /// card confirms it (plays now, or locks it in early).
+  VoidCallback? _tapHandlerFor(String cardId) {
+    if (cardId == selectedCardId) {
+      if (onConfirm != null) return () => onConfirm!(cardId);
+      if (onSelect != null) return () => onSelect!(cardId);
+      return null;
+    }
+    return onSelect == null ? null : () => onSelect!(cardId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +252,7 @@ class _HandGrid extends StatelessWidget {
               index: i,
               width: cardWidth,
               selected: cards[i].id == selectedCardId,
-              onTap: onSelect == null ? null : () => onSelect!(cards[i].id),
+              onTap: _tapHandlerFor(cards[i].id),
             ),
         ];
 
@@ -479,6 +518,85 @@ class _HandCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Dramatic, vibrant banner over the hand once a card is selected: tells the
+/// player what a second tap on that same card will do — play it now, play it
+/// early, or (once locked) that it will auto-play on their turn — and offers
+/// a way to cancel the selection.
+class _MoveActionBanner extends StatelessWidget {
+  const _MoveActionBanner({
+    required this.isMyTurn,
+    required this.moveLocked,
+    required this.onCancel,
+  });
+
+  final bool isMyTurn;
+  final bool moveLocked;
+  final VoidCallback? onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locked = !isMyTurn && moveLocked;
+    final String label;
+    final Color color;
+    final Doodle icon;
+    if (isMyTurn) {
+      label = l10n.playCardTapHint;
+      color = KoColors.lime;
+      icon = Doodle.check;
+    } else if (locked) {
+      label = l10n.playEarlyLockedHint;
+      color = KoColors.violet;
+      icon = Doodle.check;
+    } else {
+      label = l10n.playEarlyTapHint;
+      color = KoColors.tangerine;
+      icon = Doodle.sparkle;
+    }
+
+    return Container(
+      key: const ValueKey<String>('hand-move-banner'),
+      margin: const EdgeInsets.only(top: KoSpace.sm),
+      padding:
+          const EdgeInsets.symmetric(horizontal: KoSpace.lg, vertical: KoSpace.md),
+      decoration: BoxDecoration(
+        color: color,
+        border: Border.all(width: KoBorders.thick, color: KoColors.ink),
+        borderRadius: BorderRadius.circular(KoRadii.card),
+        boxShadow: const <BoxShadow>[KoShadows.lg],
+      ),
+      child: Row(
+        children: <Widget>[
+          DoodleIcon(icon, size: 22),
+          const SizedBox(width: KoSpace.sm),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
+          ),
+          if (onCancel != null)
+            Semantics(
+              button: true,
+              label: l10n.cancel,
+              child: GestureDetector(
+                key: const ValueKey<String>('hand-move-banner-cancel'),
+                onTap: onCancel,
+                child: const Padding(
+                  padding: EdgeInsets.only(left: KoSpace.sm),
+                  child: DoodleIcon(Doodle.cross, size: 20),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

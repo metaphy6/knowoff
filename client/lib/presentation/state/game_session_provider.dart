@@ -295,6 +295,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     state = state.copyWith(selectedCardId: cardId, moveLocked: true);
   }
 
+  /// Deselects the current card without playing or locking it in — the
+  /// cancel affordance next to the hand's tap-to-confirm indicator.
+  void clearSelection() {
+    state = state.copyWith(clearSelectedCard: true, moveLocked: false);
+  }
+
   /// Plays a move locked in earlier the instant this seat's turn starts, so
   /// the player isn't left waiting to re-confirm a decision they already made.
   void _autoPlayLockedMove() {

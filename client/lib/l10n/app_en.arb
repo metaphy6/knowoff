@@ -763,6 +763,18 @@
   "@selectCardHint": {
     "description": "Hint on the round screen before a card is selected."
   },
+  "playCardTapHint": "Tap it again to play",
+  "@playCardTapHint": {
+    "description": "Banner shown over the hand when a card is selected and it is the player's turn."
+  },
+  "playEarlyTapHint": "Tap it again to play early \u2014 it fires the instant your turn starts",
+  "@playEarlyTapHint": {
+    "description": "Banner shown over the hand when a card is selected before the player's turn."
+  },
+  "playEarlyLockedHint": "Locked in \u2014 plays automatically on your turn",
+  "@playEarlyLockedHint": {
+    "description": "Banner shown over the hand once an early move is locked in."
+  },
   "voteBudgetLabel": "Votes left",
   "@voteBudgetLabel": {
     "description": "Label for the match's remaining Knowoff votes."

@@ -366,6 +366,20 @@ void main() {
     expect(transport.sent, isEmpty);
   });
 
+  test('clearSelection drops the pending card and its lock without sending',
+      () async {
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+    notifier.lockMove('card-1');
+
+    notifier.clearSelection();
+
+    expect(notifier.state.selectedCardId, isNull);
+    expect(notifier.state.moveLocked, isFalse);
+    expect(transport.sent, isEmpty);
+  });
+
   test("a locked move auto-plays the instant this seat's turn starts",
       () async {
     // Regression: picking a card during someone else's turn used to require
