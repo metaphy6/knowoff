@@ -250,11 +250,13 @@ type EconomyTuning struct {
 
 // LiquidityTuning is Quick Play backfill bot settings.
 type LiquidityTuning struct {
-	BackfillEnabled      bool `yaml:"backfill_enabled"`
-	QueueTimeoutS        int  `yaml:"queue_timeout_s"`
-	MinHumans            int  `yaml:"min_humans"`
-	LeaderboardMinHumans int  `yaml:"leaderboard_min_humans"`
-	NoinMinHumans        int  `yaml:"noin_min_humans"`
+	BackfillEnabled      bool    `yaml:"backfill_enabled"`
+	QueueTimeoutS        int     `yaml:"queue_timeout_s"`
+	MinHumans            int     `yaml:"min_humans"`
+	LeaderboardMinHumans int     `yaml:"leaderboard_min_humans"`
+	NoinMinHumans        int     `yaml:"noin_min_humans"`
+	BotThinkMinS         float64 `yaml:"bot_think_min_s"`
+	BotThinkMaxS         float64 `yaml:"bot_think_max_s"`
 }
 
 // LiveOpsTuning is leaderboard and challenge constants.

@@ -80,7 +80,7 @@ Architecture decision records:
 
 ### 3. The Round: Turn-Based Play
 
-* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **15 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
+* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **10 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
 * Played cards stay on the table for the whole match — the evidence the votes are argued over.
 * **Draws**: during your turn, you may draw from your 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
 * **Timeout**: a player whose turn expires with no action auto-passes and loses one random card. Stalling costs.
@@ -91,7 +91,7 @@ Architecture decision records:
   * **Local rooms:** talk happens out loud at the table.
   * **Online rooms:** players argue through **Quick Chat** — a set of canned phrases and reactions ("I suspect P3", "my card fits, trust me", "that play was weird", emotes), sent as taps, localized automatically. **No free-text chat at v1** (see Product Baseline); free-text and voice are v2 candidates behind proper moderation.
 * Then **Knowoff**: a 20-second blind ballot. Everyone still in the match votes for one player (never themselves); votes stay hidden until the window closes, then all votes are shown. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; if the runoff is still tied, the vote is a miss: it counts as one survived voting for the Donowers, eliminates nobody, and reveals no role.
-* **Result window:** every vote's outcome is displayed for 15 seconds before it becomes final — this is the window where a Revote card (§5) can land. Then it applies.
+* **Result window:** every vote's outcome is displayed for 15 seconds before it becomes final — this is the window where a Revote card (§5) can land. Ends early once every connected active player marks Ready (any Revote holder simply doesn't ready up until they've decided). Then it applies.
 * An eliminated player — Nower or Donower — watches the rest of the match: no plays, no votes, no chat, no pokes. Their screen no longer shows Nown (a revealed Donower could otherwise feed it to a surviving partner). Staying connected to the end collects their points as normal (§6, §7).
 * After the match, the verdict screen shows all Nowns to everyone; Donowers finally see what they survived.
 
@@ -151,7 +151,7 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 
 ### 8. Pace Controls: Ready & Poke
 
-* **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends the moment its player acts, and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. Fast tables play fast; the 15 s turn and `10 s × players` discussion timers are only ceilings. **Ballots, runoffs, and result windows always run their full time** — blind and cancelable to the end.
+* **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends the moment its player acts, and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. The 15 s result window works the same way: Ready counts you in, and once every connected active player has, it finalizes early instead of waiting out the timer. Fast tables play fast; the 15 s turn, `10 s × players` discussion, and 15 s result timers are only ceilings. **Ballots and runoffs always run their full time** — blind to the end.
 * **Poke**: once per target per round, you may poke a player who hasn't acted — the turn player sitting on the clock, or anyone not yet Ready in discussion. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. No score effect; the cap is enforced server-side.
 
 ---
@@ -424,7 +424,7 @@ game:
   abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
 
 timers:                             # seconds; which windows may fast-forward is structure (§8)
-  play_turn: 15                     # each player's turn; the play reveals immediately, the turn ends on action
+  play_turn: 10                     # each player's turn; the play reveals immediately, the turn ends on action
   discussion_per_player: 10         # Ready unanimity ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
@@ -477,6 +477,8 @@ liquidity:                          # Quick Play backfill bots (🎮 §1)
   min_humans: 1
   leaderboard_min_humans: 3
   noin_min_humans: 2               # team-win Noin requires this many humans
+  bot_think_min_s: 1.5             # a bot pauses before acting, so its move is visible to watch
+  bot_think_max_s: 4               # upper bound of that randomized pause
 
 liveops:
   leaderboard_daily_counted_matches: 10

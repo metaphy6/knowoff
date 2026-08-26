@@ -19,6 +19,7 @@ import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_shake.dart';
 import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
+import '../widgets/ready_button.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/dev_tools_overlay.dart';
@@ -216,7 +217,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               selectedCardId: session.selectedCardId,
               myRole: session.myRole,
               onSelect:
-                  session.isMyTurn ? (id) => notifier.selectCard(id) : null,
+                  session.canPickCard ? (id) => notifier.selectCard(id) : null,
               onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
             ),
             const SizedBox(height: KoSpace.lg),
@@ -274,15 +275,29 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                       ),
                     ),
                     if (!session.amEliminated && dto.turnSeat >= 0)
-                      KoButton(
-                        label: l10n.pokeLabel,
-                        size: KoButtonSize.small,
-                        backgroundColor: KoColors.pink,
-                        icon: const DoodleIcon(Doodle.poke, size: 18),
-                        onTap: () {
-                          notifier.poke(dto.turnSeat);
-                          setState(() => _pokeCount++);
-                        },
+                      Padding(
+                        padding: const EdgeInsets.only(left: KoSpace.sm),
+                        child: KoButton(
+                          label: l10n.pokeLabel,
+                          size: KoButtonSize.small,
+                          backgroundColor: KoColors.pink,
+                          icon: const DoodleIcon(Doodle.poke, size: 18),
+                          onTap: () {
+                            notifier.poke(dto.turnSeat);
+                            setState(() => _pokeCount++);
+                          },
+                        ),
+                      ),
+                    if (session.canPickCard)
+                      Padding(
+                        padding: const EdgeInsets.only(left: KoSpace.sm),
+                        child: ReadyButton(
+                          ready: session.moveLocked,
+                          onReady: session.canLockMove
+                              ? () => notifier.lockMove(session.selectedCardId!)
+                              : null,
+                          size: KoButtonSize.small,
+                        ),
                       ),
                   ],
                 ),

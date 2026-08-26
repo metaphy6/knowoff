@@ -158,6 +158,47 @@ void main() {
     expect(notifier.state.dto.voteTarget, equals(-1));
   });
 
+  test('a ready_ack flips the local resultReady flag', () async {
+    transport.emit('knowoff_resolved', <String, dynamic>{
+      'result': <String, dynamic>{
+        'eliminated_seat': 1,
+        'tally': <String, dynamic>{'1': 2},
+      },
+    });
+    await _settle();
+    expect(notifier.state.dto.resultReady, isFalse);
+
+    await notifier.ready();
+    transport.emit('ready_ack', <String, dynamic>{'result_ready': true});
+    await _settle();
+
+    expect(notifier.state.dto.resultReady, isTrue);
+  });
+
+  test('a fresh result window clears a stale resultReady', () async {
+    transport.emit('knowoff_resolved', <String, dynamic>{
+      'result': <String, dynamic>{
+        'eliminated_seat': 1,
+        'tally': <String, dynamic>{'1': 2},
+      },
+    });
+    transport.emit('ready_ack', <String, dynamic>{'result_ready': true});
+    await _settle();
+    expect(notifier.state.dto.resultReady, isTrue);
+
+    // Regression: a stale resultReady would let a single seat's earlier
+    // Ready silently finalize the very next round's result window too.
+    transport.emit('knowoff_resolved', <String, dynamic>{
+      'result': <String, dynamic>{
+        'eliminated_seat': 2,
+        'tally': <String, dynamic>{'2': 2},
+      },
+    });
+    await _settle();
+
+    expect(notifier.state.dto.resultReady, isFalse);
+  });
+
   test('a phase window starts a display-only countdown', () async {
     transport.emit('phase_started', <String, dynamic>{
       'phase': 'knowoff',
@@ -310,5 +351,75 @@ void main() {
           as Map<String, dynamic>)['access_token'],
       equals('fresh-token'),
     );
+  });
+
+  test('lockMove marks the pending card locked without sending anything',
+      () async {
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+
+    notifier.lockMove('card-1');
+
+    expect(notifier.state.selectedCardId, equals('card-1'));
+    expect(notifier.state.moveLocked, isTrue);
+    expect(transport.sent, isEmpty);
+  });
+
+  test("a locked move auto-plays the instant this seat's turn starts",
+      () async {
+    // Regression: picking a card during someone else's turn used to require
+    // sitting through the wait and re-confirming once your turn arrived.
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+    notifier.lockMove('card-1');
+
+    transport.emit('turn_started', <String, dynamic>{
+      'turn_seat': 0,
+      'round': 1,
+      'timeout': 7,
+    });
+    await _settle();
+
+    expect(notifier.state.moveLocked, isFalse);
+    expect(transport.sent.single['kind'], equals('play_card'));
+    expect(
+      (transport.sent.single['payload'] as Map<String, dynamic>)['card_id'],
+      equals('card-1'),
+    );
+  });
+
+  test('turn_started for another seat does not fire a locked move', () async {
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+    notifier.lockMove('card-1');
+
+    transport.emit('turn_started', <String, dynamic>{
+      'turn_seat': 1,
+      'round': 1,
+      'timeout': 7,
+    });
+    await _settle();
+
+    expect(notifier.state.moveLocked, isTrue);
+    expect(transport.sent, isEmpty);
+  });
+
+  test('a new round clears a stale pre-selection', () async {
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+    notifier.lockMove('card-1');
+
+    transport.emit('round_started', <String, dynamic>{
+      'round': 2,
+      'turn_order': <int>[1, 0],
+    });
+    await _settle();
+
+    expect(notifier.state.moveLocked, isFalse);
+    expect(notifier.state.selectedCardId, isNull);
   });
 }

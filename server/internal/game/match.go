@@ -43,6 +43,7 @@ type Match struct {
 	runoffCandidates    []int
 	resultPending       bool
 	eliminatedThisRound int
+	resultReady         map[int]bool
 
 	remainingVotes int
 	uniqueUsed     map[string]bool
@@ -76,6 +77,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		ballots:             make(map[int]int),
 		uniqueUsed:          make(map[string]bool),
 		eliminatedThisRound: -1,
+		resultReady:         make(map[int]bool),
 	}
 	for i := range m.players {
 		m.players[i] = &PlayerState{Ballot: -1, PokesUsed: make(map[int]bool)}
@@ -562,6 +564,11 @@ func (m *Match) beginRoundLocked() {
 	})
 	m.currentTurn = 0
 
+	// Every other phase transition announces itself via phase_started; this one
+	// didn't, so the client's dto.phase stayed on the previous phase (e.g.
+	// "prefetch") forever and every phase == 'play' gate (card selection, the
+	// Ready control) silently stayed dead all round.
+	m.broadcastPhase()
 	m.broadcastRoundStarted()
 	m.scheduleTurn()
 }
@@ -613,9 +620,9 @@ func (m *Match) scheduleTurn() {
 	}
 	seat := m.turnOrder[m.currentTurn]
 	m.bcast.Broadcast(transport.NewEvent(transport.EventTurnStarted, map[string]any{
-		"seat":    seat,
-		"round":   m.round,
-		"timeout": m.deps.Config.Tuning.Timers.PlayTurn,
+		"turn_seat": seat,
+		"round":     m.round,
+		"timeout":   m.deps.Config.Tuning.Timers.PlayTurn,
 	}), -1)
 	if !m.connected[seat] {
 		m.autoPass(seat)
@@ -932,12 +939,24 @@ func (m *Match) scheduleDiscussion() {
 }
 
 func (m *Match) handleReady(seat int, payload map[string]any) error {
-	if m.phase != PhaseDiscussion {
-		return fmt.Errorf("not discussion phase")
+	switch m.phase {
+	case PhaseDiscussion:
+		m.discussionReady[seat] = true
+		m.players[seat].Ready = true
+		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
+			map[string]any{"discussion_ready": true}))
+		m.checkDiscussionReady()
+	case PhaseResult:
+		// Rules §4's Revote window otherwise always runs its full length even
+		// when nobody intends to use it — Ready lets the table skip the wait
+		// once everyone agrees the result can finalize now.
+		m.resultReady[seat] = true
+		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
+			map[string]any{"result_ready": true}))
+		m.checkResultReady()
+	default:
+		return fmt.Errorf("not a ready phase")
 	}
-	m.discussionReady[seat] = true
-	m.players[seat].Ready = true
-	m.checkDiscussionReady()
 	return nil
 }
 
@@ -948,6 +967,16 @@ func (m *Match) checkDiscussionReady() {
 		}
 	}
 	m.endDiscussionLocked()
+}
+
+func (m *Match) checkResultReady() {
+	for _, s := range m.activeSeats() {
+		if m.connected[s] && !m.resultReady[s] {
+			return
+		}
+	}
+	m.stopResultTimer()
+	m.finalizeKnowoffLocked()
 }
 
 // endDiscussion is the timer-safe entry point; it acquires the lock.
@@ -1114,6 +1143,12 @@ func (m *Match) beginRunoff(candidates []int) {
 func (m *Match) afterBallot(eliminatedSomeone bool) {
 	m.resultPending = true
 	m.phase = PhaseResult
+	m.resultReady = make(map[int]bool)
+	for i := 0; i < m.size; i++ {
+		if !m.eliminated[i] && !m.connected[i] {
+			m.resultReady[i] = true
+		}
+	}
 
 	// Award correct-vote points before any revote can erase them.
 	if eliminatedSomeone {
@@ -1382,6 +1417,13 @@ func (m *Match) KnowoffActive() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.phase == PhaseKnowoff || m.phase == PhaseRunoff
+}
+
+// ResultWindowActive reports whether the post-ballot Revote window is open.
+func (m *Match) ResultWindowActive() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.phase == PhaseResult
 }
 
 func (m *Match) roundID() string {

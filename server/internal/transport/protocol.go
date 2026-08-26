@@ -42,6 +42,10 @@ const (
 	EventQuickChat         = "quick_chat"
 	EventSystemNotice      = "system_notice"
 	EventError             = "error"
+	// EventReadyAck confirms one seat's own Ready intent landed — a targeted
+	// echo, not a broadcast, since only that seat's button needs to flip to
+	// its locked-in state.
+	EventReadyAck = "ready_ack"
 )
 
 // Envelope is the unit of communication on the WebSocket. Every frame is a

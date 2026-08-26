@@ -24,7 +24,7 @@ func testConfig(size int) *config.Config {
 				PokesPerTargetPerRound: 1,
 			},
 			Timers: config.TimersTuning{
-				PlayTurn:            15,
+				PlayTurn:            10,
 				DiscussionPerPlayer: 10,
 				KnowoffBallot:       20,
 				KnowoffRunoff:       15,
@@ -236,6 +236,34 @@ func TestMatch_NownPayloadScoping(t *testing.T) {
 	}
 }
 
+// TestMatch_TurnStarted_CarriesTurnSeatKey guards the wire contract the
+// client's hand relies on: the client's generic state merge treats a bare
+// "seat" key as the *local player's own* seat, so turn_started must publish
+// whose turn it is under "turn_seat" or a card tap never re-enables client
+// side (regression: turn_started used to send "seat", silently corrupting
+// every client's own seat identity on each turn).
+func TestMatch_TurnStarted_CarriesTurnSeatKey(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	events := bcast.findEvents(0, transport.EventTurnStarted)
+	if len(events) == 0 {
+		t.Fatal("expected a turn_started event")
+	}
+	turnSeatF, ok := events[0].Payload["turn_seat"].(int)
+	if !ok {
+		t.Fatalf("turn_started payload missing turn_seat: %v", events[0].Payload)
+	}
+	if turnSeatF != m.turnOrder[0] {
+		t.Fatalf("turn_seat = %d, want %d", turnSeatF, m.turnOrder[0])
+	}
+	if _, leaked := events[0].Payload["seat"]; leaked {
+		t.Fatalf("turn_started must not also carry a bare 'seat' key: %v", events[0].Payload)
+	}
+}
+
 func TestMatch_OutOfTurnRejected(t *testing.T) {
 	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
@@ -428,6 +456,85 @@ func TestMatch_RevoteNullifiesResult(t *testing.T) {
 	nulls := bcast.findEvents(revoter, transport.EventVoteNullified)
 	if len(nulls) != 1 {
 		t.Fatalf("expected vote_nullified event, got %d", len(nulls))
+	}
+}
+
+// TestMatch_ResultWindow_ReadyFinalizesEarly guards the fix that let the
+// table skip the 15s Revote window (Rules §4) once everyone agrees the
+// result can finalize now instead of always running the timer out.
+func TestMatch_ResultWindow_ReadyFinalizesEarly(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	for _, s := range m.activeSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	target := m.activeSeats()[0]
+	for _, s := range m.activeSeats() {
+		if s != target {
+			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(target)}))
+		}
+	}
+	m.resolveBallot()
+	if m.phase != PhaseResult {
+		t.Fatalf("expected result phase, got %s", m.phase)
+	}
+
+	seats := m.activeSeats()
+	for i, s := range seats {
+		if err := m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil)); err != nil {
+			t.Fatalf("ready in result window: %v", err)
+		}
+		if i < len(seats)-1 && m.phase != PhaseResult {
+			t.Fatalf("result window finalized before every seat readied (after %d)", i+1)
+		}
+	}
+	if m.phase == PhaseResult {
+		t.Fatal("expected the result window to finalize once every seat readied")
+	}
+}
+
+// TestMatch_ReadyAck_TargetsOnlyActingSeat guards the wire contract the
+// Ready button's checked state relies on: the server used to never confirm a
+// Ready intent to anyone, so the button never actually flipped.
+func TestMatch_ReadyAck_TargetsOnlyActingSeat(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	if m.phase != PhaseDiscussion {
+		t.Fatalf("expected discussion phase, got %s", m.phase)
+	}
+
+	bcast.clear()
+	seat := m.activeSeats()[0]
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentReady, nil)); err != nil {
+		t.Fatalf("ready: %v", err)
+	}
+	acks := bcast.findEvents(seat, transport.EventReadyAck)
+	if len(acks) != 1 || acks[0].Payload["discussion_ready"] != true {
+		t.Fatalf("expected a discussion_ready ack for seat %d, got %v", seat, acks)
+	}
+	for _, other := range m.activeSeats() {
+		if other == seat {
+			continue
+		}
+		if evs := bcast.findEvents(other, transport.EventReadyAck); len(evs) != 0 {
+			t.Fatalf("ready_ack leaked to seat %d: %v", other, evs)
+		}
 	}
 }
 
@@ -809,6 +916,30 @@ func TestMatch_PhaseStarted_AlwaysCarriesVoteBudget(t *testing.T) {
 			t.Fatalf("phase %v: expected 2 votes at 4 players, got %v",
 				env.Payload["phase"], votes)
 		}
+	}
+}
+
+// TestMatch_BeginRound_BroadcastsPlayPhase guards the wire contract the
+// client's every phase == 'play' gate depends on (card selection, the Ready
+// control): beginRoundLocked used to flip m.phase to PhasePlay without ever
+// announcing it via phase_started, so the client's dto.phase stayed stuck on
+// whatever phase preceded the round (e.g. "prefetch") for the whole round.
+func TestMatch_BeginRound_BroadcastsPlayPhase(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+
+	events := bcast.findEvents(0, transport.EventPhaseStarted)
+	found := false
+	for _, env := range events {
+		if env.Payload["phase"] == PhasePlay {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a phase_started(play) broadcast on round start, got: %v", events)
 	}
 }
 

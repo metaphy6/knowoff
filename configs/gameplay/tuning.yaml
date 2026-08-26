@@ -13,7 +13,7 @@ game:
   abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
 
 timers:                             # seconds; which windows may fast-forward is structure (Rules §8)
-  play_turn: 15                     # each player's turn; the play reveals immediately, the turn ends on action
+  play_turn: 10                     # each player's turn; the play reveals immediately, the turn ends on action
   discussion_per_player: 10         # Ready unanimity ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
@@ -66,6 +66,8 @@ liquidity:                          # Quick Play backfill bots (Game Modes §1)
   min_humans: 1
   leaderboard_min_humans: 3
   noin_min_humans: 2                # team-win Noin requires this many humans
+  bot_think_min_s: 1.5               # a bot pauses before acting, so its move is visible to watch
+  bot_think_max_s: 4                 # upper bound of that randomized pause
 
 liveops:
   leaderboard_daily_counted_matches: 10
