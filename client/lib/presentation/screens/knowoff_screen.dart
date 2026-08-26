@@ -14,6 +14,7 @@ import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
 import '../widgets/ko_scaffold.dart';
+import '../widgets/ready_button.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/vote_board.dart';
 
@@ -91,14 +92,39 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
       ),
       body: KoBody(
         children: <Widget>[
-          if (inResultWindow && result != null)
+          if (inResultWindow && result != null) ...<Widget>[
             _ResultCard(
               result: result,
               players: dto.players,
               canRevote: session.isNower && dto.hand.specialty == 'revote',
               onRevote: () => notifier.useSpecialty('revote'),
-            )
-          else
+            ),
+            const SizedBox(height: KoSpace.lg),
+            KoContainer(
+              backgroundColor:
+                  dto.resultReady ? KoColors.lime : KoColors.whiteWell,
+              padding: const EdgeInsets.all(KoSpace.lg),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(l10n.readyLabel, style: text.headlineSmall),
+                        Text(l10n.resultReadyHint, style: text.bodySmall),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: KoSpace.md),
+                  ReadyButton(
+                    ready: dto.resultReady,
+                    onReady: session.canReadyResult ? notifier.ready : null,
+                  ),
+                ],
+              ),
+            ),
+          ] else
             _BallotNotice(
               locked: dto.voteTarget >= 0,
               eliminated: session.amEliminated,

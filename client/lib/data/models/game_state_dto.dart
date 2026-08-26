@@ -156,6 +156,7 @@ class GameStateDto {
     this.turnSeat = -1,
     this.plays = const {},
     this.discussionReady = false,
+    this.resultReady = false,
     this.voteTarget = -1,
     this.result,
     this.winner,
@@ -179,6 +180,10 @@ class GameStateDto {
   final int turnSeat;
   final Map<String, CardDto> plays;
   final bool discussionReady;
+
+  /// True once this seat has marked Ready during the post-ballot Revote
+  /// window (Rules §4) — skips the wait once everyone agrees to finalize.
+  final bool resultReady;
   final int voteTarget;
   final VoteResultDto? result;
   final String? winner;
@@ -209,6 +214,7 @@ class GameStateDto {
       turnSeat: json['turn_seat'] as int? ?? -1,
       plays: cardMap(json['plays']),
       discussionReady: json['discussion_ready'] as bool? ?? false,
+      resultReady: json['result_ready'] as bool? ?? false,
       voteTarget: json['vote_target'] as int? ?? -1,
       result: json['result'] == null
           ? null
@@ -233,6 +239,7 @@ class GameStateDto {
     int? turnSeat,
     Map<String, CardDto>? plays,
     bool? discussionReady,
+    bool? resultReady,
     int? voteTarget,
     VoteResultDto? result,
     String? winner,
@@ -258,6 +265,7 @@ class GameStateDto {
       turnSeat: turnSeat ?? this.turnSeat,
       plays: plays ?? this.plays,
       discussionReady: discussionReady ?? this.discussionReady,
+      resultReady: resultReady ?? this.resultReady,
       voteTarget: voteTarget ?? this.voteTarget,
       result: clearResult ? null : (result ?? this.result),
       winner: winner ?? this.winner,

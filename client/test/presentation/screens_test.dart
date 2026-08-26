@@ -132,6 +132,10 @@ void main() {
       ),
     );
     expect(find.text('Argue. Accuse. Bluff.'), findsOneWidget);
+    // Regression: Nown and the evidence table used to disappear once
+    // discussion started, right when players need them to argue.
+    expect(find.text('A dog on a skateboard'), findsOneWidget);
+    expect(find.text('Beta'), findsOneWidget);
   });
 
   testWidgets('KnowoffScreen renders the blind ballot', (tester) async {

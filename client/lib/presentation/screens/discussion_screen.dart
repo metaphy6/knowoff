@@ -13,6 +13,8 @@ import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_shake.dart';
+import '../widgets/nown_stage.dart';
+import '../widgets/play_table.dart';
 import '../widgets/poke_nudge.dart';
 import '../widgets/quick_chat_bar.dart';
 import '../widgets/ready_button.dart';
@@ -89,6 +91,10 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
         ),
         body: KoBody(
           children: <Widget>[
+            NownStage(nown: dto.nown, decoy: session.showDecoy),
+            const SizedBox(height: KoSpace.lg),
+            PlayTable(players: dto.players, plays: dto.plays),
+            const SizedBox(height: KoSpace.xl),
             KoContainer(
               backgroundColor:
                   dto.discussionReady ? KoColors.lime : KoColors.whiteWell,

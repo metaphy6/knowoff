@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/config"
@@ -80,26 +81,48 @@ func (bm *BackfillManager) Stop() {
 	}
 }
 
-// NewBotActor creates an in-process bot controller for a seat.
-func NewBotActor(room BotRoom, seat int, rng *rand.Rand, logger *slog.Logger) *BotActor {
+// NewBotActor creates an in-process bot controller for a seat. thinkMin/
+// thinkMax bound the randomized pause before a bot acts on a decision, so its
+// move stays observable instead of firing the instant it becomes legal.
+func NewBotActor(
+	room BotRoom,
+	seat int,
+	rng *rand.Rand,
+	logger *slog.Logger,
+	thinkMin, thinkMax time.Duration,
+) *BotActor {
 	if rng == nil {
 		rng = rand.New(rngSource)
 	}
+	if thinkMax < thinkMin {
+		thinkMax = thinkMin
+	}
 	return &BotActor{
-		room:   room,
-		seat:   seat,
-		rng:    rng,
-		logger: logger.With("bot_seat", seat, "room_id", room.RoomID()),
+		room:     room,
+		seat:     seat,
+		rng:      rng,
+		logger:   logger.With("bot_seat", seat, "room_id", room.RoomID()),
+		thinkMin: thinkMin,
+		thinkMax: thinkMax,
 	}
 }
 
 // BotActor drives one bot seat through a match.
 type BotActor struct {
-	room   BotRoom
-	seat   int
-	rng    *rand.Rand
-	logger *slog.Logger
-	stop   chan struct{}
+	room     BotRoom
+	seat     int
+	rng      *rand.Rand
+	logger   *slog.Logger
+	stop     chan struct{}
+	thinkMin time.Duration
+	thinkMax time.Duration
+
+	// Gates repeated 500ms polls against a single decision: a new pending
+	// key re-arms the think delay, and acted stops it firing more than once
+	// per decision window.
+	pending string
+	actAt   time.Time
+	acted   bool
 }
 
 // Start runs the bot loop until the match finishes.
@@ -135,59 +158,141 @@ func (b *BotActor) loop() {
 	}
 }
 
+// thinkDelay returns a randomized pause in [thinkMin, thinkMax].
+func (b *BotActor) thinkDelay() time.Duration {
+	if b.thinkMax <= 0 {
+		return 0
+	}
+	span := b.thinkMax - b.thinkMin
+	if span <= 0 {
+		return b.thinkMin
+	}
+	return b.thinkMin + time.Duration(b.rng.Int63n(int64(span)))
+}
+
 func (b *BotActor) act(m *game.Match) {
 	seat := b.seat
-	if m.CurrentTurnSeat() == seat {
-		hand := m.PlayerHand(seat)
-		// Play the first non-empty card slot; if empty, draw once or pass.
-		if len(hand.Cards) > 0 {
-			cardID := hand.Cards[0]
-			b.logger.Debug("bot playing card", "card_id", cardID)
-			_ = m.HandleIntent(seat, &transport.Envelope{
-				Kind:    transport.IntentPlayCard,
-				Payload: map[string]any{"card_id": cardID},
-			})
-			return
-		}
-		if len(hand.DrawPile) > 0 {
-			b.logger.Debug("bot drawing card")
-			_ = m.HandleIntent(seat, &transport.Envelope{
-				Kind:    transport.IntentDrawCards,
-				Payload: map[string]any{"count": 1},
-			})
-			return
-		}
-		b.logger.Debug("bot passing turn")
-		_ = m.HandleIntent(seat, &transport.Envelope{
-			Kind:    transport.IntentUseSpecialty,
-			Payload: map[string]any{"specialty": "pass"},
-		})
+
+	var key string
+	switch {
+	case m.CurrentTurnSeat() == seat:
+		key = "turn"
+	case m.IsDiscussionReadyAllowed(), m.ResultWindowActive():
+		// Discussion's Ready and the Result window's Ready are separate
+		// decision windows this seat only marks once each, so key on the
+		// phase itself.
+		key = "ready:" + m.Phase()
+	case m.KnowoffActive():
+		// Knowoff and a tie-break Runoff are both separate decision windows
+		// this seat only votes in once each, so key on the phase itself.
+		key = "vote:" + m.Phase()
+	}
+
+	if key == "" {
+		b.pending = ""
+		b.acted = false
+		return
+	}
+	if b.pending != key {
+		b.pending = key
+		b.acted = false
+		b.actAt = time.Now().Add(b.thinkDelay())
+		return
+	}
+	if b.acted || time.Now().Before(b.actAt) {
 		return
 	}
 
-	if m.IsDiscussionReadyAllowed() {
-		b.logger.Debug("bot marking ready")
-		_ = m.HandleIntent(seat, &transport.Envelope{Kind: transport.IntentReady})
+	switch {
+	case key == "turn":
+		if !b.playTurn(m) {
+			// Shuffle re-dealt this seat's hand but Rules §5 doesn't end the
+			// turn on it — think again before taking the turn's real action.
+			b.actAt = time.Now().Add(b.thinkDelay())
+			return
+		}
+	case strings.HasPrefix(key, "ready:"):
+		b.markReady(m)
+	default:
+		b.castVote(m)
+	}
+	b.acted = true
+}
+
+// playTurn takes this seat's turn action and reports whether the turn ended.
+// Using Shuffle re-deals hands but leaves the turn open (Rules §5), so it
+// reports false to make act re-think with the fresh hand.
+func (b *BotActor) playTurn(m *game.Match) bool {
+	seat := b.seat
+	hand := m.PlayerHand(seat)
+
+	// A held Shuffle is a one-time, round-start-only Donower specialty that
+	// a bot previously never touched; using it on sight is a simple,
+	// legitimate improvement over always playing the first card.
+	if hand.Specialty == game.SpecialtyShuffle &&
+		m.PlayerRole(seat) == game.RoleDonower &&
+		len(m.TablePlays()) == 0 {
+		b.logger.Debug("bot using shuffle specialty")
+		_ = m.HandleIntent(seat, &transport.Envelope{
+			Kind:    transport.IntentUseSpecialty,
+			Payload: map[string]any{"specialty": game.SpecialtyShuffle},
+		})
+		return false
 	}
 
-	if m.KnowoffActive() {
-		// Vote for a random active player other than self.
-		active := m.ActiveSeats()
-		var targets []int
-		for _, s := range active {
-			if s != seat {
-				targets = append(targets, s)
-			}
-		}
-		if len(targets) > 0 {
-			target := targets[b.rng.Intn(len(targets))]
-			b.logger.Debug("bot casting vote", "target", target)
-			_ = m.HandleIntent(seat, &transport.Envelope{
-				Kind:    transport.IntentCastVote,
-				Payload: map[string]any{"target_seat": target},
-			})
+	if len(hand.Cards) > 0 {
+		// A random slot, not always the first, so the bot's play order isn't
+		// a mechanical tell a regular could learn to read.
+		cardID := hand.Cards[b.rng.Intn(len(hand.Cards))]
+		b.logger.Debug("bot playing card", "card_id", cardID)
+		_ = m.HandleIntent(seat, &transport.Envelope{
+			Kind:    transport.IntentPlayCard,
+			Payload: map[string]any{"card_id": cardID},
+		})
+		return true
+	}
+	if len(hand.DrawPile) > 0 {
+		b.logger.Debug("bot drawing card")
+		_ = m.HandleIntent(seat, &transport.Envelope{
+			Kind:    transport.IntentDrawCards,
+			Payload: map[string]any{"count": 1},
+		})
+		return true
+	}
+	b.logger.Debug("bot passing turn")
+	_ = m.HandleIntent(seat, &transport.Envelope{
+		Kind:    transport.IntentUseSpecialty,
+		Payload: map[string]any{"specialty": "pass"},
+	})
+	return true
+}
+
+func (b *BotActor) markReady(m *game.Match) {
+	b.logger.Debug("bot marking ready")
+	_ = m.HandleIntent(b.seat, &transport.Envelope{Kind: transport.IntentReady})
+}
+
+func (b *BotActor) castVote(m *game.Match) {
+	seat := b.seat
+	// Vote for a random active player other than self — a Donower bot has
+	// no legitimate way to know who else is a Donower, and a Nower bot has
+	// only what TablePlays already exposes, same as a human at the table.
+	active := m.ActiveSeats()
+	var targets []int
+	for _, s := range active {
+		if s != seat {
+			targets = append(targets, s)
 		}
 	}
+	if len(targets) == 0 {
+		return
+	}
+	target := targets[b.rng.Intn(len(targets))]
+	b.logger.Debug("bot casting vote", "target", target)
+	_ = m.HandleIntent(seat, &transport.Envelope{
+		Kind:    transport.IntentCastVote,
+		Payload: map[string]any{"target_seat": target},
+	})
 }
 
 // IsBotNickname reports whether a nickname is reserved for backfill bots.

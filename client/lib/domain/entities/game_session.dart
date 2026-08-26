@@ -12,6 +12,7 @@ class GameSession {
     this.myRole,
     this.lastError,
     this.selectedCardId,
+    this.moveLocked = false,
     this.frozen = false,
   });
 
@@ -19,6 +20,12 @@ class GameSession {
   final String? myRole;
   final String? lastError;
   final String? selectedCardId;
+
+  /// True once a card picked during someone else's turn is locked in to
+  /// auto-play the instant this seat's turn starts (turn order itself stays
+  /// strictly sequential server side; this only skips the wait-then-decide
+  /// step client side).
+  final bool moveLocked;
 
   /// Developer-only: while true, incoming server events are buffered instead
   /// of applied, so the screen stops advancing for UI/UX inspection.
@@ -29,13 +36,17 @@ class GameSession {
     String? myRole,
     String? lastError,
     String? selectedCardId,
+    bool clearSelectedCard = false,
+    bool? moveLocked,
     bool? frozen,
   }) {
     return GameSession(
       dto: dto ?? this.dto,
       myRole: myRole ?? this.myRole,
       lastError: lastError,
-      selectedCardId: selectedCardId ?? this.selectedCardId,
+      selectedCardId:
+          clearSelectedCard ? null : (selectedCardId ?? this.selectedCardId),
+      moveLocked: moveLocked ?? this.moveLocked,
       frozen: frozen ?? this.frozen,
     );
   }
@@ -53,6 +64,17 @@ class GameSession {
 
   bool get canAct => isMyTurn && (phase == 'play' || phase == 'role_reveal');
 
+  bool get hasPlayedThisRound => dto.plays.containsKey(seat.toString());
+
+  /// A card can be picked any time during the Play phase, not only on your
+  /// own turn — picking ahead of time is what lets a locked-in move fire the
+  /// instant your turn starts.
+  bool get canPickCard =>
+      !amEliminated && phase == 'play' && !hasPlayedThisRound;
+
+  bool get canLockMove =>
+      canPickCard && !isMyTurn && !moveLocked && selectedCardId != null;
+
   bool canVoteFor(int targetSeat) {
     if (amEliminated) return false;
     if (targetSeat == seat) return false;
@@ -65,6 +87,10 @@ class GameSession {
       !amEliminated &&
       (phase == 'discussion' || phase == 'role_reveal') &&
       !dto.discussionReady;
+
+  /// Rules §4's post-ballot Revote window otherwise always runs its full
+  /// length; Ready lets the table skip the wait once everyone agrees.
+  bool get canReadyResult => !amEliminated && hasResult && !dto.resultReady;
 
   PlayerDto? playerBySeat(int seat) {
     for (final p in dto.players) {

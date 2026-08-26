@@ -808,6 +808,10 @@
   "@discussionReadyHint": {
     "description": "Hint under the Ready button."
   },
+  "resultReadyHint": "When everyone is Ready this finalizes early.",
+  "@resultReadyHint": {
+    "description": "Hint under the Ready button in the Knowoff result window."
+  },
   "quickChatTitle": "Quick Chat",
   "@quickChatTitle": {
     "description": "Heading over the canned-phrase bar."
