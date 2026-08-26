@@ -59,7 +59,7 @@ Run `make hosts.add` once to resolve those names, then:
 
 | URL | What |
 |---|---|
-| `https://app.knowoff.local` | Flutter web client |
+| `https://app.knowoff.local`, `http://0.0.0.0:8000/` (flutter CLI debug and integrated browser access) | Flutter web client |
 | `https://api.knowoff.local` | Game server — REST + `/ws` WebSocket |
 | `https://admin.knowoff.local` | Admin Console / Contributor Portal (dev-only, never expose this) |
 | `https://adminer.knowoff.local` | Postgres browser |

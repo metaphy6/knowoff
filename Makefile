@@ -25,7 +25,7 @@ RUN_ID  ?=
 
 .PHONY: help git git.dry track.add track.list roadmap.status codeg \
   server.build server.test server.lint server.seed-admin client.build client.test client.lint \
-  client.web.rebuild \
+  client.web.rebuild client.web.run \
   compose.up compose.down compose.snap.create compose.snap.restore \
   containers.label.version containers.label.list hosts.add hosts.remove hosts.status
 
@@ -98,6 +98,10 @@ client.lint:
 ## client.web.rebuild Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window
 client.web.rebuild:
 	@$(XOPS)/client_web_ops.py rebuild
+
+## client.web.run    Run the Flutter web client natively via the Flutter CLI (no Docker) at http://localhost:8000 or http://0.0.0.0:8000 for integrated browser
+client.web.run:
+	@cd client && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8000
 
 ## compose.up        Start the local Docker Compose stack
 compose.up:
