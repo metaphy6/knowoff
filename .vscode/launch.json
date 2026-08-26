@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Emulator)",
+      "request": "launch",
+      "type": "dart",
+      // Flutter project lives under client/, not the workspace root.
+      "cwd": "client",
+      "program": "lib/main.dart"
+      // No deviceId: uses whichever device is selected in VS Code's status
+      // bar device picker (remembers the last one, e.g. an Android emulator).
+    },
+    {
+      "name": "Flutter (Web)",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "client",
+      "program": "lib/main.dart",
+      "deviceId": "chrome"
+    }
+  ]
+}
+

@@ -26,6 +26,11 @@
       "onAutoForward": "ignore"
     }
   },
+  // No system Chrome on this box, only snap Chromium — propagates to all
+  // Dart/Flutter processes the extension spawns, including device polling.
+  "dart.env": {
+    "CHROME_EXECUTABLE": "/snap/bin/chromium"
+  },
   "chat.agentSkillsLocations": {
     ".agents/skills": true
   },
