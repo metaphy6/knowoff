@@ -966,6 +966,48 @@ func TestMatch_QuickChat_Broadcasts(t *testing.T) {
 	}
 }
 
+func TestMatch_QuickChat_TargetedBroadcasts(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	bcast.clear()
+	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentQuickChat, map[string]any{
+		"phrase_id":   "suspect",
+		"target_seat": float64(1),
+	})); err != nil {
+		t.Fatalf("quick chat: %v", err)
+	}
+	found := false
+	for _, msgs := range bcast.messages {
+		for _, env := range msgs {
+			if env.Kind == transport.EventQuickChat &&
+				env.Payload["phrase_id"] == "suspect" &&
+				env.Payload["target_seat"] == 1 {
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected targeted quick_chat broadcast with target_seat")
+	}
+
+	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentQuickChat, map[string]any{
+		"phrase_id":   "trust",
+		"target_seat": float64(0),
+	})); err == nil {
+		t.Fatal("expected error targeting self")
+	}
+
+	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentQuickChat, map[string]any{
+		"phrase_id":   "trust",
+		"target_seat": float64(99),
+	})); err == nil {
+		t.Fatal("expected error for out-of-range target")
+	}
+}
+
 func TestMatch_Poke_CapEnforced(t *testing.T) {
 	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {

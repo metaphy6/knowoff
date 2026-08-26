@@ -17,6 +17,9 @@ class PlayTable extends StatelessWidget {
     required this.players,
     required this.plays,
     this.highlightSeat = -1,
+    this.localSeat = -1,
+    this.onPoke,
+    this.onTargetedChat,
     super.key,
   });
 
@@ -25,6 +28,16 @@ class PlayTable extends StatelessWidget {
 
   /// Seat whose play should read as the most recent one.
   final int highlightSeat;
+
+  /// The local player's seat — its own box gets no poke/quick-chat actions.
+  final int localSeat;
+
+  /// Pokes the tapped seat's doodle badge. Null hides the badge entirely.
+  final ValueChanged<int>? onPoke;
+
+  /// Opens the targeted Quick Chat picker for the tapped seat. Null disables
+  /// the tap-to-accuse/trust affordance on every box.
+  final void Function(int seat)? onTargetedChat;
 
   PlayerDto _playerFor(int seat, String fallback) {
     for (final p in players) {
@@ -101,6 +114,9 @@ class PlayTable extends StatelessWidget {
                   ),
                   card: entry.value,
                   latest: (int.tryParse(entry.key) ?? -1) == highlightSeat,
+                  isLocal: (int.tryParse(entry.key) ?? -1) == localSeat,
+                  onPoke: onPoke,
+                  onTargetedChat: onTargetedChat,
                 ),
             ],
           ),
@@ -111,12 +127,18 @@ class PlayTable extends StatelessWidget {
 }
 
 /// A single played card, square, sized so several sit side by side and wrap
-/// onto a new row once the table runs out of width.
+/// onto a new row once the table runs out of width. Doubles as the poke and
+/// targeted Quick Chat affordance for that seat: a poke doodle badge sits in
+/// its corner, and tapping the box (any seat but your own, or an eliminated
+/// one) opens the "I suspect you" / "Trust me" picker.
 class _PlayedEntry extends StatelessWidget {
   const _PlayedEntry({
     required this.player,
     required this.card,
     required this.latest,
+    this.isLocal = false,
+    this.onPoke,
+    this.onTargetedChat,
   });
 
   static const double _tileSize = 184;
@@ -124,11 +146,17 @@ class _PlayedEntry extends StatelessWidget {
   final PlayerDto player;
   final CardDto card;
   final bool latest;
+  final bool isLocal;
+  final ValueChanged<int>? onPoke;
+  final void Function(int seat)? onTargetedChat;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final accent = seatAccent(player.seat);
-    return Container(
+    final canAct = !isLocal && !player.eliminated;
+
+    final tile = Container(
       key: ValueKey<String>('played-card-${player.seat}'),
       width: _tileSize,
       padding: const EdgeInsets.all(KoSpace.md),
@@ -181,9 +209,60 @@ class _PlayedEntry extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              if (canAct && onPoke != null)
+                _PokeBadge(
+                  key: ValueKey<String>('poke-badge-${player.seat}'),
+                  semanticLabel: '${l10n.pokeLabel} ${seatDisplayName(player)}',
+                  onTap: () => onPoke!(player.seat),
+                ),
             ],
           ),
         ],
+      ),
+    );
+
+    if (!canAct || onTargetedChat == null) return tile;
+
+    return Semantics(
+      button: true,
+      label: l10n.quickChatTargetHint(seatDisplayName(player)),
+      child: Material(
+        key: ValueKey<String>('played-card-tap-${player.seat}'),
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(KoRadii.card),
+          onTap: () => onTargetedChat!(player.seat),
+          child: tile,
+        ),
+      ),
+    );
+  }
+}
+
+/// Small tappable poke doodle pinned to a played-card box's corner.
+class _PokeBadge extends StatelessWidget {
+  const _PokeBadge(
+      {required this.semanticLabel, required this.onTap, super.key});
+
+  final String semanticLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: Material(
+        color: KoColors.pink,
+        shape: const CircleBorder(side: BorderSide(color: KoColors.ink)),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: const Padding(
+            padding: EdgeInsets.all(KoSpace.xs),
+            child: DoodleIcon(Doodle.poke, size: 16),
+          ),
+        ),
       ),
     );
   }

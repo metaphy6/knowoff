@@ -4,10 +4,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
+import '../widgets/accusation_banner.dart';
 import '../widgets/chat_feed.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
@@ -15,9 +17,9 @@ import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_shake.dart';
 import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
-import '../widgets/poke_nudge.dart';
 import '../widgets/quick_chat_bar.dart';
 import '../widgets/ready_button.dart';
+import '../widgets/targeted_chat_sheet.dart';
 
 /// Discussion screen: argue, bluff, mark Ready, poke, and Quick Chat.
 class DiscussionScreen extends ConsumerStatefulWidget {
@@ -43,6 +45,28 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
   void dispose() {
     _ticker?.cancel();
     super.dispose();
+  }
+
+  void _openTargetedChat(
+    BuildContext context,
+    List<PlayerDto> players,
+    int seat,
+    GameSessionNotifier notifier,
+  ) {
+    final target = players.firstWhere(
+      (p) => p.seat == seat,
+      orElse: () => PlayerDto(
+        seat: seat,
+        name: '',
+        connected: false,
+        eliminated: false,
+      ),
+    );
+    showTargetedChatSheet(
+      context,
+      player: target,
+      onPhrase: (phraseId) => notifier.quickChat(phraseId, targetSeat: seat),
+    );
   }
 
   @override
@@ -89,70 +113,70 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
             ),
           ],
         ),
-        body: KoBody(
-          children: <Widget>[
-            NownStage(nown: dto.nown, decoy: session.showDecoy),
-            const SizedBox(height: KoSpace.lg),
-            PlayTable(players: dto.players, plays: dto.plays),
-            const SizedBox(height: KoSpace.xl),
-            KoContainer(
-              backgroundColor:
-                  dto.discussionReady ? KoColors.lime : KoColors.whiteWell,
-              padding: const EdgeInsets.all(KoSpace.lg),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(l10n.readyLabel, style: text.headlineSmall),
-                        Text(l10n.discussionReadyHint, style: text.bodySmall),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: KoSpace.md),
-                  ReadyButton(
-                    ready: dto.discussionReady,
-                    onReady: session.canReady ? notifier.ready : null,
-                  ),
-                ],
+        body: AccusationBanner(
+          events: dto.chatEvents,
+          players: dto.players,
+          child: KoBody(
+            children: <Widget>[
+              NownStage(nown: dto.nown, decoy: session.showDecoy),
+              const SizedBox(height: KoSpace.lg),
+              PlayTable(
+                players: dto.players,
+                plays: dto.plays,
+                localSeat: session.seat,
+                onPoke: session.amEliminated
+                    ? null
+                    : (seat) {
+                        notifier.poke(seat);
+                        setState(() => _pokeCount++);
+                      },
+                onTargetedChat: session.amEliminated
+                    ? null
+                    : (seat) =>
+                        _openTargetedChat(context, dto.players, seat, notifier),
               ),
-            ),
-            const SizedBox(height: KoSpace.xl),
-            KoSectionHeader(
-              label: l10n.quickChatTitle,
-              glyph: const DoodleIcon(Doodle.cloud, size: 20),
-              accent: KoColors.violet,
-            ),
-            QuickChatBar(
-              onPhrase: session.amEliminated ? null : notifier.quickChat,
-            ),
-            const SizedBox(height: KoSpace.lg),
-            ChatFeed(
-              events: dto.chatEvents,
-              players: dto.players,
-              localSeat: session.seat,
-            ),
-            const SizedBox(height: KoSpace.xl),
-            KoSectionHeader(
-              label: l10n.pokeLabel,
-              glyph: const DoodleIcon(Doodle.poke, size: 20),
-              accent: KoColors.pink,
-            ),
-            Text(l10n.pokeHint, style: text.bodySmall),
-            const SizedBox(height: KoSpace.md),
-            PokeNudge(
-              players: dto.players,
-              localSeat: session.seat,
-              onPoke: session.amEliminated
-                  ? null
-                  : (seat) {
-                      notifier.poke(seat);
-                      setState(() => _pokeCount++);
-                    },
-            ),
-          ],
+              const SizedBox(height: KoSpace.xl),
+              KoContainer(
+                backgroundColor:
+                    dto.discussionReady ? KoColors.lime : KoColors.whiteWell,
+                padding: const EdgeInsets.all(KoSpace.lg),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Text(l10n.readyLabel, style: text.headlineSmall),
+                          Text(l10n.discussionReadyHint, style: text.bodySmall),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: KoSpace.md),
+                    ReadyButton(
+                      ready: dto.discussionReady,
+                      onReady: session.canReady ? notifier.ready : null,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: KoSpace.xl),
+              KoSectionHeader(
+                label: l10n.quickChatTitle,
+                glyph: const DoodleIcon(Doodle.cloud, size: 20),
+                accent: KoColors.violet,
+              ),
+              QuickChatBar(
+                onPhrase: session.amEliminated ? null : notifier.quickChat,
+              ),
+              const SizedBox(height: KoSpace.lg),
+              ChatFeed(
+                events: dto.chatEvents,
+                players: dto.players,
+                localSeat: session.seat,
+              ),
+            ],
+          ),
         ),
       ),
     );
