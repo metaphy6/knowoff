@@ -82,9 +82,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'turn_started':
         _mergeState(payload);
         _setTurnDeadline(payload);
+        _autoPlayLockedMove();
         break;
       case 'round_started':
         _setDto(state.dto.copyWith(plays: const {}));
+        state = state.copyWith(moveLocked: false, clearSelectedCard: true);
         _mergeState(payload);
         break;
       case 'play_revealed':
@@ -93,14 +95,26 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'round_resolved':
       case 'shuffle_occurred':
       case 'vote_result_pending':
+        _mergeState(payload);
+        break;
       case 'knowoff_resolved':
         _mergeState(payload);
+        // A fresh result window starts unread — otherwise a stale Ready from
+        // the previous round's window would finalize this one instantly.
+        _setDto(state.dto.copyWith(resultReady: false));
         break;
       case 'vote_nullified':
         // A Revote cancels the shown result outright: it reveals nobody and
         // eliminates nobody (Rules §5).
         _mergeState(payload);
-        _setDto(state.dto.copyWith(clearResult: true, voteTarget: -1));
+        _setDto(state.dto.copyWith(
+          clearResult: true,
+          voteTarget: -1,
+          resultReady: false,
+        ));
+        break;
+      case 'ready_ack':
+        _mergeState(payload);
         break;
       case 'quick_chat':
         _appendChatEvent(payload);
@@ -112,6 +126,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'hand_dealt':
         final hand = HandDto.fromJson(payload);
         _setDto(state.dto.copyWith(hand: hand));
+        state = state.copyWith(moveLocked: false, clearSelectedCard: true);
         break;
       case 'match_verdict':
       case 'points_scored':
@@ -184,7 +199,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
     var dto = state.dto;
     if (opensBallot) {
-      dto = dto.copyWith(voteTarget: -1, clearResult: true);
+      dto = dto.copyWith(voteTarget: -1, clearResult: true, resultReady: false);
     }
     dto = window == null || window <= 0
         ? dto.copyWith(clearTurnDeadline: true, phaseWindow: 0)
@@ -237,6 +252,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           : current.plays,
       discussionReady:
           payload['discussion_ready'] as bool? ?? current.discussionReady,
+      resultReady: payload['result_ready'] as bool? ?? current.resultReady,
       voteTarget: payload['vote_target'] as int? ?? current.voteTarget,
       result: payload.containsKey('result')
           ? (payload['result'] == null
@@ -269,7 +285,23 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   }
 
   void selectCard(String cardId) {
-    state = state.copyWith(selectedCardId: cardId);
+    state = state.copyWith(selectedCardId: cardId, moveLocked: false);
+  }
+
+  /// Locks in a card picked during someone else's turn. Nothing is sent to
+  /// the server yet — the turn order stays strictly sequential there — this
+  /// just marks the decision as made so it can fire itself later.
+  void lockMove(String cardId) {
+    state = state.copyWith(selectedCardId: cardId, moveLocked: true);
+  }
+
+  /// Plays a move locked in earlier the instant this seat's turn starts, so
+  /// the player isn't left waiting to re-confirm a decision they already made.
+  void _autoPlayLockedMove() {
+    if (!state.moveLocked || !state.isMyTurn) return;
+    final cardId = state.selectedCardId;
+    state = state.copyWith(moveLocked: false);
+    if (cardId != null) unawaited(playCard(cardId));
   }
 
   static const _protocolVersion = 1;

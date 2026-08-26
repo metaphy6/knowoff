@@ -198,7 +198,7 @@ func (b *bot) handle(ev envelope) {
 	case eventRoundStarted:
 		b.turn = false
 	case eventTurnStarted:
-		seatF, _ := ev.Payload["seat"].(float64)
+		seatF, _ := ev.Payload["turn_seat"].(float64)
 		if int(seatF) == b.seat {
 			b.turn = true
 			b.playCard()

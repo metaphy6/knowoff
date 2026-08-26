@@ -122,3 +122,12 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-26T10:47:20Z,hand-size-202608261048,copilot,client,commit,completed,fix(client): match hand cards to support card size,,pending
 2026-08-26T10:49:51Z,hand-spacing-202608261052,copilot,client,commit,completed,style(client): tighten grouped hand card spacing,,pending
 2026-08-26T10:55:06Z,hand-layout-repair-202608261058,copilot,client,commit,completed,fix(client): restore grouped hand card layout,,pending
+2026-08-26T11:05:12Z,run-20260826110512-336327,human,server,commit,completed,"fix(server): send whose-turn seat under turn_seat, not seat, in turn_started",,pending
+2026-08-26T11:17:58Z,run-20260826110512-336327,human,client,commit,completed,feat(gameplay): 7s turn timer + pre-pick and auto-play a locked move on your turn,,pending
+2026-08-26T11:23:36Z,run-20260826112336-368376,human,client,commit,completed,"fix(client): revert turn timer to 10s, move Ready control into the hand container",,pending
+2026-08-26T11:26:57Z,run-20260826112657-375003,human,server,commit,completed,fix(server): broadcast phase_started(play) on round start so card selection and Ready stop being permanently dead,,pending
+2026-08-26T11:45:19Z,run-20260826114519-410286,human,client,commit,completed,fix(client): move Ready button out of the hand row into the waiting panel,,pending
+2026-08-26T11:45:19Z,run-20260826114519-410307,human,server,commit,completed,"feat(bots): add a randomized think-time pause and smarter play (random card choice, uses Shuffle)",,pending
+2026-08-26T11:54:58Z,run-20260826115458-426665,human,client,commit,completed,feat(client): show Nown and a vertical evidence list (card + owner avatar) during discussion,,pending
+2026-08-26T12:07:18Z,run-20260826120718-451975,human,server,commit,completed,feat(server): let Ready finalize the Knowoff result window early once everyone agrees,,pending
+2026-08-26T12:07:18Z,run-20260826120718-451996,human,client,commit,completed,feat(client): add a Ready button to the Knowoff result window; fix Ready never acking back,,pending

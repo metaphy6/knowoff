@@ -119,11 +119,14 @@ func (r *Room) StartMatch(deps game.Dependencies) error {
 }
 
 func (r *Room) startBotActorsLocked(m *game.Match) {
+	think := r.deps.Config.Tuning.Liquidity
+	thinkMin := time.Duration(think.BotThinkMinS * float64(time.Second))
+	thinkMax := time.Duration(think.BotThinkMaxS * float64(time.Second))
 	for seat, b := range r.bindings {
 		if !b.Bot {
 			continue
 		}
-		actor := bots.NewBotActor(r, seat, nil, r.deps.Logger)
+		actor := bots.NewBotActor(r, seat, nil, r.deps.Logger, thinkMin, thinkMax)
 		actor.Start()
 		r.botActors = append(r.botActors, actor)
 	}

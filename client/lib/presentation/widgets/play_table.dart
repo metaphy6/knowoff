@@ -10,9 +10,8 @@ import 'seat_tile.dart';
 
 /// The evidence table: every card played this match, with the name attached.
 ///
-/// This is a read-only surface, so it takes the loudest layout treatment in
-/// the app: plays are scattered at alternating tilts with the player's seat
-/// colour stamped on each, instead of stacking as a tidy upright list.
+/// Cards list vertically in play order, each with the owner's avatar boxed
+/// underneath — "who played what" has to read in one glance while arguing.
 class PlayTable extends StatelessWidget {
   const PlayTable({
     required this.players,
@@ -90,94 +89,81 @@ class PlayTable extends StatelessWidget {
             ],
           ),
           const SizedBox(height: KoSpace.md),
-          Wrap(
-            spacing: KoSpace.lg,
-            runSpacing: KoSpace.lg,
-            children: <Widget>[
-              for (var i = 0; i < entries.length; i++)
-                _PlayedCard(
-                  player: _playerFor(
-                    int.tryParse(entries[i].key) ?? -1,
-                    entries[i].key,
-                  ),
-                  card: entries[i].value,
-                  tilt: KoTilt.alternating(i),
-                  latest: (int.tryParse(entries[i].key) ?? -1) == highlightSeat,
-                ),
-            ],
-          ),
+          for (var i = 0; i < entries.length; i++) ...[
+            if (i > 0) const SizedBox(height: KoSpace.md),
+            _PlayedEntry(
+              player: _playerFor(
+                int.tryParse(entries[i].key) ?? -1,
+                entries[i].key,
+              ),
+              card: entries[i].value,
+              latest: (int.tryParse(entries[i].key) ?? -1) == highlightSeat,
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _PlayedCard extends StatelessWidget {
-  const _PlayedCard({
+class _PlayedEntry extends StatelessWidget {
+  const _PlayedEntry({
     required this.player,
     required this.card,
-    required this.tilt,
     required this.latest,
   });
 
   final PlayerDto player;
   final CardDto card;
-  final double tilt;
   final bool latest;
 
   @override
   Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: tilt,
-      child: Container(
-        width: 132,
-        padding: const EdgeInsets.all(KoSpace.sm),
-        decoration: BoxDecoration(
-          color: KoColors.surface,
-          border: Border.all(
-            width: latest ? KoBorders.thick : KoBorders.regular,
-            color: KoColors.ink,
+    return Container(
+      key: ValueKey<String>('played-card-${player.seat}'),
+      width: double.infinity,
+      padding: const EdgeInsets.all(KoSpace.sm),
+      decoration: BoxDecoration(
+        color: KoColors.surface,
+        border: Border.all(
+          width: latest ? KoBorders.thick : KoBorders.regular,
+          color: KoColors.ink,
+        ),
+        borderRadius: BorderRadius.circular(KoRadii.card),
+        boxShadow: <BoxShadow>[latest ? KoShadows.lg : KoShadows.sm],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: double.infinity,
+            height: 96,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.all(KoSpace.sm),
+            decoration: BoxDecoration(
+              color: KoColors.whiteWell,
+              border: Border.all(width: KoBorders.thin, color: KoColors.ink),
+              borderRadius: BorderRadius.circular(KoRadii.well),
+            ),
+            child: CardFace(card: card, compact: true, maxLines: 3),
           ),
-          borderRadius: BorderRadius.circular(KoRadii.card),
-          boxShadow: <BoxShadow>[latest ? KoShadows.lg : KoShadows.sm],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(
-                horizontal: KoSpace.sm,
-                vertical: 3,
+          const SizedBox(height: KoSpace.sm),
+          Row(
+            children: <Widget>[
+              SeatAvatar(player: player, size: 36),
+              const SizedBox(width: KoSpace.sm),
+              Expanded(
+                child: Text(
+                  seatDisplayName(player),
+                  style: Theme.of(context).textTheme.labelMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              decoration: BoxDecoration(
-                color: seatAccent(player.seat),
-                border: Border.all(width: KoBorders.thin, color: KoColors.ink),
-                borderRadius: BorderRadius.circular(KoRadii.chip),
-              ),
-              child: Text(
-                seatDisplayName(player),
-                style: Theme.of(context).textTheme.labelSmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: KoSpace.sm),
-            Container(
-              height: 92,
-              width: double.infinity,
-              alignment: Alignment.center,
-              padding: const EdgeInsets.all(KoSpace.sm),
-              decoration: BoxDecoration(
-                color: KoColors.whiteWell,
-                border: Border.all(width: KoBorders.thin, color: KoColors.ink),
-                borderRadius: BorderRadius.circular(KoRadii.well),
-              ),
-              child: CardFace(card: card, compact: true, maxLines: 3),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
