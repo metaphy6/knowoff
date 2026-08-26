@@ -90,21 +90,21 @@ class _RoleCardState extends State<RoleCard> {
                         : Doodle.eye,
                 size: iconSize,
               ),
-              if (label != null) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: (size >= 120 ? text.labelLarge : text.labelMedium)
-                      ?.copyWith(
-                    height: 1.0,
-                    fontWeight: FontWeight.w600,
-                    color: KoColors.ink,
-                  ),
+              ...<Widget>[
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: (size >= 120 ? text.labelLarge : text.labelMedium)
+                    ?.copyWith(
+                  height: 1.0,
+                  fontWeight: FontWeight.w600,
+                  color: KoColors.ink,
                 ),
-              ],
+              ),
+            ],
             ],
           ),
         ),

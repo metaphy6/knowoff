@@ -104,3 +104,9 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-25T14:28:45Z,run-20260825142845-1298280,human,client,commit,completed,"fix(client): enlarge reveal-role square, add Reveal your role label, bright idle color, keep square shape",,pending
 2026-08-25T14:36:06Z,run-20260825143606-1313248,human,client,commit,completed,fix(client): double the reveal-role square size and scale its contents,,pending
 2026-08-25T14:59:48Z,run-20260825145948-1354982,human,client,commit,completed,"fix(client): make hand cards large squares, double role square again, widen draw pile to match",,pending
+2026-08-26T09:37:10Z,run-20260826093710-175024,human,client,commit,completed,feat(client): add VS Code web debug launch configs and flutter CLI make target,,pending
+2026-08-26T09:43:39Z,run-20260826094339-186345,human,tasks,note,completed,"chore(tasks): only Compose: Up (core) auto-start task disabled in tasks.json, per user; other tasks left active",,
+2026-08-26T09:43:39Z,run-20260826094339-186369,human,client,commit,completed,"fix(client): fix VS Code Flutter web device detection (dart.env, dart.flutterShowWebServerDevice) and default debug config to integrated browser",,pending
+2026-08-26T09:45:49Z,run-20260826094549-189957,human,client,commit,completed,"fix(client): simplify VS Code launch config to a single F5-equivalent Flutter debug entry, revert unhelpful dart-code settings",,pending
+2026-08-26T09:50:24Z,run-20260826095024-199979,human,client,commit,completed,feat(client): add explicit Web (Chrome) VS Code launch config alongside default F5 config,,pending
+2026-08-26T09:52:50Z,run-20260826095250-204373,human,client,commit,completed,fix(client): rewrite localhost to 10.0.2.2 on Android emulator so serverUrl/websocketUrl reach the host,,pending

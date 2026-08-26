@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Client-side configuration: server URL, feature flags, and localization
@@ -35,8 +36,12 @@ class ClientConfig {
 
   factory ClientConfig.fromJson(Map<String, dynamic> json) {
     return ClientConfig(
-      serverUrl: json['serverUrl'] as String? ?? 'http://localhost:8080',
-      websocketUrl: json['websocketUrl'] as String? ?? 'ws://localhost:8080/ws',
+      serverUrl: _resolveHostForEmulator(
+        json['serverUrl'] as String? ?? 'http://localhost:8080',
+      ),
+      websocketUrl: _resolveHostForEmulator(
+        json['websocketUrl'] as String? ?? 'ws://localhost:8080/ws',
+      ),
       protocolVersion: json['protocolVersion'] as int? ?? 1,
       featureFlags: (json['featureFlags'] as Map<String, dynamic>?) ?? const {},
       supportedLocales:
@@ -46,12 +51,22 @@ class ClientConfig {
     );
   }
 
-  static ClientConfig defaultConfig() => const ClientConfig(
-        serverUrl: 'http://localhost:8080',
-        websocketUrl: 'ws://localhost:8080/ws',
+  /// The Android emulator has its own loopback network, so `localhost`/
+  /// `127.0.0.1` in config.json (meant for the host machine) must be
+  /// rewritten to the emulator's host-loopback alias `10.0.2.2`.
+  static String _resolveHostForEmulator(String url) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return url;
+    return url
+        .replaceFirst('localhost', '10.0.2.2')
+        .replaceFirst('127.0.0.1', '10.0.2.2');
+  }
+
+  static ClientConfig defaultConfig() => ClientConfig(
+        serverUrl: _resolveHostForEmulator('http://localhost:8080'),
+        websocketUrl: _resolveHostForEmulator('ws://localhost:8080/ws'),
         protocolVersion: 1,
-        featureFlags: {},
-        supportedLocales: ['en'],
+        featureFlags: const {},
+        supportedLocales: const ['en'],
         defaultLocale: 'en',
       );
 
