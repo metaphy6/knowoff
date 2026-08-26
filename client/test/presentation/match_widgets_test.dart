@@ -226,6 +226,121 @@ void main() {
     });
 
     testWidgets(
+        'shows a tap-to-play banner once a card is selected on my turn',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          HandFan(
+            cards: cards,
+            drawPile: const [],
+            selectedCardId: 'c2',
+            isMyTurn: true,
+            onSelect: (_) {},
+            onConfirm: (_) {},
+          ),
+        ),
+      );
+
+      expect(
+        find.byKey(const ValueKey<String>('hand-move-banner')),
+        findsOneWidget,
+      );
+      expect(find.text('Tap it again to play'), findsOneWidget);
+    });
+
+    testWidgets(
+        'shows a play-early banner once a card is selected before my turn',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          HandFan(
+            cards: cards,
+            drawPile: const [],
+            selectedCardId: 'c2',
+            isMyTurn: false,
+            onSelect: (_) {},
+            onConfirm: (_) {},
+          ),
+        ),
+      );
+
+      expect(
+        find.text('Tap it again to play early — it fires the instant your '
+            'turn starts'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a locked early move shows the locked-in banner',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          HandFan(
+            cards: cards,
+            drawPile: const [],
+            selectedCardId: 'c2',
+            isMyTurn: false,
+            moveLocked: true,
+            onSelect: (_) {},
+            onConfirm: (_) {},
+          ),
+        ),
+      );
+
+      expect(find.text('Locked in — plays automatically on your turn'),
+          findsOneWidget);
+    });
+
+    testWidgets('a second tap on the selected card confirms it, not selects',
+        (tester) async {
+      String? selected;
+      String? confirmed;
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) => _wrap(
+            HandFan(
+              cards: cards,
+              drawPile: const [],
+              selectedCardId: selected,
+              onSelect: (id) => setState(() => selected = id),
+              onConfirm: (id) => confirmed = id,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('second'));
+      await tester.pump();
+      expect(selected, equals('c2'));
+      expect(confirmed, isNull);
+
+      await tester.tap(find.text('second'));
+      await tester.pump();
+      expect(confirmed, equals('c2'));
+    });
+
+    testWidgets('the banner cancel affordance calls onCancelSelection',
+        (tester) async {
+      var cancelled = false;
+      await tester.pumpWidget(
+        _wrap(
+          HandFan(
+            cards: cards,
+            drawPile: const [],
+            selectedCardId: 'c2',
+            onSelect: (_) {},
+            onConfirm: (_) {},
+            onCancelSelection: () => cancelled = true,
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const ValueKey<String>('hand-move-banner-cancel')));
+      await tester.pump();
+      expect(cancelled, isTrue);
+    });
+
+    testWidgets(
         'fits a tuned starting hand (5 cards + specialty) without scrolling',
         (tester) async {
       await tester.pumpWidget(
