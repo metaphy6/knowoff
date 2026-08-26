@@ -19,7 +19,6 @@ import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_shake.dart';
 import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
-import '../widgets/ready_button.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/dev_tools_overlay.dart';
@@ -51,6 +50,24 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
   void dispose() {
     _ticker?.cancel();
     super.dispose();
+  }
+
+  /// The hand's tap-to-confirm second tap: plays the card now on this seat's
+  /// turn, otherwise locks it in early (or cancels an existing lock).
+  void _confirmSelection(
+    GameSessionNotifier notifier,
+    GameSession session,
+    String cardId,
+  ) {
+    if (session.isMyTurn) {
+      notifier.playCard(cardId);
+      return;
+    }
+    if (session.moveLocked) {
+      notifier.clearSelection();
+    } else {
+      notifier.lockMove(cardId);
+    }
   }
 
   Future<void> _useReveal(
@@ -216,8 +233,16 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               specialty: dto.hand.specialty,
               selectedCardId: session.selectedCardId,
               myRole: session.myRole,
+              isMyTurn: session.isMyTurn,
+              moveLocked: session.moveLocked,
               onSelect:
                   session.canPickCard ? (id) => notifier.selectCard(id) : null,
+              onConfirm: session.canPickCard
+                  ? (id) => _confirmSelection(notifier, session, id)
+                  : null,
+              onCancelSelection: session.selectedCardId != null
+                  ? () => notifier.clearSelection()
+                  : null,
               onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
             ),
             const SizedBox(height: KoSpace.lg),
@@ -225,20 +250,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  KoButton(
-                    label: l10n.playCard,
-                    subLabel: session.selectedCardId == null
-                        ? l10n.selectCardHint
-                        : null,
-                    size: KoButtonSize.large,
-                    expand: true,
-                    shadow: KoShadows.lg,
-                    icon: const DoodleIcon(Doodle.check, size: 26),
-                    onTap: session.selectedCardId != null
-                        ? () => notifier.playCard(session.selectedCardId!)
-                        : null,
-                  ),
-                  const SizedBox(height: KoSpace.md),
                   if (specialty != null)
                     Wrap(
                       spacing: KoSpace.md,
@@ -286,17 +297,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                             notifier.poke(dto.turnSeat);
                             setState(() => _pokeCount++);
                           },
-                        ),
-                      ),
-                    if (session.canPickCard)
-                      Padding(
-                        padding: const EdgeInsets.only(left: KoSpace.sm),
-                        child: ReadyButton(
-                          ready: session.moveLocked,
-                          onReady: session.canLockMove
-                              ? () => notifier.lockMove(session.selectedCardId!)
-                              : null,
-                          size: KoButtonSize.small,
                         ),
                       ),
                   ],

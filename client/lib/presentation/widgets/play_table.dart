@@ -89,23 +89,29 @@ class PlayTable extends StatelessWidget {
             ],
           ),
           const SizedBox(height: KoSpace.md),
-          for (var i = 0; i < entries.length; i++) ...[
-            if (i > 0) const SizedBox(height: KoSpace.md),
-            _PlayedEntry(
-              player: _playerFor(
-                int.tryParse(entries[i].key) ?? -1,
-                entries[i].key,
-              ),
-              card: entries[i].value,
-              latest: (int.tryParse(entries[i].key) ?? -1) == highlightSeat,
-            ),
-          ],
+          Wrap(
+            spacing: KoSpace.md,
+            runSpacing: KoSpace.md,
+            children: <Widget>[
+              for (final entry in entries)
+                _PlayedEntry(
+                  player: _playerFor(
+                    int.tryParse(entry.key) ?? -1,
+                    entry.key,
+                  ),
+                  card: entry.value,
+                  latest: (int.tryParse(entry.key) ?? -1) == highlightSeat,
+                ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
+/// A single played card, square, sized so several sit side by side and wrap
+/// onto a new row once the table runs out of width.
 class _PlayedEntry extends StatelessWidget {
   const _PlayedEntry({
     required this.player,
@@ -113,16 +119,19 @@ class _PlayedEntry extends StatelessWidget {
     required this.latest,
   });
 
+  static const double _tileSize = 184;
+
   final PlayerDto player;
   final CardDto card;
   final bool latest;
 
   @override
   Widget build(BuildContext context) {
+    final accent = seatAccent(player.seat);
     return Container(
       key: ValueKey<String>('played-card-${player.seat}'),
-      width: double.infinity,
-      padding: const EdgeInsets.all(KoSpace.sm),
+      width: _tileSize,
+      padding: const EdgeInsets.all(KoSpace.md),
       decoration: BoxDecoration(
         color: KoColors.surface,
         border: Border.all(
@@ -130,28 +139,39 @@ class _PlayedEntry extends StatelessWidget {
           color: KoColors.ink,
         ),
         borderRadius: BorderRadius.circular(KoRadii.card),
-        boxShadow: <BoxShadow>[latest ? KoShadows.lg : KoShadows.sm],
+        boxShadow: <BoxShadow>[
+          BoxShadow(
+            color: accent,
+            offset: Offset(latest ? 8 : 6, latest ? 8 : 6),
+            blurRadius: 0,
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: double.infinity,
-            height: 96,
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(KoSpace.sm),
-            decoration: BoxDecoration(
-              color: KoColors.whiteWell,
-              border: Border.all(width: KoBorders.thin, color: KoColors.ink),
-              borderRadius: BorderRadius.circular(KoRadii.well),
+          AspectRatio(
+            aspectRatio: 1,
+            child: Container(
+              width: double.infinity,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.all(KoSpace.sm),
+              decoration: BoxDecoration(
+                color: Color.alphaBlend(
+                  accent.withValues(alpha: 0.28),
+                  KoColors.whiteWell,
+                ),
+                border: Border.all(width: KoBorders.thin, color: KoColors.ink),
+                borderRadius: BorderRadius.circular(KoRadii.well),
+              ),
+              child: CardFace(card: card, compact: true, maxLines: 3),
             ),
-            child: CardFace(card: card, compact: true, maxLines: 3),
           ),
           const SizedBox(height: KoSpace.sm),
           Row(
             children: <Widget>[
-              SeatAvatar(player: player, size: 36),
+              SeatAvatar(player: player, size: 34),
               const SizedBox(width: KoSpace.sm),
               Expanded(
                 child: Text(

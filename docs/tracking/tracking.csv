@@ -131,3 +131,6 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-26T11:54:58Z,run-20260826115458-426665,human,client,commit,completed,feat(client): show Nown and a vertical evidence list (card + owner avatar) during discussion,,pending
 2026-08-26T12:07:18Z,run-20260826120718-451975,human,server,commit,completed,feat(server): let Ready finalize the Knowoff result window early once everyone agrees,,pending
 2026-08-26T12:07:18Z,run-20260826120718-451996,human,client,commit,completed,feat(client): add a Ready button to the Knowoff result window; fix Ready never acking back,,pending
+2026-08-26T12:20:59Z,run-20260826122059-476593,copilot,client,commit,completed,feat(client): tap-to-confirm hand cards replace the Play/Ready buttons,,pending
+2026-08-26T12:26:49Z,run-20260826122649-486595,human,client,commit,completed,feat(client): lay played cards out as a square grid instead of a full-width stack,,pending
+2026-08-26T12:30:55Z,run-20260826123055-493596,human,client,commit,completed,feat(client): enlarge played-card tiles with seat-colored well and drop shadow,,pending
