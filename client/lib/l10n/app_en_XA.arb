@@ -81,6 +81,8 @@
   "specialtyRevoteAction": "[Revote]",
   "chooseRevealTargetTitle": "[Choose a player to reveal]",
   "turnTimeRemaining": "[{seconds}s left]",
+  "gameStartTitle": "[It's Knowoff time!]",
+  "gameStartSubtitle": "[Roles are dealt. The first Nown is on its way.]",
   "pokedByLabel": "[{name} poked you]",
   "chatLogEmpty": "[No chatter yet.]",
   "pokedTargetLog": "[{name} poked {target}]"

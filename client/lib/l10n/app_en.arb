@@ -751,6 +751,14 @@
   "@turnWaitLabel": {
     "description": "Status when no seat is on the clock."
   },
+  "gameStartTitle": "It's Knowoff time!",
+  "@gameStartTitle": {
+    "description": "Hero headline on the game-start splash shown during the pre-match countdown."
+  },
+  "gameStartSubtitle": "Roles are dealt. The first Nown is on its way.",
+  "@gameStartSubtitle": {
+    "description": "Sub-line under the game-start splash headline."
+  },
   "spectatingLabel": "You're out",
   "@spectatingLabel": {
     "description": "Banner heading for an eliminated player."

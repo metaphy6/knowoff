@@ -124,6 +124,45 @@ void main() {
     expect(find.text('A dog on a skateboard'), findsOneWidget);
   });
 
+  testWidgets(
+      'RoundScreen announces the match start during prefetch, then the '
+      'splash shrinks away and leaves the countdown bar running',
+      (tester) async {
+    final base = _sampleSession(phase: 'prefetch');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        round: 0,
+        turnSeat: -1,
+        phaseWindow: 5,
+        turnDeadline: DateTime.now().add(const Duration(seconds: 5)),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
+    await tester.pump();
+
+    // The hero splash announces the start while the honest countdown bar
+    // already runs underneath.
+    expect(find.text("It's Knowoff time!"), findsOneWidget);
+    expect(find.textContaining(RegExp(r'^\d+s left$')), findsOneWidget);
+
+    // After the countdown window the splash has landed in the bar and is
+    // gone — the bar carries on alone.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pump();
+    expect(find.text("It's Knowoff time!"), findsNothing);
+    expect(find.textContaining(RegExp(r'^\d+s left$')), findsOneWidget);
+  });
+
+  testWidgets('RoundScreen shows no game-start splash once the round is live',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), _sampleSession()),
+    );
+    await tester.pump();
+
+    expect(find.text("It's Knowoff time!"), findsNothing);
+  });
+
   testWidgets('DiscussionScreen renders without exception', (tester) async {
     await tester.pumpWidget(
       _wrapWithSession(
@@ -166,7 +205,11 @@ void main() {
     await tester.pump();
 
     await tester.longPress(find.text('Beta'));
-    await tester.pumpAndSettle();
+    // Bounded pumps, not pumpAndSettle: KoVoteBudget's urgency pulse repeats
+    // forever on this screen, so the tree never "settles". Two frames are
+    // enough for the sheet's open animation to finish.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Report player'), findsOneWidget);
   });
