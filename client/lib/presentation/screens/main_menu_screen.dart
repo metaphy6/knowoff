@@ -305,7 +305,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
 /// The hero: an oversized stamped wordmark, a highlighter-swept tagline, and
 /// the wallet badge. The whole point of the screen is that it looks *built*.
-class _Wordmark extends StatelessWidget {
+class _Wordmark extends StatefulWidget {
   const _Wordmark({
     required this.title,
     required this.tagline,
@@ -321,18 +321,63 @@ class _Wordmark extends StatelessWidget {
   final VoidCallback onNoinTap;
 
   @override
+  State<_Wordmark> createState() => _WordmarkState();
+}
+
+class _WordmarkState extends State<_Wordmark>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fallController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..forward();
+
+  late final Animation<double> _drop = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween<double>(begin: 0, end: 0), weight: 18),
+    TweenSequenceItem(
+      tween: Tween<double>(begin: 0, end: 28)
+          .chain(CurveTween(curve: Curves.easeIn)),
+      weight: 22,
+    ),
+    TweenSequenceItem(
+      tween: Tween<double>(begin: 28, end: 15)
+          .chain(CurveTween(curve: Curves.easeOut)),
+      weight: 10,
+    ),
+    TweenSequenceItem(tween: Tween<double>(begin: 15, end: 15), weight: 20),
+    TweenSequenceItem(tween: Tween<double>(begin: 15, end: 15), weight: 30),
+  ]).animate(_fallController);
+
+  late final Animation<double> _tilt = TweenSequence<double>([
+    TweenSequenceItem(tween: Tween<double>(begin: 0, end: 0), weight: 18),
+    TweenSequenceItem(tween: Tween<double>(begin: 0, end: -0.16), weight: 22),
+    TweenSequenceItem(tween: Tween<double>(begin: -0.16, end: 0.1), weight: 10),
+    TweenSequenceItem(tween: Tween<double>(begin: 0.1, end: 0.06), weight: 20),
+    TweenSequenceItem(tween: Tween<double>(begin: 0.06, end: 0.06), weight: 30),
+  ]).animate(_fallController);
+
+  @override
+  void dispose() {
+    _fallController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final title = widget.title.toUpperCase();
+    final firstLetter = title.isEmpty ? '' : title.substring(0, 1);
+    final remainingLetters = title.length <= 1 ? '' : title.substring(1);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (noin != null)
+        if (widget.noin != null)
           Align(
             alignment: Alignment.centerRight,
             child: NoinBadge(
-              balance: noin!,
-              label: noinLabel,
+              balance: widget.noin!,
+              label: widget.noinLabel,
               compact: true,
-              onTap: onNoinTap,
+              onTap: widget.onNoinTap,
             ),
           ),
         const SizedBox(height: KoSpace.sm),
@@ -353,9 +398,36 @@ class _Wordmark extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(
-                title.toUpperCase(),
-                style: koDisplayStyle(size: 64, letterSpacing: -3, height: 1.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedBuilder(
+                    animation: _fallController,
+                    builder: (context, child) => Transform.translate(
+                      offset: Offset(7, _drop.value),
+                      child: Transform.rotate(angle: _tilt.value, child: child),
+                    ),
+                    child: Text(
+                      firstLetter,
+                      key: const ValueKey<String>('wordmark-k'),
+                      style: koDisplayStyle(
+                        size: 64,
+                        letterSpacing: -3,
+                        height: 1.0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    remainingLetters,
+                    key: const ValueKey<String>('wordmark-rest'),
+                    style: koDisplayStyle(
+                      size: 64,
+                      letterSpacing: -3,
+                      height: 1.0,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -365,7 +437,7 @@ class _Wordmark extends StatelessWidget {
           padding: const EdgeInsets.only(left: KoSpace.sm),
           child: Highlighter(
             child: Text(
-              tagline,
+              widget.tagline,
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
