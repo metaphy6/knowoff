@@ -212,4 +212,19 @@ void main() {
     expect(find.text('Store'), findsOneWidget);
     expect(find.text('Notices'), findsOneWidget);
   });
+
+  testWidgets('MainMenuScreen detaches the first wordmark letter',
+      (tester) async {
+    await _pump(tester, const MainMenuScreen());
+
+    final k = find.byKey(const ValueKey<String>('wordmark-k'));
+    expect(find.text('K'), findsOneWidget);
+    expect(find.text('NOWOFF'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 2200));
+    final fallenPosition = tester.getTopLeft(k);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(tester.getTopLeft(k), fallenPosition);
+  });
 }

@@ -110,3 +110,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-26T09:45:49Z,run-20260826094549-189957,human,client,commit,completed,"fix(client): simplify VS Code launch config to a single F5-equivalent Flutter debug entry, revert unhelpful dart-code settings",,pending
 2026-08-26T09:50:24Z,run-20260826095024-199979,human,client,commit,completed,feat(client): add explicit Web (Chrome) VS Code launch config alongside default F5 config,,pending
 2026-08-26T09:52:50Z,run-20260826095250-204373,human,client,commit,completed,fix(client): rewrite localhost to 10.0.2.2 on Android emulator so serverUrl/websocketUrl reach the host,,pending
+2026-08-26T10:03:45Z,wordmark-202608261004,copilot,client,commit,completed,feat(client): animate detached K in main menu wordmark,,pending
+2026-08-26T10:06:16Z,wordmark-202608261011,copilot,client,commit,completed,fix(client): keep wordmark K fallen after entrance animation,,pending
