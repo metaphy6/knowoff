@@ -210,29 +210,30 @@ services:
         condition: service_healthy
     profiles: [core, edge]
 
-  client-web:
-    build:
-      context: ../../client
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ../../client:/app
-      # Container-local .dart_tool — keeps the container's own `flutter pub
-      # get` (its own SDK version, container-root paths) from overwriting
-      # the host's .dart_tool/package_config.json, which the host-side Dart
-      # analyzer/IDE reads directly.
-      - client_dart_tool:/app/.dart_tool
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 120s
-    deploy:
-      resources:
-        limits:
-          cpus: "2"
-          memory: 2g
-    profiles: [core, edge]
+## Temporarily disabled; flutter cli or vscode is used for fast debug responses
+  # client-web:
+  #   build:
+  #     context: ../../client
+  #     dockerfile: Dockerfile.dev
+  #   volumes:
+  #     - ../../client:/app
+  #     # Container-local .dart_tool — keeps the container's own `flutter pub
+  #     # get` (its own SDK version, container-root paths) from overwriting
+  #     # the host's .dart_tool/package_config.json, which the host-side Dart
+  #     # analyzer/IDE reads directly.
+  #     - client_dart_tool:/app/.dart_tool
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://127.0.0.1:8000/"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 6
+  #     start_period: 120s
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: "2"
+  #         memory: 2g
+  #   profiles: [core, edge]
 
   nginx:
     build:
@@ -264,37 +265,38 @@ services:
     depends_on:
       server:
         condition: service_healthy
-      client-web:
-        condition: service_healthy
+      # client-web:
+      #   condition: service_healthy
       adminer:
         condition: service_healthy
       minio:
         condition: service_healthy
     profiles: [core, edge]
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    env_file:
-      - ./config/cloudflared/environment.env
-    command: ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:20241", "run", "--token", "$$KNOWOFF_TUNNEL_TOKEN"]
-    healthcheck:
-      test: ["CMD", "cloudflared", "tunnel", "--metrics", "0.0.0.0:20241", "ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 6
-      start_period: 30s
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256m
-    depends_on:
-      server:
-        condition: service_healthy
-    profiles: [edge]
+## Temporarily disabled till prod v1 is ready
+#   cloudflared:
+#     image: cloudflare/cloudflared:latest
+#     env_file:
+#       - ./config/cloudflared/environment.env
+#     command: ["tunnel", "--no-autoupdate", "--metrics", "0.0.0.0:20241", "run", "--token", "$$KNOWOFF_TUNNEL_TOKEN"]
+#     healthcheck:
+#       test: ["CMD", "cloudflared", "tunnel", "--metrics", "0.0.0.0:20241", "ready"]
+#       interval: 10s
+#       timeout: 5s
+#       retries: 6
+#       start_period: 30s
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: "0.5"
+#           memory: 256m
+#     depends_on:
+#       server:
+#         condition: service_healthy
+#     profiles: [edge]
 
-volumes:
-  pg_data:
-  redis_data:
-  minio_data:
-  client_dart_tool:
+# volumes:
+#   pg_data:
+#   redis_data:
+#   minio_data:
+#   client_dart_tool:
