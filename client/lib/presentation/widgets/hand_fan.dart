@@ -562,8 +562,8 @@ class _MoveActionBanner extends StatelessWidget {
     return Container(
       key: const ValueKey<String>('hand-move-banner'),
       margin: const EdgeInsets.only(top: KoSpace.sm),
-      padding:
-          const EdgeInsets.symmetric(horizontal: KoSpace.lg, vertical: KoSpace.md),
+      padding: const EdgeInsets.symmetric(
+          horizontal: KoSpace.lg, vertical: KoSpace.md),
       decoration: BoxDecoration(
         color: color,
         border: Border.all(width: KoBorders.thick, color: KoColors.ink),
