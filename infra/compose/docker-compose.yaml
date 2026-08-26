@@ -295,8 +295,9 @@ services:
 #         condition: service_healthy
 #     profiles: [edge]
 
-# volumes:
-#   pg_data:
-#   redis_data:
-#   minio_data:
-#   client_dart_tool:
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
+  # client_dart_tool:
+

@@ -134,3 +134,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-26T12:20:59Z,run-20260826122059-476593,copilot,client,commit,completed,feat(client): tap-to-confirm hand cards replace the Play/Ready buttons,,pending
 2026-08-26T12:26:49Z,run-20260826122649-486595,human,client,commit,completed,feat(client): lay played cards out as a square grid instead of a full-width stack,,pending
 2026-08-26T12:30:55Z,run-20260826123055-493596,human,client,commit,completed,feat(client): enlarge played-card tiles with seat-colored well and drop shadow,,pending
+2026-08-26T12:42:43Z,run-20260826124243-511838,human,general,commit,completed,fix(infra): allow nginx boot when client-web container is disabled,,pending
