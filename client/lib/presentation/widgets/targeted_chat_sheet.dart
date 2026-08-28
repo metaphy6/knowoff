@@ -6,6 +6,7 @@ import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'ko_chip.dart';
 import 'quick_chat_bar.dart';
+import 'seat_sheet.dart';
 import 'seat_tile.dart';
 
 /// Opens the targeted Quick Chat picker for [player] — tapped from their box
@@ -16,12 +17,17 @@ Future<void> showTargetedChatSheet(
   BuildContext context, {
   required PlayerDto player,
   required ValueChanged<String> onPhrase,
+  bool isLocal = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
-    builder: (context) => TargetedChatSheet(player: player, onPhrase: onPhrase),
+    builder: (context) => TargetedChatSheet(
+      player: player,
+      onPhrase: onPhrase,
+      isLocal: isLocal,
+    ),
   );
 }
 
@@ -29,11 +35,13 @@ class TargetedChatSheet extends StatelessWidget {
   const TargetedChatSheet({
     required this.player,
     required this.onPhrase,
+    this.isLocal = false,
     super.key,
   });
 
   final PlayerDto player;
   final ValueChanged<String> onPhrase;
+  final bool isLocal;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +68,16 @@ class TargetedChatSheet extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                SeatAvatar(player: player, size: 48),
+                SeatAvatar(
+                  key: ValueKey<String>('profile-avatar-${player.seat}'),
+                  player: player,
+                  size: 48,
+                  onTap: () => showSeatSheet(
+                    context,
+                    player: player,
+                    isLocal: isLocal,
+                  ),
+                ),
                 const SizedBox(width: KoSpace.md),
                 Expanded(
                   child: Text(

@@ -6,6 +6,7 @@ import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'ko_container.dart';
 import 'quick_chat_bar.dart';
+import 'seat_sheet.dart';
 import 'seat_tile.dart';
 
 /// Scrollable feed of recent Quick Chat phrases and pokes.
@@ -82,7 +83,16 @@ class ChatFeed extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                SeatAvatar(player: from, size: 30),
+                SeatAvatar(
+                  key: ValueKey<String>('profile-avatar-${from.seat}'),
+                  player: from,
+                  size: 30,
+                  onTap: () => showSeatSheet(
+                    context,
+                    player: from,
+                    isLocal: from.seat == localSeat,
+                  ),
+                ),
                 const SizedBox(width: KoSpace.sm),
                 Expanded(
                   child: Container(

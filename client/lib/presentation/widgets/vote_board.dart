@@ -68,6 +68,7 @@ class VoteBoard extends StatelessWidget {
               locked: locked,
               votes: tally?[player.seat.toString()],
               voters: _votersFor(player.seat),
+              localSeat: localSeat,
               eliminated: eliminatedSeat == player.seat,
               onVote:
                   onVote == null || locked ? null : () => onVote!(player.seat),
@@ -94,6 +95,7 @@ class _BallotRow extends StatefulWidget {
     required this.locked,
     required this.votes,
     required this.voters,
+    required this.localSeat,
     required this.eliminated,
     required this.onVote,
     required this.voteLabel,
@@ -104,6 +106,7 @@ class _BallotRow extends StatefulWidget {
   final bool locked;
   final int? votes;
   final List<PlayerDto>? voters;
+  final int localSeat;
   final bool eliminated;
   final VoidCallback? onVote;
   final String voteLabel;
@@ -161,9 +164,12 @@ class _BallotRowState extends State<_BallotRow> {
                   widget.onVote!();
                 }
               : null,
-          // Voting is the tap; the seat sheet (stats + flag) is a long-press
-          // so the two never fight over the same gesture (👤 §3).
-          onLongPress: () => showSeatSheet(context, player: widget.player),
+          // Voting is the row tap; the avatar itself opens the seat sheet.
+          onLongPress: () => showSeatSheet(
+            context,
+            player: widget.player,
+            isLocal: widget.player.seat == widget.localSeat,
+          ),
           child: AnimatedContainer(
             duration: KoMotion.press,
             curve: Curves.easeOut,
@@ -185,7 +191,18 @@ class _BallotRowState extends State<_BallotRow> {
                 padding: const EdgeInsets.all(KoSpace.md),
                 child: Row(
                   children: <Widget>[
-                    SeatAvatar(player: widget.player, size: 48),
+                    SeatAvatar(
+                      key: ValueKey<String>(
+                        'profile-avatar-${widget.player.seat}',
+                      ),
+                      player: widget.player,
+                      size: 48,
+                      onTap: () => showSeatSheet(
+                        context,
+                        player: widget.player,
+                        isLocal: widget.player.seat == widget.localSeat,
+                      ),
+                    ),
                     const SizedBox(width: KoSpace.md),
                     Expanded(
                       child: Column(
@@ -225,6 +242,11 @@ class _BallotRowState extends State<_BallotRow> {
                                           'vote-trail-${voter.seat}-${widget.player.seat}'),
                                       player: voter,
                                       size: 30,
+                                      onTap: () => showSeatSheet(
+                                        context,
+                                        player: voter,
+                                        isLocal: voter.seat == widget.localSeat,
+                                      ),
                                     ),
                                   ),
                               ],
