@@ -265,11 +265,11 @@ that the suite now asserts, per live match screen:
 ### 4.2 The visual loop
 
 ```bash
-make compose.up                       # postgres + redis + minio + server
+make up                               # postgres + redis + minio + server
 cd client && flutter build web --release
 python3 -m http.server 8791 -d build/web --bind 127.0.0.1
 # then drive it with the browser tools
-make compose.down                     # leave the machine as you found it
+make down                             # leave the machine as you found it
 ```
 
 ---
@@ -439,7 +439,7 @@ That went into `tracking.csv` as an `action=note` row rather than into scope.
 | `flutter test --plain-name '…'` | Isolate one failing test with full output | Grep the raw output; the reporter truncates |
 | `flutter gen-l10n` | Regenerate `AppLocalizations` after ARB edits | `l10n.yaml` wins over CLI flags |
 | `xops/agent/safe-run.sh <tag> -- <cmd>` | Any long/risky command | Note the `--` separator; writes `/tmp/agent-runs/*.log` and a `last_failure.json` breadcrumb |
-| `make compose.up` / `compose.down` | The real stack | The dev server hot-reloads on Go edits and can wedge; `docker compose restart server` clears it |
+| `make up` / `down` | The real stack | The dev server hot-reloads on Go edits and can wedge; `docker compose restart server` clears it |
 | Browser tools + `run_playwright_code` | Visual verification | **Flutter web renders to canvas — there are no DOM elements.** Selectors fail; click by coordinate read off a screenshot |
 | `git stash --keep-index` | Prove a failure predates you | §5.10 |
 | Throwaway debug test | Print the widget tree / measure a `RenderBox` | Delete it the moment it has answered |

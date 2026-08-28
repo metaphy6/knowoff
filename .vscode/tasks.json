@@ -5,7 +5,7 @@
     //   "label": "Compose: Up (core)",
     //   "type": "shell",
     //   "command": "make",
-    //   "args": ["compose.up"],
+    //   "args": ["up"],
     //   "presentation": { "reveal": "always", "panel": "dedicated" },
     //   "runOptions": { "runOn": "folderOpen" },
     //   "problemMatcher": []

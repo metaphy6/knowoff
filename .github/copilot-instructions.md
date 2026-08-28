@@ -37,7 +37,7 @@ with a new file at a different path.
 1. **Never `git commit` / `git push`.** Append a tracking row via
    [`xops/agent/tracking_append.sh`](../xops/agent/tracking_append.sh),
    then `git add -A`, then stop. Human runs `make git`.
-2. **Tests move with code** in the same commit.
+2. **Tests move with code** in the same commit. Run `python3 xops/test/tests-lints.py` for the unified repository validation gate.
 3. **No system-level changes** without explicit per-occurrence confirmation.
 4. **Non-zero exit recovery:** wrap risky commands with
    [`xops/agent/safe-run.sh`](../xops/agent/safe-run.sh); read the log,

@@ -32,7 +32,7 @@ tracking rows, then stage. Emoji references (🏛️ ⚙️ 🎮 💰 🧑‍�
 
 ### 📊 Status snapshot
 
-Update with `make roadmap.status` (parses the `[ ]` / `[x]` boxes in this
+Update with `python3 xops/makefile/roadmap_ops.py status` (parses the `[ ]` / `[x]` boxes in this
 chapter).
 
 | Phase | Items | Done | Status |

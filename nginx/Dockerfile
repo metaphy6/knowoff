@@ -5,7 +5,7 @@ FROM nginx:1.27-alpine
 
 # ── OCI image labels ────────────────────────────────────────────────────
 # Bump org.opencontainers.image.version with:
-#   make containers.label.version SERVICE=nginx VERSION=X.Y.Z
+#   make label.version SERVICE=nginx VERSION=X.Y.Z
 ARG IMAGE_VERSION=0.1.0
 ARG BUILD_DATE=unknown
 ARG VCS_REF=unknown

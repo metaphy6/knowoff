@@ -126,14 +126,14 @@ const (
 
 // RoleApplication is a player's request for a portal role.
 type RoleApplication struct {
-	ID          string
-	AccountID   string
-	Role        Role
-	Status      ApplicationStatus
-	AppliedAt   time.Time
-	DecidedAt   *time.Time
-	DecidedBy   *string
-	Reason      string
+	ID        string
+	AccountID string
+	Role      Role
+	Status    ApplicationStatus
+	AppliedAt time.Time
+	DecidedAt *time.Time
+	DecidedBy *string
+	Reason    string
 }
 
 // RoleGrant records an active or revoked portal role.
@@ -147,32 +147,32 @@ type RoleGrant struct {
 
 // Submission is a media contribution.
 type Submission struct {
-	ID                string
-	AccountID         string
-	MediaType         MediaType
-	Content           string
-	AssetRef          string
-	Status            SubmissionStatus
-	Tags              []string
-	ToneBucket        string
-	NownID            *string
-	PackTag           string
-	TermsVersion      string
-	TermsAcceptedAt   time.Time
-	SubmittedAt       *time.Time
-	DecidedAt         *time.Time
-	DecidedBy         *string
-	RejectionReason   string
+	ID              string
+	AccountID       string
+	MediaType       MediaType
+	Content         string
+	AssetRef        string
+	Status          SubmissionStatus
+	Tags            []string
+	ToneBucket      string
+	NownID          *string
+	PackTag         string
+	TermsVersion    string
+	TermsAcceptedAt time.Time
+	SubmittedAt     *time.Time
+	DecidedAt       *time.Time
+	DecidedBy       *string
+	RejectionReason string
 }
 
 // ChallengeTopic is the weekly Nown topic.
 type ChallengeTopic struct {
-	ID           string
-	WeekStart    time.Time
-	WeekEnd      time.Time
-	NownMediaID  string
-	PublishedAt  time.Time
-	ClosedAt     *time.Time
+	ID            string
+	WeekStart     time.Time
+	WeekEnd       time.Time
+	NownMediaID   string
+	PublishedAt   time.Time
+	ClosedAt      *time.Time
 	WinnerEntryID *string
 }
 
@@ -381,11 +381,11 @@ func (m *Manager) GrantRole(ctx context.Context, adminID, accountID string, role
 
 // TermsVersion is a versioned contribution terms record.
 type TermsVersion struct {
-	Version   string
-	Title     string
-	Body      string
+	Version    string
+	Title      string
+	Body       string
 	ActiveFrom time.Time
-	CreatedAt time.Time
+	CreatedAt  time.Time
 }
 
 // ListTermsVersions returns all contribution terms versions, newest first.

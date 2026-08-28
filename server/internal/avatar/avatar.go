@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	maxAvatarBytes   = 2 * 1024 * 1024
+	maxAvatarBytes     = 2 * 1024 * 1024
 	maxAvatarDimension = 2048
-	avatarSize       = 256
+	avatarSize         = 256
 )
 
 // Manager owns custom avatar uploads.

@@ -130,6 +130,8 @@ You must **never**:
 If you cannot reach a test you should have written, **leave the change out**
 and say so. A passing build with no test for new behaviour is a false positive.
 
+Run all repository tests and lint checks with `python3 xops/test/tests-lints.py`.
+
 ---
 
 ## 4. 🛡️ System-level change guardrails

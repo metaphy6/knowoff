@@ -18,7 +18,7 @@
 #
 # Example:
 #   xops/agent/safe-run.sh tests -- npm test
-#   xops/agent/safe-run.sh build -- make build
+#   xops/agent/safe-run.sh build -- make server.build
 
 set -u
 

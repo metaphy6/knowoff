@@ -15,6 +15,8 @@ xops/
 │   ├── safe-run.sh
 │   ├── session-bootstrap.sh
 │   └── run-with-retry.sh
+├── test/              ← repository validation entry point
+│   └── tests-lints.py
 ├── lib/              ← shared bash helpers (emoji logger)
 │   └── log.sh
 └── makefile/         ← python3 dispatchers the Makefile calls
@@ -45,11 +47,23 @@ xops/
 | [`agent/session-bootstrap.sh`](agent/session-bootstrap.sh) | Print orienting context at agent session start. |
 | [`agent/tracking_append.sh`](agent/tracking_append.sh) | Validated, atomic CSV appender for `docs/tracking/tracking.csv`. |
 | [`agent/run-with-retry.sh`](agent/run-with-retry.sh) | Wrap a flaky command in bounded retries with backoff. |
+| [`test/tests-lints.py`](test/tests-lints.py) | Run Go and Flutter tests, linters, and formatting checks. Stops at the first failing check. |
 | [`makefile/_common.py`](makefile/_common.py) | Shared helpers for the Python make dispatchers. |
 | [`makefile/git_ops.py`](makefile/git_ops.py) | `make git` / `make git.dry`. |
 | [`makefile/track_ops.py`](makefile/track_ops.py) | `make track.add` / `make track.list`. |
-| [`makefile/roadmap_ops.py`](makefile/roadmap_ops.py) | `make roadmap.status`. |
+| [`makefile/roadmap_ops.py`](makefile/roadmap_ops.py) | `python3 xops/makefile/roadmap_ops.py status`. |
 | [`makefile/codegraph_ops.py`](makefile/codegraph_ops.py) | `make codeg` — initialize or update the local CodeGraph index. |
+
+## Validation
+
+Run every repository test and lint check from the repository root:
+
+```bash
+python3 xops/test/tests-lints.py
+```
+
+The script runs Go tests and linting, then Flutter tests, analysis, and format
+checking. It exits non-zero at the first failing command.
 
 ## Add a new Makefile target
 

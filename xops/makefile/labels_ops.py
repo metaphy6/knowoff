@@ -1,4 +1,4 @@
-"""xops/makefile/labels_ops.py — `make containers.label.version` / `containers.label.list`.
+"""xops/makefile/labels_ops.py — `make label.version` / `label.list`.
 
 Bumps the `ARG IMAGE_VERSION=...` line (which feeds the
 `org.opencontainers.image.version` OCI label) in a service's Dockerfile.
@@ -32,12 +32,12 @@ SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$")
 
 
 def _usage() -> None:
-    info("usage: make containers.label.version SERVICE=<name> VERSION=<x.y.z>")
+    info("usage: make label.version SERVICE=<name> VERSION=<x.y.z>")
     info(f"  known SERVICE values: {', '.join(sorted(SERVICES))}")
 
 
 def cmd_version(_args: List[str]) -> None:
-    step("🏷  make containers.label.version")
+    step("🏷  make label.version")
     service = os.environ.get("SERVICE", "").strip()
     version = os.environ.get("VERSION", "").strip()
 
@@ -75,7 +75,7 @@ def cmd_version(_args: List[str]) -> None:
 
 
 def cmd_list(_args: List[str]) -> None:
-    step("🏷  make containers.label.list")
+    step("🏷  make label.list")
     for service, dockerfile in sorted(SERVICES.items()):
         if not dockerfile.exists():
             print(f"  {service:<16} (missing: {dockerfile.relative_to(REPO_ROOT)})")

@@ -1,4 +1,4 @@
-"""xops/makefile/roadmap_ops.py — `make roadmap.status`.
+"""xops/makefile/roadmap_ops.py — `python3 xops/makefile/roadmap_ops.py status`.
 
 Parses Markdown checkboxes in docs/planning/ROADMAP.md (the spec+roadmap
 monolith) and prints a per-section count of `[ ]` vs `[x]`.
@@ -20,9 +20,9 @@ CHECKBOX_RE = re.compile(r"^\s*-\s*\[([ xX])\]\s*(.*)$")
 
 
 def cmd_status(_args: List[str]) -> None:
-    step("🗺  make roadmap.status")
+    step("🗺  roadmap status")
     if not ROADMAP_MD.exists():
-        err(f"{ROADMAP_MD} not found — create the file before using roadmap.status")
+        err(f"{ROADMAP_MD} not found — create the file before checking roadmap status")
         sys.exit(66)
 
     current_section = "(no heading)"

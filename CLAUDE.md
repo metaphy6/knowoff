@@ -29,6 +29,7 @@ domain rules.
   `git add -A`, then stop. The human runs `make git`.
 - **Every code change ships its test in the same commit.** Skipping or
   weakening a test to make a gate green is a hard violation.
+- **Run the unified validation gate** with `python3 xops/test/tests-lints.py`.
 - **Do not run system-level commands** (`apt`, `systemctl`, global git
   config, …) without explicit per-occurrence confirmation. Inside the
   workspace, act freely.

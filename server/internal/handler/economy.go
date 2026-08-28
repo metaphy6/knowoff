@@ -16,9 +16,9 @@ import (
 
 // EconomyDeps bundles economy handlers.
 type EconomyDeps struct {
-	Config   *config.Config
-	Auth     *auth.Manager
-	Economy  *economy.Manager
+	Config  *config.Config
+	Auth    *auth.Manager
+	Economy *economy.Manager
 }
 
 // RegisterEconomyRoutes mounts wallet, store, and purchase endpoints.
@@ -44,12 +44,12 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			return
 		}
 		writeJSON(w, map[string]any{
-			"balance":             bal,
-			"noin":                bal,
-			"daily_earned":        earned,
-			"daily_earn_cap":      deps.Config.Tuning.Noin.DailyEarnCap,
-			"points_to_noin":      deps.Config.Tuning.Economy.PointsToNoin,
-			"free_daily_matches":  deps.Config.Tuning.Economy.FreeDailyQuickplayMatches,
+			"balance":              bal,
+			"noin":                 bal,
+			"daily_earned":         earned,
+			"daily_earn_cap":       deps.Config.Tuning.Noin.DailyEarnCap,
+			"points_to_noin":       deps.Config.Tuning.Economy.PointsToNoin,
+			"free_daily_matches":   deps.Config.Tuning.Economy.FreeDailyQuickplayMatches,
 			"non_converted_points": 0,
 		})
 	})
@@ -272,9 +272,9 @@ func storeCatalog(cfg *config.Config) map[string]any {
 	}
 
 	return map[string]any{
-		"play_passes":             passes,
-		"play_pass_prices":        playPassPrices,
-		"noin_bundles":            bundles,
+		"play_passes":      passes,
+		"play_pass_prices": playPassPrices,
+		"noin_bundles":     bundles,
 		"premium": map[string]any{
 			"monthly_id":          "premium_monthly",
 			"yearly_id":           "premium_yearly",
