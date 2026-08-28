@@ -6,6 +6,7 @@ import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import 'card_face.dart';
 import 'ko_container.dart';
+import 'seat_sheet.dart';
 import 'seat_tile.dart';
 
 /// The evidence table: every card played this match, with the name attached.
@@ -199,7 +200,16 @@ class _PlayedEntry extends StatelessWidget {
           const SizedBox(height: KoSpace.sm),
           Row(
             children: <Widget>[
-              SeatAvatar(player: player, size: 34),
+              SeatAvatar(
+                key: ValueKey<String>('profile-avatar-${player.seat}'),
+                player: player,
+                size: 34,
+                onTap: () => showSeatSheet(
+                  context,
+                  player: player,
+                  isLocal: isLocal,
+                ),
+              ),
               const SizedBox(width: KoSpace.sm),
               Expanded(
                 child: Text(

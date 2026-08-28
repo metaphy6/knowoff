@@ -64,6 +64,7 @@ class SeatAvatar extends StatelessWidget {
     required this.player,
     this.size = 56,
     this.dimmed = false,
+    this.onTap,
     super.key,
   });
 
@@ -73,6 +74,7 @@ class SeatAvatar extends StatelessWidget {
   /// Eliminated seats keep their border and glyph but drop to cream — the
   /// crossed-out doodle, not the colour, carries the meaning.
   final bool dimmed;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +95,7 @@ class SeatAvatar extends StatelessWidget {
       );
     }
 
-    return Container(
+    final avatar = Container(
       width: size,
       height: size,
       alignment: Alignment.center,
@@ -109,6 +111,17 @@ class SeatAvatar extends StatelessWidget {
         boxShadow: const <BoxShadow>[KoShadows.sm],
       ),
       child: child,
+    );
+    if (onTap == null) return avatar;
+
+    return Semantics(
+      button: true,
+      label: 'Open ${seatDisplayName(player)} profile',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: avatar,
+      ),
     );
   }
 }
