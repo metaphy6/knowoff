@@ -92,6 +92,13 @@ class GameSession {
   /// length; Ready lets the table skip the wait once everyone agrees.
   bool get canReadyResult => !amEliminated && hasResult && !dto.resultReady;
 
+  /// Any active player can agree to resolve the ballot early. Uncast ballots
+  /// count as abstentions only after every active connected player agrees.
+  bool get canReadyBallot =>
+      !amEliminated &&
+      (phase == 'knowoff' || phase == 'runoff') &&
+      !dto.ballotReady;
+
   PlayerDto? playerBySeat(int seat) {
     for (final p in dto.players) {
       if (p.seat == seat) return p;

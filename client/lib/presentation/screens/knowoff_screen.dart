@@ -129,12 +129,40 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
               locked: dto.voteTarget >= 0,
               eliminated: session.amEliminated,
             ),
+          if (!inResultWindow && !session.amEliminated) ...<Widget>[
+            const SizedBox(height: KoSpace.lg),
+            KoContainer(
+              backgroundColor:
+                  dto.ballotReady ? KoColors.lime : KoColors.whiteWell,
+              padding: const EdgeInsets.all(KoSpace.lg),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(l10n.readyLabel, style: text.headlineSmall),
+                        Text(l10n.ballotReadyHint, style: text.bodySmall),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: KoSpace.md),
+                  ReadyButton(
+                    ready: dto.ballotReady,
+                    onReady: session.canReadyBallot ? notifier.ready : null,
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: KoSpace.lg),
           VoteBoard(
             players: dto.players,
             localSeat: session.seat,
             votedSeat: dto.voteTarget,
             tally: inResultWindow ? result?.tally : null,
+            ballots: inResultWindow ? result?.votes : null,
             eliminatedSeat:
                 inResultWindow ? (result?.eliminatedSeat ?? -1) : -1,
             onVote: session.amEliminated || inResultWindow
