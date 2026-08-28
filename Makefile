@@ -55,10 +55,6 @@ track.list:
 codeg:
 	@$(XOPS)/codegraph_ops.py update
 
-## server.build      Build the Go server binary
-server.build:
-	@cd server && go build ./cmd/knowoffd
-
 ## server.rebuild    Rebuild and recreate the server container
 server.rebuild:
 	@cd infra/compose && docker compose --profile core build server
