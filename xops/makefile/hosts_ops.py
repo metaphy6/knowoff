@@ -1,4 +1,4 @@
-"""xops/makefile/hosts_ops.py — `make hosts.add` / `hosts.remove` / `hosts.status`.
+"""xops/makefile/hosts_ops.py — `make localhostfile.add` / `localhostfile.remove` / `localhostfile.status`.
 
 Adds or removes a marked block of `127.0.0.1 *.knowoff.local` entries in
 the OS hosts file, so the nginx reverse proxy (nginx/) can be
@@ -79,11 +79,11 @@ def _permission_help(path: Path, *, reading: bool = False) -> None:
     if sys.platform.startswith("win"):
         warn("re-run this command from an elevated (Run as Administrator) shell")
     else:
-        warn(f"re-run with elevated privileges, e.g.: sudo make hosts.add")
+        warn(f"re-run with elevated privileges, e.g.: sudo make localhostfile.add")
 
 
 def cmd_add(_args: List[str]) -> None:
-    step("🌐 make hosts.add — resolve *.knowoff.local to 127.0.0.1")
+    step("🌐 make localhostfile.add — resolve *.knowoff.local to 127.0.0.1")
     path = _hosts_path()
     lines = _read_hosts(path)
     lines = _strip_managed_block(lines)
@@ -101,11 +101,11 @@ def cmd_add(_args: List[str]) -> None:
     ok(f"added to {path}:")
     for d in DOMAINS:
         print(f"  127.0.0.1  {d}")
-    info("run 'make hosts.remove' to undo")
+    info("run 'make localhostfile.remove' to undo")
 
 
 def cmd_remove(_args: List[str]) -> None:
-    step("🌐 make hosts.remove — drop the *.knowoff.local block")
+    step("🌐 make localhostfile.remove — drop the *.knowoff.local block")
     path = _hosts_path()
     lines = _read_hosts(path)
     if not any(line.strip() == MARKER_BEGIN for line in lines):
@@ -127,7 +127,7 @@ def cmd_remove(_args: List[str]) -> None:
 
 
 def cmd_status(_args: List[str]) -> None:
-    step("🌐 make hosts.status")
+    step("🌐 make localhostfile.status")
     path = _hosts_path()
     lines = _read_hosts(path)
     present = any(line.strip() == MARKER_BEGIN for line in lines)
@@ -137,7 +137,7 @@ def cmd_status(_args: List[str]) -> None:
         for d in DOMAINS:
             print(f"  127.0.0.1  {d}")
     else:
-        info("knowoff.local block is NOT present (run 'make hosts.add')")
+        info("knowoff.local block is NOT present (run 'make localhostfile.add')")
 
 
 TABLE = {

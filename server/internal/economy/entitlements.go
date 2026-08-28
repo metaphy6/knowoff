@@ -13,9 +13,9 @@ import (
 type EntitlementType string
 
 const (
-	EntitlementPlayPass1D    EntitlementType = "play_pass_1d"
-	EntitlementPlayPass3D    EntitlementType = "play_pass_3d"
-	EntitlementPlayPass7D    EntitlementType = "play_pass_7d"
+	EntitlementPlayPass1D     EntitlementType = "play_pass_1d"
+	EntitlementPlayPass3D     EntitlementType = "play_pass_3d"
+	EntitlementPlayPass7D     EntitlementType = "play_pass_7d"
 	EntitlementPremiumMonthly EntitlementType = "premium_monthly"
 	EntitlementPremiumYearly  EntitlementType = "premium_yearly"
 	EntitlementCustomAvatar   EntitlementType = "custom_avatar"

@@ -20,9 +20,9 @@ import (
 type NoticeType string
 
 const (
-	NoticeMaintenance   NoticeType = "maintenance"
-	NoticeDowntime      NoticeType = "downtime"
-	NoticeAnnouncement  NoticeType = "announcement"
+	NoticeMaintenance  NoticeType = "maintenance"
+	NoticeDowntime     NoticeType = "downtime"
+	NoticeAnnouncement NoticeType = "announcement"
 )
 
 // Notice represents a system notice with localized title/body.
@@ -158,13 +158,13 @@ func (m *Manager) ActiveNotices(ctx context.Context, now time.Time) ([]Notice, e
 // ActiveNoticesForLocale returns active notices with title/body resolved to the
 // requested locale (falling back to the configured default locale, then any).
 type LocalizedNotice struct {
-	ID                     uuid.UUID `json:"id"`
-	Type                   string    `json:"type"`
-	Title                  string    `json:"title"`
-	Body                   string    `json:"body"`
+	ID                     uuid.UUID  `json:"id"`
+	Type                   string     `json:"type"`
+	Title                  string     `json:"title"`
+	Body                   string     `json:"body"`
 	PublishedAt            *time.Time `json:"published_at,omitempty"`
 	MaintenanceStart       *time.Time `json:"maintenance_start,omitempty"`
-	MaintenanceDurationMin int       `json:"maintenance_duration_min,omitempty"`
+	MaintenanceDurationMin int        `json:"maintenance_duration_min,omitempty"`
 }
 
 func (m *Manager) ActiveNoticesForLocale(ctx context.Context, locale string) ([]LocalizedNotice, error) {

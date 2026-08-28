@@ -42,7 +42,7 @@ type ConnectionState struct {
 	Redis        interface {
 		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
 	}
-	rateLimiter  *ratelimit.Limiter
+	rateLimiter *ratelimit.Limiter
 }
 
 // HandlerDeps bundles dependencies for the realtime WebSocket handler.

@@ -8,7 +8,7 @@ this doc because they only ever unlock a throwaway local Docker stack.
 ## Postgres / Adminer
 
 Open `https://adminer.knowoff.local` (or `http://localhost:8081` without the
-proxy) after `make hosts.add` + `docker compose --profile core up`.
+proxy) after `make localhostfile.add` + `docker compose --profile core up`.
 
 | Field | Value |
 |---|---|
@@ -33,7 +33,8 @@ The Admin Console (`https://admin.knowoff.local`, or `http://localhost:9090`)
 has no default login — seed one with:
 
 ```bash
-make server.seed-admin
+cd infra/compose
+docker compose --profile tools run --rm --build seed-admin
 ```
 
 Prints an email, password, TOTP secret, and `otpauth://` URL to stdout (scan
@@ -42,7 +43,8 @@ it with an authenticator app, or compute a code with `oathtool --totp -b
 the identity with:
 
 ```bash
-make server.seed-admin KNOWOFF_SEED_ADMIN_EMAIL=you@knowoff.local KNOWOFF_SEED_ADMIN_PASSWORD=somepassword
+cd infra/compose
+KNOWOFF_SEED_ADMIN_EMAIL=you@knowoff.local KNOWOFF_SEED_ADMIN_PASSWORD=somepassword docker compose --profile tools run --rm --build seed-admin
 ```
 
 Refuses to run when `app.env=prod`. See `seedAdmin` in
