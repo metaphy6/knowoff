@@ -39,6 +39,7 @@ type Match struct {
 	discussionReady map[int]bool
 
 	ballots             map[int]int
+	ballotReady         map[int]bool
 	runoff              bool
 	runoffCandidates    []int
 	resultPending       bool
@@ -75,6 +76,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		plays:               make(map[int]string),
 		discussionReady:     make(map[int]bool),
 		ballots:             make(map[int]int),
+		ballotReady:         make(map[int]bool),
 		uniqueUsed:          make(map[string]bool),
 		eliminatedThisRound: -1,
 		resultReady:         make(map[int]bool),
@@ -215,6 +217,10 @@ func (m *Match) SetConnected(seat int, connected bool) {
 		// Abstain in ballot.
 		if (m.phase == PhaseKnowoff || m.phase == PhaseRunoff) && m.ballots[seat] == -1 {
 			m.checkBallotComplete()
+		}
+		if m.phase == PhaseKnowoff || m.phase == PhaseRunoff {
+			m.ballotReady[seat] = true
+			m.checkBallotReady()
 		}
 	}
 }
@@ -954,6 +960,11 @@ func (m *Match) handleReady(seat int, payload map[string]any) error {
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
 			map[string]any{"result_ready": true}))
 		m.checkResultReady()
+	case PhaseKnowoff, PhaseRunoff:
+		m.ballotReady[seat] = true
+		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
+			map[string]any{"ballot_ready": true}))
+		m.checkBallotReady()
 	default:
 		return fmt.Errorf("not a ready phase")
 	}
@@ -979,6 +990,16 @@ func (m *Match) checkResultReady() {
 	m.finalizeKnowoffLocked()
 }
 
+func (m *Match) checkBallotReady() {
+	for _, seat := range m.activeSeats() {
+		if m.connected[seat] && !m.ballotReady[seat] {
+			return
+		}
+	}
+	m.stopBallotTimer()
+	m.resolveBallot()
+}
+
 // endDiscussion is the timer-safe entry point; it acquires the lock.
 func (m *Match) endDiscussion() {
 	m.mu.Lock()
@@ -998,6 +1019,7 @@ func (m *Match) endDiscussionLocked() {
 func (m *Match) beginKnowoff() {
 	m.phase = PhaseKnowoff
 	m.ballots = make(map[int]int)
+	m.ballotReady = make(map[int]bool)
 	for _, s := range m.activeSeats() {
 		m.ballots[s] = -1
 	}
@@ -1124,6 +1146,7 @@ func (m *Match) beginRunoff(candidates []int) {
 	m.runoffCandidates = candidates
 	m.phase = PhaseRunoff
 	m.ballots = make(map[int]int)
+	m.ballotReady = make(map[int]bool)
 	for _, s := range m.activeSeats() {
 		m.ballots[s] = -1
 	}

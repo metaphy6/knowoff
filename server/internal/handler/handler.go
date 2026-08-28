@@ -270,7 +270,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		s.Room.SetConnection(s.Seat, s.Conn)
 		s.Logger = s.Logger.With("room_id", s.Room.ID, "seat", s.Seat)
 		s.Logger.Info("assigned from queue")
-		return s.sendOK("joined", map[string]any{"room_id": s.Room.ID, "seat": s.Seat, "size": s.Room.Size, "session_token": s.sessionToken})
+		return s.sendOK("joined", map[string]any{"room_id": s.Room.ID, "seat": s.Seat, "code": s.Room.Code, "size": s.Room.Size, "session_token": s.sessionToken})
 
 	default:
 		return fmt.Errorf("first intent must be join_room or queue_quickplay")

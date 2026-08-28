@@ -22,12 +22,17 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   })  : _transport = transport,
         super(initialState ?? GameSession(dto: _initialDto())) {
     _subscription = transport.messages.listen(_onMessage);
+    _connectionSubscription = transport.state.listen(_onConnectionState);
     transport.connect();
   }
 
   final GameTransport _transport;
   StreamSubscription<Map<String, dynamic>>? _subscription;
+  StreamSubscription<ConnectionState>? _connectionSubscription;
   final List<Map<String, dynamic>> _bufferedMessages = [];
+  String? _sessionToken;
+  bool _rejoinPending = false;
+  bool _rejoinInProgress = false;
 
   static GameStateDto _initialDto() => const GameStateDto();
 
@@ -70,6 +75,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     switch (kind) {
       case 'joined':
       case 'joined_joined':
+        final sessionToken = payload['session_token'] as String?;
+        if (sessionToken != null && sessionToken.isNotEmpty) {
+          _sessionToken = sessionToken;
+        }
+        _rejoinPending = false;
         _setDto(state.dto.copyWith(
           seat: payload['seat'] as int? ?? state.dto.seat,
           roomCode: payload['code'] as String? ?? state.dto.roomCode,
@@ -110,6 +120,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         _setDto(state.dto.copyWith(
           clearResult: true,
           voteTarget: -1,
+          ballotReady: false,
           resultReady: false,
         ));
         break;
@@ -146,6 +157,36 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'system_notice':
       default:
         break;
+    }
+  }
+
+  void _onConnectionState(ConnectionState connection) {
+    if (connection == ConnectionState.disconnected ||
+        connection == ConnectionState.reconnecting) {
+      _rejoinPending = _sessionToken != null && state.dto.roomCode.isNotEmpty;
+      return;
+    }
+    if (connection == ConnectionState.connected && _rejoinPending) {
+      unawaited(_reclaimRoom());
+    }
+  }
+
+  Future<void> _reclaimRoom() async {
+    if (_rejoinInProgress || !_rejoinPending) return;
+    final sessionToken = _sessionToken;
+    final roomCode = state.dto.roomCode;
+    if (sessionToken == null || roomCode.isEmpty) return;
+
+    _rejoinInProgress = true;
+    try {
+      await _send('join_room', {
+        'code': roomCode,
+        'session_token': sessionToken,
+        'access_token': await _freshAccessToken(),
+      });
+      _rejoinPending = false;
+    } finally {
+      _rejoinInProgress = false;
     }
   }
 
@@ -199,7 +240,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
     var dto = state.dto;
     if (opensBallot) {
-      dto = dto.copyWith(voteTarget: -1, clearResult: true, resultReady: false);
+      dto = dto.copyWith(
+        voteTarget: -1,
+        clearResult: true,
+        ballotReady: false,
+        resultReady: false,
+      );
     }
     dto = window == null || window <= 0
         ? dto.copyWith(clearTurnDeadline: true, phaseWindow: 0)
@@ -253,13 +299,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       discussionReady:
           payload['discussion_ready'] as bool? ?? current.discussionReady,
       resultReady: payload['result_ready'] as bool? ?? current.resultReady,
+      ballotReady: payload['ballot_ready'] as bool? ?? current.ballotReady,
       voteTarget: payload['vote_target'] as int? ?? current.voteTarget,
-      result: payload.containsKey('result')
-          ? (payload['result'] == null
-              ? null
-              : VoteResultDto.fromJson(
-                  payload['result'] as Map<String, dynamic>))
-          : current.result,
+      result: _resultFromPayload(payload, current.result),
       winner: payload.containsKey('winner')
           ? payload['winner'] as String?
           : current.winner,
@@ -278,6 +320,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       chatEvents: current.chatEvents,
     );
     state = state.copyWith(dto: updated, lastError: null);
+  }
+
+  VoteResultDto? _resultFromPayload(
+      Map<String, dynamic> payload, VoteResultDto? current) {
+    if (!payload.containsKey('result')) return current;
+    final rawResult = payload['result'];
+    if (rawResult == null) return null;
+    final result = Map<String, dynamic>.from(rawResult as Map<String, dynamic>);
+    if (payload.containsKey('votes')) result['votes'] = payload['votes'];
+    return VoteResultDto.fromJson(result);
   }
 
   void _setDto(GameStateDto dto) {
@@ -377,6 +429,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _connectionSubscription?.cancel();
     _transport.close();
     super.dispose();
   }

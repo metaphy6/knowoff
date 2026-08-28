@@ -145,6 +145,7 @@ void main() {
             localSeat: 0,
             votedSeat: 1,
             tally: {'1': 2, '2': 0},
+            ballots: {'0': 1, '2': 1},
             eliminatedSeat: 1,
           ),
         ),
@@ -152,6 +153,8 @@ void main() {
 
       expect(find.text('2'), findsOneWidget);
       expect(find.text('0'), findsOneWidget);
+      expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
+      expect(find.byKey(const Key('vote-trail-2-1')), findsOneWidget);
     });
   });
 

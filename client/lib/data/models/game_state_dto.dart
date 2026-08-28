@@ -157,6 +157,7 @@ class GameStateDto {
     this.plays = const {},
     this.discussionReady = false,
     this.resultReady = false,
+    this.ballotReady = false,
     this.voteTarget = -1,
     this.result,
     this.winner,
@@ -184,6 +185,9 @@ class GameStateDto {
   /// True once this seat has marked Ready during the post-ballot Revote
   /// window (Rules §4) — skips the wait once everyone agrees to finalize.
   final bool resultReady;
+
+  /// True once this seat has marked the current ballot ready to resolve.
+  final bool ballotReady;
   final int voteTarget;
   final VoteResultDto? result;
   final String? winner;
@@ -215,6 +219,7 @@ class GameStateDto {
       plays: cardMap(json['plays']),
       discussionReady: json['discussion_ready'] as bool? ?? false,
       resultReady: json['result_ready'] as bool? ?? false,
+      ballotReady: json['ballot_ready'] as bool? ?? false,
       voteTarget: json['vote_target'] as int? ?? -1,
       result: json['result'] == null
           ? null
@@ -240,6 +245,7 @@ class GameStateDto {
     Map<String, CardDto>? plays,
     bool? discussionReady,
     bool? resultReady,
+    bool? ballotReady,
     int? voteTarget,
     VoteResultDto? result,
     String? winner,
@@ -266,6 +272,7 @@ class GameStateDto {
       plays: plays ?? this.plays,
       discussionReady: discussionReady ?? this.discussionReady,
       resultReady: resultReady ?? this.resultReady,
+      ballotReady: ballotReady ?? this.ballotReady,
       voteTarget: voteTarget ?? this.voteTarget,
       result: clearResult ? null : (result ?? this.result),
       winner: winner ?? this.winner,
@@ -287,17 +294,24 @@ class VoteResultDto {
     required this.eliminatedSeat,
     required this.role,
     required this.tally,
+    this.votes = const {},
   });
 
   final int eliminatedSeat;
   final String? role;
   final Map<String, int> tally;
 
+  /// Per-voter targets, revealed only after the server closes the ballot.
+  /// A negative target represents an abstention.
+  final Map<String, int> votes;
+
   factory VoteResultDto.fromJson(Map<String, dynamic> json) {
     return VoteResultDto(
       eliminatedSeat: json['eliminated_seat'] as int? ?? -1,
       role: json['role'] as String?,
       tally: (json['tally'] as Map<String, dynamic>? ?? const {})
+          .map((k, v) => MapEntry(k, v as int)),
+      votes: (json['votes'] as Map<String, dynamic>? ?? const {})
           .map((k, v) => MapEntry(k, v as int)),
     );
   }

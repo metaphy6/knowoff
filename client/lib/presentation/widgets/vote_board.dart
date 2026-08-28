@@ -23,6 +23,7 @@ class VoteBoard extends StatelessWidget {
     required this.votedSeat,
     this.onVote,
     this.tally,
+    this.ballots,
     this.eliminatedSeat = -1,
     super.key,
   });
@@ -34,6 +35,10 @@ class VoteBoard extends StatelessWidget {
 
   /// Per-seat vote counts, revealed after the window closes.
   final Map<String, int>? tally;
+
+  /// Per-voter targets, revealed after the window closes. A negative target
+  /// is an abstention and has no corresponding target-row stamp.
+  final Map<String, int>? ballots;
   final int eliminatedSeat;
 
   @override
@@ -62,6 +67,7 @@ class VoteBoard extends StatelessWidget {
               chosen: votedSeat == player.seat,
               locked: locked,
               votes: tally?[player.seat.toString()],
+              voters: _votersFor(player.seat),
               eliminated: eliminatedSeat == player.seat,
               onVote:
                   onVote == null || locked ? null : () => onVote!(player.seat),
@@ -71,6 +77,14 @@ class VoteBoard extends StatelessWidget {
       ],
     );
   }
+
+  List<PlayerDto>? _votersFor(int targetSeat) {
+    if (ballots == null) return null;
+    return players
+        .where((player) => ballots![player.seat.toString()] == targetSeat)
+        .toList()
+      ..sort((left, right) => left.seat.compareTo(right.seat));
+  }
 }
 
 class _BallotRow extends StatefulWidget {
@@ -79,6 +93,7 @@ class _BallotRow extends StatefulWidget {
     required this.chosen,
     required this.locked,
     required this.votes,
+    required this.voters,
     required this.eliminated,
     required this.onVote,
     required this.voteLabel,
@@ -88,6 +103,7 @@ class _BallotRow extends StatefulWidget {
   final bool chosen;
   final bool locked;
   final int? votes;
+  final List<PlayerDto>? voters;
   final bool eliminated;
   final VoidCallback? onVote;
   final String voteLabel;
@@ -193,6 +209,27 @@ class _BallotRowState extends State<_BallotRow> {
                             )
                           else if (isBotSeat(widget.player))
                             Text(l10n.botSeatLabel, style: text.labelSmall),
+                          if (widget.voters != null &&
+                              widget.voters!.isNotEmpty) ...<Widget>[
+                            const SizedBox(height: KoSpace.sm),
+                            Wrap(
+                              spacing: KoSpace.sm,
+                              runSpacing: KoSpace.sm,
+                              children: <Widget>[
+                                for (final voter in widget.voters!)
+                                  Semantics(
+                                    label:
+                                        '${seatDisplayName(voter)} voted for ${seatDisplayName(widget.player)}',
+                                    child: SeatAvatar(
+                                      key: Key(
+                                          'vote-trail-${voter.seat}-${widget.player.seat}'),
+                                      player: voter,
+                                      size: 30,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
                         ],
                       ),
                     ),
