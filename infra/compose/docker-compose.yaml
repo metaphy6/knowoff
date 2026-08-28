@@ -29,6 +29,8 @@ services:
       - shared_buffers=768MB
       - -c
       - effective_cache_size=2GB
+      - -c
+      - log_line_prefix=%m [%p] [POSTGRES]
     env_file:
       - ./config/postgres/environment.env
     volumes:
@@ -54,7 +56,7 @@ services:
     # maxmemory matches the 1g limit below (with headroom for Redis's own
     # overhead); allkeys-lru evicts instead of erroring once full, so a
     # burst of concurrent sessions degrades gracefully rather than OOMing.
-    command: ["sh", "-c", "exec redis-server --requirepass \"$$KNOWOFF_REDIS_PASSWORD\" --maxmemory 768mb --maxmemory-policy allkeys-lru"]
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$KNOWOFF_REDIS_PASSWORD\" --maxmemory 768mb --maxmemory-policy allkeys-lru --loglevel notice --logfile \"\""]
     volumes:
       - redis_data:/data
     healthcheck:

@@ -140,3 +140,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-08-26T13:35:05Z,run-20260826133505-601244,human,client,commit,completed,"feat(client): move poke to table boxes, add tap-to-accuse/trust with dramatic banner",,pending
 2026-08-26T13:35:11Z,run-20260826133505-601244,human,server,commit,completed,fix(server): support target_seat on quick_chat for targeted suspect/trust phrases,,pending
 2026-08-28T09:52:40Z,run-20260828095241-32873,copilot,xops,commit,completed,chore(xops): simplify Make targets and centralize checks,Makefile;xops/test/tests-lints.py;xops/README.md,pending
+2026-08-28T10:16:08Z,run-20260828101608-52138,copilot,observability,commit,completed,feat(logging): standardize runtime diagnostics,server/internal/logging/console.go;client/lib/core/logging/app_logger.dart;docs/guides/LOGGING.md,pending

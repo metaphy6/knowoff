@@ -25,6 +25,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/handler"
 	"github.com/knowoff/knowoff/server/internal/leaderboard"
 	"github.com/knowoff/knowoff/server/internal/lobby"
+	"github.com/knowoff/knowoff/server/internal/logging"
 	"github.com/knowoff/knowoff/server/internal/notices"
 	"github.com/knowoff/knowoff/server/internal/portal"
 	"github.com/knowoff/knowoff/server/internal/profile"
@@ -568,7 +569,7 @@ func newLogger(cfg *config.Config) *slog.Logger {
 	opts := &slog.HandlerOptions{Level: level, AddSource: cfg.Log.AddCaller}
 	var handler slog.Handler
 	if cfg.Log.Format == "text" {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		handler = logging.NewConsoleHandlerWithOptions(os.Stdout, opts)
 	} else {
 		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
