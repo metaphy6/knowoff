@@ -11,6 +11,7 @@ import '../widgets/ko_container.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ko_stat_tile.dart';
 import '../widgets/seat_tile.dart';
+import '../widgets/seat_sheet.dart';
 
 /// Lobby screen: the room code as a hero object, the QR to scan it, and the
 /// seats as they fill.
@@ -55,7 +56,10 @@ class LobbyScreen extends StatelessWidget {
             for (final player in players)
               Padding(
                 padding: const EdgeInsets.only(bottom: KoSpace.sm),
-                child: SeatTile(player: player),
+                child: SeatTile(
+                  player: player,
+                  onTap: () => showSeatSheet(context, player: player),
+                ),
               ),
         ],
       ),

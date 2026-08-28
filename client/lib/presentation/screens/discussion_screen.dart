@@ -52,6 +52,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
     List<PlayerDto> players,
     int seat,
     GameSessionNotifier notifier,
+    int localSeat,
   ) {
     final target = players.firstWhere(
       (p) => p.seat == seat,
@@ -66,6 +67,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
       context,
       player: target,
       onPhrase: (phraseId) => notifier.quickChat(phraseId, targetSeat: seat),
+      isLocal: target.seat == localSeat,
     );
   }
 
@@ -133,7 +135,13 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
                 onTargetedChat: session.amEliminated
                     ? null
                     : (seat) =>
-                        _openTargetedChat(context, dto.players, seat, notifier),
+                        _openTargetedChat(
+                          context,
+                          dto.players,
+                          seat,
+                          notifier,
+                          session.seat,
+                        ),
               ),
               const SizedBox(height: KoSpace.xl),
               KoContainer(
