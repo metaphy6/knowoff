@@ -1,4 +1,4 @@
-"""xops/makefile/client_web_ops.py — `make client.web.rebuild`.
+"""xops/makefile/client_web_ops.py — `make web.rebuild`.
 
 Force-rebuilds and recreates the `client-web` (Flutter web dev-server)
 Compose service, then best-effort opens the dev URL in a fresh
@@ -51,7 +51,7 @@ def _open_private(url: str) -> bool:
 
 
 def cmd_rebuild(_args: List[str]) -> None:
-    step(f"🔁 make client.web.rebuild — rebuild the {SERVICE} dev container")
+    step(f"🔁 make web.rebuild — rebuild the {SERVICE} dev container")
     _compose("build", SERVICE)
     _compose("up", "-d", "--force-recreate", SERVICE)
     ok(f"{SERVICE} rebuilt and recreated")

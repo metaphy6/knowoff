@@ -6,7 +6,7 @@
 #
 #  Convention:
 #    • daily verbs are short  : help, git
-#    • everything else uses   : domain.action  (track.add, git.dry, roadmap.status)
+#    • everything else uses   : domain.action  (track.add, git.dry)
 # ┊┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃┃
 
 PYTHON ?= python3
@@ -23,11 +23,10 @@ RUN_ID  ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help git git.dry track.add track.list roadmap.status codeg \
-  server.build server.test server.lint server.seed-admin client.build client.test client.lint \
-  client.web.rebuild client.web.run \
-  compose.up compose.down compose.snap.create compose.snap.restore \
-  containers.label.version containers.label.list hosts.add hosts.remove hosts.status
+.PHONY: help git git.dry track.add track.list codeg \
+	server.build server.rebuild web.rebuild web.run \
+	up down \
+	label.version label.list localhostfile.add localhostfile.remove localhostfile.status
 
 ## help              List all available targets
 help:
@@ -52,10 +51,6 @@ track.add:
 track.list:
 	@$(XOPS)/track_ops.py list
 
-## roadmap.status    Summarize ROADMAP.md checkbox progress
-roadmap.status:
-	@$(XOPS)/roadmap_ops.py status
-
 ## codeg             Initialize or update the CodeGraph index
 codeg:
 	@$(XOPS)/codegraph_ops.py update
@@ -64,77 +59,43 @@ codeg:
 server.build:
 	@cd server && go build ./cmd/knowoffd
 
-## server.test       Run all Go unit tests
-server.test:
-	@cd server && go test ./... -count=1 -p=1
+## server.rebuild    Rebuild and recreate the server container
+server.rebuild:
+	@cd infra/compose && docker compose --profile core build server
+	@cd infra/compose && docker compose --profile core up -d --force-recreate server
 
-## server.lint       Lint and format-check Go code (golangci-lint, fallback gofmt + go vet)
-server.lint:
-	@cd server && if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run ./...; \
-	else \
-		test -z "$$(gofmt -l .)" || (echo "gofmt issues:"; gofmt -l .; exit 1); \
-		go vet ./...; \
-	fi
-
-## server.seed-admin Seed a dev-only Admin Console login (vars: KNOWOFF_SEED_ADMIN_EMAIL KNOWOFF_SEED_ADMIN_PASSWORD)
-server.seed-admin:
-	@cd infra/compose && docker compose --profile tools run --rm --build seed-admin
-
-## client.build      Build Flutter for Android and Web (CI also builds iOS)
-client.build:
-	@cd client && flutter build apk --debug
-	@cd client && flutter build web
-
-## client.test       Run Flutter unit/widget tests
-client.test:
-	@cd client && flutter test
-
-## client.lint       Run Flutter static analysis and format check
-client.lint:
-	@cd client && flutter analyze
-	@cd client && dart format --output=none --set-exit-if-changed .
-
-## client.web.rebuild Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window
-client.web.rebuild:
+## web.rebuild       Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window
+web.rebuild:
 	@$(XOPS)/client_web_ops.py rebuild
 
-## client.web.run    Run the Flutter web client natively via the Flutter CLI (no Docker) at http://localhost:8000 or http://0.0.0.0:8000 for integrated browser
-client.web.run:
+## web.run           Run the Flutter web client natively via the Flutter CLI (no Docker) at http://localhost:8000 or http://0.0.0.0:8000 for integrated browser
+web.run:
 	@cd client && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8000
 
-## compose.up        Start the local Docker Compose stack
-compose.up:
+## up                Start the local Docker Compose stack
+up:
 	@cd infra/compose && docker compose --profile core up --build -d
 
-## compose.down      Stop the local Docker Compose stack
-compose.down:
+## down              Stop the local Docker Compose stack
+down:
 	@cd infra/compose && docker compose --profile core down
 
-## compose.snap.create <dir>  Snapshot running Compose volumes
-compose.snap.create:
-	@cd infra/compose && ./snapshot.sh create "$(dir)"
-
-## compose.snap.restore <dir> Restore snapshot onto fresh Compose volumes
-compose.snap.restore:
-	@cd infra/compose && ./snapshot.sh restore "$(dir)"
-
-## containers.label.version Bump a Dockerfile's org.opencontainers.image.version (vars: SERVICE VERSION)
-containers.label.version:
+## label.version     Bump a Dockerfile's org.opencontainers.image.version (vars: SERVICE VERSION)
+label.version:
 	@$(XOPS)/labels_ops.py version
 
-## containers.label.list    List every service Dockerfile's current image label version
-containers.label.list:
+## label.list        List every service Dockerfile's current image label version
+label.list:
 	@$(XOPS)/labels_ops.py list
 
-## hosts.add         Resolve *.knowoff.local to 127.0.0.1 in the OS hosts file (needs elevated privileges)
-hosts.add:
+## localhostfile.add Resolve *.knowoff.local to 127.0.0.1 in the OS hosts file (needs elevated privileges)
+localhostfile.add:
 	@$(XOPS)/hosts_ops.py add
 
-## hosts.remove      Remove the *.knowoff.local block from the OS hosts file (needs elevated privileges)
-hosts.remove:
+## localhostfile.remove Remove the *.knowoff.local block from the OS hosts file (needs elevated privileges)
+localhostfile.remove:
 	@$(XOPS)/hosts_ops.py remove
 
-## hosts.status      Show whether the *.knowoff.local hosts block is present
-hosts.status:
+## localhostfile.status Show whether the *.knowoff.local hosts block is present
+localhostfile.status:
 	@$(XOPS)/hosts_ops.py status

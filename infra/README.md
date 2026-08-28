@@ -27,7 +27,7 @@ auto-open in VS Code's browser preview once nginx is reachable (see
 Then resolve the local domains once (see [`nginx/README.md`](../nginx/README.md)):
 
 ```bash
-make hosts.add   # adds *.knowoff.local -> 127.0.0.1 to your hosts file
+make localhostfile.add   # adds *.knowoff.local -> 127.0.0.1 to your hosts file
 ```
 
 Open `https://app.knowoff.local` for the Flutter web client. The browser
@@ -37,7 +37,8 @@ will warn about the self-signed certificate on first visit — see
 Seed a dev-only Admin Console login (`https://admin.knowoff.local`):
 
 ```bash
-make server.seed-admin
+cd infra/compose
+docker compose --profile tools run --rm --build seed-admin
 ```
 
 Local service configuration lives in `compose/config/<service>/environment.env`.
@@ -53,4 +54,22 @@ Profiles:
 - `tools` — dev tooling
 - `test` — test runners
 - `edge` — adds cloudflared (beta-at-home only)
+
+## Volume snapshots
+
+Use the Compose snapshot script directly. Create a snapshot while the `core`
+profile is running:
+
+```bash
+./infra/compose/snapshot.sh create /path/to/snapshot
+```
+
+Restore from a complete snapshot with:
+
+```bash
+./infra/compose/snapshot.sh restore /path/to/snapshot
+```
+
+Restoring replaces the Compose data volumes, then starts the full `core` stack.
+The snapshot directory must contain `postgres.dump`, `redis.rdb`, and `minio/`.
 

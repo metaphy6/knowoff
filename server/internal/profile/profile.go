@@ -40,8 +40,8 @@ type Profile struct {
 
 // Manager is the profile service.
 type Manager struct {
-	db    *sql.DB
-	prog  config.ProgressionTuning
+	db   *sql.DB
+	prog config.ProgressionTuning
 }
 
 // NewManager creates a profile manager.

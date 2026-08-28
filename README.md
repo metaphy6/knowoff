@@ -30,32 +30,34 @@ build plan — phases, checkboxes, proof tests — lives in
 All 6 roadmap phases are built and passing their proof tests —
 foundation, media engine, realtime game loop, accounts & Quick Play, the
 Noin economy & Admin Console, and the Contributor Portal. `make
-compose.up` gets you a full 6-player match with zero cloud dependencies.
+up` gets you a full 6-player match with zero cloud dependencies.
 See the phase-by-phase snapshot in
 [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md).
 
 ## Quickstart
 
 ```bash
-make roadmap.status  # roadmap checkbox progress
 make server.build    # build the Go server
-make server.test     # run Go unit tests
-make server.lint     # gofmt + go vet
-make client.build    # Flutter Android + Web builds
-make client.test     # Flutter unit/widget tests
-make client.lint     # flutter analyze + dart format check
-make compose.up      # start the local Docker Compose stack
-make compose.down    # stop the local stack
-make client.web.rebuild  # force-rebuild + recreate the client-web dev container, cache-bust the browser
+make server.rebuild  # rebuild and recreate the server container
+python3 xops/test/tests-lints.py  # all tests and lint checks
+make up              # start the local Docker Compose stack
+make down            # stop the local stack
+make web.rebuild     # force-rebuild + recreate the client-web dev container, cache-bust the browser
+```
+
+For roadmap checkbox progress, run:
+
+```bash
+python3 xops/makefile/roadmap_ops.py status
 ```
 
 ## Local stack
 
-`make compose.up` brings up server + postgres + redis + minio + adminer +
+`make up` brings up server + postgres + redis + minio + adminer +
 client-web, fronted by a local **nginx** reverse proxy that terminates TLS
 and publishes friendly `*.knowoff.local` names (dev convenience only — the
 public ingress is a Cloudflare Tunnel, see [`nginx/README.md`](nginx/README.md)).
-Run `make hosts.add` once to resolve those names, then:
+Run `make localhostfile.add` once to resolve those names, then:
 
 | URL | What |
 |---|---|

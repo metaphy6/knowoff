@@ -19,8 +19,8 @@ see `infra/compose/config/cloudflared/` and BLUEPRINT.md 📦 §2).
 Resolve these names to `127.0.0.1` with:
 
 ```bash
-make hosts.add      # writes the *.knowoff.local block to your hosts file (admin/sudo required)
-make hosts.remove   # removes it again
+make localhostfile.add      # writes the *.knowoff.local block to your hosts file (admin/sudo required)
+make localhostfile.remove   # removes it again
 ```
 
 See [`xops/makefile/hosts_ops.py`](../xops/makefile/hosts_ops.py) for exactly what it writes.
@@ -96,7 +96,7 @@ tabs/devices, not to reject them.
 ## Bumping the image label version
 
 ```bash
-make containers.label.version SERVICE=nginx VERSION=0.2.0
+make label.version SERVICE=nginx VERSION=0.2.0
 ```
 
 See [`xops/makefile/labels_ops.py`](../xops/makefile/labels_ops.py).

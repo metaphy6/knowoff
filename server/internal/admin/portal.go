@@ -326,4 +326,3 @@ func (m *Manager) portalChallengeEntryReject(w http.ResponseWriter, r *http.Requ
 	}
 	http.Redirect(w, r, "/admin/portal/challenge", http.StatusSeeOther)
 }
-

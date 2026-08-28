@@ -92,8 +92,10 @@ func (fakeAudit) LogAction(ctx context.Context, adminID, action, entityType, ent
 
 type fakeAuth struct{}
 
-func (fakeAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) { return token, nil }
-func (fakeAuth) RevokeAccount(ctx context.Context, accountID string) error             { return nil }
+func (fakeAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) {
+	return token, nil
+}
+func (fakeAuth) RevokeAccount(ctx context.Context, accountID string) error { return nil }
 
 var _ AuthClient = fakeAuth{}
 
