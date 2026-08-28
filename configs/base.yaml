@@ -9,7 +9,7 @@ app:
 
 log:
   level: info          # debug | info | warn | error
-  format: json         # json | text
+  format: json         # json for machine consumers; text for readable local output
   add_caller: false
 
 server:

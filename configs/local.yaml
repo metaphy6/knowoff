@@ -6,7 +6,7 @@ app:
 
 log:
   level: debug
-  format: text
+  format: text         # emoji severity/topic labels; safe for Docker stdout
   add_caller: true
 
 server:
