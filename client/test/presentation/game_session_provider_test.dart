@@ -27,18 +27,21 @@ class _StubAuthService extends AuthService {
 class _FakeTransport implements gt.GameTransport {
   final StreamController<Map<String, dynamic>> _controller =
       StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<gt.ConnectionState> _stateController =
+      StreamController<gt.ConnectionState>.broadcast();
   final List<Map<String, dynamic>> sent = <Map<String, dynamic>>[];
 
   void emit(String kind, Map<String, dynamic> payload) {
     _controller.add(<String, dynamic>{'kind': kind, 'payload': payload});
   }
 
+  void emitState(gt.ConnectionState state) => _stateController.add(state);
+
   @override
   Stream<Map<String, dynamic>> get messages => _controller.stream;
 
   @override
-  Stream<gt.ConnectionState> get state =>
-      Stream<gt.ConnectionState>.value(gt.ConnectionState.connected);
+  Stream<gt.ConnectionState> get state => _stateController.stream;
 
   @override
   bool get isConnected => true;
@@ -46,7 +49,10 @@ class _FakeTransport implements gt.GameTransport {
   int reconnectCount = 0;
 
   @override
-  Future<void> close() async => _controller.close();
+  Future<void> close() async {
+    await _controller.close();
+    await _stateController.close();
+  }
 
   @override
   Future<void> connect() async {}
@@ -173,6 +179,25 @@ void main() {
     await _settle();
 
     expect(notifier.state.dto.resultReady, isTrue);
+  });
+
+  test('a resolved ballot retains each voter target', () async {
+    transport.emit('knowoff_resolved', <String, dynamic>{
+      'votes': <String, dynamic>{'0': 1, '1': 2, '2': -1},
+      'result': <String, dynamic>{
+        'eliminated_seat': 1,
+        'tally': <String, dynamic>{'1': 1, '2': 1},
+      },
+    });
+    await _settle();
+
+    expect(
+        notifier.state.dto.result?.votes,
+        equals(<String, int>{
+          '0': 1,
+          '1': 2,
+          '2': -1,
+        }));
   });
 
   test('a fresh result window clears a stale resultReady', () async {
@@ -351,6 +376,30 @@ void main() {
           as Map<String, dynamic>)['access_token'],
       equals('fresh-token'),
     );
+  });
+
+  test('reclaims the room after a dropped authenticated socket', () async {
+    final auth = _StubAuthService();
+    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
+    transport.emit('joined', <String, dynamic>{
+      'seat': 0,
+      'code': 'ABC123',
+      'session_token': 'reclaim-token',
+    });
+    await _settle();
+
+    transport.emitState(gt.ConnectionState.disconnected);
+    transport.emitState(gt.ConnectionState.connected);
+    await _settle();
+    await _settle();
+
+    expect(transport.sent, hasLength(1));
+    expect(transport.sent.single['kind'], 'join_room');
+    expect(transport.sent.single['payload'], <String, dynamic>{
+      'code': 'ABC123',
+      'session_token': 'reclaim-token',
+      'access_token': 'fresh-token',
+    });
   });
 
   test('lockMove marks the pending card locked without sending anything',

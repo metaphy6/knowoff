@@ -17,6 +17,7 @@ import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
+import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
   return GameSession(
@@ -351,6 +352,27 @@ void main() {
     expect(find.text('Beta'), findsOneWidget);
     expect(find.text('Gamma'), findsOneWidget);
     expect(find.text('Delta'), findsOneWidget);
+    expect(find.byKey(const Key('vote-trail-0-1')), findsNothing);
+  });
+
+  testWidgets('KnowoffScreen sends Ready to resolve a ballot early',
+      (tester) async {
+    final transport = _FakeTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const KnowoffScreen(),
+        _sampleSession(phase: 'knowoff'),
+        transport: transport,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(ReadyButton));
+
+    expect(transport.sent, hasLength(1));
+    expect(transport.sent.single['v'], 1);
+    expect(transport.sent.single['kind'], 'ready');
+    expect(transport.sent.single['payload'], isEmpty);
   });
 
   testWidgets(
@@ -476,5 +498,32 @@ void main() {
       (gradientContainers.single.decoration! as BoxDecoration).gradient,
       equals(KoColors.revealGradient),
     );
+  });
+
+  testWidgets(
+      'KnowoffScreen places voter avatars beneath their target after resolution',
+      (tester) async {
+    final session = _sampleSession(phase: 'result');
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const KnowoffScreen(),
+        GameSession(
+          myRole: session.myRole,
+          dto: session.dto.copyWith(
+            phase: 'result',
+            result: const VoteResultDto(
+              eliminatedSeat: 1,
+              role: 'donower',
+              tally: {'1': 2},
+              votes: {'0': 1, '2': -1},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
+    expect(find.byKey(const Key('vote-trail-2-1')), findsNothing);
   });
 }

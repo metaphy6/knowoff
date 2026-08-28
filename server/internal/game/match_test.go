@@ -501,6 +501,32 @@ func TestMatch_ResultWindow_ReadyFinalizesEarly(t *testing.T) {
 	}
 }
 
+func TestMatch_BallotReadyResolvesEarly(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	m.beginKnowoff()
+
+	seats := m.activeSeats()
+	for index, seat := range seats {
+		if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentReady, nil)); err != nil {
+			t.Fatalf("ready in ballot: %v", err)
+		}
+		acks := bcast.findEvents(seat, transport.EventReadyAck)
+		if len(acks) != 1 || acks[0].Payload["ballot_ready"] != true {
+			t.Fatalf("expected a ballot_ready ack for seat %d, got %v", seat, acks)
+		}
+		if index < len(seats)-1 && m.phase != PhaseKnowoff {
+			t.Fatalf("ballot resolved before every seat readied (after %d)", index+1)
+		}
+	}
+	if m.phase == PhaseKnowoff || m.phase == PhaseRunoff {
+		t.Fatal("expected ballot to resolve once every active seat readied")
+	}
+}
+
 // TestMatch_ReadyAck_TargetsOnlyActingSeat guards the wire contract the
 // Ready button's checked state relies on: the server used to never confirm a
 // Ready intent to anyone, so the button never actually flipped.

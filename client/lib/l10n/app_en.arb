@@ -865,6 +865,10 @@
   "@resultReadyHint": {
     "description": "Hint under the Ready button in the Knowoff result window."
   },
+  "ballotReadyHint": "When everyone is Ready, uncast ballots abstain and this resolves early.",
+  "@ballotReadyHint": {
+    "description": "Hint under the Ready button in the Knowoff ballot window."
+  },
   "quickChatTitle": "Quick Chat",
   "@quickChatTitle": {
     "description": "Heading over the canned-phrase bar."
