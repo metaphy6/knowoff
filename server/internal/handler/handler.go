@@ -157,6 +157,39 @@ func (s *ConnectionState) run(ctx context.Context) error {
 	}
 	readTimeout := pongWaitDuration + 10*time.Second
 
+	// A silent phase (discussion, ballot, vote window) is entirely normal —
+	// a player who is just reading and thinking sends no intents for a
+	// while. Without a keepalive, that legitimate silence alone would blow
+	// past readTimeout and the read deadline would kill the connection out
+	// from under them. A background ping ticker plus a pong handler that
+	// refreshes the deadline keeps idle-but-healthy connections alive;
+	// WriteControl is safe to call concurrently with the other Write calls
+	// on this connection (room broadcasts, sendError, etc).
+	done := make(chan struct{})
+	defer close(done)
+	s.Conn.SetPongHandler(func(string) error {
+		s.Conn.SetReadDeadline(time.Now().Add(readTimeout))
+		return nil
+	})
+	pingPeriod := time.Duration(s.Config().WebSocket.PingPeriodS) * time.Second
+	if pingPeriod <= 0 {
+		pingPeriod = 30 * time.Second // fallback default
+	}
+	go func() {
+		ticker := time.NewTicker(pingPeriod)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ticker.C:
+				if err := s.Conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(10*time.Second)); err != nil {
+					return
+				}
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-ctx.Done():

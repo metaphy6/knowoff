@@ -161,3 +161,9 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T10:26:57Z,run-20260901102657-409967,human,general,commit,completed,perf(server): defer media pack loading after server starts listening,,pending
 2026-09-01T10:34:54Z,run-20260901103454-428343,human,general,commit,completed,"fix(lobby): read live media pack at match start, not stale startup snapshot",,pending
 2026-09-01T10:40:55Z,run-20260901104055-443233,human,general,commit,completed,fix(client): stop infinite rejoin loop after stale room/session errors,,pending
+2026-09-01T11:07:58Z,run-20260901110758-493865,human,general,commit,completed,fix(server): add WebSocket ping/pong keepalive to stop idle-phase disconnects,,pending
+2026-09-01T11:08:04Z,run-20260901110804-494098,human,general,commit,completed,"feat(client): distinct color/icon/tilt per specialty card, no animation",,pending
+2026-09-01T11:16:53Z,run-20260901111653-521376,human,client,commit,completed,fix(client): merge auto-pass timeouts into plays and own hand,,pending
+2026-09-01T11:24:10Z,run-20260901112410-534921,human,client,commit,completed,fix(client): show a Timed out label instead of a blank placeholder for auto-passed plays,,pending
+2026-09-01T11:42:24Z,run-20260901114224-583059,human,server,commit,completed,fix(server): send full card payloads on round_resolved so an auto-passed seat renders as timed-out instead of a blank card,,pending
+2026-09-01T11:50:46Z,run-20260901115046-600185,human,server,commit,completed,"fix(game): a timed-out seat's play now shows the actual card it lost to the stalling penalty, tagged timed out, instead of a bare Timed out box",,pending

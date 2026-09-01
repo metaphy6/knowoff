@@ -470,6 +470,53 @@ void main() {
     expect(transport.sent, isEmpty);
   });
 
+  test('a turn timeout removes the auto-discarded card from my own hand',
+      () async {
+    // Regression: play_revealed for a timeout carries no card_id (the seat
+    // never played), so the old merge silently ignored it — the seat's play
+    // never landed in `plays` and the auto-discarded card stayed visible in
+    // the local hand even though the server had already removed it.
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    transport.emit('hand_dealt', <String, dynamic>{
+      'cards': <String>['card-1', 'card-2'],
+      'draw_pile': <String>[],
+      'specialty': null,
+    });
+    await _settle();
+
+    transport.emit('play_revealed', <String, dynamic>{
+      'seat': 0,
+      'timeout': true,
+      'lost': <String, dynamic>{'id': 'card-1', 'type': 'text'},
+    });
+    await _settle();
+
+    expect(
+      notifier.state.dto.hand.cards.map((c) => c.id),
+      equals(<String>['card-2']),
+    );
+    final play = notifier.state.dto.plays['0'];
+    expect(play, isNotNull);
+    expect(play!.timedOut, isTrue);
+    expect(play.id, equals('card-1'));
+  });
+
+  test('a turn timeout for another seat still marks that seat as played',
+      () async {
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+
+    transport.emit('play_revealed', <String, dynamic>{
+      'seat': 1,
+      'timeout': true,
+    });
+    await _settle();
+
+    expect(notifier.state.dto.plays['1'], isNotNull);
+  });
+
   test('a new round clears a stale pre-selection', () async {
     transport.emit('joined', <String, dynamic>{'seat': 0});
     transport.emit('phase_started', <String, dynamic>{'phase': 'play'});

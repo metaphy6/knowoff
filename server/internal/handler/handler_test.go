@@ -27,6 +27,91 @@ func testLobby(t *testing.T) *lobby.Manager {
 	})
 }
 
+// TestRealtimeHandler_KeepsIdleConnectionAliveWithPing guards against the
+// regression where a legitimately silent connection (a player reading
+// through a long discussion/ballot window without sending an intent) got
+// killed by the read-deadline watchdog because nothing ever kept it warm.
+// The server must proactively ping on ping_period_s so idle-but-healthy
+// connections survive.
+func TestRealtimeHandler_KeepsIdleConnectionAliveWithPing(t *testing.T) {
+	cfg := &config.Config{
+		WebSocket: config.WebSocketConfig{
+			PongWaitS:   1,
+			PingPeriodS: 1,
+		},
+		Tuning: config.TuningConfig{
+			Game: config.GameTuning{
+				RoomSizes:      []int{4},
+				DonowersBySize: map[int]int{4: 1},
+				VotesBySize:    map[int]int{4: 2},
+				MinConnected:   3,
+			},
+		},
+	}
+	lobbyManager := lobby.NewManager(lobby.Deps{
+		Config:  cfg,
+		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Pack:    &media.Pack{},
+		Manager: media.NewManager(nil),
+		NodeID:  "test-node",
+	})
+	room, err := lobbyManager.CreateRoom(4)
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+
+	deps := HandlerDeps{
+		Config: cfg,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Lobby:  lobbyManager,
+	}
+	srv := httptest.NewServer(RealtimeHandler(deps))
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	pinged := make(chan struct{}, 1)
+	conn.SetPingHandler(func(string) error {
+		select {
+		case pinged <- struct{}{}:
+		default:
+		}
+		return conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Second))
+	})
+
+	join := map[string]any{
+		"v":    transport.ProtocolVersion,
+		"kind": "join_room",
+		"payload": map[string]any{
+			"code": room.Code,
+		},
+	}
+	if err := conn.WriteJSON(join); err != nil {
+		t.Fatalf("write join: %v", err)
+	}
+
+	// Gorilla only services control frames (ping/pong) during a read call, so
+	// keep reading in the background exactly like a real client would.
+	go func() {
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}()
+
+	select {
+	case <-pinged:
+	case <-time.After(3 * time.Second):
+		t.Fatal("expected a keepalive ping from the server within ping_period_s, got none")
+	}
+}
+
 // TestRealtimeHandler_RejectsOverCapacity verifies the ConnLimiter is
 // enforced at upgrade time: once at capacity, further connections are
 // rejected with HTTP 503 instead of being accepted and exhausting resources.

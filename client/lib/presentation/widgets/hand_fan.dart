@@ -316,10 +316,50 @@ Doodle specialtyIcon(String specialty) {
       return Doodle.eye;
     case 'shuffle':
       return Doodle.staticBurst;
-    case 'one_more_free_card':
     case 'revote':
+      return Doodle.mask;
+    case 'one_more_free_card':
     default:
       return Doodle.sparkle;
+  }
+}
+
+/// Accent colour for a specialty id — each one gets its own personality so
+/// the hand reads as a set of distinct powers, not one generic "special"
+/// card repainted five times.
+Color specialtyColor(String specialty) {
+  switch (specialty) {
+    case 'pass':
+      return KoColors.aqua;
+    case 'reveal':
+      return KoColors.pink;
+    case 'shuffle':
+      return KoColors.violet;
+    case 'revote':
+      return KoColors.tangerine;
+    case 'one_more_free_card':
+    default:
+      return KoColors.lime;
+  }
+}
+
+/// Deterministic static tilt per specialty (Rules-flavoured, not random) —
+/// part of the same fixed-angle language as [KoTilt.alternating], just
+/// keyed by identity instead of list position so a given specialty always
+/// leans the same way.
+double specialtyTilt(String specialty) {
+  switch (specialty) {
+    case 'pass':
+      return KoTilt.subtle;
+    case 'reveal':
+      return KoTilt.loud;
+    case 'shuffle':
+      return KoTilt.soft;
+    case 'revote':
+      return -KoTilt.soft;
+    case 'one_more_free_card':
+    default:
+      return -KoTilt.loud;
   }
 }
 
@@ -368,63 +408,94 @@ class _SpecialtyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final label = specialtyLabel(l10n, specialty);
+    final color = specialtyColor(specialty);
+    final icon = specialtyIcon(specialty);
 
     return Semantics(
       label: label,
-      child: Container(
-        key: ValueKey<String>('hand-specialty-$specialty'),
-        width: width,
-        height: width,
-        padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
-        decoration: BoxDecoration(
-          color: KoColors.tangerine,
-          border: Border.all(width: KoBorders.regular, color: KoColors.ink),
-          borderRadius: BorderRadius.circular(KoRadii.card),
-          boxShadow: const <BoxShadow>[KoShadows.md],
-        ),
-        child: width < 140
-            ? Stack(
-                children: <Widget>[
-                  Center(
-                    child: DoodleIcon(specialtyIcon(specialty), size: 20),
-                  ),
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    child: Center(child: DoodleIcon(Doodle.sparkle, size: 14)),
-                  ),
-                ],
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          DoodleIcon(specialtyIcon(specialty), size: 28),
-                          const SizedBox(height: KoSpace.xs),
-                          Text(
-                            label,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: KoSpace.sm),
-                  _CardFooter(
-                    width: width,
-                    icon: Doodle.sparkle,
-                    label: l10n.cardTypeSpecialty,
-                  ),
-                ],
+      child: Transform.rotate(
+        angle: specialtyTilt(specialty),
+        child: Container(
+          key: ValueKey<String>('hand-specialty-$specialty'),
+          width: width,
+          height: width,
+          padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
+          decoration: BoxDecoration(
+            color: color,
+            border: Border.all(width: KoBorders.thick, color: KoColors.ink),
+            borderRadius: BorderRadius.circular(KoRadii.card),
+            boxShadow: const <BoxShadow>[KoShadows.md],
+          ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              // A faint oversized echo of the same glyph behind the main
+              // icon — a static poster-print flourish, not a texture.
+              Positioned(
+                right: -width * 0.12,
+                top: -width * 0.08,
+                child: Opacity(
+                  opacity: 0.18,
+                  child:
+                      DoodleIcon(icon, size: width * 0.7, color: KoColors.ink),
+                ),
               ),
+              width < 140
+                  ? Stack(
+                      children: <Widget>[
+                        Center(child: DoodleIcon(icon, size: 20)),
+                        const Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: Center(
+                              child: DoodleIcon(Doodle.sparkle, size: 14)),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Container(
+                                  padding: const EdgeInsets.all(KoSpace.sm),
+                                  decoration: BoxDecoration(
+                                    color: KoColors.whiteWell,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        width: KoBorders.regular,
+                                        color: KoColors.ink),
+                                  ),
+                                  child: DoodleIcon(icon, size: 26),
+                                ),
+                                const SizedBox(height: KoSpace.xs),
+                                Text(
+                                  label,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: KoSpace.sm),
+                        _CardFooter(
+                          width: width,
+                          icon: Doodle.sparkle,
+                          label: l10n.cardTypeSpecialty,
+                        ),
+                      ],
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }

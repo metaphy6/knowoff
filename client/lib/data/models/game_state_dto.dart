@@ -52,6 +52,7 @@ class CardDto {
     required this.type,
     this.content,
     this.signedUrl,
+    this.timedOut = false,
   });
 
   final String id;
@@ -59,12 +60,17 @@ class CardDto {
   final String? content;
   final String? signedUrl;
 
+  /// True when this play is a turn-timeout auto-pass showing the randomly
+  /// discarded card (Rules §3), not an actual play.
+  final bool timedOut;
+
   factory CardDto.fromJson(Map<String, dynamic> json) {
     return CardDto(
       id: json['id'] as String? ?? '',
       type: json['type'] as String? ?? 'text',
       content: json['content'] as String?,
       signedUrl: json['signed_url'] as String?,
+      timedOut: json['timed_out'] as bool? ?? false,
     );
   }
 }

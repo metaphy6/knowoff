@@ -777,6 +777,53 @@ func TestMatch_Specialty_PassEndsTurn(t *testing.T) {
 	}
 }
 
+// TestMatch_RoundResolved_TimedOutSeatCarriesLostCard guards the
+// round_resolved resync: an auto-passed seat's play must still render the
+// card it lost to the stalling penalty (Rules §3), tagged timed_out=true,
+// after the resync — not degrade to a raw card id string or a blank card.
+func TestMatch_RoundResolved_TimedOutSeatCarriesLostCard(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+
+	timedOutSeat := m.turnOrder[len(m.turnOrder)-1]
+	for _, seat := range m.turnOrder {
+		if seat == timedOutSeat {
+			m.autoPass(seat)
+			continue
+		}
+		cardID := m.players[seat].Hand.Cards[0]
+		if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": cardID})); err != nil {
+			t.Fatalf("play seat %d: %v", seat, err)
+		}
+	}
+
+	events := bcast.findEvents(0, transport.EventRoundResolved)
+	if len(events) == 0 {
+		t.Fatal("expected a round_resolved event")
+	}
+	plays, ok := events[0].Payload["plays"].(map[int]map[string]any)
+	if !ok {
+		t.Fatalf("round_resolved plays not in the full card-payload shape: %v", events[0].Payload["plays"])
+	}
+	card, ok := plays[timedOutSeat]
+	if !ok {
+		t.Fatalf("round_resolved missing the timed-out seat's play: %v", plays)
+	}
+	if card["timed_out"] != true {
+		t.Fatalf("timed-out seat's play should carry timed_out=true, got: %v", card)
+	}
+	lostID := m.lostCards[timedOutSeat]
+	if lostID == "" {
+		t.Fatal("expected the timed-out seat to have lost a card")
+	}
+	if card["id"] != lostID {
+		t.Fatalf("timed-out seat's play should show the lost card %q, got: %v", lostID, card)
+	}
+}
+
 func TestMatch_Specialty_OneMoreFreeDrawNoPenalty(t *testing.T) {
 	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {

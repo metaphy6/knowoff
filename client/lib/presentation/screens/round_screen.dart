@@ -117,15 +117,15 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
       case 'pass':
         return KoButton(
           label: l10n.passTurn,
-          backgroundColor: KoColors.surface,
-          icon: const DoodleIcon(Doodle.cloud, size: 20),
+          backgroundColor: specialtyColor('pass'),
+          icon: DoodleIcon(specialtyIcon('pass'), size: 20),
           onTap: () => notifier.useSpecialty('pass'),
         );
       case 'reveal':
         return KoButton(
           label: l10n.specialtyRevealAction,
-          backgroundColor: KoColors.tangerine,
-          icon: const DoodleIcon(Doodle.eye, size: 20),
+          backgroundColor: specialtyColor('reveal'),
+          icon: DoodleIcon(specialtyIcon('reveal'), size: 20),
           onTap: selectedCardId != null
               ? () => _useReveal(context, notifier, session)
               : null,
@@ -133,8 +133,8 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
       case 'one_more_free_card':
         return KoButton(
           label: l10n.specialtyOneMoreAction,
-          backgroundColor: KoColors.tangerine,
-          icon: const DoodleIcon(Doodle.sparkle, size: 20),
+          backgroundColor: specialtyColor('one_more_free_card'),
+          icon: DoodleIcon(specialtyIcon('one_more_free_card'), size: 20),
           onTap: selectedCardId != null
               ? () => notifier.useSpecialty('one_more_free_card',
                   discardCardId: selectedCardId)
@@ -144,8 +144,8 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
         if (!session.isDonower || dto.plays.isNotEmpty) return null;
         return KoButton(
           label: l10n.specialtyShuffleAction,
-          backgroundColor: KoColors.pink,
-          icon: const DoodleIcon(Doodle.staticBurst, size: 20),
+          backgroundColor: specialtyColor('shuffle'),
+          icon: DoodleIcon(specialtyIcon('shuffle'), size: 20),
           onTap: () => notifier.useSpecialty('shuffle'),
         );
       default:
