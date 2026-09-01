@@ -35,6 +35,11 @@ type Match struct {
 	turnOrder   []int
 	currentTurn int
 	plays       map[int]string
+	// lostCards is the random-discard penalty card for a seat that timed
+	// out this round (Rules §3) — kept so the play_revealed and
+	// round_resolved payloads can show what was auto-discarded instead of a
+	// bare "timed out" marker.
+	lostCards map[int]string
 
 	discussionReady map[int]bool
 
@@ -74,6 +79,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		absent:              make([]bool, size),
 		players:             make([]*PlayerState, size),
 		plays:               make(map[int]string),
+		lostCards:           make(map[int]string),
 		discussionReady:     make(map[int]bool),
 		ballots:             make(map[int]int),
 		ballotReady:         make(map[int]bool),
@@ -557,6 +563,7 @@ func (m *Match) beginRoundLocked() {
 	m.stopTimers()
 	m.phase = PhasePlay
 	m.plays = make(map[int]string)
+	m.lostCards = make(map[int]string)
 	for _, p := range m.players {
 		p.Ready = false
 		p.PokesUsed = make(map[int]bool)
@@ -664,6 +671,7 @@ func (m *Match) autoPass(seat int) {
 		idx := m.rng.Intn(len(p.Hand.Cards))
 		removed := p.Hand.Cards[idx]
 		p.Hand.Cards = append(p.Hand.Cards[:idx], p.Hand.Cards[idx+1:]...)
+		m.lostCards[seat] = removed
 		m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 			"seat":    seat,
 			"timeout": true,
@@ -922,7 +930,7 @@ func (m *Match) beginDiscussion() {
 	m.broadcastPhase()
 	m.bcast.Broadcast(transport.NewEvent(transport.EventRoundResolved, map[string]any{
 		"round": m.round,
-		"plays": m.plays,
+		"plays": m.playsPayload(),
 	}), -1)
 	for i := 0; i < m.size; i++ {
 		if !m.eliminated[i] && !m.connected[i] {
@@ -1477,6 +1485,38 @@ func (m *Match) cardPayloads(ids []string) []map[string]any {
 		out[i] = m.cardPayload(id)
 	}
 	return out
+}
+
+// playsPayload renders every seat's play for this round in the same full
+// {id, type[, content][, signed_url]} wire shape play_revealed already uses.
+// Without this, the round_resolved resync sent raw {seat: cardID} pairs,
+// which downgraded an auto-passed turn (cardID == "") to a blank card
+// instead of the timed-out seat's lost card, and dropped image/GIF signed
+// URLs for every other play once discussion started.
+func (m *Match) playsPayload() map[int]map[string]any {
+	out := make(map[int]map[string]any, len(m.plays))
+	for seat, cardID := range m.plays {
+		if cardID == "" {
+			out[seat] = m.timeoutPayload(seat)
+			continue
+		}
+		out[seat] = m.cardPayload(cardID)
+	}
+	return out
+}
+
+// timeoutPayload renders a timed-out seat's play as the card it randomly
+// lost (Rules §3's stalling penalty) tagged timed_out=true, so the table
+// shows what was auto-discarded instead of a bare "timed out" box. Falls
+// back to an empty timed-out marker if the seat's hand was already empty.
+func (m *Match) timeoutPayload(seat int) map[string]any {
+	lostID := m.lostCards[seat]
+	if lostID == "" {
+		return map[string]any{"id": "", "type": "text", "timed_out": true}
+	}
+	payload := m.cardPayload(lostID)
+	payload["timed_out"] = true
+	return payload
 }
 
 // sendHandDealt sends one seat's full hand, draw pile, and specialty.

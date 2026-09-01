@@ -293,12 +293,38 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         ),
       ));
     }
-    if (seat == null || cardId == null) return;
+    if (seat == null) return;
+    final timedOut = payload['timeout'] == true;
+    // A turn timeout carries no card_id (the seat auto-passed, it didn't
+    // play a card) — without this branch the seat's play never lands in
+    // `plays`, so the UI shows it as still mid-turn and, for the local
+    // seat, the auto-discarded card never disappears from the hand.
+    if (cardId == null && !timedOut) return;
+    var current = state.dto;
+    if (timedOut && seat == current.seat) {
+      final lostId =
+          (payload['lost'] as Map<String, dynamic>?)?['id'] as String?;
+      if (lostId != null) {
+        current = current.copyWith(
+          hand: HandDto(
+            cards: current.hand.cards.where((c) => c.id != lostId).toList(),
+            drawPile: current.hand.drawPile,
+            specialty: current.hand.specialty,
+          ),
+        );
+      }
+    }
     final cardPayload = payload['card'] as Map<String, dynamic>?;
-    final card = cardPayload != null
-        ? CardDto.fromJson(cardPayload)
-        : CardDto(id: cardId, type: 'text');
-    final current = state.dto;
+    final lostPayload = payload['lost'] as Map<String, dynamic>?;
+    // A timeout shows the card randomly discarded as the stalling penalty
+    // (Rules §3), tagged timed out, instead of a bare "timed out" box.
+    final card = cardId != null
+        ? (cardPayload != null
+            ? CardDto.fromJson(cardPayload)
+            : CardDto(id: cardId, type: 'text'))
+        : (lostPayload != null
+            ? CardDto.fromJson({...lostPayload, 'timed_out': true})
+            : const CardDto(id: '', type: 'text', timedOut: true));
     final plays = Map<String, CardDto>.from(current.plays);
     plays[seat.toString()] = card;
     state = state.copyWith(
