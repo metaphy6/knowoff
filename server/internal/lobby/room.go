@@ -386,6 +386,14 @@ func (r *Room) write(conn *websocket.Conn, env *transport.Envelope) error {
 	if err != nil {
 		return err
 	}
+	// Set write deadline to prevent indefinite blocking if connection stalls.
+	// If WriteWaitS is not configured or is 0, use default 10s.
+	writeWaitDuration := time.Duration(r.deps.Config.WebSocket.WriteWaitS) * time.Second
+	if writeWaitDuration == 0 {
+		writeWaitDuration = 10 * time.Second
+	}
+	conn.SetWriteDeadline(time.Now().Add(writeWaitDuration))
+	defer conn.SetWriteDeadline(time.Time{}) // clear deadline after write
 	return conn.WriteMessage(websocket.TextMessage, data)
 }
 

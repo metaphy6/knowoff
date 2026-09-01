@@ -147,6 +147,16 @@ func (s *ConnectionState) run(ctx context.Context) error {
 	// revocations drop live connections within seconds.
 	revalidate := time.NewTicker(5 * time.Second)
 	defer revalidate.Stop()
+
+	// Set read deadline to detect stalled or dead connections. Use PongWaitS
+	// plus buffer to allow for legitimate latency. If no message arrives within
+	// this time, the connection is considered stuck and will be closed.
+	pongWaitDuration := time.Duration(s.Config().WebSocket.PongWaitS) * time.Second
+	if pongWaitDuration == 0 {
+		pongWaitDuration = 60 * time.Second // fallback default
+	}
+	readTimeout := pongWaitDuration + 10*time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -161,8 +171,12 @@ func (s *ConnectionState) run(ctx context.Context) error {
 		default:
 		}
 
+		// Set read deadline to prevent indefinite blocking if connection stalls
+		s.Conn.SetReadDeadline(time.Now().Add(readTimeout))
 		env, err := s.readEnvelope()
 		if err != nil {
+			// Clear deadline on error to clean up
+			s.Conn.SetReadDeadline(time.Time{})
 			return err
 		}
 		if s.rateLimiter != nil && s.Config().RateLimit.Enabled && !s.rateLimiter.Allow() {

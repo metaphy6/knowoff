@@ -2,3 +2,4 @@
 2. Show who gets the votes from who in real time during voting screen
 3. Add a vote beside Vote that displays what card the given player used. Happens one time then the button fades out
 4. Special cards don't work yet. Particularly revote which should be available to use during vote. Add dev feature to get a special card to test
+5. if its 4 players table, we should say Dowoner wins. If 6 players table, dowoners win together
