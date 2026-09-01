@@ -136,24 +136,31 @@ func (m *Manager) destroyRoomLocked(id string) {
 // enough humans are available.
 func (m *Manager) QueueQuickPlay(size int, accountID string) (string, <-chan QueueAssignment, error) {
 	if !m.matchmakingReady() {
+		m.deps.Logger.Warn("quickplay queue rejected: matchmaking not ready",
+			"account", accountID, "size", size)
 		return "", nil, fmt.Errorf("matchmaking paused")
 	}
 	if size != 4 && size != 6 {
+		m.deps.Logger.Warn("quickplay queue rejected: invalid size",
+			"account", accountID, "requested_size", size)
 		return "", nil, fmt.Errorf("invalid room size %d", size)
 	}
 	if m.deps.Economy != nil {
 		cap := m.deps.Config.Tuning.Economy.FreeDailyQuickplayMatches
-		m.deps.Logger.Info("queue quickplay check", "account_id", accountID, "cap", cap)
 		ok, err := m.deps.Economy.CanQueueQuickPlay(context.Background(), accountID)
 		if err != nil {
-			m.deps.Logger.Warn("queue quickplay eligibility error", "account_id", accountID, "error", err)
+			m.deps.Logger.Warn("quickplay queue rejected: eligibility check failed",
+				"account", accountID, "size", size, "error", err)
 			return "", nil, fmt.Errorf("quickplay eligibility: %w", err)
 		}
 		if !ok {
-			m.deps.Logger.Warn("queue quickplay cap reached", "account_id", accountID, "cap", cap)
+			m.deps.Logger.Warn("quickplay queue rejected: daily limit reached",
+				"account", accountID, "size", size, "daily_limit", cap)
 			return "", nil, fmt.Errorf("daily quickplay limit reached")
 		}
 		if err := m.deps.Economy.CheckCooldown(context.Background(), accountID); err != nil {
+			m.deps.Logger.Warn("quickplay queue rejected: cooldown active",
+				"account", accountID, "size", size, "error", err)
 			return "", nil, err
 		}
 	}
@@ -165,8 +172,12 @@ func (m *Manager) QueueQuickPlay(size int, accountID string) (string, <-chan Que
 		assigned:  make(chan QueueAssignment, 1),
 	}
 	m.mu.Lock()
+	queueLen := len(m.queues[size])
 	m.queues[size] = append(m.queues[size], entry)
 	m.mu.Unlock()
+	m.deps.Logger.Info("player queued for quickplay",
+		"account", accountID, "size", size, "queue_id", entry.id,
+		"position_in_queue", queueLen+1)
 	m.ProcessQueue(context.Background())
 	return entry.id, entry.assigned, nil
 }
