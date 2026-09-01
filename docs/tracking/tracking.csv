@@ -160,3 +160,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T10:23:08Z,run-20260901102308-396389,human,general,commit,completed,perf(client): speed up WebSocket reconnection after server restart,,pending
 2026-09-01T10:26:57Z,run-20260901102657-409967,human,general,commit,completed,perf(server): defer media pack loading after server starts listening,,pending
 2026-09-01T10:34:54Z,run-20260901103454-428343,human,general,commit,completed,"fix(lobby): read live media pack at match start, not stale startup snapshot",,pending
+2026-09-01T10:40:55Z,run-20260901104055-443233,human,general,commit,completed,fix(client): stop infinite rejoin loop after stale room/session errors,,pending
