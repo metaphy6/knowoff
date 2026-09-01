@@ -7,8 +7,8 @@ import (
 )
 
 func (m *Match) handlePoke(seat int, payload map[string]any) error {
-	if m.phase != PhasePlay && m.phase != PhaseDiscussion {
-		return fmt.Errorf("cannot poke outside play or discussion")
+	if m.phase != PhasePlay && m.phase != PhaseDiscussion && m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
+		return fmt.Errorf("cannot poke outside play, discussion, or voting phases")
 	}
 	targetF, _ := payload["target_seat"].(float64)
 	target := int(targetF)

@@ -32,6 +32,8 @@ class DiscussionScreen extends ConsumerStatefulWidget {
 class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
   Timer? _ticker;
   int _pokeCount = 0;
+  String _lastPhase = '';
+  final Set<int> _pokedThisPhase = {};
 
   @override
   void initState() {
@@ -78,6 +80,12 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
     final session = ref.watch(gameSessionProvider);
     final notifier = ref.read(gameSessionProvider.notifier);
     final dto = session.dto;
+
+    // Reset poke tracking when phase changes
+    if (_lastPhase != dto.phase) {
+      _lastPhase = dto.phase;
+      _pokedThisPhase.clear();
+    }
 
     // Rules §4: the discussion window is 10 s per player, ending early when
     // everyone is Ready. The server declares its length in `phase_started`.
@@ -129,8 +137,11 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
                 onPoke: session.amEliminated
                     ? null
                     : (seat) {
-                        notifier.poke(seat);
-                        setState(() => _pokeCount++);
+                        if (!_pokedThisPhase.contains(seat)) {
+                          _pokedThisPhase.add(seat);
+                          notifier.poke(seat);
+                          setState(() => _pokeCount++);
+                        }
                       },
                 onTargetedChat: session.amEliminated
                     ? null

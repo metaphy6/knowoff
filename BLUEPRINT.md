@@ -152,7 +152,7 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 ### 8. Pace Controls: Ready & Poke
 
 * **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends the moment its player acts, and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. The 15 s result window works the same way: Ready counts you in, and once every connected active player has, it finalizes early instead of waiting out the timer. Fast tables play fast; the 15 s turn, `10 s × players` discussion, and 15 s result timers are only ceilings. **Ballots and runoffs always run their full time** — blind to the end.
-* **Poke**: once per target per round, you may poke a player who hasn't acted — the turn player sitting on the clock, or anyone not yet Ready in discussion. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. No score effect; the cap is enforced server-side.
+* **Poke**: once per target per phase, you may poke a player — the turn player sitting on the clock during play, anyone not yet Ready during discussion, or anyone during voting. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. The three phases are independent: you can poke the same player once in play, once in discussion, and once in voting. No score effect; the cap is enforced server-side.
 
 ---
 
