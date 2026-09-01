@@ -917,6 +917,7 @@ func (m *Match) beginDiscussion() {
 	m.discussionReady = make(map[int]bool)
 	for _, p := range m.players {
 		p.Ready = false
+		p.PokesUsed = make(map[int]bool)
 	}
 	m.broadcastPhase()
 	m.bcast.Broadcast(transport.NewEvent(transport.EventRoundResolved, map[string]any{
@@ -1026,6 +1027,7 @@ func (m *Match) beginKnowoff() {
 	for _, p := range m.players {
 		p.Ballot = -1
 		p.CorrectVote = false
+		p.PokesUsed = make(map[int]bool)
 	}
 	m.runoff = false
 	m.runoffCandidates = nil
