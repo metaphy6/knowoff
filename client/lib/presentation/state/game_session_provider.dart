@@ -41,7 +41,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   final List<Map<String, dynamic>> _pendingRequests = [];
   bool _connectionReady = false;
   int _retryAttempts = 0;
-  static const _retryDelay = Duration(milliseconds: 500);
+  static const _retryDelay = Duration(milliseconds: 100);
 
   static GameStateDto _initialDto() => const GameStateDto();
 
@@ -69,6 +69,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// queue call a fresh handshake to join on.
   void restart() {
     _bufferedMessages.clear();
+    _pendingRequests.clear();
     state = GameSession(dto: _initialDto());
     unawaited(_transport.reconnect());
   }

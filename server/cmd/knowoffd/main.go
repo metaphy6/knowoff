@@ -120,15 +120,6 @@ func run() error {
 	economyManager := economy.NewManager(db, cfg)
 
 	mediaManager := media.NewManager(nil)
-	if cfg.Media.LocalBundlePath != "" {
-		pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
-		if err != nil {
-			logger.Error("failed to load media pack", "path", cfg.Media.LocalBundlePath, "error", err)
-		} else {
-			mediaManager.Load(pack)
-			logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
-		}
-	}
 
 	issuer := media.NewSignedURLIssuer([]byte(cfg.Media.URLSigningKey), time.Duration(cfg.Media.SignedURLTTLS)*time.Second)
 	redisClient := store.NewRedisClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
@@ -272,6 +263,21 @@ func run() error {
 	go func() { errCh <- publicServer.ListenAndServe() }()
 	go func() { errCh <- adminServer.ListenAndServe() }()
 	go func() { errCh <- metricsServer.ListenAndServe() }()
+
+	// Load media pack asynchronously in background; servers are now listening
+	// for clients to connect. This keeps initial startup fast even if the media
+	// pack is large or I/O is slow.
+	if cfg.Media.LocalBundlePath != "" {
+		go func() {
+			pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
+			if err != nil {
+				logger.Error("failed to load media pack", "path", cfg.Media.LocalBundlePath, "error", err)
+			} else {
+				mediaManager.Load(pack)
+				logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
+			}
+		}()
+	}
 
 	transport.SetReady(true)
 	runCtx, runCancel := context.WithCancel(context.Background())
