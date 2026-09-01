@@ -151,3 +151,9 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T08:19:15Z,run-20260901081915-139535,human,general,commit,completed,feat(resilience): add human-readable logging and request queuing for pre-ready failures,,pending
 2026-09-01T08:26:38Z,run-20260901082638-156582,human,general,commit,completed,"feat(bots): improve speed, strategy, and error handling for production",,pending
 2026-09-01T08:54:07Z,run-20260901085407-205783,human,general,commit,completed,fix(bots): make ready and knowoff votes fire immediately,,pending
+2026-09-01T09:18:35Z,run-20260901091835-250431,human,general,commit,completed,feat(client): add reconnect retry banner,,pending
+2026-09-01T09:44:56Z,run-20260901094456-311629,human,general,commit,completed,feat(client): rotate queue retry messages every 1.5s with accurate attempt counter,,pending
+2026-09-01T10:05:22Z,run-20260901100522-352096,human,general,commit,completed,"feat(client): slow queue retry to 4.5s intervals, add animated ellipsis and pulsing container for drama",,pending
+2026-09-01T10:09:21Z,run-20260901100921-361748,human,general,commit,completed,"feat(client): extend message interval to 10s, add independent 5s retry attempt counter",,pending
+2026-09-01T10:14:49Z,run-20260901101449-375907,human,general,commit,completed,fix(client): remove pulsing animation from retry banner to keep font size static,,pending
+2026-09-01T10:16:45Z,run-20260901101645-382428,human,general,commit,completed,fix(client): restore container animation with counter-scaled text for static font size,,pending

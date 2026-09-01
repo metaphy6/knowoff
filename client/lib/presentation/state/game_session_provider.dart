@@ -21,6 +21,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     required GameTransport transport,
     GameSession? initialState,
   })  : _transport = transport,
+        _retryAttempts = initialState?.reconnectAttempts ?? 0,
         super(initialState ?? GameSession(dto: _initialDto())) {
     _subscription = transport.messages.listen(_onMessage);
     _connectionSubscription = transport.state.listen(_onConnectionState);
@@ -39,6 +40,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   // and retry them automatically when the connection is ready.
   final List<Map<String, dynamic>> _pendingRequests = [];
   bool _connectionReady = false;
+  int _retryAttempts = 0;
   static const _retryDelay = Duration(milliseconds: 500);
 
   static GameStateDto _initialDto() => const GameStateDto();
@@ -172,10 +174,24 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         connection == ConnectionState.reconnecting) {
       _connectionReady = false;
       _rejoinPending = _sessionToken != null && state.dto.roomCode.isNotEmpty;
+      if (connection == ConnectionState.reconnecting &&
+          state.connectionState != ConnectionState.reconnecting) {
+        _retryAttempts += 1;
+      }
+      state = state.copyWith(
+        connectionState: connection,
+        reconnectAttempts: _retryAttempts,
+      );
       return;
     }
     if (connection == ConnectionState.connected) {
       _connectionReady = true;
+      _retryAttempts = 0;
+      state = state.copyWith(
+        connectionState: connection,
+        reconnectAttempts: 0,
+        lastError: null,
+      );
       if (_rejoinPending) {
         unawaited(_reclaimRoom());
       }

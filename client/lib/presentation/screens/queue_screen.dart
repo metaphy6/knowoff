@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -21,13 +23,22 @@ class QueueScreen extends ConsumerStatefulWidget {
 }
 
 class _QueueScreenState extends ConsumerState<QueueScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   bool _queued = false;
+  int _messageIndex = 0;
+  int _retryAttemptDisplay = 1;
+  Timer? _messageTimer;
+  Timer? _retryAttemptTimer;
 
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
   )..repeat(reverse: true);
+
+  late final AnimationController _glow = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  )..repeat();
 
   @override
   void initState() {
@@ -35,12 +46,41 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(gameSessionProvider.notifier).queueQuickPlay(4);
       setState(() => _queued = true);
+      _startMessageRotation();
+      _startRetryAttemptCounter();
+    });
+  }
+
+  void _startMessageRotation() {
+    _messageTimer?.cancel();
+    // Rotate messages every 10 seconds for readability
+    _messageTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        setState(() {
+          _messageIndex = (_messageIndex + 1) % 6; // 6 messages in the list
+        });
+      }
+    });
+  }
+
+  void _startRetryAttemptCounter() {
+    _retryAttemptTimer?.cancel();
+    // Increment display counter every 5 seconds to show active trying
+    _retryAttemptTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        setState(() {
+          _retryAttemptDisplay++;
+        });
+      }
     });
   }
 
   @override
   void dispose() {
     _pulse.dispose();
+    _glow.dispose();
+    _messageTimer?.cancel();
+    _retryAttemptTimer?.cancel();
     super.dispose();
   }
 
@@ -49,8 +89,34 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final session = ref.watch(gameSessionProvider);
+    final retrying = _queued && session.dto.roomCode.isEmpty;
+    // Use display counter that increments every 5 seconds to show active trying
+    final retryAttempt = retrying ? _retryAttemptDisplay : 1;
+    final retryMessages = <String>[
+      'The room is trying to reappear.',
+      'The table is doing a dramatic reset.',
+      'The signal is wobbling. We are not done.',
+      'The lobby is doing a little stretch break.',
+      'The match is still in the wings.',
+      'The room is making an entrance.',
+    ];
+    // Messages rotate independently every 4.5 seconds for readability
+    final retryTitle = retrying
+        ? retryMessages[_messageIndex % retryMessages.length]
+        : 'Finding a match...';
+    // Animated ellipsis pulses with the counter to show active retrying
+    final ellipsis = <String>[
+      '',
+      '.',
+      '..',
+      '...'
+    ][(DateTime.now().millisecondsSinceEpoch ~/ 250) % 4];
+    // Retry subtitle shows actual attempt count + dramatic status
+    final retrySubtitle = retrying
+        ? 'Retry attempt $retryAttempt$ellipsis alive and fighting back.'
+        : 'The table is assembling itself.';
 
-    if (session.dto.seat >= 0) {
+    if (session.dto.seat >= 0 && session.dto.roomCode.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.of(context).pushReplacement(
@@ -71,15 +137,18 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
             // The one looping animation in the app: a searching beacon on a
             // screen with nothing else to do.
             AnimatedBuilder(
-              animation: _pulse,
+              animation: Listenable.merge([_pulse, _glow]),
               builder: (context, child) => Transform.rotate(
                 angle: KoTilt.loud * _pulse.value,
-                child: child,
+                child: Opacity(
+                  opacity: 0.7 + (0.3 * _glow.value),
+                  child: child,
+                ),
               ),
               child: Container(
                 padding: const EdgeInsets.all(KoSpace.xl),
                 decoration: BoxDecoration(
-                  color: KoColors.lime,
+                  color: retrying ? KoColors.pink : KoColors.lime,
                   border:
                       Border.all(width: KoBorders.thick, color: KoColors.ink),
                   borderRadius: BorderRadius.circular(KoRadii.card),
@@ -89,11 +158,54 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
               ),
             ),
             const SizedBox(height: KoSpace.xxl),
-            Text(
-              _queued ? l10n.findingMatch : l10n.queueInitializing,
-              textAlign: TextAlign.center,
-              style: text.headlineMedium,
-            ),
+            if (retrying)
+              AnimatedBuilder(
+                animation: _pulse,
+                builder: (context, _) {
+                  final scaleValue = 0.98 + (0.02 * _pulse.value);
+                  final inverseScale = 1.0 / scaleValue;
+                  return Opacity(
+                    opacity: 0.85 + (0.15 * _pulse.value),
+                    child: Transform.scale(
+                      scale: scaleValue,
+                      child: KoContainer(
+                        backgroundColor: KoColors.lime,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: KoSpace.lg,
+                          vertical: KoSpace.sm,
+                        ),
+                        child: Column(
+                          children: <Widget>[
+                            Transform.scale(
+                              scale: inverseScale,
+                              child: Text(
+                                retryTitle,
+                                textAlign: TextAlign.center,
+                                style: text.headlineMedium,
+                              ),
+                            ),
+                            const SizedBox(height: KoSpace.xs),
+                            Transform.scale(
+                              scale: inverseScale,
+                              child: Text(
+                                retrySubtitle,
+                                textAlign: TextAlign.center,
+                                style: text.titleMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              )
+            else
+              Text(
+                _queued ? l10n.findingMatch : l10n.queueInitializing,
+                textAlign: TextAlign.center,
+                style: text.headlineMedium,
+              ),
             if (session.lastError != null) ...<Widget>[
               const SizedBox(height: KoSpace.lg),
               KoContainer(
