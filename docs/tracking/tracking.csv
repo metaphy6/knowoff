@@ -171,3 +171,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T13:09:04Z,run-20260901130548-716396,copilot,chat,commit,completed,feat(chat): expand profanity masking coverage,server/internal/game/poke.go;server/internal/game/match_test.go,pending
 2026-09-01T13:17:40Z,run-20260901130548-716396,copilot,chat,commit,completed,feat(chat): add configured multilingual profanity filtering,configs/base.yaml;server/internal/config/config.go;server/internal/game/poke.go;docs/guides/CHAT_MODERATION.md,pending
 2026-09-01T13:23:23Z,run-20260901130548-716396,copilot,build,commit,completed,fix(build): rebuild migration image with server,Makefile;server/internal/config/config.go;configs/base.yaml,pending
+2026-09-01T13:41:11Z,run-20260901134111-789553,human,"client,server",commit,completed,"fix(realtime): scope ballot-unlock to cast_vote rejections, not any voting-phase error",,pending
