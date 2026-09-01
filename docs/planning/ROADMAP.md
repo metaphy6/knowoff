@@ -82,8 +82,8 @@ Deliberate exclusions. Do not build these, and do not "improve" toward them:
 
 - **No audio or video Nowns** — image, GIF, text only (sound leaks to
   Donowers in local rooms; assets stay tiny; v2 may revisit).
-- **No free-text chat, no voice** — canned Quick Chat only; free text is a
-  v2 candidate behind mute/report moderation infrastructure.
+- **No voice or video chat** — free text is limited to server-masked messages
+  under the configured multilingual moderation policy.
 - **No public room browser, no skill rating.**
 - **No pay-to-win, ever** — nothing purchasable affects dealing, roles,
   votes, or scoring.
@@ -307,7 +307,7 @@ on Round and Knowoff.
 - [x] Seeded match-replay harness: every match logs its seed + intent script; a replay run reproduces the byte-identical event stream — failing matches replay exactly, and failing seeds are committed as regression fixtures.
 - [x] Phase state machine: role assignment, role-blind constraint dealing, randomized per-round turn order, 15 s turns with immediate attributed reveals (played cards stay on the table all match — the evidence votes are argued over), table-announced penalized pile draws (who, how many), timeout auto-pass + random card loss.
 - [x] Specialties (Rules §5): Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle (Donower-use-only, round-start only, draw piles untouched) / attributed once-per-match Revote (Nower-use-only, result window) — off-role and duplicate uses rejected (dead cards remain usable as discard fodder); Type A plays cost one extra discard (except Pass); Shuffle re-deals against the current Nown schedule so the dealing guarantee survives.
-- [x] Discussion window (`10 s × players`, Ready fast-forward) with the localizable canned Quick Chat catalog; Poke once per target per round (buzz on native, screen shake on the PWA — no vibration API; pokes show who poked whom, no score effect), cap enforced server-side.
+- [x] Discussion window (`10 s × players`, Ready fast-forward) with localizable canned Quick Chat plus server-masked free text; English is applied to every message and configured language lists apply from the active client locale. Poke once per target per round (buzz on native, screen shake on the PWA — no vibration API; pokes show who poked whom, no score effect), cap enforced server-side.
 - [x] Knowoff: 20 s blind ballot — one vote each, never for yourself → tie runoff → 15 s result window → elimination + role reveal (these windows always run full time — Ready never shortens them); early-end rule (votes remaining < uncaught Donowers); still-tied runoff = survived voting for Donowers; eliminated-spectator scoping (no Nown, no actions); verdict screen reveals all Nowns to everyone.
 - [x] Disconnect handling per Rules §7: auto-played seats (turns pass instantly, abstain from votes, count Ready, stay votable), 20 s grace, team forfeits + scored low-population ending; match points per Rules §6 with the zero floor (absent at match end = 0 points; already-earned Noin stays).
 - [x] Design tokens (🎨): the palette as Flutter constants — `canvas #DCC8F7` lavender field with its faint low-contrast grid tile (`CustomPainter`, no raster), `surface #F7F2E9` warm cream for cards and sheets, `#FFFFFF` content wells inside them, `ink #141414` for every border and every glyph (text is never gray-on-gray), `violet #B49AF5` the neutral interactive (buttons, selected tiles, timers, progress fills), `lime #D4F04C` the truth/reward signal (Nower catches, match points, Noin grants), `pink #FF9ED2` the risk/accusation signal (votes, the Knowoff board, Donower reveals); the palette's single permitted gradient `#FFD9EC → #FF9ED2` reserved for the Knowoff reveal header; light theme only at v1 — token values snapshot-tested so silent drift fails CI.

@@ -26,6 +26,7 @@ Deprecated names must not reappear in new code, docs, or identifiers.
 | **Non-Converted Points** | Convertible balance (100 → 1 Noin, one-way); owner-visible only. |
 | **Shuffle / Revote** | Unique once-per-match specialty cards — Shuffle usable by Donowers, Revote by Nowers. |
 | **Backfill bot** | 🤖-labeled server bot that tops up a short Quick Play queue; earns nothing. |
+| **Chat moderation** | Server-side free-text masking using English plus the sender's selected-language list from `moderation.word_lists`. |
 
 ## Deprecated names — do not use
 

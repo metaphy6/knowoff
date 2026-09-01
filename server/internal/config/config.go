@@ -14,6 +14,7 @@ type Config struct {
 	WebSocket    WebSocketConfig    `yaml:"websocket"`
 	Protocol     ProtocolConfig     `yaml:"protocol"`
 	Localization LocalizationConfig `yaml:"localization"`
+	Moderation   ModerationConfig   `yaml:"moderation"`
 	Database     DatabaseConfig     `yaml:"database"`
 	Redis        RedisConfig        `yaml:"redis"`
 	Storage      StorageConfig      `yaml:"storage"`
@@ -76,6 +77,13 @@ type LocalizationConfig struct {
 	DefaultLocale       string   `yaml:"default_locale"`
 	SupportedLocales    []string `yaml:"supported_locales"`
 	PseudoLocaleEnabled bool     `yaml:"pseudo_locale_enabled"`
+}
+
+// ModerationConfig holds per-language free-chat word lists. English is always
+// applied as the fallback list in addition to a player's selected language.
+type ModerationConfig struct {
+	DefaultLanguage string              `yaml:"default_language"`
+	WordLists       map[string][]string `yaml:"word_lists"`
 }
 
 // DatabaseConfig is the PostgreSQL connection pool.
