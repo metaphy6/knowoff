@@ -379,6 +379,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       kind: kind,
       fromSeat: fromSeat,
       phraseId: payload['phrase_id'] as String?,
+      text: payload['text'] as String?,
       targetSeat: payload['target_seat'] as int?,
     );
     final events = [...state.dto.chatEvents, event];
@@ -565,6 +566,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           if (targetSeat != null) 'target_seat': targetSeat,
         },
       );
+
+  Future<void> freeChat(String text, String language) =>
+      _send('quick_chat', {'text': text, 'language': language});
 
   @override
   void dispose() {

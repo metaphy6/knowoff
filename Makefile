@@ -57,7 +57,7 @@ codeg:
 
 ## server.rebuild    Rebuild and recreate the server container
 server.rebuild:
-	@cd infra/compose && docker compose --profile core build server
+	@cd infra/compose && docker compose --profile core build server migrate
 	@cd infra/compose && docker compose --profile core up -d --force-recreate server
 
 ## web.rebuild       Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window

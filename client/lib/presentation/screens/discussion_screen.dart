@@ -34,6 +34,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
   int _pokeCount = 0;
   String _lastPhase = '';
   final Set<int> _pokedThisPhase = {};
+  final _chatController = TextEditingController();
 
   @override
   void initState() {
@@ -46,7 +47,15 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
   @override
   void dispose() {
     _ticker?.cancel();
+    _chatController.dispose();
     super.dispose();
+  }
+
+  void _sendFreeChat(GameSessionNotifier notifier, String language) {
+    final message = _chatController.text.trim();
+    if (message.isEmpty) return;
+    _chatController.clear();
+    notifier.freeChat(message, language);
   }
 
   void _openTargetedChat(
@@ -80,6 +89,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
     final session = ref.watch(gameSessionProvider);
     final notifier = ref.read(gameSessionProvider.notifier);
     final dto = session.dto;
+    final language = Localizations.localeOf(context).languageCode;
 
     // Reset poke tracking when phase changes
     if (_lastPhase != dto.phase) {
@@ -186,6 +196,25 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
               ),
               QuickChatBar(
                 onPhrase: session.amEliminated ? null : notifier.quickChat,
+              ),
+              const SizedBox(height: KoSpace.lg),
+              TextField(
+                controller: _chatController,
+                enabled: !session.amEliminated,
+                maxLength: 280,
+                textInputAction: TextInputAction.send,
+                onSubmitted: (_) => _sendFreeChat(notifier, language),
+                decoration: InputDecoration(
+                  hintText: 'Say something',
+                  counterText: '',
+                  suffixIcon: IconButton(
+                    tooltip: 'Send message',
+                    icon: const Icon(Icons.send),
+                    onPressed: session.amEliminated
+                        ? null
+                        : () => _sendFreeChat(notifier, language),
+                  ),
+                ),
               ),
               const SizedBox(height: KoSpace.lg),
               ChatFeed(

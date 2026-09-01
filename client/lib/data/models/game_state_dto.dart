@@ -139,12 +139,14 @@ class ChatEventDto {
     required this.kind,
     required this.fromSeat,
     this.phraseId,
+    this.text,
     this.targetSeat,
   });
 
   final String kind;
   final int fromSeat;
   final String? phraseId;
+  final String? text;
   final int? targetSeat;
 }
 

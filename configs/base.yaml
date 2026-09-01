@@ -60,6 +60,17 @@ localization:
     - en
   pseudo_locale_enabled: true  # CI gate uses pseudo-locale to catch hardcoded strings
 
+# Free-chat moderation always applies English plus the sender's selected
+# language. Add localized terms here; code never embeds a word list.
+moderation:
+  default_language: en
+  word_lists:
+    en: [arse, arsehole, ass, asshole, bastard, bitch, bollocks, bullshit, crap, cunt, damn, dick, douchebag, fuck, fucker, fucking, fucks, goddamn, jackass, motherfucker, motherfucking, motherfucks, piss, pissed, pissing, prick, scumbag, shit, shits, shitting, shitty, slut, twat, wanker, whore]
+    tr: [amk, amcik, bok, orospu, sik, siktir, yarrak]
+    es: [cabron, coño, joder, mierda, puta, puto]
+    de: [arsch, arschloch, bastard, scheisse, wichser]
+    fr: [connard, merde, putain, salope]
+
 database:
   driver: postgres
   host: postgres

@@ -325,6 +325,32 @@ void main() {
     expect(find.text('Ha!'), findsOneWidget);
   });
 
+  testWidgets('DiscussionScreen sends free-text chat', (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const DiscussionScreen(),
+        _sampleSession(phase: 'discussion'),
+        transport: transport,
+      ),
+    );
+
+    await tester.enterText(find.byType(TextField), 'A free chat message');
+    await tester.tap(find.byTooltip('Send message'));
+    await tester.pump();
+
+    expect(
+      transport.sent.any((message) =>
+          message['kind'] == 'quick_chat' &&
+          message['payload']['text'] == 'A free chat message' &&
+          message['payload']['language'] == 'en'),
+      isTrue,
+    );
+  });
+
   testWidgets(
       'DiscussionScreen shows a dramatic accusation banner for a targeted '
       'quick chat event', (tester) async {
