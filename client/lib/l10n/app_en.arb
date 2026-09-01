@@ -113,6 +113,10 @@
   "@passTurn": {
     "description": "Button label to pass the turn."
   },
+  "timedOutLabel": "Timed out",
+  "@timedOutLabel": {
+    "description": "Shown on the evidence table in place of a card for a seat that auto-passed on turn timeout."
+  },
   "discussionPrompt": "Argue. Accuse. Bluff.",
   "@discussionPrompt": {
     "description": "Prompt shown during discussion."
