@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
+import '../../core/logging/app_logger.dart';
 import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../domain/entities/game_session.dart';
@@ -33,6 +34,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   String? _sessionToken;
   bool _rejoinPending = false;
   bool _rejoinInProgress = false;
+
+  // Request resilience: queue requests that fail due to connection issues
+  // and retry them automatically when the connection is ready.
+  final List<Map<String, dynamic>> _pendingRequests = [];
+  bool _connectionReady = false;
+  static const _retryDelay = Duration(milliseconds: 500);
 
   static GameStateDto _initialDto() => const GameStateDto();
 
@@ -163,11 +170,43 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   void _onConnectionState(ConnectionState connection) {
     if (connection == ConnectionState.disconnected ||
         connection == ConnectionState.reconnecting) {
+      _connectionReady = false;
       _rejoinPending = _sessionToken != null && state.dto.roomCode.isNotEmpty;
       return;
     }
-    if (connection == ConnectionState.connected && _rejoinPending) {
-      unawaited(_reclaimRoom());
+    if (connection == ConnectionState.connected) {
+      _connectionReady = true;
+      if (_rejoinPending) {
+        unawaited(_reclaimRoom());
+      }
+      // Retry any pending requests once connection is established
+      if (_pendingRequests.isNotEmpty) {
+        unawaited(_retryPendingRequests());
+      }
+    }
+  }
+
+  /// Retry all pending requests that were queued due to connection issues.
+  Future<void> _retryPendingRequests() async {
+    if (_pendingRequests.isEmpty || !_connectionReady) return;
+
+    final pending = List<Map<String, dynamic>>.of(_pendingRequests);
+    _pendingRequests.clear();
+
+    for (final request in pending) {
+      await Future<void>.delayed(_retryDelay);
+      if (!_connectionReady) {
+        // Connection was lost again, requeue
+        _pendingRequests.addAll(pending);
+        return;
+      }
+      try {
+        await _transport.send(request);
+      } catch (e) {
+        AppLogger.warning(LogTopic.game, 'Retry failed, requeuing request',
+            fields: {'error': e.toString()});
+        _pendingRequests.add(request);
+      }
     }
   }
 
@@ -365,11 +404,33 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   static const _protocolVersion = 1;
 
   Future<void> _send(String kind, Map<String, dynamic> payload) async {
-    await _transport.send(<String, dynamic>{
+    final envelope = <String, dynamic>{
       'v': _protocolVersion,
       'kind': kind,
       'payload': payload,
-    });
+    };
+
+    // If we have pending requests, queue this one too (maintain ordering)
+    if (_pendingRequests.isNotEmpty) {
+      _pendingRequests.add(envelope);
+      return;
+    }
+
+    // Try to send immediately
+    try {
+      await _transport.send(envelope);
+      return;
+    } catch (e) {
+      // If send failed (likely due to connection not being ready), queue for retry
+      AppLogger.warning(LogTopic.game, 'Request send failed, queuing for retry',
+          fields: {'kind': kind, 'error': e.toString()});
+      _pendingRequests.add(envelope);
+
+      // If connection is ready, schedule retry immediately
+      if (_connectionReady) {
+        unawaited(_retryPendingRequests());
+      }
+    }
   }
 
   /// The access token expires after 15 minutes and the socket handshake is

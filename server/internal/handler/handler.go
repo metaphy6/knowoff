@@ -238,6 +238,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		token, _ := env.Payload["session_token"].(string)
 		room := s.Lobby.RoomByCode(code)
 		if room == nil {
+			s.Logger.Warn("join room rejected: room not found", "code", code, "account", s.AccountID)
 			return fmt.Errorf("room not found")
 		}
 
@@ -246,12 +247,14 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		if token != "" {
 			seat, ok = room.ReclaimSeat(token)
 			if !ok {
+				s.Logger.Warn("join room rejected: invalid session token", "code", code, "account", s.AccountID)
 				return fmt.Errorf("invalid session token")
 			}
 			token = room.SessionToken(seat)
 		} else {
 			seat, token, ok = room.ClaimSeat(s.AccountID, false)
 			if !ok {
+				s.Logger.Warn("join room rejected: room full", "code", code, "account", s.AccountID, "room_size", room.Size)
 				return fmt.Errorf("room full")
 			}
 		}
@@ -260,7 +263,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		s.sessionToken = token
 		s.Room.SetConnection(seat, s.Conn)
 		s.Logger = s.Logger.With("room_id", room.ID, "seat", seat)
-		s.Logger.Info("joined room")
+		s.Logger.Info("player joined room", "code", code, "account", s.AccountID, "room_size", room.Size, "reclaimed", token != "")
 		return s.sendOK("joined", map[string]any{"room_id": room.ID, "seat": seat, "code": room.Code, "size": room.Size, "session_token": token})
 
 	case transport.IntentQueueQuickPlay:
@@ -268,9 +271,11 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		size := int(sizeF)
 		queueID, assigned, err := s.Lobby.QueueQuickPlay(size, s.AccountID)
 		if err != nil {
+			s.Logger.Warn("quickplay queue request failed", "account", s.AccountID, "size", size, "error", err)
 			return err
 		}
 		defer s.Lobby.RemoveFromQueue(queueID)
+		s.Logger.Info("waiting for room assignment", "account", s.AccountID, "size", size, "queue_id", queueID)
 		// Wait until ProcessQueue assigns us to a room.
 		select {
 		case a := <-assigned:
@@ -278,12 +283,13 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 			s.Seat = a.Seat
 			s.sessionToken = a.SessionToken
 		case <-time.After(30 * time.Second):
+			s.Logger.Warn("quickplay room assignment timeout", "account", s.AccountID, "size", size, "queue_id", queueID)
 			return fmt.Errorf("queue timeout")
 		}
 		// Bind connection; the room auto-starts once every seat binds.
 		s.Room.SetConnection(s.Seat, s.Conn)
 		s.Logger = s.Logger.With("room_id", s.Room.ID, "seat", s.Seat)
-		s.Logger.Info("assigned from queue")
+		s.Logger.Info("player assigned from quickplay queue", "account", s.AccountID, "size", s.Room.Size, "code", s.Room.Code, "queue_id", queueID)
 		return s.sendOK("joined", map[string]any{"room_id": s.Room.ID, "seat": s.Seat, "code": s.Room.Code, "size": s.Room.Size, "session_token": s.sessionToken})
 
 	default:
