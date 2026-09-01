@@ -368,6 +368,15 @@ func (b *BotActor) castVote(m *game.Match) {
 	})
 	if err != nil {
 		b.logger.Warn("bot vote failed", "target", target, "error", err)
+		return
+	}
+	// The open ballot only resolves early once every active seat marks Ready
+	// (ADR-009 follow-up) — casting alone no longer completes it, so a table
+	// full of bots (or a bot waiting on one slow human) doesn't stall for the
+	// whole ballot window. A bot never wants to reconsider its vote, so it
+	// readies the instant it casts.
+	if err := m.HandleIntent(seat, &transport.Envelope{Kind: transport.IntentReady}); err != nil {
+		b.logger.Warn("bot ballot ready failed", "error", err)
 	}
 }
 

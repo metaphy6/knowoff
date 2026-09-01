@@ -613,6 +613,10 @@ func TestMatch_TiedRunoffCountsAsSurvived(t *testing.T) {
 	for _, s := range m.activeSeats() {
 		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(voteTarget(s))}))
 	}
+	// The open ballot no longer auto-resolves the instant everyone has voted
+	// (a revote grace, not a Ready quorum) — it closes on its timer in
+	// production; drive it directly here.
+	m.resolveBallot()
 	if m.phase != PhaseRunoff {
 		t.Fatalf("expected runoff phase, got %s", m.phase)
 	}
@@ -620,6 +624,7 @@ func TestMatch_TiedRunoffCountsAsSurvived(t *testing.T) {
 	for _, s := range m.activeSeats() {
 		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(voteTarget(s))}))
 	}
+	m.resolveBallot()
 	if m.phase != PhaseResult {
 		t.Fatalf("expected result phase after tied runoff, got %s", m.phase)
 	}
@@ -933,6 +938,47 @@ func TestMatch_CastVote_RejectsWrongPayloadKey(t *testing.T) {
 	}
 	if got := m.ballots[0]; got != 2 {
 		t.Fatalf("expected seat 0 to have voted for 2, got %d", got)
+	}
+}
+
+// TestMatch_CastVote_LiveBroadcastAndChange guards the open-ballot behaviour:
+// every cast (or change of mind) broadcasts a live vote_cast event to the
+// whole table immediately, and a seat may re-cast a different target as long
+// as the window is still open (Rules §4).
+func TestMatch_CastVote_LiveBroadcastAndChange(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	m.beginKnowoff()
+	bcast.clear()
+
+	if err := m.HandleIntent(0, transport.NewIntent(
+		transport.IntentCastVote,
+		map[string]any{"target_seat": float64(2)},
+	)); err != nil {
+		t.Fatalf("cast vote: %v", err)
+	}
+	if err := m.HandleIntent(0, transport.NewIntent(
+		transport.IntentCastVote,
+		map[string]any{"target_seat": float64(3)},
+	)); err != nil {
+		t.Fatalf("change vote: %v", err)
+	}
+	if got := m.ballots[0]; got != 3 {
+		t.Fatalf("expected seat 0's changed vote to land, got %d", got)
+	}
+
+	casts := bcast.findEvents(1, transport.EventVoteCast)
+	if len(casts) != 2 {
+		t.Fatalf("expected 2 live vote_cast events, got %d", len(casts))
+	}
+	if casts[0].Payload["seat"] != 0 || casts[0].Payload["target_seat"] != 2 {
+		t.Fatalf("first vote_cast payload wrong: %v", casts[0].Payload)
+	}
+	if casts[1].Payload["seat"] != 0 || casts[1].Payload["target_seat"] != 3 {
+		t.Fatalf("second vote_cast payload wrong: %v", casts[1].Payload)
 	}
 }
 

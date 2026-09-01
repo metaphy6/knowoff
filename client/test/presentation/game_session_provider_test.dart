@@ -325,6 +325,31 @@ void main() {
     );
   });
 
+  test('a live vote_cast event updates the live ballots map', () async {
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'knowoff',
+      'window_seconds': 20,
+    });
+    await _settle();
+
+    transport.emit('vote_cast', <String, dynamic>{'seat': 0, 'target_seat': 2});
+    await _settle();
+    expect(notifier.state.dto.liveBallots, equals(<String, int>{'0': 2}));
+
+    // Changing a mind overwrites the seat's live target.
+    transport.emit('vote_cast', <String, dynamic>{'seat': 0, 'target_seat': 3});
+    await _settle();
+    expect(notifier.state.dto.liveBallots, equals(<String, int>{'0': 3}));
+
+    // A fresh ballot window wipes the live view clean.
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'runoff',
+      'window_seconds': 15,
+    });
+    await _settle();
+    expect(notifier.state.dto.liveBallots, isEmpty);
+  });
+
   test('a rejected cast_vote releases the local lock', () async {
     transport.emit('phase_started', <String, dynamic>{
       'phase': 'knowoff',

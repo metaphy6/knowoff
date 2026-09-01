@@ -172,3 +172,7 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T13:17:40Z,run-20260901130548-716396,copilot,chat,commit,completed,feat(chat): add configured multilingual profanity filtering,configs/base.yaml;server/internal/config/config.go;server/internal/game/poke.go;docs/guides/CHAT_MODERATION.md,pending
 2026-09-01T13:23:23Z,run-20260901130548-716396,copilot,build,commit,completed,fix(build): rebuild migration image with server,Makefile;server/internal/config/config.go;configs/base.yaml,pending
 2026-09-01T13:41:11Z,run-20260901134111-789553,human,"client,server",commit,completed,"fix(realtime): scope ballot-unlock to cast_vote rejections, not any voting-phase error",,pending
+2026-09-01T14:01:38Z,run-20260901140138-836004,copilot,knowoff,commit,completed,"feat(knowoff): open, live Knowoff ballot with a dramatic vote ticker (ADR-009)",,pending
+2026-09-01T14:07:44Z,run-20260901140138-836004,copilot,knowoff,commit,completed,fix(knowoff): drop the vote-ticker tilt that overflowed its own card,,pending
+2026-09-01T14:17:44Z,run-20260901140138-836004,copilot,knowoff,commit,completed,"feat(knowoff): fold live votes into each candidate's own row as animated named chips, drop the separate ticker",,pending
+2026-09-01T14:31:23Z,run-20260901140138-836004,copilot,knowoff,commit,completed,fix(knowoff): stop the ballot auto-resolving on cast completion so revote actually has time to work,,pending

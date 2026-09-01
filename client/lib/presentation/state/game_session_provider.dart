@@ -126,6 +126,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'vote_result_pending':
         _mergeState(payload);
         break;
+      case 'vote_cast':
+        _applyVoteCast(payload);
+        break;
       case 'knowoff_resolved':
         _mergeState(payload);
         // A fresh result window starts unread — otherwise a stale Ready from
@@ -363,6 +366,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         clearResult: true,
         ballotReady: false,
         resultReady: false,
+        clearLiveBallots: true,
       );
     }
     dto = window == null || window <= 0
@@ -372,6 +376,19 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
             phaseWindow: window,
           );
     _setDto(dto);
+  }
+
+  /// Rules §4 (open ballot): every cast or change of mind lands here live,
+  /// attributed, for the whole table — this is what makes each candidate's
+  /// row show its voters as they land, instead of only after the ballot
+  /// resolves.
+  void _applyVoteCast(Map<String, dynamic> payload) {
+    final voterSeat = payload['seat'] as int?;
+    final targetSeat = payload['target_seat'] as int?;
+    if (voterSeat == null || targetSeat == null) return;
+    final ballots = Map<String, int>.of(state.dto.liveBallots)
+      ..['$voterSeat'] = targetSeat;
+    _setDto(state.dto.copyWith(liveBallots: ballots));
   }
 
   void _appendChatEvent(Map<String, dynamic> payload) {
@@ -437,6 +454,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       turnDeadline: current.turnDeadline,
       phaseWindow: current.phaseWindow,
       chatEvents: current.chatEvents,
+      liveBallots: current.liveBallots,
     );
     state = state.copyWith(dto: updated, lastError: null);
   }
@@ -547,11 +565,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
   Future<void> drawCards(int count) => _send('draw_cards', {'count': count});
 
-  /// Sends the ballot and locks it locally.
-  ///
-  /// The vote stays blind to the rest of the table (Rules §4), so the server
-  /// never echoes it back — without the local lock the voter gets no feedback
-  /// at all and can tap every row in turn.
+  /// Casts (or changes) the local ballot. Rules §4: the ballot is open and
+  /// live — every cast broadcasts immediately, and a seat may switch its
+  /// target as many times as it likes until the window resolves.
   Future<void> castVote(int targetSeat) async {
     _setDto(state.dto.copyWith(voteTarget: targetSeat));
     await _send('cast_vote', {'target_seat': targetSeat});

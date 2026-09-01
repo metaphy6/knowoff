@@ -33,15 +33,20 @@ const (
 	EventRoundResolved     = "round_resolved"
 	EventShuffleOccurred   = "shuffle_occurred"
 	EventVoteResultPending = "vote_result_pending"
-	EventVoteNullified     = "vote_nullified"
-	EventKnowoffResolved   = "knowoff_resolved"
-	EventMatchVerdict      = "match_verdict"
-	EventPointsScored      = "points_scored"
-	EventPointsConverted   = "points_converted"
-	EventNoinGranted       = "noin_granted"
-	EventQuickChat         = "quick_chat"
-	EventSystemNotice      = "system_notice"
-	EventError             = "error"
+	// EventVoteCast is broadcast on every ballot cast or change while the
+	// Knowoff/runoff window is open (attributed, live — Rules §4). It never
+	// carries the tally or the outcome, only the single seat->target pair
+	// that just landed.
+	EventVoteCast        = "vote_cast"
+	EventVoteNullified   = "vote_nullified"
+	EventKnowoffResolved = "knowoff_resolved"
+	EventMatchVerdict    = "match_verdict"
+	EventPointsScored    = "points_scored"
+	EventPointsConverted = "points_converted"
+	EventNoinGranted     = "noin_granted"
+	EventQuickChat       = "quick_chat"
+	EventSystemNotice    = "system_notice"
+	EventError           = "error"
 	// EventReadyAck confirms one seat's own Ready intent landed — a targeted
 	// echo, not a broadcast, since only that seat's button needs to flip to
 	// its locked-in state.

@@ -18,7 +18,7 @@ import '../widgets/ready_button.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/vote_board.dart';
 
-/// Knowoff voting screen — the ballot, the blind window, and the 15-second
+/// Knowoff voting screen — the open, live ballot (ADR-009) and the 15-second
 /// result window where a Revote can still land (Rules §4–5).
 class KnowoffScreen extends ConsumerStatefulWidget {
   const KnowoffScreen({super.key});
@@ -162,7 +162,7 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
             localSeat: session.seat,
             votedSeat: dto.voteTarget,
             tally: inResultWindow ? result?.tally : null,
-            ballots: inResultWindow ? result?.votes : null,
+            ballots: inResultWindow ? result?.votes : dto.liveBallots,
             eliminatedSeat:
                 inResultWindow ? (result?.eliminatedSeat ?? -1) : -1,
             onVote: session.amEliminated || inResultWindow

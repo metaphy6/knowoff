@@ -1095,12 +1095,20 @@ func (m *Match) handleCastVote(seat int, payload map[string]any) error {
 	if target < 0 || target >= m.size || m.eliminated[target] {
 		return fmt.Errorf("invalid target")
 	}
-	if m.ballots[seat] != -1 {
-		return fmt.Errorf("already voted")
-	}
+	// Rules §4 (open ballot): a vote lands live and can be changed as many
+	// times as the window allows, right up until it resolves. A cast no
+	// longer auto-resolves the ballot the instant every seat has voted once
+	// (ADR-009 follow-up): that used to fire the moment the last holdout cast
+	// their first vote, giving them (or anyone else) zero chance to actually
+	// use "change your mind". The ballot now always runs its full window,
+	// exactly like a runoff, unless every active connected seat explicitly
+	// marks Ready to close it early (see checkBallotReady).
 	m.ballots[seat] = target
 	m.players[seat].Ballot = target
-	m.checkBallotComplete()
+	m.bcast.Broadcast(transport.NewEvent(transport.EventVoteCast, map[string]any{
+		"seat":        seat,
+		"target_seat": target,
+	}), -1)
 	return nil
 }
 

@@ -96,7 +96,7 @@ void main() {
       expect(find.text('Bot'), findsOneWidget);
     });
 
-    testWidgets('locks every row once a vote is cast', (tester) async {
+    testWidgets('re-taps the already-chosen row as a no-op', (tester) async {
       var votes = 0;
       await tester.pumpWidget(
         _wrap(
@@ -113,6 +113,25 @@ void main() {
       await tester.tap(find.text('Beta'));
       await tester.pump();
       expect(votes, equals(0));
+    });
+
+    testWidgets('a different row stays tappable so a vote can be changed',
+        (tester) async {
+      var lastVote = -1;
+      await tester.pumpWidget(
+        _wrap(
+          VoteBoard(
+            players: _players,
+            localSeat: 0,
+            votedSeat: 1,
+            onVote: (seat) => lastVote = seat,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Bot 2'));
+      await tester.pump();
+      expect(lastVote, equals(2));
     });
 
     testWidgets('long-pressing a row opens the seat sheet instead of voting',
@@ -150,11 +169,33 @@ void main() {
           ),
         ),
       );
+      await tester.pump(const Duration(milliseconds: 400));
 
       expect(find.text('2'), findsOneWidget);
       expect(find.text('0'), findsOneWidget);
       expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
       expect(find.byKey(const Key('vote-trail-2-1')), findsOneWidget);
+    });
+
+    testWidgets(
+        'announces each voter as a named chip inside the target\'s own row',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const VoteBoard(
+            players: _players,
+            localSeat: 0,
+            votedSeat: 1,
+            ballots: {'0': 1},
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
+      // The chip carries the voter's name, not just a bare avatar, so the
+      // table can read "who" without a separate feed.
+      expect(find.text('Alpha'), findsOneWidget);
     });
   });
 
