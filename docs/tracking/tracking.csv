@@ -149,3 +149,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T07:37:54Z,run-20260901073754-54834,human,general,commit,completed,feat(poke): enforce one poke per player per phase instead of per round,,pending
 2026-09-01T07:47:19Z,run-20260901074719-76254,human,general,commit,completed,fix(websocket): add read/write timeouts to prevent connection freezes,,pending
 2026-09-01T08:19:15Z,run-20260901081915-139535,human,general,commit,completed,feat(resilience): add human-readable logging and request queuing for pre-ready failures,,pending
+2026-09-01T08:26:38Z,run-20260901082638-156582,human,general,commit,completed,"feat(bots): improve speed, strategy, and error handling for production",,pending
+2026-09-01T08:54:07Z,run-20260901085407-205783,human,general,commit,completed,fix(bots): make ready and knowoff votes fire immediately,,pending

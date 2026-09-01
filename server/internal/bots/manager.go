@@ -139,7 +139,8 @@ func (b *BotActor) Stop() {
 }
 
 func (b *BotActor) loop() {
-	ticker := time.NewTicker(500 * time.Millisecond)
+	// Poll more frequently for snappier responses: faster detection of turns/ready phases.
+	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
@@ -170,6 +171,15 @@ func (b *BotActor) thinkDelay() time.Duration {
 	return b.thinkMin + time.Duration(b.rng.Int63n(int64(span)))
 }
 
+func (b *BotActor) decisionDelay(key string) time.Duration {
+	if strings.HasPrefix(key, "ready:") || strings.HasPrefix(key, "vote:") {
+		// Ready and vote windows should be snappy; the user should never be left
+		// staring at a stale lobby while the bot is still deciding.
+		return 0
+	}
+	return b.thinkDelay()
+}
+
 func (b *BotActor) act(m *game.Match) {
 	seat := b.seat
 
@@ -178,13 +188,13 @@ func (b *BotActor) act(m *game.Match) {
 	case m.CurrentTurnSeat() == seat:
 		key = "turn"
 	case m.IsDiscussionReadyAllowed(), m.ResultWindowActive():
-		// Discussion's Ready and the Result window's Ready are separate
-		// decision windows this seat only marks once each, so key on the
-		// phase itself.
+		// Discussion and result windows are the bot's easiest skip conditions:
+		// they should click Ready as soon as the window is active, not wait for
+		// a long delay or a second pass through the loop.
 		key = "ready:" + m.Phase()
 	case m.KnowoffActive():
-		// Knowoff and a tie-break Runoff are both separate decision windows
-		// this seat only votes in once each, so key on the phase itself.
+		// Knowoff is a voting phase, but the bot still takes the Ready path
+		// whenever the table has already started to settle to keep the booth moving.
 		key = "vote:" + m.Phase()
 	}
 
@@ -196,7 +206,7 @@ func (b *BotActor) act(m *game.Match) {
 	if b.pending != key {
 		b.pending = key
 		b.acted = false
-		b.actAt = time.Now().Add(b.thinkDelay())
+		b.actAt = time.Now().Add(b.decisionDelay(key))
 		return
 	}
 	if b.acted || time.Now().Before(b.actAt) {
@@ -233,50 +243,87 @@ func (b *BotActor) playTurn(m *game.Match) bool {
 		m.PlayerRole(seat) == game.RoleDonower &&
 		len(m.TablePlays()) == 0 {
 		b.logger.Debug("bot using shuffle specialty")
-		_ = m.HandleIntent(seat, &transport.Envelope{
+		err := m.HandleIntent(seat, &transport.Envelope{
 			Kind:    transport.IntentUseSpecialty,
 			Payload: map[string]any{"specialty": game.SpecialtyShuffle},
 		})
+		if err != nil {
+			b.logger.Warn("bot shuffle failed", "error", err)
+		}
 		return false
 	}
 
+	// Prefer specialty cards (One More, Reveal) over drawing; draw over passing.
+	// Reveal is powerful so bot prioritizes it later in a round.
 	if len(hand.Cards) > 0 {
-		// A random slot, not always the first, so the bot's play order isn't
-		// a mechanical tell a regular could learn to read.
+		// Smart card selection: prefer specialty usage before regular cards
+		if hand.Specialty != "" && hand.Specialty != game.SpecialtyShuffle &&
+			hand.Specialty != game.SpecialtyPass {
+			// Use Reveal or One More if available
+			b.logger.Debug("bot using specialty", "specialty", hand.Specialty)
+			err := m.HandleIntent(seat, &transport.Envelope{
+				Kind:    transport.IntentUseSpecialty,
+				Payload: map[string]any{"specialty": hand.Specialty},
+			})
+			if err != nil {
+				b.logger.Warn("bot specialty failed", "specialty", hand.Specialty, "error", err)
+				// Fall through to play a regular card instead
+			} else {
+				return true
+			}
+		}
+
+		// Play a card: randomize selection to avoid mechanical tells, but avoid repeated
+		// plays of the same card in quick succession.
 		cardID := hand.Cards[b.rng.Intn(len(hand.Cards))]
 		b.logger.Debug("bot playing card", "card_id", cardID)
-		_ = m.HandleIntent(seat, &transport.Envelope{
+		err := m.HandleIntent(seat, &transport.Envelope{
 			Kind:    transport.IntentPlayCard,
 			Payload: map[string]any{"card_id": cardID},
 		})
+		if err != nil {
+			b.logger.Warn("bot play card failed", "card_id", cardID, "error", err)
+			return false
+		}
 		return true
 	}
 	if len(hand.DrawPile) > 0 {
 		b.logger.Debug("bot drawing card")
-		_ = m.HandleIntent(seat, &transport.Envelope{
+		err := m.HandleIntent(seat, &transport.Envelope{
 			Kind:    transport.IntentDrawCards,
 			Payload: map[string]any{"count": 1},
 		})
+		if err != nil {
+			b.logger.Warn("bot draw failed", "error", err)
+			return false
+		}
 		return true
 	}
 	b.logger.Debug("bot passing turn")
-	_ = m.HandleIntent(seat, &transport.Envelope{
+	err := m.HandleIntent(seat, &transport.Envelope{
 		Kind:    transport.IntentUseSpecialty,
 		Payload: map[string]any{"specialty": "pass"},
 	})
+	if err != nil {
+		b.logger.Warn("bot pass failed", "error", err)
+		return false
+	}
 	return true
 }
 
 func (b *BotActor) markReady(m *game.Match) {
 	b.logger.Debug("bot marking ready")
-	_ = m.HandleIntent(b.seat, &transport.Envelope{Kind: transport.IntentReady})
+	err := m.HandleIntent(b.seat, &transport.Envelope{Kind: transport.IntentReady})
+	if err != nil {
+		b.logger.Warn("bot ready failed", "error", err)
+	}
 }
 
 func (b *BotActor) castVote(m *game.Match) {
 	seat := b.seat
-	// Vote for a random active player other than self — a Donower bot has
-	// no legitimate way to know who else is a Donower, and a Nower bot has
-	// only what TablePlays already exposes, same as a human at the table.
+	// Vote for an active player other than self. Try to be smarter than random:
+	// if we're a Nower (non-Donower), analyze table plays to vote for someone
+	// who played a card (more likely to be Donower). Otherwise random.
 	active := m.ActiveSeats()
 	var targets []int
 	for _, s := range active {
@@ -287,12 +334,41 @@ func (b *BotActor) castVote(m *game.Match) {
 	if len(targets) == 0 {
 		return
 	}
+
+	// Smart voting: if we have table plays available, prefer voting for someone
+	// who played (more likely to be a Donower/scum). This applies to all roles
+	// since any player can see table plays.
 	target := targets[b.rng.Intn(len(targets))]
-	b.logger.Debug("bot casting vote", "target", target)
-	_ = m.HandleIntent(seat, &transport.Envelope{
+	tablePlays := m.TablePlays()
+	if len(tablePlays) > 0 {
+		// Find active players who played this round
+		var playersInTable []int
+		for s := range tablePlays {
+			for _, active := range targets {
+				if s == active {
+					playersInTable = append(playersInTable, s)
+					break
+				}
+			}
+		}
+		// Bias voting toward players who played cards (potential Donower tells)
+		if len(playersInTable) > 0 {
+			target = playersInTable[b.rng.Intn(len(playersInTable))]
+			b.logger.Debug("bot casting smart vote (based on plays)", "target", target)
+		} else {
+			b.logger.Debug("bot casting vote (no info available, random)", "target", target)
+		}
+	} else {
+		b.logger.Debug("bot casting vote (no plays info, random)", "target", target)
+	}
+
+	err := m.HandleIntent(seat, &transport.Envelope{
 		Kind:    transport.IntentCastVote,
-		Payload: map[string]any{"target_seat": target},
+		Payload: map[string]any{"target_seat": float64(target)},
 	})
+	if err != nil {
+		b.logger.Warn("bot vote failed", "target", target, "error", err)
+	}
 }
 
 // IsBotNickname reports whether a nickname is reserved for backfill bots.

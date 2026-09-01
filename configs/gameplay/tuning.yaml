@@ -66,8 +66,8 @@ liquidity:                          # Quick Play backfill bots (Game Modes §1)
   min_humans: 1
   leaderboard_min_humans: 3
   noin_min_humans: 2                # team-win Noin requires this many humans
-  bot_think_min_s: 1.5               # a bot pauses before acting, so its move is visible to watch
-  bot_think_max_s: 4                 # upper bound of that randomized pause
+  bot_think_min_s: 0.10              # eager but still visible to watch
+  bot_think_max_s: 0.25              # compact action window for live production tables
 
 liveops:
   leaderboard_daily_counted_matches: 10
