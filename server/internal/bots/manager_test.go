@@ -204,3 +204,41 @@ func TestBotActor_MarksReadyDuringResultWindow(t *testing.T) {
 
 	waitFor(t, 2*time.Second, func() bool { return !m.ResultWindowActive() })
 }
+
+func TestBotActor_VotesInKnowoff(t *testing.T) {
+	m := newTestMatch(t, 1)
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
+
+	for range m.ActiveSeats() {
+		seat := m.CurrentTurnSeat()
+		card := m.PlayerHand(seat).Cards[0]
+		if err := m.HandleIntent(seat, transport.NewIntent(
+			transport.IntentPlayCard, map[string]any{"card_id": card},
+		)); err != nil {
+			t.Fatalf("play card: %v", err)
+		}
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseDiscussion })
+	for _, s := range m.ActiveSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.KnowoffActive() })
+
+	active := m.ActiveSeats()
+	botSeat := active[0]
+	for _, s := range active {
+		if s == botSeat {
+			continue
+		}
+		_ = m.HandleIntent(s, transport.NewIntent(
+			transport.IntentCastVote, map[string]any{"target_seat": float64(botSeat)},
+		))
+	}
+
+	room := &fakeRoom{id: "room-knowoff", m: m}
+	actor := NewBotActor(room, botSeat, rand.New(rand.NewSource(1)), slog.Default(), 0, 0)
+	actor.Start()
+	defer actor.Stop()
+
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() != game.PhaseKnowoff })
+}
