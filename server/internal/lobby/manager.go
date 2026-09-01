@@ -275,9 +275,17 @@ func (m *Manager) makeRoomLocked(size int) (*Room, error) {
 	r := NewRoom(id, code, size, 0, true, m.deps)
 	r.SetOnStart(func(r *Room) error {
 		renderer := game.NewPayloadRenderer(m.deps.Manager, m.deps.Issuer, m.deps.AssetBaseURL)
+		// Read the live pack rather than the Deps snapshot: the media pack may
+		// still be loading in the background when the Manager was constructed.
+		pack := m.deps.Pack
+		if m.deps.Manager != nil {
+			if active := m.deps.Manager.Active(); active != nil {
+				pack = active
+			}
+		}
 		deps := game.Dependencies{
 			Config:   m.deps.Config,
-			Pack:     m.deps.Pack,
+			Pack:     pack,
 			Renderer: renderer,
 			OnFinish: r.matchFinishCallback(),
 			Identity: r.SeatIdentity,
