@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 
 /// Domain view of the current match session.
@@ -12,6 +13,8 @@ class GameSession {
     this.myRole,
     this.lastError,
     this.selectedCardId,
+    this.connectionState = ConnectionState.disconnected,
+    this.reconnectAttempts = 0,
     this.moveLocked = false,
     this.frozen = false,
   });
@@ -20,6 +23,8 @@ class GameSession {
   final String? myRole;
   final String? lastError;
   final String? selectedCardId;
+  final ConnectionState connectionState;
+  final int reconnectAttempts;
 
   /// True once a card picked during someone else's turn is locked in to
   /// auto-play the instant this seat's turn starts (turn order itself stays
@@ -36,6 +41,8 @@ class GameSession {
     String? myRole,
     String? lastError,
     String? selectedCardId,
+    ConnectionState? connectionState,
+    int? reconnectAttempts,
     bool clearSelectedCard = false,
     bool? moveLocked,
     bool? frozen,
@@ -46,6 +53,8 @@ class GameSession {
       lastError: lastError,
       selectedCardId:
           clearSelectedCard ? null : (selectedCardId ?? this.selectedCardId),
+      connectionState: connectionState ?? this.connectionState,
+      reconnectAttempts: reconnectAttempts ?? this.reconnectAttempts,
       moveLocked: moveLocked ?? this.moveLocked,
       frozen: frozen ?? this.frozen,
     );
@@ -74,7 +83,10 @@ class GameSession {
 
   bool get canLockMove =>
       canPickCard && !isMyTurn && !moveLocked && selectedCardId != null;
-
+  bool get isRetrying =>
+      connectionState == ConnectionState.disconnected ||
+      connectionState == ConnectionState.reconnecting ||
+      connectionState == ConnectionState.connecting;
   bool canVoteFor(int targetSeat) {
     if (amEliminated) return false;
     if (targetSeat == seat) return false;

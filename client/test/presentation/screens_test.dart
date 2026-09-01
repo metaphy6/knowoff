@@ -79,14 +79,18 @@ Widget _wrapWithSession(
 }
 
 class _FakeTransport implements gt.GameTransport {
+  _FakeTransport({this.stateStream})
+      : _stateStream = stateStream ?? const Stream.empty();
+
   final List<Map<String, dynamic>> sent = [];
+  final Stream<gt.ConnectionState>? stateStream;
+  final Stream<gt.ConnectionState> _stateStream;
 
   @override
   Stream<Map<String, dynamic>> get messages => const Stream.empty();
 
   @override
-  Stream<gt.ConnectionState> get state =>
-      Stream.value(gt.ConnectionState.disconnected);
+  Stream<gt.ConnectionState> get state => _stateStream;
 
   @override
   bool get isConnected => false;
@@ -140,12 +144,26 @@ class _ControllableTransport implements gt.GameTransport {
 }
 
 void main() {
-  testWidgets('QueueScreen renders finding match', (tester) async {
+  testWidgets('QueueScreen shows a dramatic retry banner while queued',
+      (tester) async {
+    final session = _sampleSession(phase: 'waiting').copyWith(
+      connectionState: gt.ConnectionState.disconnected,
+      reconnectAttempts: 2,
+    );
     await tester.pumpWidget(
-      _wrapWithSession(const QueueScreen(), _sampleSession(phase: 'waiting')),
+      _wrapWithSession(
+        const QueueScreen(),
+        session,
+        transport: _FakeTransport(
+          stateStream: Stream.value(gt.ConnectionState.disconnected),
+        ),
+      ),
     );
     await tester.pump();
-    expect(find.text('Finding a match...'), findsOneWidget);
+    // Messages rotate every 10s; initially the first message is shown
+    // Retry attempt counter starts at 1 and increments every 5 seconds
+    expect(find.text('The room is trying to reappear.'), findsOneWidget);
+    expect(find.textContaining('Retry attempt 1'), findsOneWidget);
   });
 
   testWidgets('LobbyScreen renders room code and players', (tester) async {
