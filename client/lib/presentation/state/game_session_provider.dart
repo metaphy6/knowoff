@@ -43,6 +43,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   int _retryAttempts = 0;
   static const _retryDelay = Duration(milliseconds: 100);
 
+  // Remembers an in-flight quickplay queue size so a stale-room rejoin
+  // failure (e.g. the server restarted and forgot the room) can fall back
+  // to a fresh queue attempt instead of retrying the same dead room forever.
+  int? _pendingQuickPlaySize;
+
   static GameStateDto _initialDto() => const GameStateDto();
 
   /// Developer-only freeze toggle: while frozen, incoming server events are
@@ -70,6 +75,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   void restart() {
     _bufferedMessages.clear();
     _pendingRequests.clear();
+    _sessionToken = null;
+    _rejoinPending = false;
+    _pendingQuickPlaySize = null;
     state = GameSession(dto: _initialDto());
     unawaited(_transport.reconnect());
   }
@@ -90,6 +98,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           _sessionToken = sessionToken;
         }
         _rejoinPending = false;
+        _pendingQuickPlaySize = null;
         _setDto(state.dto.copyWith(
           seat: payload['seat'] as int? ?? state.dto.seat,
           roomCode: payload['code'] as String? ?? state.dto.roomCode,
@@ -155,6 +164,26 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'error':
         final code = payload['code'] as String?;
+        final params = payload['params'] as Map<String, dynamic>? ?? const {};
+        final errorMessage = params['message'] as String?;
+        // The server rejects a handshake join/rejoin with "join_failed" and
+        // closes the socket. If we were reclaiming a room that no longer
+        // exists (server restarted, session expired), keep retrying it
+        // forever is pointless — drop the stale room/session and, if the
+        // player was in the quickplay queue, fall back to a fresh queue
+        // attempt on the next reconnect instead.
+        final staleRoom = code == 'join_failed' &&
+            (errorMessage == 'room not found' ||
+                errorMessage == 'invalid session token');
+        if (staleRoom) {
+          _sessionToken = null;
+          _rejoinPending = false;
+          state = state.copyWith(
+            dto: state.dto.copyWith(seat: -1, roomCode: ''),
+            lastError: code,
+          );
+          break;
+        }
         // A rejected ballot has to release the local lock, or the row stays
         // stamped for a vote the server never accepted. Scoped to the voting
         // phases so an unrelated error can't wipe a ballot that did land.
@@ -195,6 +224,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       );
       if (_rejoinPending) {
         unawaited(_reclaimRoom());
+      } else if (_pendingQuickPlaySize != null && state.dto.roomCode.isEmpty) {
+        // The previous rejoin attempt gave up on a dead room; re-enter the
+        // quickplay queue fresh on this new connection.
+        unawaited(queueQuickPlay(_pendingQuickPlaySize!));
       }
       // Retry any pending requests once connection is established
       if (_pendingRequests.isNotEmpty) {
@@ -458,10 +491,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     return auth.accessToken ?? '';
   }
 
-  Future<void> queueQuickPlay(int size) async => _send('queue_quickplay', {
-        'size': size,
-        'access_token': await _freshAccessToken(),
-      });
+  Future<void> queueQuickPlay(int size) async {
+    _pendingQuickPlaySize = size;
+    await _send('queue_quickplay', {
+      'size': size,
+      'access_token': await _freshAccessToken(),
+    });
+  }
 
   Future<void> joinRoom(String code) async => _send('join_room', {
         'code': code,
