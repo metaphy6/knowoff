@@ -157,3 +157,6 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T10:09:21Z,run-20260901100921-361748,human,general,commit,completed,"feat(client): extend message interval to 10s, add independent 5s retry attempt counter",,pending
 2026-09-01T10:14:49Z,run-20260901101449-375907,human,general,commit,completed,fix(client): remove pulsing animation from retry banner to keep font size static,,pending
 2026-09-01T10:16:45Z,run-20260901101645-382428,human,general,commit,completed,fix(client): restore container animation with counter-scaled text for static font size,,pending
+2026-09-01T10:23:08Z,run-20260901102308-396389,human,general,commit,completed,perf(client): speed up WebSocket reconnection after server restart,,pending
+2026-09-01T10:26:57Z,run-20260901102657-409967,human,general,commit,completed,perf(server): defer media pack loading after server starts listening,,pending
+2026-09-01T10:34:54Z,run-20260901103454-428343,human,general,commit,completed,"fix(lobby): read live media pack at match start, not stale startup snapshot",,pending
