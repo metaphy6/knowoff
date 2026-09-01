@@ -1062,14 +1062,14 @@ func TestMatch_Poke_LimitResetPerPhase(t *testing.T) {
 	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentPoke, map[string]any{"target_seat": float64(1)})); err == nil {
 		t.Fatal("expected second poke to same target in play phase rejected")
 	}
-	
+
 	// Simulate the round completing and move to discussion
 	m.mu.Lock()
 	m.currentTurn = len(m.turnOrder)
 	m.mu.Unlock()
 	m.advanceTurn()
 	m.beginDiscussion()
-	
+
 	// Now poke same player again in PhaseDiscussion (should succeed)
 	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentPoke, map[string]any{"target_seat": float64(1)})); err != nil {
 		t.Fatalf("poke in discussion phase: %v", err)
@@ -1078,10 +1078,10 @@ func TestMatch_Poke_LimitResetPerPhase(t *testing.T) {
 	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentPoke, map[string]any{"target_seat": float64(1)})); err == nil {
 		t.Fatal("expected second poke to same target in discussion phase rejected")
 	}
-	
+
 	// Move to Knowoff
 	m.beginKnowoff()
-	
+
 	// Now poke same player again in PhaseKnowoff (should succeed)
 	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentPoke, map[string]any{"target_seat": float64(1)})); err != nil {
 		t.Fatalf("poke in knowoff phase: %v", err)

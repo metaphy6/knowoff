@@ -145,8 +145,7 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
                       },
                 onTargetedChat: session.amEliminated
                     ? null
-                    : (seat) =>
-                        _openTargetedChat(
+                    : (seat) => _openTargetedChat(
                           context,
                           dto.players,
                           seat,
