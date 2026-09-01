@@ -232,7 +232,12 @@ func (s *ConnectionState) run(ctx context.Context) error {
 			continue
 		}
 		if err := s.handleIntent(env); err != nil {
-			_ = s.sendError("rejected", err.Error())
+			// Tag the rejection with the intent that caused it so a client can
+			// tell a stale/unrelated rejection apart from one about its most
+			// recent action (e.g. a queued "ready" resurfacing as rejected
+			// during the following Knowoff ballot must not be mistaken for the
+			// vote itself getting rejected).
+			_ = s.sendErrorFor("rejected", err.Error(), env.Kind)
 			s.Audit.LogWithAccount(ctx, audit.EventIntentRejected, uuidToAccount(s.AccountID), s.RoomID(), "", map[string]any{"reason": err.Error(), "intent": env.Kind})
 		}
 	}
@@ -395,6 +400,14 @@ func (s *ConnectionState) sendOK(key string, payload map[string]any) error {
 
 func (s *ConnectionState) sendError(code, message string) error {
 	return s.send(transport.NewErrorEnvelope(code, map[string]any{"message": message}, ""))
+}
+
+// sendErrorFor is sendError with the rejected intent's kind attached as
+// params["reply_to"], so the client can correlate the rejection back to the
+// action that caused it instead of reacting to it as if it were about
+// whatever the client is currently doing.
+func (s *ConnectionState) sendErrorFor(code, message, intentKind string) error {
+	return s.send(transport.NewErrorEnvelope(code, map[string]any{"message": message}, intentKind))
 }
 
 func (s *ConnectionState) reject(code, message string) error {

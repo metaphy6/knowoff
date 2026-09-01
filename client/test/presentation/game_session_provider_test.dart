@@ -325,7 +325,7 @@ void main() {
     );
   });
 
-  test('a rejected ballot releases the local lock', () async {
+  test('a rejected cast_vote releases the local lock', () async {
     transport.emit('phase_started', <String, dynamic>{
       'phase': 'knowoff',
       'window_seconds': 20,
@@ -334,11 +334,14 @@ void main() {
     await notifier.castVote(2);
     expect(notifier.state.dto.voteTarget, equals(2));
 
-    transport.emit('error', <String, dynamic>{'code': 'already_voted'});
+    transport.emit('error', <String, dynamic>{
+      'code': 'rejected',
+      'params': <String, dynamic>{'reply_to': 'cast_vote'},
+    });
     await _settle();
 
     expect(notifier.state.dto.voteTarget, equals(-1));
-    expect(notifier.state.lastError, equals('already_voted'));
+    expect(notifier.state.lastError, equals('rejected'));
   });
 
   test('an error outside the voting phases leaves the ballot alone', () async {
@@ -352,6 +355,32 @@ void main() {
     transport.emit('phase_started', <String, dynamic>{'phase': 'result'});
     await _settle();
     transport.emit('error', <String, dynamic>{'code': 'poke_cap'});
+    await _settle();
+
+    expect(notifier.state.dto.voteTarget, equals(2));
+  });
+
+  test(
+      'a rejection of an unrelated intent during the voting phase does not '
+      'unlock an already-cast ballot', () async {
+    // Regression test: a stale/queued request (e.g. a "ready" that only
+    // reaches the server after Knowoff opens) can come back rejected while
+    // the player is sitting on a ballot that was already accepted. Only a
+    // rejection replying to cast_vote itself may release the local lock —
+    // otherwise the row flips back to unlocked and the player has to tap
+    // Vote a second time even though their first vote already landed.
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'knowoff',
+      'window_seconds': 20,
+    });
+    await _settle();
+    await notifier.castVote(2);
+    expect(notifier.state.dto.voteTarget, equals(2));
+
+    transport.emit('error', <String, dynamic>{
+      'code': 'rejected',
+      'params': <String, dynamic>{'reply_to': 'ready'},
+    });
     await _settle();
 
     expect(notifier.state.dto.voteTarget, equals(2));

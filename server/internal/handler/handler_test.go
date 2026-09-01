@@ -170,6 +170,81 @@ func TestRealtimeHandler_RejectsOverCapacity(t *testing.T) {
 	conns = append(conns, c)
 }
 
+// TestRealtimeHandler_RejectedIntentCarriesReplyTo guards against a client
+// mistaking a stale/unrelated rejection for one about whatever it is
+// currently doing (e.g. a queued "ready" resurfacing as rejected while the
+// player is mid-ballot must not be read as the vote itself failing). The
+// server must tag every rejected-intent error with the intent kind it is
+// replying to.
+func TestRealtimeHandler_RejectedIntentCarriesReplyTo(t *testing.T) {
+	lobbyManager := lobby.NewManager(lobby.Deps{
+		Config: &config.Config{},
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Pack:   &media.Pack{},
+	})
+	deps := HandlerDeps{
+		Config: &config.Config{},
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Lobby:  lobbyManager,
+	}
+	srv := httptest.NewServer(RealtimeHandler(deps))
+	defer srv.Close()
+	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
+
+	room, err := lobbyManager.CreateRoom(4)
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	join := map[string]any{
+		"v":       transport.ProtocolVersion,
+		"kind":    "join_room",
+		"payload": map[string]any{"code": room.Code},
+	}
+	if err := conn.WriteJSON(join); err != nil {
+		t.Fatalf("write join: %v", err)
+	}
+
+	// A lone seat never starts a match, so any gameplay intent sent now is
+	// rejected with "match not started" — a stand-in for any rejected
+	// intent, exercising the same reply_to tagging path.
+	vote := map[string]any{
+		"v":       transport.ProtocolVersion,
+		"kind":    "cast_vote",
+		"payload": map[string]any{"target_seat": 1},
+	}
+	if err := conn.WriteJSON(vote); err != nil {
+		t.Fatalf("write cast_vote: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		conn.SetReadDeadline(deadline)
+		_, data, err := conn.ReadMessage()
+		if err != nil {
+			t.Fatalf("read message: %v", err)
+		}
+		var env transport.Envelope
+		if err := json.Unmarshal(data, &env); err != nil {
+			t.Fatalf("unmarshal envelope: %v", err)
+		}
+		if env.Kind != transport.EventError {
+			continue
+		}
+		params, _ := env.Payload["params"].(map[string]any)
+		if replyTo, _ := params["reply_to"].(string); replyTo != "cast_vote" {
+			t.Fatalf("expected reply_to %q, got %q (payload=%+v)", "cast_vote", replyTo, env.Payload)
+		}
+		break
+	}
+}
+
 // TestHandleJoinIntent_RejectsInvalidToken pins the failure behind a
 // "join_failed: daily quickplay limit reached" report on a healthy account:
 // an expired token used to fall through anonymously, and the empty account

@@ -185,11 +185,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           break;
         }
         // A rejected ballot has to release the local lock, or the row stays
-        // stamped for a vote the server never accepted. Scoped to the voting
-        // phases so an unrelated error can't wipe a ballot that did land.
-        final voting = state.phase == 'knowoff' || state.phase == 'runoff';
+        // stamped for a vote the server never accepted. Scoped to a rejection
+        // of the cast_vote intent itself — the server tags every rejection
+        // with the intent it was replying to, so a stale/unrelated rejection
+        // (e.g. a queued "ready" resurfacing once Knowoff opens) can't wipe a
+        // ballot that already landed and force a second, redundant tap.
+        final voteRejected = params['reply_to'] == 'cast_vote';
         state = state.copyWith(
-          dto: voting ? state.dto.copyWith(voteTarget: -1) : state.dto,
+          dto: voteRejected ? state.dto.copyWith(voteTarget: -1) : state.dto,
           lastError: code,
         );
         break;
