@@ -35,6 +35,7 @@ type Match struct {
 	turnOrder   []int
 	currentTurn int
 	plays       map[int]string
+	chatFilter  *profanityFilter
 	// lostCards is the random-discard penalty card for a seat that timed
 	// out this round (Rules §3) — kept so the play_revealed and
 	// round_resolved payloads can show what was auto-discarded instead of a
@@ -79,6 +80,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		absent:              make([]bool, size),
 		players:             make([]*PlayerState, size),
 		plays:               make(map[int]string),
+		chatFilter:          newProfanityFilter(deps.Config.Moderation.WordLists),
 		lostCards:           make(map[int]string),
 		discussionReady:     make(map[int]bool),
 		ballots:             make(map[int]int),

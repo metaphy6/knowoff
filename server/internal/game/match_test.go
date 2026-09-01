@@ -13,6 +13,13 @@ import (
 
 func testConfig(size int) *config.Config {
 	cfg := &config.Config{
+		Moderation: config.ModerationConfig{
+			DefaultLanguage: "en",
+			WordLists: map[string][]string{
+				"en": {"asshole", "douchebag", "fucking", "motherfucker"},
+				"tr": {"amk"},
+			},
+		},
 		Tuning: config.TuningConfig{
 			Seed: 42,
 			Game: config.GameTuning{
@@ -122,6 +129,28 @@ func newTestMatch(t *testing.T, size int, opts ...MatchOption) (*Match, *fakeBca
 	bcast := newFakeBcast(size)
 	m := NewMatch(size, Dependencies{Config: cfg, Pack: pack, Renderer: renderer}, bcast, opts...)
 	return m, bcast
+}
+
+func TestMatch_FreeChatMasksProfanity(t *testing.T) {
+	m, bcast := newTestMatch(t, 4)
+	m.phase = PhaseDiscussion
+	m.connected[0] = true
+
+	err := m.HandleIntent(0, transport.NewIntent(transport.IntentQuickChat, map[string]any{
+		"language": "tr",
+		"text":     "That is fucking asshole douchebag motherfucker amk behavior",
+	}))
+	if err != nil {
+		t.Fatalf("send free chat: %v", err)
+	}
+
+	events := bcast.findEvents(1, transport.EventQuickChat)
+	if len(events) != 1 {
+		t.Fatalf("expected one free chat event, got %d", len(events))
+	}
+	if got, want := events[0].Payload["text"], "That is f****** a****** d******** m*********** a** behavior"; got != want {
+		t.Errorf("masked text = %q, want %q", got, want)
+	}
 }
 
 // TestMatch_PlayerPayloads_Identity guards the wire contract the client's seat

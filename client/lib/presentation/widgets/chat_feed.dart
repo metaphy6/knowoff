@@ -9,7 +9,7 @@ import 'quick_chat_bar.dart';
 import 'seat_sheet.dart';
 import 'seat_tile.dart';
 
-/// Scrollable feed of recent Quick Chat phrases and pokes.
+/// Scrollable feed of recent chat messages and pokes.
 class ChatFeed extends StatelessWidget {
   const ChatFeed({
     required this.events,
@@ -76,7 +76,7 @@ class ChatFeed extends StatelessWidget {
                       seatDisplayName(from),
                       seatDisplayName(_playerFor(event.targetSeat ?? -1)),
                     ))
-              : quickChatPhraseLabel(l10n, event.phraseId);
+              : (event.text ?? quickChatPhraseLabel(l10n, event.phraseId));
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: KoSpace.xs),
