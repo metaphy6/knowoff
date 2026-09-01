@@ -28,3 +28,4 @@ Both live alongside the code they shape — file name embeds the topic
 | [ADR-006](ADR-006-typography.md) | v1 typography stand-in — **superseded by ADR-007** |
 | [ADR-007](ADR-007-display-typeface.md) | Baloo 2 locked as the bundled display face |
 | [ADR-008](ADR-008-support-accents.md) | Three support accents beside the locked verdict palette |
+| [ADR-009](ADR-009-open-live-knowoff-ballot.md) | Open, live Knowoff ballot (replaces the blind-simultaneous ballot) |

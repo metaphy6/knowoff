@@ -14,8 +14,13 @@ import 'seat_tile.dart';
 /// scatter, full-width rows, one tap target per candidate. The weight comes
 /// from the `lg` shadow tier and the pink accusation accent instead.
 ///
-/// Rules §4: the ballot is blind — [tally] is only non-null once the window has
-/// closed, and only then do the counts render.
+/// Rules §4 (ADR-009): the ballot is open and live — [ballots] carries the
+/// live seat->target map while the window is open (fed by `vote_cast`
+/// events) and the final one once it closes. Each candidate's own row pops
+/// an animated, named chip for every voter as their vote lands (and briefly
+/// flashes pink), so "who votes whom" plays out right where it happens
+/// instead of in a separate feed. [tally] stays `null` until the window
+/// closes; the numeric count only renders once the ballot resolves.
 class VoteBoard extends StatelessWidget {
   const VoteBoard({
     required this.players,
@@ -36,8 +41,9 @@ class VoteBoard extends StatelessWidget {
   /// Per-seat vote counts, revealed after the window closes.
   final Map<String, int>? tally;
 
-  /// Per-voter targets, revealed after the window closes. A negative target
-  /// is an abstention and has no corresponding target-row stamp.
+  /// Per-voter targets — live while the ballot is open (ADR-009), final once
+  /// the window closes. A negative target is an abstention and has no
+  /// corresponding target-row stamp.
   final Map<String, int>? ballots;
   final int eliminatedSeat;
 
@@ -53,8 +59,6 @@ class VoteBoard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final locked = votedSeat >= 0;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -65,13 +69,13 @@ class VoteBoard extends StatelessWidget {
             child: _BallotRow(
               player: player,
               chosen: votedSeat == player.seat,
-              locked: locked,
               votes: tally?[player.seat.toString()],
               voters: _votersFor(player.seat),
               localSeat: localSeat,
               eliminated: eliminatedSeat == player.seat,
-              onVote:
-                  onVote == null || locked ? null : () => onVote!(player.seat),
+              onVote: onVote == null || votedSeat == player.seat
+                  ? null
+                  : () => onVote!(player.seat),
               voteLabel: l10n.voteFor(seatDisplayName(player)),
             ),
           ),
@@ -92,7 +96,6 @@ class _BallotRow extends StatefulWidget {
   const _BallotRow({
     required this.player,
     required this.chosen,
-    required this.locked,
     required this.votes,
     required this.voters,
     required this.localSeat,
@@ -103,7 +106,6 @@ class _BallotRow extends StatefulWidget {
 
   final PlayerDto player;
   final bool chosen;
-  final bool locked;
   final int? votes;
   final List<PlayerDto>? voters;
   final int localSeat;
@@ -118,6 +120,32 @@ class _BallotRow extends StatefulWidget {
 class _BallotRowState extends State<_BallotRow> {
   bool _pressed = false;
   bool _hovered = false;
+  bool _flashing = false;
+  Set<int> _voterSeats = <int>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _voterSeats = _seatsOf(widget.voters);
+  }
+
+  @override
+  void didUpdateWidget(_BallotRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final seats = _seatsOf(widget.voters);
+    // A new voter (not just a reorder of the same set) flashes the row so a
+    // vote landing here is obvious even without watching the row directly.
+    if (seats.difference(_voterSeats).isNotEmpty) {
+      _flashing = true;
+      Future.delayed(KoMotion.pop * 3, () {
+        if (mounted) setState(() => _flashing = false);
+      });
+    }
+    _voterSeats = seats;
+  }
+
+  Set<int> _seatsOf(List<PlayerDto>? voters) =>
+      voters?.map((p) => p.seat).toSet() ?? <int>{};
 
   @override
   Widget build(BuildContext context) {
@@ -129,13 +157,15 @@ class _BallotRowState extends State<_BallotRow> {
         ? KoColors.pink
         : widget.chosen
             ? KoColors.lime
-            : enabled
-                ? KoColors.whiteWell
-                : KoColors.surface;
+            : _flashing
+                ? KoColors.pink
+                : enabled
+                    ? KoColors.whiteWell
+                    : KoColors.surface;
 
     final BoxShadow shadow = _pressed
         ? KoShadows.pressed
-        : widget.chosen || widget.eliminated
+        : widget.chosen || widget.eliminated || _flashing
             ? KoShadows.lg
             : _hovered && enabled
                 ? KoShadows.lift
@@ -171,7 +201,7 @@ class _BallotRowState extends State<_BallotRow> {
             isLocal: widget.player.seat == widget.localSeat,
           ),
           child: AnimatedContainer(
-            duration: KoMotion.press,
+            duration: KoMotion.pop,
             curve: Curves.easeOut,
             constraints: const BoxConstraints(minHeight: 72),
             decoration: BoxDecoration(
@@ -234,20 +264,12 @@ class _BallotRowState extends State<_BallotRow> {
                               runSpacing: KoSpace.sm,
                               children: <Widget>[
                                 for (final voter in widget.voters!)
-                                  Semantics(
-                                    label:
-                                        '${seatDisplayName(voter)} voted for ${seatDisplayName(widget.player)}',
-                                    child: SeatAvatar(
-                                      key: Key(
-                                          'vote-trail-${voter.seat}-${widget.player.seat}'),
-                                      player: voter,
-                                      size: 30,
-                                      onTap: () => showSeatSheet(
-                                        context,
-                                        player: voter,
-                                        isLocal: voter.seat == widget.localSeat,
-                                      ),
-                                    ),
+                                  _VoteChip(
+                                    key: ValueKey<String>(
+                                        'vote-trail-${voter.seat}-${widget.player.seat}'),
+                                    voter: voter,
+                                    target: widget.player,
+                                    localSeat: widget.localSeat,
                                   ),
                               ],
                             ),
@@ -262,6 +284,79 @@ class _BallotRowState extends State<_BallotRow> {
                   ],
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A single live vote, rendered as a small badge inside its target's own
+/// row — the "who" (avatar + name) sitting right where the "whom" already
+/// is. Pops in once per new arrival: the key is stable across rebuilds for
+/// a voter who stays on this target, so it only (re)plays the entrance
+/// animation when that pairing is actually new.
+class _VoteChip extends StatelessWidget {
+  const _VoteChip({
+    required this.voter,
+    required this.target,
+    required this.localSeat,
+    super.key,
+  });
+
+  final PlayerDto voter;
+  final PlayerDto target;
+  final int localSeat;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: KoMotion.pop * 2,
+      curve: Curves.elasticOut,
+      builder: (context, t, child) => Opacity(
+        opacity: t.clamp(0, 1),
+        child: Transform.scale(scale: 0.4 + 0.6 * t.clamp(0, 1), child: child),
+      ),
+      child: Semantics(
+        label: l10n.voteCastAnnouncement(
+          seatDisplayName(voter),
+          seatDisplayName(target),
+        ),
+        child: GestureDetector(
+          onTap: () => showSeatSheet(
+            context,
+            player: voter,
+            isLocal: voter.seat == localSeat,
+          ),
+          child: Container(
+            padding: const EdgeInsets.only(
+              left: KoSpace.xs,
+              right: KoSpace.sm,
+              top: KoSpace.xs,
+              bottom: KoSpace.xs,
+            ),
+            decoration: BoxDecoration(
+              color: KoColors.pink,
+              border: Border.all(width: KoBorders.thin, color: KoColors.ink),
+              borderRadius: BorderRadius.circular(KoRadii.chip),
+              boxShadow: const <BoxShadow>[KoShadows.sm],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                SeatAvatar(player: voter, size: 22),
+                const SizedBox(width: KoSpace.xs),
+                Text(
+                  seatDisplayName(voter),
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+              ],
             ),
           ),
         ),

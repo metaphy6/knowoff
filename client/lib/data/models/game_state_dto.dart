@@ -176,6 +176,7 @@ class GameStateDto {
     this.turnDeadline,
     this.phaseWindow = 0,
     this.chatEvents = const [],
+    this.liveBallots = const {},
   });
 
   final String phase;
@@ -209,6 +210,11 @@ class GameStateDto {
   /// Display-only: the server owns the phase clock.
   final int phaseWindow;
   final List<ChatEventDto> chatEvents;
+
+  /// Live seat->target ballot, filled in from `vote_cast` events while the
+  /// Knowoff/runoff window is open (Rules §4: the open ballot). Cleared the
+  /// moment a fresh ballot starts.
+  final Map<String, int> liveBallots;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
     return GameStateDto(
@@ -264,8 +270,10 @@ class GameStateDto {
     DateTime? turnDeadline,
     int? phaseWindow,
     List<ChatEventDto>? chatEvents,
+    Map<String, int>? liveBallots,
     bool clearResult = false,
     bool clearTurnDeadline = false,
+    bool clearLiveBallots = false,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -292,6 +300,8 @@ class GameStateDto {
           clearTurnDeadline ? null : (turnDeadline ?? this.turnDeadline),
       phaseWindow: phaseWindow ?? this.phaseWindow,
       chatEvents: chatEvents ?? this.chatEvents,
+      liveBallots:
+          clearLiveBallots ? const {} : (liveBallots ?? this.liveBallots),
     );
   }
 }

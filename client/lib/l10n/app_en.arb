@@ -828,13 +828,21 @@
   "@knowoffPrompt": {
     "description": "Ballot heading."
   },
-  "knowoffBlindBallot": "Blind ballot. Votes stay hidden until the window closes.",
+  "knowoffBlindBallot": "Live ballot. Every vote lands for the whole table to see \u2014 change your mind any time before the window closes.",
   "@knowoffBlindBallot": {
-    "description": "Explains ballot secrecy."
+    "description": "Explains that the ballot is open and revotable."
   },
-  "knowoffLockedLabel": "Vote locked in",
+  "knowoffLockedLabel": "Vote cast",
   "@knowoffLockedLabel": {
-    "description": "Status once the local player has voted."
+    "description": "Status once the local player has voted at least once."
+  },
+  "voteCastAnnouncement": "{voter} votes {target}!",
+  "@voteCastAnnouncement": {
+    "description": "Accessibility label for a live vote chip landing on a candidate's row.",
+    "placeholders": {
+      "voter": {"type": "String"},
+      "target": {"type": "String"}
+    }
   },
   "runoffTitle": "Runoff",
   "@runoffTitle": {
