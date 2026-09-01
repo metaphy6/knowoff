@@ -175,9 +175,8 @@ func TestBotActor_MarksReadyDuringResultWindow(t *testing.T) {
 	active := m.ActiveSeats()
 	target := active[0]
 	for _, s := range active {
-		// Every active seat must cast a ballot for checkBallotComplete to
-		// resolve immediately; the target votes for someone else instead of
-		// itself.
+		// Every active seat must cast a ballot; the target votes for someone
+		// else instead of itself.
 		voteFor := target
 		if s == target {
 			voteFor = active[1]
@@ -185,6 +184,11 @@ func TestBotActor_MarksReadyDuringResultWindow(t *testing.T) {
 		_ = m.HandleIntent(s, transport.NewIntent(
 			transport.IntentCastVote, map[string]any{"target_seat": float64(voteFor)},
 		))
+	}
+	// The open ballot only resolves early once every active seat marks Ready
+	// (ADR-009 follow-up); casting alone no longer completes it.
+	for _, s := range active {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
 	}
 	waitFor(t, 2*time.Second, func() bool { return m.ResultWindowActive() })
 
@@ -233,6 +237,10 @@ func TestBotActor_VotesInKnowoff(t *testing.T) {
 		_ = m.HandleIntent(s, transport.NewIntent(
 			transport.IntentCastVote, map[string]any{"target_seat": float64(botSeat)},
 		))
+		// The open ballot only resolves early once every active seat marks
+		// Ready (ADR-009 follow-up); the bot readies itself as soon as it
+		// casts, but these seats need to do so explicitly here.
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
 	}
 
 	room := &fakeRoom{id: "room-knowoff", m: m}

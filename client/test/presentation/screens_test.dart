@@ -382,7 +382,7 @@ void main() {
     expect(find.textContaining('suspects'), findsNothing);
   });
 
-  testWidgets('KnowoffScreen renders the blind ballot', (tester) async {
+  testWidgets('KnowoffScreen renders the open live ballot', (tester) async {
     await tester.pumpWidget(
       _wrapWithSession(
         const KnowoffScreen(),
@@ -391,7 +391,7 @@ void main() {
     );
     await tester.pump();
     expect(find.text("Who can't see Nown?"), findsWidgets);
-    expect(find.textContaining('Blind ballot'), findsOneWidget);
+    expect(find.textContaining('Live ballot'), findsOneWidget);
     // One ballot row per candidate: 4 seats minus the local player.
     expect(find.text('Beta'), findsOneWidget);
     expect(find.text('Gamma'), findsOneWidget);
