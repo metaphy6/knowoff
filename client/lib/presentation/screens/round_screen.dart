@@ -36,6 +36,8 @@ class RoundScreen extends ConsumerStatefulWidget {
 class _RoundScreenState extends ConsumerState<RoundScreen> {
   Timer? _ticker;
   int _pokeCount = 0;
+  String _lastPhase = '';
+  final Set<int> _pokedThisPhase = {};
 
   /// Anchor for the game-start splash's landing dive, and whether that splash
   /// already played out (prefetch fires once per match — never mid-match).
@@ -171,6 +173,12 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final dto = session.dto;
     final notifier = ref.read(gameSessionProvider.notifier);
 
+    // Reset poke tracking when phase changes
+    if (_lastPhase != dto.phase) {
+      _lastPhase = dto.phase;
+      _pokedThisPhase.clear();
+    }
+
     final window = dto.phaseWindow;
     final deadline = dto.turnDeadline;
     final remaining = deadline == null
@@ -223,9 +231,13 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                     _TurnRail(
                       session: session,
                       dto: dto,
+                      pokedThisPhase: _pokedThisPhase,
                       onPoke: (seat) {
-                        notifier.poke(seat);
-                        if (devEchoPokes.value) setState(() => _pokeCount++);
+                        if (!_pokedThisPhase.contains(seat)) {
+                          _pokedThisPhase.add(seat);
+                          notifier.poke(seat);
+                          if (devEchoPokes.value) setState(() => _pokeCount++);
+                        }
                       },
                     ),
                     const SizedBox(width: KoSpace.md),
@@ -310,10 +322,13 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                               size: KoButtonSize.small,
                               backgroundColor: KoColors.pink,
                               icon: const DoodleIcon(Doodle.poke, size: 18),
-                              onTap: () {
-                                notifier.poke(dto.turnSeat);
-                                setState(() => _pokeCount++);
-                              },
+                              onTap: !_pokedThisPhase.contains(dto.turnSeat)
+                                  ? () {
+                                      _pokedThisPhase.add(dto.turnSeat);
+                                      notifier.poke(dto.turnSeat);
+                                      setState(() => _pokeCount++);
+                                    }
+                                  : null,
                             ),
                           ),
                       ],
@@ -343,11 +358,17 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
 /// Each seat is a tap target: the sheet behind it is where a player checks who
 /// they are up against and where the flag lives (👤 §3).
 class _TurnRail extends StatelessWidget {
-  const _TurnRail({required this.session, required this.dto, this.onPoke});
+  const _TurnRail({
+    required this.session,
+    required this.dto,
+    this.onPoke,
+    this.pokedThisPhase,
+  });
 
   final GameSession session;
   final GameStateDto dto;
   final ValueChanged<int>? onPoke;
+  final Set<int>? pokedThisPhase;
 
   @override
   Widget build(BuildContext context) {
@@ -404,7 +425,10 @@ class _TurnRail extends StatelessWidget {
                           child: GestureDetector(
                             key: ValueKey<String>('poke-seat-${player.seat}'),
                             behavior: HitTestBehavior.opaque,
-                            onTap: () => onPoke!(player.seat),
+                            onTap: (pokedThisPhase != null &&
+                                    pokedThisPhase!.contains(player.seat))
+                                ? null
+                                : () => onPoke!(player.seat),
                             child: Semantics(
                               button: true,
                               label:
