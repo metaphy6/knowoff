@@ -166,6 +166,26 @@ void main() {
     expect(find.textContaining('Retry attempt 1'), findsOneWidget);
   });
 
+  testWidgets('QueueScreen hides retry messaging while the server is healthy',
+      (tester) async {
+    final session = _sampleSession(phase: 'waiting').copyWith(
+      connectionState: gt.ConnectionState.connected,
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const QueueScreen(),
+        session,
+        transport: _FakeTransport(
+          stateStream: Stream.value(gt.ConnectionState.connected),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('The room is trying to reappear.'), findsNothing);
+    expect(find.textContaining('Retry attempt'), findsNothing);
+  });
+
   testWidgets('LobbyScreen renders room code and players', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(

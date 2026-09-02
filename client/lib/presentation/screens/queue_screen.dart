@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/network/game_transport.dart' as transport;
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
@@ -89,7 +90,10 @@ class _QueueScreenState extends ConsumerState<QueueScreen>
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
     final session = ref.watch(gameSessionProvider);
-    final retrying = _queued && session.dto.roomCode.isEmpty;
+    final retrying = _queued &&
+        session.dto.roomCode.isEmpty &&
+        (session.connectionState == transport.ConnectionState.disconnected ||
+            session.connectionState == transport.ConnectionState.reconnecting);
     // Use display counter that increments every 5 seconds to show active trying
     final retryAttempt = retrying ? _retryAttemptDisplay : 1;
     final retryMessages = <String>[
