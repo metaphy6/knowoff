@@ -66,7 +66,7 @@ class VoteBoard extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: KoSpace.md),
             child: _BallotRow(
               player: player,
-              chosen: votedSeat == player.seat,
+              chosen: player.seat != localSeat && votedSeat == player.seat,
               votes: tally?[player.seat.toString()],
               voters: _votersFor(player.seat),
               localSeat: localSeat,

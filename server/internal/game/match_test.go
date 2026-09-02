@@ -1038,9 +1038,8 @@ func TestMatch_KnowoffResolved_CarriesTheClientResultShape(t *testing.T) {
 		t.Fatalf("expected %d votes against seat %d, got %d", want, target,
 			tally[strconv.Itoa(target)])
 	}
-	// The role stays hidden while the result is still cancellable by a Revote.
-	if _, leaked := result["role"]; leaked {
-		t.Fatal("a pending result must not reveal a role")
+	if result["role"] != string(m.roles[target]) {
+		t.Fatalf("expected eliminated role %q, got %v", m.roles[target], result["role"])
 	}
 }
 

@@ -1208,10 +1208,8 @@ func (m *Match) afterBallot(eliminatedSomeone bool) {
 		"round":    m.round,
 		"votes":    m.ballots,
 		"resolved": eliminatedSomeone,
-		// The client renders the 15 s result window from this object. The role
-		// is deliberately absent: the result is not final yet, and a Revote
-		// cancels it without revealing anybody (§5). Roles reach clients on the
-		// next phase broadcast, after elimination applies.
+		// The result window announces the eliminated seat and role immediately,
+		// making the table's outcome clear before the next phase begins.
 		"result": map[string]any{
 			"eliminated_seat": m.eliminatedThisRound,
 			"tally":           m.ballotTally(),
@@ -1219,6 +1217,7 @@ func (m *Match) afterBallot(eliminatedSomeone bool) {
 	}
 	if eliminatedSomeone {
 		payload["eliminated"] = m.eliminatedThisRound
+		payload["result"].(map[string]any)["role"] = string(m.roles[m.eliminatedThisRound])
 	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventKnowoffResolved, payload), -1)
 
