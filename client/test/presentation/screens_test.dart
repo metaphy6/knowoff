@@ -750,6 +750,55 @@ void main() {
     expect(find.text('Report player'), findsOneWidget);
   });
 
+  testWidgets(
+      'VerdictScreen Back to menu resets the session and returns to the '
+      'first route, so the next Quick Play does not land back on this same '
+      'finished match', (tester) async {
+    final navigatorKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          gameSessionProvider.overrideWith(
+            (ref) => GameSessionNotifier(
+              transport: _FakeTransport(),
+              initialState: _sampleSession(phase: 'verdict').copyWith(
+                dto: _sampleSession(phase: 'verdict')
+                    .dto
+                    .copyWith(roomCode: 'ABCDEF'),
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          theme: knowoffTheme(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: Text('Main Menu')),
+        ),
+      ),
+    );
+
+    navigatorKey.currentState!.push(
+      MaterialPageRoute<void>(builder: (_) => const VerdictScreen()),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Nowers win'), findsOneWidget);
+
+    await tester.tap(find.text('Back to menu'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Main Menu'), findsOneWidget);
+    expect(find.text('Nowers win'), findsNothing);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('Main Menu')),
+    );
+    final session = container.read(gameSessionProvider);
+    expect(session.dto.roomCode, isEmpty);
+    expect(session.dto.phase, equals('waiting'));
+  });
+
   group('design guardrails hold on every live match screen', () {
     final screens = <String, (Widget, String)>{
       'round': (const RoundScreen(), 'play'),

@@ -7,8 +7,9 @@ import 'ko_button.dart';
 
 /// Brutalist ready button that sends a ready intent.
 ///
-/// Once Ready the control locks into a lime, checked, un-tappable state — the
-/// icon changes with the colour so the state never rides on hue alone.
+/// Ready flips the control to a lime, checked state; tapping again takes the
+/// Ready back (until the window finalizes) — the icon changes with the
+/// colour so the state never rides on hue alone.
 class ReadyButton extends StatelessWidget {
   const ReadyButton({
     required this.onReady,
@@ -30,7 +31,7 @@ class ReadyButton extends StatelessWidget {
       backgroundColor: ready ? KoColors.lime : KoColors.violet,
       shadow: ready ? KoShadows.md : KoShadows.lg,
       icon: DoodleIcon(ready ? Doodle.check : Doodle.sparkle, size: 24),
-      onTap: ready ? null : onReady,
+      onTap: onReady,
     );
   }
 }
