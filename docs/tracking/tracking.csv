@@ -178,3 +178,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-01T14:31:23Z,run-20260901140138-836004,copilot,knowoff,commit,completed,fix(knowoff): stop the ballot auto-resolving on cast completion so revote actually has time to work,,pending
 2026-09-02T07:43:03Z,run-20260902-queue-health,copilot,client,commit,completed,fix(queue): hide retry messaging while server is healthy,client/lib/presentation/screens/queue_screen.dart;client/test/presentation/screens_test.dart,pending
 2026-09-02T07:51:11Z,run-20260902-queue-health,copilot,client,commit,completed,fix(realtime): cap reconnect delay at five seconds,client/lib/core/network/websocket_transport.dart;client/test/websocket_transport_test.dart,pending
+2026-09-02T07:57:27Z,run-20260902-web-stop,copilot,xops,commit,completed,feat(xops): add Flutter web server stop command,Makefile;README.md;xops/makefile/flutter_web_ops.py;xops/makefile/test_flutter_web_ops.py;xops/test/tests-lints.py,pending
