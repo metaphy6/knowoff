@@ -222,9 +222,13 @@ func (b *BotActor) act(m *game.Match) {
 			return
 		}
 	case strings.HasPrefix(key, "ready:"):
-		b.markReady(m)
+		if !b.markReady(m) {
+			return
+		}
 	default:
-		b.castVote(m)
+		if !b.castVote(m) {
+			return
+		}
 	}
 	b.acted = true
 }
@@ -311,15 +315,17 @@ func (b *BotActor) playTurn(m *game.Match) bool {
 	return true
 }
 
-func (b *BotActor) markReady(m *game.Match) {
+func (b *BotActor) markReady(m *game.Match) bool {
 	b.logger.Debug("bot marking ready")
 	err := m.HandleIntent(b.seat, &transport.Envelope{Kind: transport.IntentReady})
 	if err != nil {
 		b.logger.Warn("bot ready failed", "error", err)
+		return false
 	}
+	return true
 }
 
-func (b *BotActor) castVote(m *game.Match) {
+func (b *BotActor) castVote(m *game.Match) bool {
 	seat := b.seat
 	// Vote for an active player other than self. Try to be smarter than random:
 	// if we're a Nower (non-Donower), analyze table plays to vote for someone
@@ -332,7 +338,7 @@ func (b *BotActor) castVote(m *game.Match) {
 		}
 	}
 	if len(targets) == 0 {
-		return
+		return false
 	}
 
 	// Smart voting: if we have table plays available, prefer voting for someone
@@ -368,7 +374,7 @@ func (b *BotActor) castVote(m *game.Match) {
 	})
 	if err != nil {
 		b.logger.Warn("bot vote failed", "target", target, "error", err)
-		return
+		return false
 	}
 	// The open ballot only resolves early once every active seat marks Ready
 	// (ADR-009 follow-up) — casting alone no longer completes it, so a table
@@ -377,7 +383,9 @@ func (b *BotActor) castVote(m *game.Match) {
 	// readies the instant it casts.
 	if err := m.HandleIntent(seat, &transport.Envelope{Kind: transport.IntentReady}); err != nil {
 		b.logger.Warn("bot ballot ready failed", "error", err)
+		return false
 	}
+	return true
 }
 
 // IsBotNickname reports whether a nickname is reserved for backfill bots.

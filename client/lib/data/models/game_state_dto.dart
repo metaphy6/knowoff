@@ -169,6 +169,7 @@ class GameStateDto {
     this.voteTarget = -1,
     this.result,
     this.winner,
+    this.donowerSeats = const [],
     this.nowns = const [],
     this.log = const [],
     this.matchPoints = 0,
@@ -177,6 +178,7 @@ class GameStateDto {
     this.phaseWindow = 0,
     this.chatEvents = const [],
     this.liveBallots = const {},
+    this.readySeats = const [],
   });
 
   final String phase;
@@ -200,6 +202,7 @@ class GameStateDto {
   final int voteTarget;
   final VoteResultDto? result;
   final String? winner;
+  final List<int> donowerSeats;
   final List<NownRefDto> nowns;
   final List<String> log;
   final int matchPoints;
@@ -215,6 +218,7 @@ class GameStateDto {
   /// Knowoff/runoff window is open (Rules §4: the open ballot). Cleared the
   /// moment a fresh ballot starts.
   final Map<String, int> liveBallots;
+  final List<int> readySeats;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
     return GameStateDto(
@@ -239,6 +243,7 @@ class GameStateDto {
           ? null
           : VoteResultDto.fromJson(json['result'] as Map<String, dynamic>),
       winner: json['winner'] as String?,
+      donowerSeats: intList(json['donower_seats']),
       nowns: nownList(json['nowns']),
       log: stringList(json['log']),
       matchPoints: json['match_points'] as int? ?? 0,
@@ -263,6 +268,7 @@ class GameStateDto {
     int? voteTarget,
     VoteResultDto? result,
     String? winner,
+    List<int>? donowerSeats,
     List<NownRefDto>? nowns,
     List<String>? log,
     int? matchPoints,
@@ -271,6 +277,7 @@ class GameStateDto {
     int? phaseWindow,
     List<ChatEventDto>? chatEvents,
     Map<String, int>? liveBallots,
+    List<int>? readySeats,
     bool clearResult = false,
     bool clearTurnDeadline = false,
     bool clearLiveBallots = false,
@@ -292,6 +299,7 @@ class GameStateDto {
       voteTarget: voteTarget ?? this.voteTarget,
       result: clearResult ? null : (result ?? this.result),
       winner: winner ?? this.winner,
+      donowerSeats: donowerSeats ?? this.donowerSeats,
       nowns: nowns ?? this.nowns,
       log: log ?? this.log,
       matchPoints: matchPoints ?? this.matchPoints,
@@ -302,6 +310,7 @@ class GameStateDto {
       chatEvents: chatEvents ?? this.chatEvents,
       liveBallots:
           clearLiveBallots ? const {} : (liveBallots ?? this.liveBallots),
+      readySeats: readySeats ?? this.readySeats,
     );
   }
 }
@@ -369,4 +378,9 @@ List<NownRefDto> nownList(dynamic value) {
 List<String> stringList(dynamic value) {
   if (value is! List<dynamic>) return const [];
   return value.whereType<String>().toList();
+}
+
+List<int> intList(dynamic value) {
+  if (value is! List<dynamic>) return const [];
+  return value.whereType<num>().map((item) => item.toInt()).toList();
 }

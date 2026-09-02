@@ -53,6 +53,26 @@ class VerdictScreen extends ConsumerWidget {
             accent: nowerWin ? KoColors.lime : KoColors.pink,
             celebrate: iWon,
           ),
+          if (!nowerWin && dto.donowerSeats.isNotEmpty) ...<Widget>[
+            const SizedBox(height: KoSpace.md),
+            KoContainer(
+              backgroundColor: KoColors.whiteWell,
+              padding: const EdgeInsets.all(KoSpace.md),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const DoodleIcon(Doodle.mask, size: 28),
+                  const SizedBox(width: KoSpace.sm),
+                  Expanded(
+                    child: Text(
+                      '${l10n.roleDonower}: ${dto.donowerSeats.map((seat) => session.playerBySeat(seat)?.name.isNotEmpty == true ? session.playerBySeat(seat)!.name : 'P$seat').join(', ')}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: KoSpace.lg),
           Row(
             children: <Widget>[

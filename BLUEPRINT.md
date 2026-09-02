@@ -80,9 +80,9 @@ Architecture decision records:
 
 ### 3. The Round: Turn-Based Play
 
-* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **10 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
+* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **20 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
 * Played cards stay on the table for the whole match — the evidence the votes are argued over.
-* **Draws**: during your turn, you may draw from your 3-card pile — all at once or in parts. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
+* **Draws**: during your turn, you may draw from your 3-card pile — all at once or in parts — without ending the turn; you may then play a card from your hand. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
 * **Timeout**: a player whose turn expires with no action auto-passes and loses one random card. Stalling costs.
 
 ### 4. Discussion & Knowoff (every round)
@@ -107,8 +107,8 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 
 **Type B — Unique (free, use restricted by role, once per match):**
 
-* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before the first turn begins. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *a Shuffle happened* — hands visibly change — but not who did it; since nobody knows who is a Donower, the alert exposes no one. It wipes out the plans Nowers built around saved cards.
-* **Revote** (rare — **usable by Nowers only**): playable during the 15-second result window of any Knowoff, before the result finalizes. The shown result is **canceled: it reveals nobody, eliminates nobody, and does not count as a survived voting for Donowers.** A fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
+* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before the first turn begins. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *who used Shuffle* with a brief, dramatic alert, and everyone's hand visibly changes. It wipes out the plans Nowers built around saved cards.
+* **Revote** (rare — **usable by Nowers only**): playable during an open Knowoff ballot or its 4-second result window. It resets the current ballot or cancels the shown result without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 
 ### 6. Match Points & Noin Earnings
@@ -425,10 +425,10 @@ game:
 
 timers:                             # seconds; which windows may fast-forward is structure (§8)
   play_turn: 10                     # each player's turn; the play reveals immediately, the turn ends on action
-  discussion_per_player: 10         # Ready unanimity ends it early
+  discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 15            # result display before finalizing — the Revote window
+  vote_result_window: 4             # result display before finalizing — the Revote window
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:

@@ -20,6 +20,7 @@ import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
 import 'package:knowoff_client/presentation/widgets/ready_button.dart';
+import 'package:knowoff_client/presentation/widgets/ready_status.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
@@ -262,6 +263,24 @@ void main() {
     expect(find.text('Beta'), findsOneWidget);
   });
 
+  testWidgets('ReadyStatus shows who is Ready', (tester) async {
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const ReadyStatus(
+          players: [
+            PlayerDto(
+                seat: 1, name: 'Beta', connected: true, eliminated: false),
+          ],
+          readySeats: [1],
+        ),
+        _sampleSession(phase: 'discussion'),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey<String>('ready-status')), findsOneWidget);
+    expect(find.text('Beta'), findsOneWidget);
+  });
+
   testWidgets(
       'DiscussionScreen no longer shows a separate Poke section; the poke '
       "doodle lives on the target's table box and sends a poke",
@@ -462,6 +481,20 @@ void main() {
       findsNothing,
     );
     expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
+  });
+
+  testWidgets('KnowoffScreen exposes Revote during an open ballot',
+      (tester) async {
+    final base = _sampleSession(phase: 'knowoff');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(cards: [], drawPile: [], specialty: 'revote'),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+    await tester.pump();
+
+    expect(find.text('Revote'), findsOneWidget);
   });
 
   testWidgets(
@@ -669,6 +702,22 @@ void main() {
     expect(find.text('Nowers win'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('A dog on a skateboard'), 300);
     expect(find.text('A dog on a skateboard'), findsOneWidget);
+  });
+
+  testWidgets('VerdictScreen declares the winning Donower', (tester) async {
+    final base = _sampleSession(phase: 'verdict');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        winner: 'donower',
+        donowerSeats: const [1],
+      ),
+      myRole: 'donower',
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const VerdictScreen(), session),
+    );
+
+    expect(find.text('Donower: Beta'), findsOneWidget);
   });
 
   testWidgets('VerdictScreen opens the seat sheet when a seat is tapped',
