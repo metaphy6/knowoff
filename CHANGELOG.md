@@ -4,10 +4,13 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Knowoff result window is 8 seconds again (was cut to 4), restoring visible time for the Nower/Donower role-reveal poster — the four-second falling reveal previously consumed the entire window, so the poster and Revote button never rendered before the round advanced.
+
 ### Changed
 
 - Knowoff results now open with a four-second falling eliminated-player reveal, then show the Nower or Donower result card and Revote on the Knowoff screen without a Ready panel or duplicate result overlay.
-- Knowoff result windows now finalize after four seconds instead of fifteen.
 - Specialty-card plays are now announced to the whole table with short animated alerts, including the player who used the card.
 - Revote cards now work from the result screen instead of being rejected as out-of-phase.
 - Bots retry a rejected Ready or vote intent instead of silently stalling the current window.
