@@ -161,6 +161,28 @@ void main() {
     await drawTransport.close();
   });
 
+  test('draw events retain a public drawer and count announcement', () async {
+    final drawTransport = _FakeTransport();
+    final drawNotifier = GameSessionNotifier(
+      transport: drawTransport,
+      initialState: const GameSession(dto: GameStateDto(seat: 0)),
+    );
+
+    drawTransport.emit('play_revealed', <String, dynamic>{
+      'seat': 2,
+      'draw': 2,
+      'cards': <Map<String, dynamic>>[],
+    });
+    await _settle();
+
+    expect(drawNotifier.state.drawAnnouncementSeat, equals(2));
+    expect(drawNotifier.state.drawAnnouncementCount, equals(2));
+    expect(drawNotifier.state.drawAnnouncementId, equals(1));
+
+    drawNotifier.dispose();
+    await drawTransport.close();
+  });
+
   test('drawing cancels a pending auto-play selection', () async {
     final drawTransport = _FakeTransport();
     final drawNotifier = GameSessionNotifier(
