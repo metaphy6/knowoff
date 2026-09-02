@@ -419,6 +419,47 @@ void main() {
     expect(find.byKey(const Key('vote-trail-0-1')), findsNothing);
   });
 
+  testWidgets(
+      'KnowoffScreen announces the eliminated player in the result window',
+      (tester) async {
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        result: const VoteResultDto(
+          eliminatedSeat: 1,
+          role: null,
+          tally: {'1': 3},
+          votes: {'0': 1, '2': 1, '3': 1},
+        ),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+    await tester.pump();
+
+    expect(find.byKey(const Key('elimination-announcement')), findsOneWidget);
+    expect(find.text('Beta is out'), findsWidgets);
+  });
+
+  testWidgets(
+      'KnowoffScreen announces when nobody is eliminated in the result window',
+      (tester) async {
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        result: const VoteResultDto(
+          eliminatedSeat: -1,
+          role: null,
+          tally: {},
+        ),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+    await tester.pump();
+
+    expect(find.byKey(const Key('elimination-announcement')), findsOneWidget);
+    expect(find.text('Nobody eliminated'), findsWidgets);
+  });
+
   testWidgets('KnowoffScreen sends Ready to resolve a ballot early',
       (tester) async {
     final transport = _FakeTransport();
