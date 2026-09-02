@@ -53,6 +53,7 @@ xops/
 | [`makefile/track_ops.py`](makefile/track_ops.py) | `make track.add` / `make track.list`. |
 | [`makefile/roadmap_ops.py`](makefile/roadmap_ops.py) | `python3 xops/makefile/roadmap_ops.py status`. |
 | [`makefile/codegraph_ops.py`](makefile/codegraph_ops.py) | `make codeg` — initialize or update the local CodeGraph index. |
+| [`makefile/flutter_web_ops.py`](makefile/flutter_web_ops.py) | `make web.stop` — stop all locally owned Flutter web-server processes. |
 
 ## Validation
 

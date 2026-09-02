@@ -24,7 +24,7 @@ RUN_ID  ?=
 .DEFAULT_GOAL := help
 
 .PHONY: help git git.dry track.add track.list codeg \
-	server.build server.rebuild web.rebuild web.run \
+	server.build server.rebuild web.rebuild web.run web.stop \
 	up down \
 	label.version label.list localhostfile.add localhostfile.remove localhostfile.status
 
@@ -67,6 +67,10 @@ web.rebuild:
 ## web.run           Run the Flutter web client natively via the Flutter CLI (no Docker) at http://localhost:8000 or http://0.0.0.0:8000 for integrated browser
 web.run:
 	@cd client && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8000
+
+## web.stop          Stop every locally owned Flutter web-server process, regardless of port
+web.stop:
+	@$(XOPS)/flutter_web_ops.py stop
 
 ## up                Start the local Docker Compose stack
 up:
