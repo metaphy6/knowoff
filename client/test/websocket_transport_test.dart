@@ -41,6 +41,12 @@ void main() {
       await server.close();
     });
 
+    test('defaults to a short maximum reconnect delay', () {
+      final transport = WebSocketTransport(url: url);
+
+      expect(transport.maxReconnectDelay, const Duration(seconds: 5));
+    });
+
     test('connects, sends, and receives echoed JSON', () async {
       final transport = WebSocketTransport(url: url);
       await transport.connect();

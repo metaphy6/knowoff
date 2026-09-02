@@ -11,7 +11,7 @@ class WebSocketTransport implements GameTransport {
   WebSocketTransport({
     required this.url,
     this.reconnectDelay = const Duration(milliseconds: 500),
-    this.maxReconnectDelay = const Duration(seconds: 30),
+    this.maxReconnectDelay = const Duration(seconds: 5),
     this.reconnectJitter = 0.2,
   });
 
