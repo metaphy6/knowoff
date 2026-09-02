@@ -21,6 +21,7 @@ import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
+import '../widgets/specialty_announcement.dart';
 import '../widgets/dev_tools_overlay.dart';
 import '../widgets/game_start_splash.dart';
 
@@ -171,6 +172,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final text = Theme.of(context).textTheme;
     final session = ref.watch(gameSessionProvider);
     final dto = session.dto;
+    final announcementPlayer = session.playerBySeat(
+      session.specialtyAnnouncementSeat ?? -1,
+    );
     final notifier = ref.read(gameSessionProvider.notifier);
 
     // Reset poke tracking when phase changes
@@ -345,6 +349,17 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                 anchor: _timerBarKey,
                 onDone: () => setState(() => _startSplashDone = true),
               ),
+            ),
+          if (session.specialtyAnnouncement != null &&
+              session.specialtyAnnouncementSeat != null)
+            SpecialtyAnnouncement(
+              key: ValueKey<String>(
+                '${session.specialtyAnnouncementSeat}-${session.specialtyAnnouncement}',
+              ),
+              playerName: announcementPlayer != null
+                  ? seatDisplayName(announcementPlayer)
+                  : 'P${session.specialtyAnnouncementSeat}',
+              specialty: session.specialtyAnnouncement!,
             ),
         ],
       ),

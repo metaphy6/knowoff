@@ -733,12 +733,6 @@ func (m *Match) handlePlayCard(seat int, payload map[string]any) error {
 }
 
 func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
-	if m.phase != PhasePlay {
-		return fmt.Errorf("not play phase")
-	}
-	if m.turnOrder[m.currentTurn] != seat {
-		return fmt.Errorf("out of turn")
-	}
 	specialty, _ := payload["specialty"].(string)
 	if specialty == "" {
 		specialty = m.players[seat].Hand.Specialty
@@ -748,6 +742,15 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 	}
 	if specialty != m.players[seat].Hand.Specialty {
 		return fmt.Errorf("specialty not held")
+	}
+	if specialty == SpecialtyRevote {
+		return m.useRevote(seat)
+	}
+	if m.phase != PhasePlay {
+		return fmt.Errorf("not play phase")
+	}
+	if m.turnOrder[m.currentTurn] != seat {
+		return fmt.Errorf("out of turn")
 	}
 
 	switch specialty {
@@ -759,8 +762,6 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 		return m.useOneMore(seat, payload)
 	case SpecialtyShuffle:
 		return m.useShuffle(seat)
-	case SpecialtyRevote:
-		return fmt.Errorf("revote only in result window")
 	default:
 		return fmt.Errorf("unknown specialty")
 	}
@@ -768,6 +769,7 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 
 func (m *Match) usePass(seat int) error {
 	m.players[seat].Hand.Specialty = ""
+	m.announceSpecialty(seat, SpecialtyPass)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":      seat,
 		"specialty": SpecialtyPass,
@@ -787,6 +789,7 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 		return fmt.Errorf("discard required")
 	}
 	m.players[seat].Hand.Specialty = ""
+	m.announceSpecialty(seat, SpecialtyReveal)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":           seat,
 		"specialty":      SpecialtyReveal,
@@ -810,6 +813,7 @@ func (m *Match) useOneMore(seat int, payload map[string]any) error {
 		return fmt.Errorf("no fresh card available")
 	}
 	m.players[seat].FreeDraws++
+	m.announceSpecialty(seat, SpecialtyOneMore)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":      seat,
 		"specialty": SpecialtyOneMore,
@@ -836,11 +840,12 @@ func (m *Match) useShuffle(seat int) error {
 	if err := m.dealHands(); err != nil {
 		return err
 	}
+	m.announceSpecialty(seat, SpecialtyShuffle)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventShuffleOccurred, map[string]any{
 		"round": m.round,
 	}), -1)
-	// Re-sync every seat's freshly re-dealt hand; a Shuffle is silent about
-	// who triggered it, but everyone's hand visibly changes (Rules §5).
+	// Re-sync every seat's freshly re-dealt hand so everyone's hand visibly
+	// changes.
 	for s, p := range m.players {
 		m.sendHandDealt(s, p)
 	}
@@ -916,8 +921,6 @@ func (m *Match) handleDrawCards(seat int, payload map[string]any) error {
 		"draw":  count,
 		"cards": m.cardPayloads(drawn),
 	}), -1)
-	m.stopTurnTimer()
-	m.advanceTurn()
 	return nil
 }
 
@@ -960,6 +963,9 @@ func (m *Match) handleReady(seat int, payload map[string]any) error {
 	case PhaseDiscussion:
 		m.discussionReady[seat] = true
 		m.players[seat].Ready = true
+		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
+			"phase": m.phase, "seat": seat,
+		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
 			map[string]any{"discussion_ready": true}))
 		m.checkDiscussionReady()
@@ -968,11 +974,17 @@ func (m *Match) handleReady(seat int, payload map[string]any) error {
 		// when nobody intends to use it — Ready lets the table skip the wait
 		// once everyone agrees the result can finalize now.
 		m.resultReady[seat] = true
+		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
+			"phase": m.phase, "seat": seat,
+		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
 			map[string]any{"result_ready": true}))
 		m.checkResultReady()
 	case PhaseKnowoff, PhaseRunoff:
 		m.ballotReady[seat] = true
+		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
+			"phase": m.phase, "seat": seat,
+		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
 			map[string]any{"ballot_ready": true}))
 		m.checkBallotReady()
@@ -1356,9 +1368,16 @@ func (m *Match) finishMatch(winner Role) {
 		}
 		nowns = append(nowns, n)
 	}
+	donowerSeats := make([]int, 0)
+	for seat, role := range m.roles {
+		if role == RoleDonower {
+			donowerSeats = append(donowerSeats, seat)
+		}
+	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventMatchVerdict, map[string]any{
-		"winner": string(winner),
-		"nowns":  nowns,
+		"winner":        string(winner),
+		"nowns":         nowns,
+		"donower_seats": donowerSeats,
 	}), -1)
 
 	// Points scored events are sent privately to each seat.
@@ -1374,7 +1393,7 @@ func (m *Match) finishMatch(winner Role) {
 }
 
 func (m *Match) useRevote(seat int) error {
-	if m.phase != PhaseResult || !m.resultPending {
+	if m.phase != PhaseResult && m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
 		return fmt.Errorf("not result window")
 	}
 	if m.roles[seat] != RoleNower {
@@ -1385,8 +1404,9 @@ func (m *Match) useRevote(seat int) error {
 	}
 	m.uniqueUsed[SpecialtyRevote] = true
 	m.players[seat].Hand.Specialty = ""
+	m.announceSpecialty(seat, SpecialtyRevote)
 
-	// Nullify the result.
+	// Reset the current ballot or result without consuming a vote.
 	m.eliminatedThisRound = -1
 	m.stopResultTimer()
 
@@ -1397,6 +1417,13 @@ func (m *Match) useRevote(seat int) error {
 	// Fresh ballot with full remaining_votes unchanged.
 	m.beginKnowoff()
 	return nil
+}
+
+func (m *Match) announceSpecialty(seat int, specialty string) {
+	m.bcast.Broadcast(transport.NewEvent(transport.EventSpecialtyUsed, map[string]any{
+		"seat":      seat,
+		"specialty": specialty,
+	}), -1)
 }
 
 // BotAccessors expose read-only match state for in-process backfill bots.

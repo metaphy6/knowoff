@@ -19,6 +19,8 @@ class GameSession {
     this.frozen = false,
     this.finalEliminatedSeat,
     this.finalEliminatedRole,
+    this.specialtyAnnouncementSeat,
+    this.specialtyAnnouncement,
   });
 
   final GameStateDto dto;
@@ -39,6 +41,8 @@ class GameSession {
   final bool frozen;
   final int? finalEliminatedSeat;
   final String? finalEliminatedRole;
+  final int? specialtyAnnouncementSeat;
+  final String? specialtyAnnouncement;
 
   GameSession copyWith({
     GameStateDto? dto,
@@ -52,6 +56,8 @@ class GameSession {
     bool? frozen,
     int? finalEliminatedSeat,
     String? finalEliminatedRole,
+    int? specialtyAnnouncementSeat,
+    String? specialtyAnnouncement,
     bool clearFinalElimination = false,
   }) {
     return GameSession(
@@ -70,6 +76,10 @@ class GameSession {
       finalEliminatedRole: clearFinalElimination
           ? null
           : (finalEliminatedRole ?? this.finalEliminatedRole),
+      specialtyAnnouncementSeat:
+          specialtyAnnouncementSeat ?? this.specialtyAnnouncementSeat,
+      specialtyAnnouncement:
+          specialtyAnnouncement ?? this.specialtyAnnouncement,
     );
   }
 

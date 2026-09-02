@@ -32,7 +32,7 @@ func testConfig(size int) *config.Config {
 			},
 			Timers: config.TimersTuning{
 				PlayTurn:            10,
-				DiscussionPerPlayer: 10,
+				DiscussionPerPlayer: 5,
 				KnowoffBallot:       20,
 				KnowoffRunoff:       15,
 				VoteResultWindow:    15,
@@ -395,8 +395,41 @@ func TestMatch_PileDrawPenaltyAndFloor(t *testing.T) {
 	}
 }
 
+func TestMatch_PileDrawKeepsTurnForTablePlay(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	turnBefore := m.currentTurn
+	drawnID := m.players[seat].Hand.DrawPile[0]
+
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentDrawCards, map[string]any{"count": float64(1)},
+	)); err != nil {
+		t.Fatalf("draw: %v", err)
+	}
+	if m.currentTurn != turnBefore {
+		t.Fatalf("draw advanced turn from %d to %d", turnBefore, m.currentTurn)
+	}
+	if plays := m.TablePlays(); len(plays) != 0 {
+		t.Fatalf("draw should not create a table play: %v", plays)
+	}
+
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentPlayCard, map[string]any{"card_id": drawnID},
+	)); err != nil {
+		t.Fatalf("play drawn card: %v", err)
+	}
+	plays := m.TablePlays()
+	if len(plays) != 1 || plays[0].Seat != seat || plays[0].CardID != drawnID {
+		t.Fatalf("expected drawn card on table for seat %d, got %v", seat, plays)
+	}
+}
+
 func TestMatch_SixPlayer_DoubleMissedVoteEndsDonowerWin(t *testing.T) {
-	m, _ := newTestMatch(t, 6, WithSeed(1), WithReplay(true))
+	m, bcast := newTestMatch(t, 6, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -424,9 +457,19 @@ func TestMatch_SixPlayer_DoubleMissedVoteEndsDonowerWin(t *testing.T) {
 	if m.phase != PhaseFinished {
 		t.Fatalf("expected finished match, got %s", m.phase)
 	}
-	// Last event should be match_verdict with Donower winner.
-	// We can't easily inspect bcast here because the helper mutates state
-	// directly; this is covered by the replay test below.
+	events := bcast.findEvents(0, transport.EventMatchVerdict)
+	if len(events) != 1 {
+		t.Fatalf("expected one match_verdict event, got %d", len(events))
+	}
+	seats, ok := events[0].Payload["donower_seats"].([]int)
+	if !ok || len(seats) != 2 {
+		t.Fatalf("expected two declared Donower seats, got %v", events[0].Payload["donower_seats"])
+	}
+	for _, seat := range seats {
+		if m.roles[seat] != RoleDonower {
+			t.Fatalf("verdict declared non-Donower seat %d", seat)
+		}
+	}
 }
 
 func TestMatch_RevoteNullifiesResult(t *testing.T) {
@@ -473,7 +516,10 @@ func TestMatch_RevoteNullifiesResult(t *testing.T) {
 		}
 	}
 	bcast.clear()
-	if err := m.useRevote(revoter); err != nil {
+	if err := m.HandleIntent(revoter, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{"specialty": SpecialtyRevote},
+	)); err != nil {
 		t.Fatalf("revote: %v", err)
 	}
 	if m.eliminatedThisRound != -1 {
@@ -485,6 +531,38 @@ func TestMatch_RevoteNullifiesResult(t *testing.T) {
 	nulls := bcast.findEvents(revoter, transport.EventVoteNullified)
 	if len(nulls) != 1 {
 		t.Fatalf("expected vote_nullified event, got %d", len(nulls))
+	}
+}
+
+func TestMatch_RevoteResetsAnOpenBallot(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	m.beginKnowoff()
+	revoter := -1
+	for seat := range m.roles {
+		if m.roles[seat] == RoleNower {
+			revoter = seat
+			m.players[seat].Hand.Specialty = SpecialtyRevote
+			break
+		}
+	}
+	if revoter < 0 {
+		t.Fatal("no Nower available")
+	}
+	if err := m.HandleIntent(revoter, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{"specialty": SpecialtyRevote},
+	)); err != nil {
+		t.Fatalf("revote during ballot: %v", err)
+	}
+	if m.phase != PhaseKnowoff || m.players[revoter].Hand.Specialty != "" {
+		t.Fatalf("revote should reset the open ballot and consume the card")
+	}
+	if len(bcast.findEvents(1, transport.EventVoteNullified)) != 1 {
+		t.Fatal("expected public vote_nullified event")
 	}
 }
 
@@ -590,6 +668,22 @@ func TestMatch_ReadyAck_TargetsOnlyActingSeat(t *testing.T) {
 		if evs := bcast.findEvents(other, transport.EventReadyAck); len(evs) != 0 {
 			t.Fatalf("ready_ack leaked to seat %d: %v", other, evs)
 		}
+		readyEvents := bcast.findEvents(other, transport.EventReadyState)
+		if len(readyEvents) != 1 || readyEvents[0].Payload["seat"] != seat {
+			t.Fatalf("expected public Ready state for seat %d, got %v", seat, readyEvents)
+		}
+	}
+}
+
+func TestMatch_DiscussionWindowIsTwentySecondsForFourPlayers(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	for i := range m.connected {
+		m.connected[i] = true
+	}
+	m.phase = PhaseDiscussion
+
+	if got := m.phaseWindowSeconds(); got != 20 {
+		t.Fatalf("expected a 20-second Discussion window, got %d", got)
 	}
 }
 
@@ -808,6 +902,13 @@ func TestMatch_Specialty_PassEndsTurn(t *testing.T) {
 	}
 	if m.turnOrder[m.currentTurn] == seat {
 		t.Fatal("turn should advance after pass")
+	}
+	events := bcast.findEvents(1, transport.EventSpecialtyUsed)
+	if len(events) != 1 {
+		t.Fatalf("expected one public specialty_used event, got %d", len(events))
+	}
+	if events[0].Payload["seat"] != seat || events[0].Payload["specialty"] != SpecialtyPass {
+		t.Fatalf("unexpected specialty_used payload: %v", events[0].Payload)
 	}
 }
 

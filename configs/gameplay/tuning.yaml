@@ -13,11 +13,11 @@ game:
   abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
 
 timers:                             # seconds; which windows may fast-forward is structure (Rules §8)
-  play_turn: 10                     # each player's turn; the play reveals immediately, the turn ends on action
-  discussion_per_player: 10         # Ready unanimity ends it early
+  play_turn: 20                     # each player's turn; the play reveals immediately, the turn ends on action
+  discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 15            # result display before finalizing — the Revote window
+  vote_result_window: 4             # result display before finalizing — the Revote window
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:

@@ -14,7 +14,9 @@ import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ready_button.dart';
+import '../widgets/ready_status.dart';
 import '../widgets/seat_tile.dart';
+import '../widgets/specialty_announcement.dart';
 import '../widgets/vote_board.dart';
 
 /// Knowoff voting screen — the open, live ballot (ADR-009) and the 15-second
@@ -52,6 +54,9 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
     final session = ref.watch(gameSessionProvider);
     final notifier = ref.read(gameSessionProvider.notifier);
     final dto = session.dto;
+    final announcementPlayer = session.playerBySeat(
+      session.specialtyAnnouncementSeat ?? -1,
+    );
     final result = dto.result;
     final isRunoff = dto.phase == 'runoff';
     final inResultWindow = dto.phase == 'result' || result != null;
@@ -135,6 +140,17 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                       eliminated: session.amEliminated,
                     ),
                     if (!session.amEliminated) ...<Widget>[
+                      if (canRevote) ...<Widget>[
+                        const SizedBox(height: KoSpace.lg),
+                        KoButton(
+                          label: l10n.specialtyRevoteAction,
+                          subLabel: l10n.revoteHint,
+                          expand: true,
+                          backgroundColor: KoColors.violet,
+                          icon: const DoodleIcon(Doodle.mask, size: 24),
+                          onTap: () => notifier.useSpecialty('revote'),
+                        ),
+                      ],
                       const SizedBox(height: KoSpace.lg),
                       _ReadyPanel(
                         ready: dto.ballotReady,
@@ -142,6 +158,10 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                         onReady: session.canReadyBallot ? notifier.ready : null,
                       ),
                     ],
+                    ReadyStatus(
+                      players: dto.players,
+                      readySeats: dto.readySeats,
+                    ),
                     const SizedBox(height: KoSpace.lg),
                     VoteBoard(
                       players: dto.players,
@@ -188,6 +208,17 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
             label: eliminatedLabel,
             isBot: announcedPlayer?.bot ?? false,
             eliminated: announcedPlayer != null,
+          ),
+        if (session.specialtyAnnouncement != null &&
+            session.specialtyAnnouncementSeat != null)
+          SpecialtyAnnouncement(
+            key: ValueKey<String>(
+              '${session.specialtyAnnouncementSeat}-${session.specialtyAnnouncement}',
+            ),
+            playerName: announcementPlayer != null
+                ? seatDisplayName(announcementPlayer)
+                : 'P${session.specialtyAnnouncementSeat}',
+            specialty: session.specialtyAnnouncement!,
           ),
       ],
     );

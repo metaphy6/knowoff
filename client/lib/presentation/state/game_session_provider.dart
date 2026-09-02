@@ -121,6 +121,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'play_revealed':
         _mergePlayRevealed(payload);
         break;
+      case 'specialty_used':
+        final seat = payload['seat'] as int?;
+        final specialty = payload['specialty'] as String?;
+        if (seat != null && specialty != null) {
+          state = state.copyWith(
+            specialtyAnnouncementSeat: seat,
+            specialtyAnnouncement: specialty,
+          );
+        }
+        break;
       case 'round_resolved':
       case 'shuffle_occurred':
       case 'vote_result_pending':
@@ -158,6 +168,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'ready_ack':
         _mergeState(payload);
+        break;
+      case 'ready_state':
+        final seat = payload['seat'] as int?;
+        final phase = payload['phase'] as String?;
+        if (seat != null && phase == state.dto.phase) {
+          _setDto(state.dto.copyWith(
+            readySeats: {...state.dto.readySeats, seat}.toList()..sort(),
+          ));
+        }
         break;
       case 'quick_chat':
         _appendChatEvent(payload);
@@ -310,6 +329,21 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       ));
     }
     if (seat == null) return;
+    if (payload.containsKey('draw') && seat == state.dto.seat) {
+      final drawn = (payload['cards'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(CardDto.fromJson)
+          .toList();
+      final count = payload['draw'] as int? ?? drawn.length;
+      _setDto(state.dto.copyWith(
+        hand: HandDto(
+          cards: [...state.dto.hand.cards, ...drawn],
+          drawPile: state.dto.hand.drawPile.skip(count).toList(),
+          specialty: state.dto.hand.specialty,
+        ),
+      ));
+      return;
+    }
     final timedOut = payload['timeout'] == true;
     // A turn timeout carries no card_id (the seat auto-passed, it didn't
     // play a card) — without this branch the seat's play never lands in
@@ -369,7 +403,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     final window = payload['window_seconds'] as int?;
     final opensBallot = phase == 'knowoff' || phase == 'runoff';
 
-    var dto = state.dto;
+    var dto = state.dto.copyWith(readySeats: const []);
     if (opensBallot) {
       dto = dto.copyWith(
         voteTarget: -1,
@@ -453,6 +487,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       winner: payload.containsKey('winner')
           ? payload['winner'] as String?
           : current.winner,
+      donowerSeats: payload.containsKey('donower_seats')
+          ? intList(payload['donower_seats'])
+          : current.donowerSeats,
       nowns: payload.containsKey('nowns')
           ? nownList(payload['nowns'])
           : current.nowns,
@@ -467,6 +504,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       phaseWindow: current.phaseWindow,
       chatEvents: current.chatEvents,
       liveBallots: current.liveBallots,
+      readySeats: current.readySeats,
     );
     state = state.copyWith(dto: updated, lastError: null);
   }
@@ -575,7 +613,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         if (targetSeat != null) 'target_seat': targetSeat,
       });
 
-  Future<void> drawCards(int count) => _send('draw_cards', {'count': count});
+  Future<void> drawCards(int count) {
+    _pendingRequests.removeWhere((request) => request['kind'] == 'play_card');
+    state = state.copyWith(clearSelectedCard: true, moveLocked: false);
+    return _send('draw_cards', {'count': count});
+  }
 
   /// Casts (or changes) the local ballot. Rules §4: the ballot is open and
   /// live — every cast broadcasts immediately, and a seat may switch its
