@@ -19,6 +19,7 @@ import '../widgets/nown_stage.dart';
 import '../widgets/play_table.dart';
 import '../widgets/quick_chat_bar.dart';
 import '../widgets/ready_button.dart';
+import '../widgets/ready_status.dart';
 import '../widgets/targeted_chat_sheet.dart';
 
 /// Discussion screen: argue, bluff, mark Ready, poke, and Quick Chat.
@@ -187,6 +188,10 @@ class _DiscussionScreenState extends ConsumerState<DiscussionScreen> {
                     ),
                   ],
                 ),
+              ),
+              ReadyStatus(
+                players: dto.players,
+                readySeats: dto.readySeats,
               ),
               const SizedBox(height: KoSpace.xl),
               KoSectionHeader(

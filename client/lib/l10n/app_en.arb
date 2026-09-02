@@ -850,7 +850,7 @@
   },
   "resultWindowTitle": "Result",
   "@resultWindowTitle": {
-    "description": "Title of the 15-second result window."
+    "description": "Title of the 4-second result window."
   },
   "resultMissLabel": "Nobody eliminated",
   "@resultMissLabel": {

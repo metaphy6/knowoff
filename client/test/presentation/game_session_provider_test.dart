@@ -6,6 +6,7 @@ import 'package:knowoff_client/core/config/client_config.dart';
 import 'package:knowoff_client/core/network/game_transport.dart' as gt;
 import 'package:knowoff_client/data/auth_service.dart';
 import 'package:knowoff_client/data/models/game_state_dto.dart';
+import 'package:knowoff_client/domain/entities/game_session.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 
 class _StubAuthService extends AuthService {
@@ -30,6 +31,7 @@ class _FakeTransport implements gt.GameTransport {
   final StreamController<gt.ConnectionState> _stateController =
       StreamController<gt.ConnectionState>.broadcast();
   final List<Map<String, dynamic>> sent = <Map<String, dynamic>>[];
+  bool failNextSend = false;
 
   void emit(String kind, Map<String, dynamic> payload) {
     _controller.add(<String, dynamic>{'kind': kind, 'payload': payload});
@@ -61,7 +63,13 @@ class _FakeTransport implements gt.GameTransport {
   Future<void> reconnect() async => reconnectCount++;
 
   @override
-  Future<void> send(Map<String, dynamic> message) async => sent.add(message);
+  Future<void> send(Map<String, dynamic> message) async {
+    if (failNextSend) {
+      failNextSend = false;
+      throw StateError('send failed');
+    }
+    sent.add(message);
+  }
 }
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
@@ -90,6 +98,117 @@ void main() {
 
     expect(notifier.state.frozen, isTrue);
     expect(notifier.state.dto.phase, equals('waiting'));
+  });
+
+  test('public specialty use is retained for announcement surfaces', () async {
+    transport.emit('specialty_used', <String, dynamic>{
+      'seat': 2,
+      'specialty': 'reveal',
+    });
+    await _settle();
+
+    expect(notifier.state.specialtyAnnouncementSeat, equals(2));
+    expect(notifier.state.specialtyAnnouncement, equals('reveal'));
+  });
+
+  test('public Ready events retain every ready seat for the current phase',
+      () async {
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    transport.emit('ready_state', <String, dynamic>{
+      'phase': 'discussion',
+      'seat': 2,
+    });
+    await _settle();
+
+    expect(notifier.state.dto.readySeats, equals(<int>[2]));
+  });
+
+  test('draw events add cards to the local hand without recording a play',
+      () async {
+    final drawTransport = _FakeTransport();
+    final drawNotifier = GameSessionNotifier(
+      transport: drawTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          hand: HandDto(
+            cards: [CardDto(id: 'existing', type: 'text')],
+            drawPile: [CardDto(id: 'drawn-card', type: 'text')],
+            specialty: null,
+          ),
+        ),
+      ),
+    );
+    drawTransport.emit('play_revealed', <String, dynamic>{
+      'seat': 0,
+      'draw': 1,
+      'cards': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'id': 'drawn-card',
+          'type': 'text',
+          'content': 'Drawn'
+        },
+      ],
+    });
+    await _settle();
+
+    expect(
+      drawNotifier.state.dto.hand.cards.any((card) => card.id == 'drawn-card'),
+      isTrue,
+    );
+    expect(drawNotifier.state.dto.plays.containsKey('0'), isFalse);
+    drawNotifier.dispose();
+    await drawTransport.close();
+  });
+
+  test('drawing cancels a pending auto-play selection', () async {
+    final drawTransport = _FakeTransport();
+    final drawNotifier = GameSessionNotifier(
+      transport: drawTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(seat: 0),
+      ),
+    );
+    drawNotifier.lockMove('stale-card');
+
+    await drawNotifier.drawCards(1);
+
+    expect(drawNotifier.state.selectedCardId, isNull);
+    expect(drawNotifier.state.moveLocked, isFalse);
+    expect(drawTransport.sent.single['kind'], equals('draw_cards'));
+
+    drawNotifier.dispose();
+    await drawTransport.close();
+  });
+
+  test('drawing removes a queued auto-play request', () async {
+    final drawTransport = _FakeTransport()..failNextSend = true;
+    final drawNotifier = GameSessionNotifier(
+      transport: drawTransport,
+      initialState: const GameSession(dto: GameStateDto(seat: 0)),
+    );
+    drawTransport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+    drawNotifier.lockMove('stale-card');
+
+    drawTransport.emit('turn_started', <String, dynamic>{
+      'turn_seat': 0,
+      'round': 1,
+      'timeout': 20,
+    });
+    await _settle();
+    await drawNotifier.drawCards(1);
+
+    drawTransport.emitState(gt.ConnectionState.connected);
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+
+    expect(
+      drawTransport.sent.map((message) => message['kind']),
+      equals(<String>['draw_cards']),
+    );
+
+    drawNotifier.dispose();
+    await drawTransport.close();
   });
 
   test('unfreezing replays buffered events in order', () async {

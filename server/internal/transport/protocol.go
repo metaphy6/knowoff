@@ -31,6 +31,7 @@ const (
 	EventTurnStarted       = "turn_started"
 	EventPlayRevealed      = "play_revealed"
 	EventRoundResolved     = "round_resolved"
+	EventSpecialtyUsed     = "specialty_used"
 	EventShuffleOccurred   = "shuffle_occurred"
 	EventVoteResultPending = "vote_result_pending"
 	// EventVoteCast is broadcast on every ballot cast or change while the
@@ -51,7 +52,8 @@ const (
 	// EventReadyAck confirms one seat's own Ready intent landed — a targeted
 	// echo, not a broadcast, since only that seat's button needs to flip to
 	// its locked-in state.
-	EventReadyAck = "ready_ack"
+	EventReadyAck   = "ready_ack"
+	EventReadyState = "ready_state"
 )
 
 // Envelope is the unit of communication on the WebSocket. Every frame is a
