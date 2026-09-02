@@ -108,7 +108,7 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 **Type B — Unique (free, use restricted by role, once per match):**
 
 * **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before the first turn begins. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *who used Shuffle* with a brief, dramatic alert, and everyone's hand visibly changes. It wipes out the plans Nowers built around saved cards.
-* **Revote** (rare — **usable by Nowers only**): playable during an open Knowoff ballot or its 4-second result window. It resets the current ballot or cancels the shown result without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
+* **Revote** (rare — **usable by Nowers only**): playable during an open Knowoff ballot or its 8-second result window. It resets the current ballot or cancels the shown result without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 
 ### 6. Match Points & Noin Earnings
@@ -428,7 +428,7 @@ timers:                             # seconds; which windows may fast-forward is
   discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 4             # result display before finalizing — the Revote window
+  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster/Revote window
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:
