@@ -132,20 +132,16 @@ class GameSession {
   }
 
   bool get canReady =>
-      !amEliminated &&
-      (phase == 'discussion' || phase == 'role_reveal') &&
-      !dto.discussionReady;
+      !amEliminated && (phase == 'discussion' || phase == 'role_reveal');
 
   /// Rules §4's post-ballot Revote window otherwise always runs its full
   /// length; Ready lets the table skip the wait once everyone agrees.
-  bool get canReadyResult => !amEliminated && hasResult && !dto.resultReady;
+  bool get canReadyResult => !amEliminated && hasResult;
 
   /// Any active player can agree to resolve the ballot early. Uncast ballots
   /// count as abstentions only after every active connected player agrees.
   bool get canReadyBallot =>
-      !amEliminated &&
-      (phase == 'knowoff' || phase == 'runoff') &&
-      !dto.ballotReady;
+      !amEliminated && (phase == 'knowoff' || phase == 'runoff');
 
   PlayerDto? playerBySeat(int seat) {
     for (final p in dto.players) {

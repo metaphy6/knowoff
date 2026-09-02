@@ -43,7 +43,15 @@ class VerdictScreen extends ConsumerWidget {
         size: KoButtonSize.large,
         expand: true,
         icon: const DoodleIcon(Doodle.cards, size: 24),
-        onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        // Popping alone leaves the finished match's state (room code, phase,
+        // seat) in the shared session — the next Quick Play attempt would
+        // then see an existing room/seat and jump straight back into this
+        // same Verdict screen instead of queuing. restart() clears that
+        // state and gives the next queue join a fresh handshake.
+        onTap: () {
+          ref.read(gameSessionProvider.notifier).restart();
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        },
       ),
       body: KoBody(
         children: <Widget>[
