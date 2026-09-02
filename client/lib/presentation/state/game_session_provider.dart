@@ -329,6 +329,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       ));
     }
     if (seat == null) return;
+    if (payload.containsKey('draw')) {
+      final count = payload['draw'] as int? ?? 0;
+      state = state.copyWith(
+        drawAnnouncementSeat: seat,
+        drawAnnouncementCount: count,
+        drawAnnouncementId: state.drawAnnouncementId + 1,
+      );
+    }
     if (payload.containsKey('draw') && seat == state.dto.seat) {
       final drawn = (payload['cards'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()

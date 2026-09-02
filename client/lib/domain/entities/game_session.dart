@@ -21,6 +21,9 @@ class GameSession {
     this.finalEliminatedRole,
     this.specialtyAnnouncementSeat,
     this.specialtyAnnouncement,
+    this.drawAnnouncementSeat,
+    this.drawAnnouncementCount,
+    this.drawAnnouncementId = 0,
   });
 
   final GameStateDto dto;
@@ -43,6 +46,9 @@ class GameSession {
   final String? finalEliminatedRole;
   final int? specialtyAnnouncementSeat;
   final String? specialtyAnnouncement;
+  final int? drawAnnouncementSeat;
+  final int? drawAnnouncementCount;
+  final int drawAnnouncementId;
 
   GameSession copyWith({
     GameStateDto? dto,
@@ -58,6 +64,9 @@ class GameSession {
     String? finalEliminatedRole,
     int? specialtyAnnouncementSeat,
     String? specialtyAnnouncement,
+    int? drawAnnouncementSeat,
+    int? drawAnnouncementCount,
+    int? drawAnnouncementId,
     bool clearFinalElimination = false,
   }) {
     return GameSession(
@@ -80,6 +89,10 @@ class GameSession {
           specialtyAnnouncementSeat ?? this.specialtyAnnouncementSeat,
       specialtyAnnouncement:
           specialtyAnnouncement ?? this.specialtyAnnouncement,
+      drawAnnouncementSeat: drawAnnouncementSeat ?? this.drawAnnouncementSeat,
+      drawAnnouncementCount:
+          drawAnnouncementCount ?? this.drawAnnouncementCount,
+      drawAnnouncementId: drawAnnouncementId ?? this.drawAnnouncementId,
     );
   }
 

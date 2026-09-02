@@ -21,6 +21,7 @@ import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
 import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 import 'package:knowoff_client/presentation/widgets/ready_status.dart';
+import 'package:knowoff_client/presentation/widgets/draw_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
@@ -208,6 +209,19 @@ void main() {
     );
     expect(find.text('Round 1'), findsOneWidget);
     expect(find.text('A dog on a skateboard'), findsOneWidget);
+  });
+
+  testWidgets('RoundScreen announces who drew cards', (tester) async {
+    final session = _sampleSession().copyWith(
+      drawAnnouncementSeat: 1,
+      drawAnnouncementCount: 2,
+      drawAnnouncementId: 1,
+    );
+    await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
+    await tester.pump();
+
+    expect(find.byType(DrawAnnouncement), findsOneWidget);
+    expect(find.text('Beta drew 2 cards'), findsOneWidget);
   });
 
   testWidgets(
