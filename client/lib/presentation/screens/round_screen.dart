@@ -23,6 +23,7 @@ import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
 import '../widgets/dev_tools_overlay.dart';
+import '../widgets/draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
@@ -174,6 +175,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final dto = session.dto;
     final announcementPlayer = session.playerBySeat(
       session.specialtyAnnouncementSeat ?? -1,
+    );
+    final drawAnnouncementPlayer = session.playerBySeat(
+      session.drawAnnouncementSeat ?? -1,
     );
     final notifier = ref.read(gameSessionProvider.notifier);
 
@@ -360,6 +364,16 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   ? seatDisplayName(announcementPlayer)
                   : 'P${session.specialtyAnnouncementSeat}',
               specialty: session.specialtyAnnouncement!,
+            ),
+          if (session.drawAnnouncementCount != null &&
+              session.drawAnnouncementSeat != null)
+            DrawAnnouncement(
+              key: ValueKey<int>(session.drawAnnouncementId),
+              playerName: drawAnnouncementPlayer != null
+                  ? seatDisplayName(drawAnnouncementPlayer)
+                  : 'P${session.drawAnnouncementSeat}',
+              count: session.drawAnnouncementCount!,
+              announcementId: session.drawAnnouncementId,
             ),
         ],
       ),

@@ -16,4 +16,5 @@ All notable changes to Knowoff are documented in this file.
 - Drawing from the pile now updates the player's hand immediately without rendering the draw as a played card.
 - Drawing a card now cancels any earlier preselected or queued auto-play card.
 - Drawing from the pile now keeps the turn active so the player can play a card afterward.
+- Every pile draw now triggers a dramatic, playful announcement naming the player and card count.
 - Discussion now shows a 20-second window in four-player rooms, and every Ready tap is publicly listed by player.
