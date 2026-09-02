@@ -264,21 +264,20 @@ func run() error {
 	go func() { errCh <- adminServer.ListenAndServe() }()
 	go func() { errCh <- metricsServer.ListenAndServe() }()
 
-	// Load media pack asynchronously in background; servers are now listening
-	// for clients to connect. This keeps initial startup fast even if the media
-	// pack is large or I/O is slow.
+	// A ready server must be able to create a room immediately. Loading this
+	// synchronously keeps /readyz false until gameplay media is available.
 	if cfg.Media.LocalBundlePath != "" {
-		go func() {
-			pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
-			if err != nil {
-				logger.Error("failed to load media pack", "path", cfg.Media.LocalBundlePath, "error", err)
-			} else {
-				mediaManager.Load(pack)
-				logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
-			}
-		}()
+		pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
+		if err != nil {
+			return fmt.Errorf("load media pack %q: %w", cfg.Media.LocalBundlePath, err)
+		}
+		mediaManager.Load(pack)
+		logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
 	}
 
+	if mediaManager.Active() == nil {
+		return fmt.Errorf("no media pack configured")
+	}
 	transport.SetReady(true)
 	runCtx, runCancel := context.WithCancel(context.Background())
 	defer runCancel()

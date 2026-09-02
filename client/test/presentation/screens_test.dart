@@ -427,7 +427,7 @@ void main() {
       dto: base.dto.copyWith(
         result: const VoteResultDto(
           eliminatedSeat: 1,
-          role: null,
+          role: 'nower',
           tally: {'1': 3},
           votes: {'0': 1, '2': 1, '3': 1},
         ),
@@ -441,6 +441,8 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Beta is out'), findsWidgets);
+    expect(find.text('PITY. A NOWER TOOK THE FALL.'), findsOneWidget);
+    expect(find.text('Nower'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 3));
     expect(
@@ -503,6 +505,8 @@ void main() {
       ),
     );
     expect(find.text('OOPS: NOWER TOOK THE FALL'), findsOneWidget);
+    expect(find.text('PITY. THEY WERE A NOWER.'), findsOneWidget);
+    expect(find.byKey(const Key('elimination-fall')), findsOneWidget);
   });
 
   testWidgets('KnowoffScreen sends Ready to resolve a ballot early',

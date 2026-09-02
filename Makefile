@@ -55,8 +55,9 @@ track.list:
 codeg:
 	@$(XOPS)/codegraph_ops.py update
 
-## server.rebuild    Rebuild and recreate the server container
+## server.rebuild    Stop the current server, then rebuild and recreate it
 server.rebuild:
+	@cd infra/compose && docker compose --profile core rm --stop --force server
 	@cd infra/compose && docker compose --profile core build server migrate
 	@cd infra/compose && docker compose --profile core up -d --force-recreate server
 
