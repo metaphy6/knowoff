@@ -305,11 +305,13 @@ class _ResultCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(
-                  player == null
+                EliminationAnnouncement(
+                  key: const Key('elimination-announcement'),
+                  label: player == null
                       ? l10n.resultMissLabel
                       : l10n.resultEliminated(seatDisplayName(player)),
-                  style: koDisplayStyle(size: 30, height: 1.05),
+                  isBot: player?.bot ?? false,
+                  eliminated: player != null,
                 ),
                 if (result.role != null) ...<Widget>[
                   const SizedBox(height: KoSpace.md),
@@ -362,6 +364,95 @@ class _ResultCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A one-shot, transform-only exit stamp for the result window. The static
+/// child avoids rebuilding text, doodles, and decoration on each frame.
+class EliminationAnnouncement extends StatefulWidget {
+  const EliminationAnnouncement({
+    required this.label,
+    required this.isBot,
+    required this.eliminated,
+    super.key,
+  });
+
+  final String label;
+  final bool isBot;
+  final bool eliminated;
+
+  @override
+  State<EliminationAnnouncement> createState() =>
+      _EliminationAnnouncementState();
+}
+
+class _EliminationAnnouncementState extends State<EliminationAnnouncement>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  )..forward();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      label: widget.label,
+      child: AnimatedBuilder(
+        animation: _controller,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(KoSpace.md),
+          decoration: BoxDecoration(
+            color: KoColors.pink,
+            border: Border.all(width: KoBorders.thick, color: KoColors.ink),
+            borderRadius: BorderRadius.circular(KoRadii.well),
+            boxShadow: const <BoxShadow>[KoShadows.lg],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              DoodleIcon(
+                widget.eliminated
+                    ? (widget.isBot ? Doodle.robot : Doodle.mask)
+                    : Doodle.staticBurst,
+                size: 40,
+              ),
+              const SizedBox(width: KoSpace.md),
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: koDisplayStyle(size: 32, height: 1.0),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(width: KoSpace.md),
+              const DoodleIcon(Doodle.cross, size: 36),
+            ],
+          ),
+        ),
+        builder: (context, child) {
+          final entrance = Curves.elasticOut.transform(_controller.value);
+          final exitKick = Curves.easeOut.transform(
+            (_controller.value * 2).clamp(0.0, 1.0),
+          );
+          return Transform.translate(
+            offset: Offset(48 * (1 - entrance), -8 * exitKick),
+            child: Transform.rotate(
+              angle: KoTilt.loud * (1 - entrance),
+              child: Transform.scale(
+                  scale: 0.72 + (0.28 * entrance), child: child),
+            ),
+          );
+        },
       ),
     );
   }
