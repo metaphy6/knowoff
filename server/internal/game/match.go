@@ -1262,6 +1262,10 @@ func (m *Match) finalizeKnowoffLocked() {
 
 	if m.eliminatedThisRound >= 0 && !m.eliminated[m.eliminatedThisRound] {
 		m.eliminate(m.eliminatedThisRound)
+		m.bcast.Broadcast(transport.NewEvent(transport.EventEliminationFinalized, map[string]any{
+			"eliminated_seat": m.eliminatedThisRound,
+			"role":            string(m.roles[m.eliminatedThisRound]),
+		}), -1)
 	}
 
 	// A Knowoff resolution always consumes one vote, even on a miss.
