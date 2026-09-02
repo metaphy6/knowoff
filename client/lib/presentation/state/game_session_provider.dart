@@ -135,6 +135,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         // the previous round's window would finalize this one instantly.
         _setDto(state.dto.copyWith(resultReady: false));
         break;
+      case 'elimination_finalized':
+        final seat = payload['eliminated_seat'] as int?;
+        final role = payload['role'] as String?;
+        if (seat != null && role != null) {
+          state = state.copyWith(
+            finalEliminatedSeat: seat,
+            finalEliminatedRole: role,
+          );
+        }
+        break;
       case 'vote_nullified':
         // A Revote cancels the shown result outright: it reveals nobody and
         // eliminates nobody (Rules §5).
@@ -368,6 +378,8 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         resultReady: false,
         clearLiveBallots: true,
       );
+    } else if (phase != 'result') {
+      dto = dto.copyWith(clearResult: true, resultReady: false);
     }
     dto = window == null || window <= 0
         ? dto.copyWith(clearTurnDeadline: true, phaseWindow: 0)

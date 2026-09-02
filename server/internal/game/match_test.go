@@ -1044,6 +1044,44 @@ func TestMatch_KnowoffResolved_CarriesTheClientResultShape(t *testing.T) {
 	}
 }
 
+func TestMatch_FinalizedElimination_RevealsRoleAfterRevoteWindow(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(
+			transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	for _, seat := range m.activeSeats() {
+		_ = m.HandleIntent(seat, transport.NewIntent(transport.IntentReady, nil))
+	}
+	target := m.activeSeats()[0]
+	for _, seat := range m.activeSeats() {
+		if seat != target {
+			_ = m.HandleIntent(seat, transport.NewIntent(
+				transport.IntentCastVote, map[string]any{"target_seat": float64(target)}))
+		}
+	}
+	m.resolveBallot()
+	bcast.clear()
+	m.finalizeKnowoff()
+
+	events := bcast.findEvents(0, transport.EventEliminationFinalized)
+	if len(events) != 1 {
+		t.Fatalf("expected one finalized elimination event, got %d", len(events))
+	}
+	if events[0].Payload["eliminated_seat"] != target {
+		t.Fatalf("expected eliminated seat %d, got %v", target, events[0].Payload)
+	}
+	if events[0].Payload["role"] != string(m.roles[target]) {
+		t.Fatalf("expected finalized role %q, got %v", m.roles[target], events[0].Payload)
+	}
+}
+
 func TestMatch_PhaseStarted_AlwaysCarriesVoteBudget(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {

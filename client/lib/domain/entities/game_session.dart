@@ -17,6 +17,8 @@ class GameSession {
     this.reconnectAttempts = 0,
     this.moveLocked = false,
     this.frozen = false,
+    this.finalEliminatedSeat,
+    this.finalEliminatedRole,
   });
 
   final GameStateDto dto;
@@ -35,6 +37,8 @@ class GameSession {
   /// Developer-only: while true, incoming server events are buffered instead
   /// of applied, so the screen stops advancing for UI/UX inspection.
   final bool frozen;
+  final int? finalEliminatedSeat;
+  final String? finalEliminatedRole;
 
   GameSession copyWith({
     GameStateDto? dto,
@@ -46,6 +50,9 @@ class GameSession {
     bool clearSelectedCard = false,
     bool? moveLocked,
     bool? frozen,
+    int? finalEliminatedSeat,
+    String? finalEliminatedRole,
+    bool clearFinalElimination = false,
   }) {
     return GameSession(
       dto: dto ?? this.dto,
@@ -57,6 +64,12 @@ class GameSession {
       reconnectAttempts: reconnectAttempts ?? this.reconnectAttempts,
       moveLocked: moveLocked ?? this.moveLocked,
       frozen: frozen ?? this.frozen,
+      finalEliminatedSeat: clearFinalElimination
+          ? null
+          : (finalEliminatedSeat ?? this.finalEliminatedSeat),
+      finalEliminatedRole: clearFinalElimination
+          ? null
+          : (finalEliminatedRole ?? this.finalEliminatedRole),
     );
   }
 
