@@ -79,6 +79,21 @@ void main() {
       expect(find.text('Delta'), findsNothing);
       await tester.tap(find.text('Alpha'));
       expect(votes, equals(0));
+
+      await tester.pumpWidget(
+        _wrap(
+          VoteBoard(
+            players: _players,
+            localSeat: 0,
+            votedSeat: -1,
+            ballots: const {'2': 0},
+            onVote: (_) => votes++,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.text('Alpha'));
+      expect(votes, equals(0));
       // Blind ballot: no counts anywhere until the window closes.
       expect(find.text('0'), findsNothing);
     });

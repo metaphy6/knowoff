@@ -38,7 +38,7 @@ See the phase-by-phase snapshot in
 
 ```bash
 make server.build    # build the Go server
-make server.rebuild  # rebuild and recreate the server container
+make server.rebuild  # stop, rebuild, and recreate the server container
 python3 xops/test/tests-lints.py  # all tests and lint checks
 make up              # start the local Docker Compose stack
 make down            # stop the local stack

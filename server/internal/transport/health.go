@@ -51,6 +51,11 @@ func ReadyzHandler(deps Deps) http.HandlerFunc {
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 			return
 		}
+		if deps.Media == nil || deps.Media.Active() == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
+			return
+		}
 
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()

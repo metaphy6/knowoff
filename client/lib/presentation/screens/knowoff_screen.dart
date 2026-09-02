@@ -320,7 +320,11 @@ class _ResultCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 Text(
-                  l10n.resultWindowTitle,
+                  result.role == 'nower'
+                      ? 'PITY. A NOWER TOOK THE FALL.'
+                      : result.role == 'donower'
+                          ? 'MASK OFF. DONOWER CAUGHT.'
+                          : l10n.resultWindowTitle,
                   style: koDisplayStyle(size: 30, height: 1.05),
                 ),
                 if (result.role != null) ...<Widget>[
@@ -463,6 +467,14 @@ class _EliminationAnnouncementOverlayState
                     style: Theme.of(context).textTheme.titleLarge,
                     textAlign: TextAlign.center,
                   ),
+                  if (widget.role == 'nower') ...<Widget>[
+                    const SizedBox(height: KoSpace.sm),
+                    Text(
+                      'PITY. THEY WERE A NOWER.',
+                      style: koDisplayStyle(size: 24, height: 1.0),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                   const SizedBox(height: KoSpace.sm),
                   Text(
                     widget.label,
@@ -473,14 +485,20 @@ class _EliminationAnnouncementOverlayState
               ),
             ),
             builder: (context, child) {
-              final entrance = Curves.elasticOut.transform(_controller.value);
+              final entrance = Curves.elasticOut.transform(
+                const Interval(0, 0.18).transform(_controller.value),
+              );
+              final fall = Curves.easeInCubic.transform(
+                const Interval(0.78, 1).transform(_controller.value),
+              );
               return Center(
                 child: Transform.translate(
-                  offset: Offset(0, 72 * (1 - entrance)),
+                  key: const Key('elimination-fall'),
+                  offset: Offset(0, (72 * (1 - entrance)) + (760 * fall)),
                   child: Transform.rotate(
-                    angle: KoTilt.loud * (1 - entrance),
+                    angle: (KoTilt.loud * (1 - entrance)) + (0.55 * fall),
                     child: Transform.scale(
-                      scale: 0.55 + (0.45 * entrance),
+                      scale: (0.55 + (0.45 * entrance)) * (1 - (0.35 * fall)),
                       child: child,
                     ),
                   ),
