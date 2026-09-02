@@ -6,50 +6,69 @@ installed CLI when available and falls back to npx without invoking a shell.
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from typing import List
 
-from _common import REPO_ROOT, err, have, ok, run, step, warn
+from _common import REPO_ROOT, err, have, ok, step, warn
 
 
 CODEGRAPH_DB = REPO_ROOT / ".codegraph" / "codegraph.db"
 CODEGRAPH_PACKAGE = "@colbymchenry/codegraph"
 
 
+def _is_noop_sync(output: str) -> bool:
+    return "already up to date" in output.casefold()
+
+
 def _action() -> str:
     return "sync" if CODEGRAPH_DB.is_file() else "init"
 
 
-def _run_codegraph(action: str) -> int:
+def _run(command: List[str]) -> tuple[int, str]:
+    process = subprocess.run(
+        command,
+        check=False,
+        cwd=REPO_ROOT,
+        stderr=subprocess.STDOUT,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    sys.stdout.write(process.stdout)
+    sys.stdout.flush()
+    return process.returncode, process.stdout
+
+
+def _run_codegraph(action: str) -> tuple[int, str]:
     if have("codegraph"):
         step(f"CodeGraph: {action} local index with codegraph")
-        return run(["codegraph", action, "."], check=False, cwd=REPO_ROOT)
+        return _run(["codegraph", action, "."])
 
     warn("CodeGraph: CLI not found; trying npx fallback")
     if not have("npx"):
         err("CodeGraph: neither codegraph nor npx is available")
-        return 1
+        return 1, ""
 
     step(f"CodeGraph: {action} local index with npx")
-    return run(["npx", "-y", CODEGRAPH_PACKAGE, action, "."], check=False, cwd=REPO_ROOT)
+    return _run(["npx", "-y", CODEGRAPH_PACKAGE, action, "."])
 
 
 def cmd_update(_args: List[str]) -> None:
     step("make codeg")
     action = _action()
-    result = _run_codegraph(action)
+    result, output = _run_codegraph(action)
 
     if result != 0 and have("codegraph") and have("npx"):
         warn("CodeGraph: installed CLI failed; trying npx fallback")
-        result = run(
-            ["npx", "-y", CODEGRAPH_PACKAGE, action, "."],
-            check=False,
-            cwd=REPO_ROOT,
-        )
+        result, output = _run(["npx", "-y", CODEGRAPH_PACKAGE, action, "."])
 
     if result != 0:
         err(f"CodeGraph: {action} failed (exit code {result})")
         sys.exit(result)
+
+    if action == "sync" and _is_noop_sync(output):
+        ok("CodeGraph: index already up to date")
+        return
 
     ok("CodeGraph: index updated successfully")
 
