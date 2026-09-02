@@ -251,6 +251,13 @@ void main() {
 
     expect(notifier.state.finalEliminatedSeat, equals(1));
     expect(notifier.state.finalEliminatedRole, equals('donower'));
+
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+
+    expect(notifier.state.dto.phase, equals('play'));
+    expect(notifier.state.finalEliminatedSeat, equals(1));
+    expect(notifier.state.finalEliminatedRole, equals('donower'));
   });
 
   test('a phase window starts a display-only countdown', () async {

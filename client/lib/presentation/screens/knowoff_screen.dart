@@ -1,15 +1,14 @@
-import '../widgets/ko_body.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/game_state_dto.dart';
 import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
+import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
@@ -56,21 +55,19 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
     final result = dto.result;
     final isRunoff = dto.phase == 'runoff';
     final inResultWindow = dto.phase == 'result' || result != null;
-    PlayerDto? announcedPlayer;
-    if (result != null) {
-      for (final player in dto.players) {
-        if (player.seat == result.eliminatedSeat) {
-          announcedPlayer = player;
-          break;
-        }
-      }
-    }
+    final canRevote = session.isNower && dto.hand.specialty == 'revote';
+    final announcedPlayer =
+        result == null ? null : session.playerBySeat(result.eliminatedSeat);
 
     final window = dto.phaseWindow;
     final deadline = dto.turnDeadline;
     final remaining = deadline == null
         ? 0
         : deadline.difference(DateTime.now()).inSeconds.clamp(0, 999);
+
+    final eliminatedLabel = announcedPlayer == null
+        ? l10n.resultMissLabel
+        : l10n.resultEliminated(seatDisplayName(announcedPlayer));
 
     return Stack(
       children: <Widget>[
@@ -101,123 +98,184 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
               ),
             ],
           ),
-          body: KoBody(
-            children: <Widget>[
-              if (inResultWindow && result != null) ...<Widget>[
-                _ResultCard(
-                  result: result,
-                  canRevote: session.isNower && dto.hand.specialty == 'revote',
-                  onRevote: () => notifier.useSpecialty('revote'),
-                ),
-                const SizedBox(height: KoSpace.lg),
-                KoContainer(
-                  backgroundColor:
-                      dto.resultReady ? KoColors.lime : KoColors.whiteWell,
-                  padding: const EdgeInsets.all(KoSpace.lg),
-                  child: Row(
+          body: inResultWindow && result != null
+              ? KoBody.single(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Text(l10n.readyLabel, style: text.headlineSmall),
-                            Text(l10n.resultReadyHint, style: text.bodySmall),
-                          ],
+                      if (result.role != null)
+                        _ResultCard(
+                          role: result.role!,
+                          eliminatedLabel: eliminatedLabel,
+                        )
+                      else
+                        _PendingEliminationReveal(
+                          label: eliminatedLabel,
+                          isBot: false,
+                          eliminated: false,
                         ),
-                      ),
-                      const SizedBox(width: KoSpace.md),
-                      ReadyButton(
-                        ready: dto.resultReady,
-                        onReady: session.canReadyResult ? notifier.ready : null,
-                      ),
+                      if (canRevote) ...<Widget>[
+                        const SizedBox(height: KoSpace.lg),
+                        KoButton(
+                          label: l10n.specialtyRevoteAction,
+                          subLabel: l10n.revoteHint,
+                          expand: true,
+                          backgroundColor: KoColors.violet,
+                          icon: const DoodleIcon(Doodle.sparkle, size: 24),
+                          onTap: () => notifier.useSpecialty('revote'),
+                        ),
+                      ],
                     ],
                   ),
-                ),
-              ] else
-                _BallotNotice(
-                  locked: dto.voteTarget >= 0,
-                  eliminated: session.amEliminated,
-                ),
-              if (!inResultWindow && !session.amEliminated) ...<Widget>[
-                const SizedBox(height: KoSpace.lg),
-                KoContainer(
-                  backgroundColor:
-                      dto.ballotReady ? KoColors.lime : KoColors.whiteWell,
-                  padding: const EdgeInsets.all(KoSpace.lg),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Text(l10n.readyLabel, style: text.headlineSmall),
-                            Text(l10n.ballotReadyHint, style: text.bodySmall),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: KoSpace.md),
-                      ReadyButton(
+                )
+              : KoBody(
+                  children: <Widget>[
+                    _BallotNotice(
+                      locked: dto.voteTarget >= 0,
+                      eliminated: session.amEliminated,
+                    ),
+                    if (!session.amEliminated) ...<Widget>[
+                      const SizedBox(height: KoSpace.lg),
+                      _ReadyPanel(
                         ready: dto.ballotReady,
+                        hint: l10n.ballotReadyHint,
                         onReady: session.canReadyBallot ? notifier.ready : null,
                       ),
                     ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: KoSpace.lg),
-              VoteBoard(
-                players: dto.players,
-                localSeat: session.seat,
-                votedSeat: dto.voteTarget,
-                tally: inResultWindow ? result?.tally : null,
-                ballots: inResultWindow ? result?.votes : dto.liveBallots,
-                eliminatedSeat:
-                    inResultWindow ? (result?.eliminatedSeat ?? -1) : -1,
-                onVote: session.amEliminated || inResultWindow
-                    ? null
-                    : (seat) => notifier.castVote(seat),
-              ),
-              if (session.amEliminated) ...<Widget>[
-                const SizedBox(height: KoSpace.lg),
-                KoContainer(
-                  backgroundColor: KoColors.surface,
-                  padding: const EdgeInsets.all(KoSpace.lg),
-                  child: Row(
-                    children: <Widget>[
-                      const DoodleIcon(Doodle.cross, size: 26),
-                      const SizedBox(width: KoSpace.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
+                    const SizedBox(height: KoSpace.lg),
+                    VoteBoard(
+                      players: dto.players,
+                      localSeat: session.seat,
+                      votedSeat: dto.voteTarget,
+                      ballots: dto.liveBallots,
+                      onVote: session.amEliminated
+                          ? null
+                          : (seat) => notifier.castVote(seat),
+                    ),
+                    if (session.amEliminated) ...<Widget>[
+                      const SizedBox(height: KoSpace.lg),
+                      KoContainer(
+                        backgroundColor: KoColors.surface,
+                        padding: const EdgeInsets.all(KoSpace.lg),
+                        child: Row(
                           children: <Widget>[
-                            Text(l10n.spectatingLabel, style: text.titleLarge),
-                            Text(l10n.spectatingHint, style: text.bodySmall),
+                            const DoodleIcon(Doodle.cross, size: 26),
+                            const SizedBox(width: KoSpace.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(l10n.spectatingLabel,
+                                      style: text.titleLarge),
+                                  Text(l10n.spectatingHint,
+                                      style: text.bodySmall),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-              ],
-            ],
-          ),
         ),
         if (inResultWindow && result != null)
           EliminationAnnouncementOverlay(
             key: ValueKey<String>(
               'elimination-announcement-${result.eliminatedSeat}-${dto.round}',
             ),
-            label: announcedPlayer == null
-                ? l10n.resultMissLabel
-                : l10n.resultEliminated(seatDisplayName(announcedPlayer)),
+            label: eliminatedLabel,
             isBot: announcedPlayer?.bot ?? false,
             eliminated: announcedPlayer != null,
-            role: null,
           ),
       ],
+    );
+  }
+}
+
+class _PendingEliminationReveal extends StatelessWidget {
+  const _PendingEliminationReveal({
+    required this.label,
+    required this.isBot,
+    required this.eliminated,
+  });
+
+  final String label;
+  final bool isBot;
+  final bool eliminated;
+
+  @override
+  Widget build(BuildContext context) {
+    return KoContainer(
+      key: const Key('pending-elimination-reveal'),
+      width: 560,
+      backgroundColor: KoColors.pink,
+      borderWidth: KoBorders.thick,
+      shadow: KoShadows.lg,
+      padding: const EdgeInsets.all(KoSpace.xxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          const DoodleIcon(Doodle.staticBurst, size: 42),
+          DoodleIcon(
+            eliminated
+                ? (isBot ? Doodle.robot : Doodle.mask)
+                : Doodle.staticBurst,
+            size: 92,
+          ),
+          const SizedBox(height: KoSpace.lg),
+          Text(
+            eliminated ? 'THE TABLE HAS SPOKEN' : 'A CLEAN ESCAPE',
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: KoSpace.sm),
+          Text(
+            label,
+            style: koDisplayStyle(size: 40, height: 1.0),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReadyPanel extends StatelessWidget {
+  const _ReadyPanel({
+    required this.ready,
+    required this.hint,
+    required this.onReady,
+  });
+
+  final bool ready;
+  final String hint;
+  final VoidCallback? onReady;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final text = Theme.of(context).textTheme;
+    return KoContainer(
+      backgroundColor: ready ? KoColors.lime : KoColors.whiteWell,
+      padding: const EdgeInsets.all(KoSpace.lg),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(l10n.readyLabel, style: text.headlineSmall),
+                Text(hint, style: text.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: KoSpace.md),
+          ReadyButton(ready: ready, onReady: onReady),
+        ],
+      ),
     );
   }
 }
@@ -263,28 +321,26 @@ class _BallotNotice extends StatelessWidget {
   }
 }
 
-/// The result window: who went out, which role they held, and — for a Nower
-/// holding Revote — the one control that can cancel it before it finalizes.
 class _ResultCard extends StatelessWidget {
   const _ResultCard({
-    required this.result,
-    required this.canRevote,
-    required this.onRevote,
+    required this.role,
+    required this.eliminatedLabel,
   });
 
-  final VoteResultDto result;
-  final bool canRevote;
-  final VoidCallback onRevote;
+  final String role;
+  final String eliminatedLabel;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final text = Theme.of(context).textTheme;
-    final caught = result.role == 'donower';
+    final caught = role == 'donower';
+    final roleDoodle = caught ? Doodle.mask : Doodle.cloud;
+    final verdictDoodle = caught ? Doodle.check : Doodle.cross;
 
     return KoContainer(
       borderWidth: KoBorders.thick,
-      shadow: caught ? KoShadows.limeGlow : KoShadows.lg,
+      shadow: caught ? KoShadows.limeGlow : KoShadows.pinkGlow,
       padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -319,61 +375,105 @@ class _ResultCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(
-                  result.role == 'nower'
-                      ? 'PITY. A NOWER TOOK THE FALL.'
-                      : result.role == 'donower'
-                          ? 'MASK OFF. DONOWER CAUGHT.'
-                          : l10n.resultWindowTitle,
-                  style: koDisplayStyle(size: 30, height: 1.05),
-                ),
-                if (result.role != null) ...<Widget>[
-                  const SizedBox(height: KoSpace.md),
-                  Row(
+                Container(
+                  key: Key('result-poster-$role'),
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(KoSpace.lg),
+                  decoration: BoxDecoration(
+                    color: caught ? KoColors.lime : KoColors.pink,
+                    border: Border.all(
+                      width: KoBorders.regular,
+                      color: KoColors.ink,
+                    ),
+                    borderRadius: BorderRadius.circular(KoRadii.well),
+                    boxShadow: const <BoxShadow>[KoShadows.md],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: <Widget>[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: KoSpace.md,
-                          vertical: KoSpace.sm,
+                      Positioned(
+                        left: 0,
+                        top: 2,
+                        child: Transform.rotate(
+                          angle: KoTilt.loud,
+                          child: DoodleIcon(verdictDoodle, size: 36),
                         ),
-                        decoration: BoxDecoration(
-                          color: caught ? KoColors.lime : KoColors.surface,
-                          border: Border.all(
-                            width: KoBorders.regular,
-                            color: KoColors.ink,
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 2,
+                        child: Transform.rotate(
+                          angle: -KoTilt.loud,
+                          child: DoodleIcon(verdictDoodle, size: 30),
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          SizedBox(
+                            width: 108,
+                            height: 96,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: <Widget>[
+                                const DoodleIcon(
+                                  Doodle.staticBurst,
+                                  size: 104,
+                                ),
+                                DoodleIcon(roleDoodle, size: 62),
+                              ],
+                            ),
                           ),
-                          borderRadius: BorderRadius.circular(KoRadii.chip),
-                          boxShadow: const <BoxShadow>[KoShadows.sm],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            DoodleIcon(
-                              caught ? Doodle.check : Doodle.cross,
-                              size: 18,
+                          const SizedBox(height: KoSpace.sm),
+                          Text(
+                            caught ? 'CAUGHT BLUFFING!' : 'WRONG SUSPECT!',
+                            style: koDisplayStyle(size: 34, height: 1.0),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: KoSpace.xs),
+                          Text(
+                            caught
+                                ? 'DONOWER UNMASKED.'
+                                : 'A NOWER TOOK THE FALL.',
+                            style: koDisplayStyle(size: 23, height: 1.0),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: KoSpace.sm),
+                          Text(
+                            eliminatedLabel,
+                            style: text.titleLarge,
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: KoSpace.md),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: KoSpace.md,
+                              vertical: KoSpace.sm,
                             ),
-                            const SizedBox(width: KoSpace.sm),
-                            Text(
-                              caught ? l10n.roleDonower : l10n.roleNower,
-                              style: text.titleMedium,
+                            decoration: BoxDecoration(
+                              color: KoColors.surface,
+                              border: Border.all(
+                                width: KoBorders.regular,
+                                color: KoColors.ink,
+                              ),
+                              borderRadius: BorderRadius.circular(KoRadii.chip),
+                              boxShadow: const <BoxShadow>[KoShadows.sm],
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                DoodleIcon(verdictDoodle, size: 18),
+                                const SizedBox(width: KoSpace.sm),
+                                Text(caught ? l10n.roleDonower : l10n.roleNower,
+                                    style: text.titleMedium),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-                if (canRevote) ...<Widget>[
-                  const SizedBox(height: KoSpace.lg),
-                  KoButton(
-                    label: l10n.specialtyRevoteAction,
-                    subLabel: l10n.revoteHint,
-                    expand: true,
-                    backgroundColor: KoColors.violet,
-                    icon: const DoodleIcon(Doodle.sparkle, size: 24),
-                    onTap: onRevote,
-                  ),
-                ],
+                ),
               ],
             ),
           ),
@@ -383,21 +483,17 @@ class _ResultCard extends StatelessWidget {
   }
 }
 
-/// A one-shot, transform-only exit stamp for the result window. The static
-/// child avoids rebuilding text, doodles, and decoration on each frame.
 class EliminationAnnouncementOverlay extends StatefulWidget {
   const EliminationAnnouncementOverlay({
     required this.label,
     required this.isBot,
     required this.eliminated,
-    required this.role,
     super.key,
   });
 
   final String label;
   final bool isBot;
   final bool eliminated;
-  final String? role;
 
   @override
   State<EliminationAnnouncementOverlay> createState() =>
@@ -427,85 +523,63 @@ class _EliminationAnnouncementOverlayState
     return Semantics(
       liveRegion: true,
       label: widget.label,
-      child: GestureDetector(
-        onTap: () {},
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          key: const Key('elimination-announcement-overlay'),
-          color: KoColors.canvasDeep,
-          child: AnimatedBuilder(
-            animation: _controller,
-            child: KoContainer(
-              width: 360,
-              backgroundColor:
-                  widget.role == 'donower' ? KoColors.lime : KoColors.pink,
-              borderWidth: KoBorders.thick,
-              shadow: KoShadows.lg,
-              padding: const EdgeInsets.all(KoSpace.xl),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const DoodleIcon(Doodle.staticBurst, size: 32),
-                  const SizedBox(height: KoSpace.md),
-                  DoodleIcon(
-                    widget.role == 'nower'
-                        ? Doodle.cloud
-                        : widget.eliminated
-                            ? (widget.isBot ? Doodle.robot : Doodle.mask)
-                            : Doodle.staticBurst,
-                    size: 72,
-                  ),
-                  const SizedBox(height: KoSpace.lg),
-                  Text(
-                    widget.role == 'donower'
-                        ? 'MASK OFF: DONOWER CAUGHT'
-                        : widget.role == 'nower'
-                            ? 'OOPS: NOWER TOOK THE FALL'
-                            : widget.eliminated
-                                ? 'THE TABLE HAS SPOKEN'
-                                : 'A CLEAN ESCAPE',
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textAlign: TextAlign.center,
-                  ),
-                  if (widget.role == 'nower') ...<Widget>[
-                    const SizedBox(height: KoSpace.sm),
-                    Text(
-                      'PITY. THEY WERE A NOWER.',
-                      style: koDisplayStyle(size: 24, height: 1.0),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                  const SizedBox(height: KoSpace.sm),
-                  Text(
-                    widget.label,
-                    style: koDisplayStyle(size: 36, height: 1.0),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+      child: Container(
+        key: const Key('elimination-announcement-overlay'),
+        color: KoColors.canvasDeep,
+        child: AnimatedBuilder(
+          animation: _controller,
+          child: KoContainer(
+            width: 420,
+            backgroundColor: KoColors.pink,
+            borderWidth: KoBorders.thick,
+            shadow: KoShadows.lg,
+            padding: const EdgeInsets.all(KoSpace.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const DoodleIcon(Doodle.staticBurst, size: 42),
+                DoodleIcon(
+                  widget.eliminated
+                      ? (widget.isBot ? Doodle.robot : Doodle.mask)
+                      : Doodle.staticBurst,
+                  size: 92,
+                ),
+                const SizedBox(height: KoSpace.lg),
+                Text(
+                  widget.eliminated ? 'THE TABLE HAS SPOKEN' : 'A CLEAN ESCAPE',
+                  style: Theme.of(context).textTheme.titleLarge,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: KoSpace.sm),
+                Text(
+                  widget.label,
+                  style: koDisplayStyle(size: 40, height: 1.0),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            builder: (context, child) {
-              final entrance = Curves.elasticOut.transform(
-                const Interval(0, 0.18).transform(_controller.value),
-              );
-              final fall = Curves.easeInCubic.transform(
-                const Interval(0.78, 1).transform(_controller.value),
-              );
-              return Center(
-                child: Transform.translate(
-                  key: const Key('elimination-fall'),
-                  offset: Offset(0, (72 * (1 - entrance)) + (760 * fall)),
-                  child: Transform.rotate(
-                    angle: (KoTilt.loud * (1 - entrance)) + (0.55 * fall),
-                    child: Transform.scale(
-                      scale: (0.55 + (0.45 * entrance)) * (1 - (0.35 * fall)),
-                      child: child,
-                    ),
+          ),
+          builder: (context, child) {
+            final entrance = Curves.elasticOut.transform(
+              const Interval(0, 0.18).transform(_controller.value),
+            );
+            final fall = Curves.easeInCubic.transform(
+              const Interval(0.78, 1).transform(_controller.value),
+            );
+            return Center(
+              child: Transform.translate(
+                key: const Key('elimination-fall'),
+                offset: Offset(0, (72 * (1 - entrance)) + (760 * fall)),
+                child: Transform.rotate(
+                  angle: (KoTilt.loud * (1 - entrance)) + (0.55 * fall),
+                  child: Transform.scale(
+                    scale: (0.55 + (0.45 * entrance)) * (1 - (0.35 * fall)),
+                    child: child,
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );

@@ -7,7 +7,9 @@ import 'package:knowoff_client/core/network/game_transport.dart' as gt;
 import 'package:knowoff_client/data/models/game_state_dto.dart';
 import 'package:knowoff_client/domain/entities/game_session.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
+import 'package:knowoff_client/presentation/icons/doodles.dart';
 import 'package:knowoff_client/presentation/screens/discussion_screen.dart';
+import 'package:knowoff_client/presentation/screens/game_shell.dart';
 import 'package:knowoff_client/presentation/screens/knowoff_screen.dart';
 import 'package:knowoff_client/presentation/screens/lobby_screen.dart';
 import 'package:knowoff_client/presentation/screens/queue_screen.dart';
@@ -18,6 +20,7 @@ import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
 import 'package:knowoff_client/presentation/widgets/ready_button.dart';
+import 'package:knowoff_client/presentation/widgets/vote_board.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
   return GameSession(
@@ -420,7 +423,7 @@ void main() {
   });
 
   testWidgets(
-      'KnowoffScreen announces the eliminated player in the result window',
+      'KnowoffScreen falls the eliminated player into the embedded result card',
       (tester) async {
     final base = _sampleSession(phase: 'result');
     final session = base.copyWith(
@@ -440,9 +443,12 @@ void main() {
       find.byKey(const Key('elimination-announcement-overlay')),
       findsOneWidget,
     );
+    expect(find.byKey(const Key('elimination-fall')), findsOneWidget);
+    expect(find.text('THE TABLE HAS SPOKEN'), findsOneWidget);
     expect(find.text('Beta is out'), findsWidgets);
-    expect(find.text('PITY. A NOWER TOOK THE FALL.'), findsOneWidget);
-    expect(find.text('Nower'), findsOneWidget);
+    expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
+    expect(find.byType(VoteBoard), findsNothing);
+    expect(find.byType(ReadyButton), findsNothing);
 
     await tester.pump(const Duration(seconds: 3));
     expect(
@@ -455,6 +461,7 @@ void main() {
       find.byKey(const Key('elimination-announcement-overlay')),
       findsNothing,
     );
+    expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
   });
 
   testWidgets(
@@ -480,33 +487,135 @@ void main() {
     expect(find.text('Nobody eliminated'), findsWidgets);
   });
 
-  testWidgets('finalized role reveals use distinct dramatic effects',
+  testWidgets('Knowoff result posters dramatize each eliminated role',
       (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: EliminationAnnouncementOverlay(
-          label: 'Beta is out',
-          isBot: false,
-          eliminated: true,
-          role: 'donower',
-        ),
-      ),
-    );
-    expect(find.text('MASK OFF: DONOWER CAUGHT'), findsOneWidget);
+    final base = _sampleSession(phase: 'result');
 
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: EliminationAnnouncementOverlay(
-          label: 'Beta is out',
-          isBot: false,
-          eliminated: true,
+    Future<void> pumpRole(String role) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      final session = base.copyWith(
+        dto: base.dto.copyWith(
+          result: VoteResultDto(
+            eliminatedSeat: 1,
+            role: role,
+            tally: const {'1': 3},
+          ),
+        ),
+      );
+      await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+      await tester.pump();
+    }
+
+    await pumpRole('nower');
+    final nowerPoster = find.byKey(const Key('result-poster-nower'));
+    expect(nowerPoster, findsOneWidget);
+    expect(find.text('WRONG SUSPECT!'), findsOneWidget);
+    expect(find.text('A NOWER TOOK THE FALL.'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: nowerPoster,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is DoodleIcon && widget.doodle == Doodle.cloud,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: nowerPoster,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is DoodleIcon && widget.doodle == Doodle.cross,
+        ),
+      ),
+      findsWidgets,
+    );
+
+    await pumpRole('donower');
+    final donowerPoster = find.byKey(const Key('result-poster-donower'));
+    expect(donowerPoster, findsOneWidget);
+    expect(find.text('CAUGHT BLUFFING!'), findsOneWidget);
+    expect(find.text('DONOWER UNMASKED.'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: donowerPoster,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is DoodleIcon && widget.doodle == Doodle.mask,
+        ),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: donowerPoster,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is DoodleIcon && widget.doodle == Doodle.check,
+        ),
+      ),
+      findsWidgets,
+    );
+  });
+
+  testWidgets('GameShell does not open a second finalized result screen',
+      (tester) async {
+    final transport = _ControllableTransport();
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        result: const VoteResultDto(
+          eliminatedSeat: 1,
           role: 'nower',
+          tally: {'1': 3},
         ),
       ),
     );
-    expect(find.text('OOPS: NOWER TOOK THE FALL'), findsOneWidget);
-    expect(find.text('PITY. THEY WERE A NOWER.'), findsOneWidget);
-    expect(find.byKey(const Key('elimination-fall')), findsOneWidget);
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const GameShell(),
+        session,
+        transport: transport,
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.byKey(const Key('elimination-announcement-overlay')),
+      findsOneWidget,
+    );
+
+    transport.emit(<String, dynamic>{
+      'kind': 'elimination_finalized',
+      'payload': <String, dynamic>{
+        'eliminated_seat': 1,
+        'role': 'nower',
+      },
+    });
+    transport.emit(<String, dynamic>{
+      'kind': 'phase_started',
+      'payload': <String, dynamic>{'phase': 'play'},
+    });
+    await tester.pump();
+
+    expect(find.byKey(const Key('final-elimination-result')), findsNothing);
+    expect(find.byType(RoundScreen), findsOneWidget);
+  });
+
+  testWidgets('Revote remains available during the candidate reveal',
+      (tester) async {
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(cards: [], drawPile: [], specialty: 'revote'),
+        result: const VoteResultDto(
+          eliminatedSeat: 1,
+          role: 'nower',
+          tally: {'1': 3},
+        ),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+    await tester.pump();
+
+    expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
+    expect(find.text('Revote'), findsOneWidget);
   });
 
   testWidgets('KnowoffScreen sends Ready to resolve a ballot early',
@@ -616,23 +725,22 @@ void main() {
     });
   });
 
-  testWidgets('the reveal gradient is spent on the Knowoff result window only',
+  testWidgets('the reveal gradient is spent on the embedded role result only',
       (tester) async {
-    final session = _sampleSession(phase: 'result');
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        result: const VoteResultDto(
+          eliminatedSeat: 1,
+          role: 'donower',
+          tally: {'1': 3},
+        ),
+      ),
+    );
     await tester.pumpWidget(
       _wrapWithSession(
         const KnowoffScreen(),
-        GameSession(
-          myRole: session.myRole,
-          dto: session.dto.copyWith(
-            phase: 'result',
-            result: const VoteResultDto(
-              eliminatedSeat: 1,
-              role: 'donower',
-              tally: {'1': 3},
-            ),
-          ),
-        ),
+        session,
       ),
     );
     await tester.pump();
@@ -652,32 +760,5 @@ void main() {
       (gradientContainers.single.decoration! as BoxDecoration).gradient,
       equals(KoColors.revealGradient),
     );
-  });
-
-  testWidgets(
-      'KnowoffScreen places voter avatars beneath their target after resolution',
-      (tester) async {
-    final session = _sampleSession(phase: 'result');
-    await tester.pumpWidget(
-      _wrapWithSession(
-        const KnowoffScreen(),
-        GameSession(
-          myRole: session.myRole,
-          dto: session.dto.copyWith(
-            phase: 'result',
-            result: const VoteResultDto(
-              eliminatedSeat: 1,
-              role: 'donower',
-              tally: {'1': 2},
-              votes: {'0': 1, '2': -1},
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
-    expect(find.byKey(const Key('vote-trail-2-1')), findsNothing);
   });
 }
