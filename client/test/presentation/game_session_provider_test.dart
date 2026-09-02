@@ -123,6 +123,40 @@ void main() {
     expect(notifier.state.dto.readySeats, equals(<int>[2]));
   });
 
+  test('a ready_state with ready:false takes a seat back out of readySeats',
+      () async {
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    transport.emit('ready_state', <String, dynamic>{
+      'phase': 'discussion',
+      'seat': 2,
+      'ready': true,
+    });
+    transport.emit('ready_state', <String, dynamic>{
+      'phase': 'discussion',
+      'seat': 2,
+      'ready': false,
+    });
+    await _settle();
+
+    expect(notifier.state.dto.readySeats, isEmpty);
+  });
+
+  test(
+      'discussionReady resets when the next round opens a fresh discussion '
+      'phase, instead of carrying over a stale Ready from last round',
+      () async {
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    transport.emit('ready_ack', <String, dynamic>{'discussion_ready': true});
+    await _settle();
+    expect(notifier.state.dto.discussionReady, isTrue);
+
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
+    await _settle();
+
+    expect(notifier.state.dto.discussionReady, isFalse);
+  });
+
   test('draw events add cards to the local hand without recording a play',
       () async {
     final drawTransport = _FakeTransport();

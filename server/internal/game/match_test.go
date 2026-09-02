@@ -675,6 +675,53 @@ func TestMatch_ReadyAck_TargetsOnlyActingSeat(t *testing.T) {
 	}
 }
 
+// TestMatch_ReadyCanBeTakenBackBeforeEveryoneAgrees guards a seat's ability to
+// cancel its own Ready as many times as it likes while the window is still
+// open: a second Ready intent must toggle the flag back off instead of being
+// a no-op, and must not finalize the phase on its own.
+func TestMatch_ReadyCanBeTakenBackBeforeEveryoneAgrees(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	if m.phase != PhaseDiscussion {
+		t.Fatalf("expected discussion phase, got %s", m.phase)
+	}
+
+	seat := m.activeSeats()[0]
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentReady, nil)); err != nil {
+		t.Fatalf("ready: %v", err)
+	}
+	if !m.discussionReady[seat] {
+		t.Fatal("expected seat to be marked Ready")
+	}
+
+	bcast.clear()
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentReady, nil)); err != nil {
+		t.Fatalf("unready: %v", err)
+	}
+	if m.discussionReady[seat] {
+		t.Fatal("expected the second Ready intent to take the Ready back")
+	}
+	if m.phase != PhaseDiscussion {
+		t.Fatal("un-readying must not finalize or otherwise change the phase")
+	}
+	acks := bcast.findEvents(seat, transport.EventReadyAck)
+	if len(acks) != 1 || acks[0].Payload["discussion_ready"] != false {
+		t.Fatalf("expected a discussion_ready=false ack for seat %d, got %v", seat, acks)
+	}
+	states := bcast.findEvents(seat, transport.EventReadyState)
+	if len(states) != 1 || states[0].Payload["ready"] != false {
+		t.Fatalf("expected a public ready_state with ready=false for seat %d, got %v", seat, states)
+	}
+}
+
 func TestMatch_DiscussionWindowIsTwentySecondsForFourPlayers(t *testing.T) {
 	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	for i := range m.connected {

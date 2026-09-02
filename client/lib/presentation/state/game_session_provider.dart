@@ -65,9 +65,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     }
   }
 
-  /// Developer-only: discards any buffered/frozen state and resets the local
-  /// session back to its initial (pre-match) shape, mirroring what the
-  /// screen looks like before a match is joined. The server only accepts a
+  /// Discards any buffered/frozen state and resets the local session back to
+  /// its initial (pre-match) shape, mirroring what the screen looks like
+  /// before a match is joined. Used both by the dev restart tool and by
+  /// "Back to menu" on the Verdict screen. The server only accepts a
   /// queue/join intent as a connection's *first* message, so a stale
   /// connection left over from the previous match would reject the next
   /// queue attempt with `expected_intent` — reconnecting gives the next
@@ -172,10 +173,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'ready_state':
         final seat = payload['seat'] as int?;
         final phase = payload['phase'] as String?;
+        final isReady = payload['ready'] as bool? ?? true;
         if (seat != null && phase == state.dto.phase) {
-          _setDto(state.dto.copyWith(
-            readySeats: {...state.dto.readySeats, seat}.toList()..sort(),
-          ));
+          final seats = {...state.dto.readySeats};
+          if (isReady) {
+            seats.add(seat);
+          } else {
+            seats.remove(seat);
+          }
+          _setDto(state.dto.copyWith(readySeats: seats.toList()..sort()));
         }
         break;
       case 'quick_chat':
@@ -411,7 +417,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     final window = payload['window_seconds'] as int?;
     final opensBallot = phase == 'knowoff' || phase == 'runoff';
 
-    var dto = state.dto.copyWith(readySeats: const []);
+    // Every fresh phase starts with a clean slate — otherwise a Ready tapped
+    // last round (e.g. discussionReady) rides along into the next one and
+    // permanently locks the button since it never gets un-set.
+    var dto = state.dto.copyWith(readySeats: const [], discussionReady: false);
     if (opensBallot) {
       dto = dto.copyWith(
         voteTarget: -1,

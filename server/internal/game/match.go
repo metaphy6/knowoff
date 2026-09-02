@@ -958,36 +958,51 @@ func (m *Match) scheduleDiscussion() {
 	m.discussionTimer = m.after(d, func() { m.endDiscussion() })
 }
 
+// handleReady toggles the acting seat's Ready flag for the current phase —
+// a seat may take back a Ready as many times as it likes while the window is
+// still open. Once every active seat is Ready the phase finalizes
+// immediately (see check*Ready below), which is the only thing that closes
+// the door on a take-back: after that the phase itself has moved on, so a
+// later "ready" intent lands here again but is now for the next phase.
 func (m *Match) handleReady(seat int, payload map[string]any) error {
 	switch m.phase {
 	case PhaseDiscussion:
-		m.discussionReady[seat] = true
-		m.players[seat].Ready = true
+		next := !m.discussionReady[seat]
+		m.discussionReady[seat] = next
+		m.players[seat].Ready = next
 		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
-			"phase": m.phase, "seat": seat,
+			"phase": m.phase, "seat": seat, "ready": next,
 		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
-			map[string]any{"discussion_ready": true}))
-		m.checkDiscussionReady()
+			map[string]any{"discussion_ready": next}))
+		if next {
+			m.checkDiscussionReady()
+		}
 	case PhaseResult:
 		// Rules §4's Revote window otherwise always runs its full length even
 		// when nobody intends to use it — Ready lets the table skip the wait
 		// once everyone agrees the result can finalize now.
-		m.resultReady[seat] = true
+		next := !m.resultReady[seat]
+		m.resultReady[seat] = next
 		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
-			"phase": m.phase, "seat": seat,
+			"phase": m.phase, "seat": seat, "ready": next,
 		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
-			map[string]any{"result_ready": true}))
-		m.checkResultReady()
+			map[string]any{"result_ready": next}))
+		if next {
+			m.checkResultReady()
+		}
 	case PhaseKnowoff, PhaseRunoff:
-		m.ballotReady[seat] = true
+		next := !m.ballotReady[seat]
+		m.ballotReady[seat] = next
 		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
-			"phase": m.phase, "seat": seat,
+			"phase": m.phase, "seat": seat, "ready": next,
 		}), -1)
 		m.bcast.SendTo(seat, transport.NewEvent(transport.EventReadyAck,
-			map[string]any{"ballot_ready": true}))
-		m.checkBallotReady()
+			map[string]any{"ballot_ready": next}))
+		if next {
+			m.checkBallotReady()
+		}
 	default:
 		return fmt.Errorf("not a ready phase")
 	}
