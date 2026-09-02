@@ -7,6 +7,7 @@ import 'knowoff_screen.dart';
 import 'lobby_screen.dart';
 import 'round_screen.dart';
 import 'verdict_screen.dart';
+import '../widgets/seat_tile.dart';
 
 /// Routes the user through the live match screens based on the server-driven
 /// phase. Replaces the navigation stack once a match is assigned.
@@ -18,31 +19,56 @@ class GameShell extends ConsumerWidget {
     final session = ref.watch(gameSessionProvider);
     final phase = session.dto.phase;
 
+    late final Widget screen;
     switch (phase) {
       case '':
       case 'waiting':
-        return LobbyScreen(
+        screen = LobbyScreen(
           code: session.dto.roomCode,
           players: session.dto.players,
         );
+        break;
       case 'role_reveal':
       case 'prefetch':
       case 'play':
-        return const RoundScreen();
+        screen = const RoundScreen();
+        break;
       case 'discussion':
-        return const DiscussionScreen();
+        screen = const DiscussionScreen();
+        break;
       case 'knowoff':
       case 'runoff':
       case 'result':
-        return const KnowoffScreen();
+        screen = const KnowoffScreen();
+        break;
       case 'verdict':
       case 'finished':
-        return const VerdictScreen();
+        screen = const VerdictScreen();
+        break;
       default:
-        return LobbyScreen(
+        screen = LobbyScreen(
           code: session.dto.roomCode,
           players: session.dto.players,
         );
     }
+    final eliminated = session.finalEliminatedSeat == null
+        ? null
+        : session.playerBySeat(session.finalEliminatedSeat!);
+
+    return Stack(
+      children: <Widget>[
+        screen,
+        if (eliminated != null && session.finalEliminatedRole != null)
+          EliminationAnnouncementOverlay(
+            key: ValueKey<String>(
+              'final-elimination-${eliminated.seat}-${session.finalEliminatedRole}',
+            ),
+            label: '${seatDisplayName(eliminated)} is out',
+            isBot: eliminated.bot,
+            eliminated: true,
+            role: session.finalEliminatedRole,
+          ),
+      ],
+    );
   }
 }

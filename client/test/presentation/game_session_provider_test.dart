@@ -164,6 +164,23 @@ void main() {
     expect(notifier.state.dto.voteTarget, equals(-1));
   });
 
+  test('a next-round phase clears the finalized result snapshot', () async {
+    transport.emit('knowoff_resolved', <String, dynamic>{
+      'result': <String, dynamic>{
+        'eliminated_seat': 1,
+        'tally': <String, dynamic>{'1': 2},
+      },
+    });
+    await _settle();
+    expect(notifier.state.dto.result, isNotNull);
+
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    await _settle();
+
+    expect(notifier.state.dto.phase, equals('play'));
+    expect(notifier.state.dto.result, isNull);
+  });
+
   test('a ready_ack flips the local resultReady flag', () async {
     transport.emit('knowoff_resolved', <String, dynamic>{
       'result': <String, dynamic>{
@@ -222,6 +239,18 @@ void main() {
     await _settle();
 
     expect(notifier.state.dto.resultReady, isFalse);
+  });
+
+  test('a finalized elimination stores the revealed role for announcement',
+      () async {
+    transport.emit('elimination_finalized', <String, dynamic>{
+      'eliminated_seat': 1,
+      'role': 'donower',
+    });
+    await _settle();
+
+    expect(notifier.state.finalEliminatedSeat, equals(1));
+    expect(notifier.state.finalEliminatedRole, equals('donower'));
   });
 
   test('a phase window starts a display-only countdown', () async {

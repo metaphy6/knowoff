@@ -50,9 +50,7 @@ class VoteBoard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final candidates = players
-        .where((p) => !p.eliminated && p.seat != localSeat)
-        .toList()
+    final candidates = players.where((p) => !p.eliminated).toList()
       ..sort((a, b) => a.seat.compareTo(b.seat));
 
     if (candidates.isEmpty) {
@@ -73,7 +71,9 @@ class VoteBoard extends StatelessWidget {
               voters: _votersFor(player.seat),
               localSeat: localSeat,
               eliminated: eliminatedSeat == player.seat,
-              onVote: onVote == null || votedSeat == player.seat
+              onVote: onVote == null ||
+                      player.seat == localSeat ||
+                      votedSeat == player.seat
                   ? null
                   : () => onVote!(player.seat),
               voteLabel: l10n.voteFor(seatDisplayName(player)),

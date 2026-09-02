@@ -60,22 +60,25 @@ Widget _wrap(Widget child) {
 
 void main() {
   group('VoteBoard', () {
-    testWidgets('lists only living opponents and hides the tally while blind',
+    testWidgets('lists every living seat and disables the local vote row',
         (tester) async {
+      var votes = 0;
       await tester.pumpWidget(
         _wrap(
           VoteBoard(
             players: _players,
             localSeat: 0,
             votedSeat: -1,
-            onVote: (_) {},
+            onVote: (_) => votes++,
           ),
         ),
       );
 
-      expect(find.text('Alpha'), findsNothing);
+      expect(find.text('Alpha'), findsWidgets);
       expect(find.text('Beta'), findsOneWidget);
       expect(find.text('Delta'), findsNothing);
+      await tester.tap(find.text('Alpha'));
+      expect(votes, equals(0));
       // Blind ballot: no counts anywhere until the window closes.
       expect(find.text('0'), findsNothing);
     });
@@ -195,7 +198,7 @@ void main() {
       expect(find.byKey(const Key('vote-trail-0-1')), findsOneWidget);
       // The chip carries the voter's name, not just a bare avatar, so the
       // table can read "who" without a separate feed.
-      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('Alpha'), findsWidgets);
     });
   });
 

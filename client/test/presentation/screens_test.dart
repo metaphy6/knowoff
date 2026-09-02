@@ -436,8 +436,23 @@ void main() {
     await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
     await tester.pump();
 
-    expect(find.byKey(const Key('elimination-announcement')), findsOneWidget);
+    expect(
+      find.byKey(const Key('elimination-announcement-overlay')),
+      findsOneWidget,
+    );
     expect(find.text('Beta is out'), findsWidgets);
+
+    await tester.pump(const Duration(seconds: 3));
+    expect(
+      find.byKey(const Key('elimination-announcement-overlay')),
+      findsOneWidget,
+    );
+
+    await tester.pump(const Duration(milliseconds: 1100));
+    expect(
+      find.byKey(const Key('elimination-announcement-overlay')),
+      findsNothing,
+    );
   });
 
   testWidgets(
@@ -456,8 +471,38 @@ void main() {
     await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
     await tester.pump();
 
-    expect(find.byKey(const Key('elimination-announcement')), findsOneWidget);
+    expect(
+      find.byKey(const Key('elimination-announcement-overlay')),
+      findsOneWidget,
+    );
     expect(find.text('Nobody eliminated'), findsWidgets);
+  });
+
+  testWidgets('finalized role reveals use distinct dramatic effects',
+      (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: EliminationAnnouncementOverlay(
+          label: 'Beta is out',
+          isBot: false,
+          eliminated: true,
+          role: 'donower',
+        ),
+      ),
+    );
+    expect(find.text('MASK OFF: DONOWER CAUGHT'), findsOneWidget);
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: EliminationAnnouncementOverlay(
+          label: 'Beta is out',
+          isBot: false,
+          eliminated: true,
+          role: 'nower',
+        ),
+      ),
+    );
+    expect(find.text('OOPS: NOWER TOOK THE FALL'), findsOneWidget);
   });
 
   testWidgets('KnowoffScreen sends Ready to resolve a ballot early',
