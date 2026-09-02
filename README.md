@@ -43,6 +43,7 @@ python3 xops/test/tests-lints.py  # all tests and lint checks
 make up              # start the local Docker Compose stack
 make down            # stop the local stack
 make web.rebuild     # force-rebuild + recreate the client-web dev container, cache-bust the browser
+make web.stop        # stop locally owned Flutter web servers on any port
 ```
 
 For roadmap checkbox progress, run:
@@ -97,6 +98,7 @@ for Compose profiles, volume snapshots, and per-service config.
 
 ```bash
 make help            # list available targets
+make web.stop        # stop locally owned Flutter web servers on any port
 make git.dry         # preview pending commits (read-only)
 make git             # commit pending tracking rows + push (human-run)
 make track.add ACTION=note SUMMARY="..."

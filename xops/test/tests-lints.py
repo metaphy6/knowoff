@@ -53,6 +53,10 @@ def main() -> None:
     client_directory = REPOSITORY_ROOT / "client"
 
     run(
+        ("python3", "-m", "unittest", "discover", "-s", "xops/makefile", "-p", "test_*.py"),
+        REPOSITORY_ROOT,
+    )
+    run(
         ("go", "test", "./...", "-count=1", "-p=1"),
         server_directory,
         GO_TEST_ENVIRONMENT,
