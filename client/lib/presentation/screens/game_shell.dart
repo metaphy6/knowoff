@@ -7,7 +7,6 @@ import 'knowoff_screen.dart';
 import 'lobby_screen.dart';
 import 'round_screen.dart';
 import 'verdict_screen.dart';
-import '../widgets/seat_tile.dart';
 
 /// Routes the user through the live match screens based on the server-driven
 /// phase. Replaces the navigation stack once a match is assigned.
@@ -51,24 +50,6 @@ class GameShell extends ConsumerWidget {
           players: session.dto.players,
         );
     }
-    final eliminated = session.finalEliminatedSeat == null
-        ? null
-        : session.playerBySeat(session.finalEliminatedSeat!);
-
-    return Stack(
-      children: <Widget>[
-        screen,
-        if (eliminated != null && session.finalEliminatedRole != null)
-          EliminationAnnouncementOverlay(
-            key: ValueKey<String>(
-              'final-elimination-${eliminated.seat}-${session.finalEliminatedRole}',
-            ),
-            label: '${seatDisplayName(eliminated)} is out',
-            isBot: eliminated.bot,
-            eliminated: true,
-            role: session.finalEliminatedRole,
-          ),
-      ],
-    );
+    return screen;
   }
 }
