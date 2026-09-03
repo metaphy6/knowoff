@@ -916,6 +916,9 @@ void main() {
 
   testWidgets('VerdictScreen labels winning Donowers on their seat tiles',
       (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     final base = _sampleSession(phase: 'verdict');
     final session = base.copyWith(
       dto: base.dto.copyWith(
@@ -932,13 +935,28 @@ void main() {
       final seatTile = find.byWidgetPredicate(
         (widget) => widget is SeatTile && widget.player.seat == seat,
       );
-      await tester.scrollUntilVisible(seatTile, 300);
       expect(
         find.descendant(of: seatTile, matching: find.text('Donower')),
         findsOneWidget,
       );
     }
     expect(find.text('Donower: Beta, Gamma'), findsNothing);
+  });
+
+  testWidgets('VerdictScreen lists the local seat last on the verdict roster',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final base = _sampleSession(phase: 'verdict');
+    final session = base.copyWith(dto: base.dto.copyWith(seat: 1));
+    await tester.pumpWidget(_wrapWithSession(const VerdictScreen(), session));
+
+    final seats = tester
+        .widgetList<SeatTile>(find.byType(SeatTile))
+        .map((tile) => tile.player.seat)
+        .toList();
+    expect(seats, equals(<int>[0, 2, 3, 1]));
   });
 
   testWidgets('VerdictScreen opens the seat sheet when a seat is tapped',
@@ -1021,6 +1039,24 @@ void main() {
     expect(find.text('Play again?'), findsOneWidget);
     expect(find.byKey(const Key('rematch-same-table')), findsOneWidget);
     expect(find.byKey(const Key('rematch-new-table')), findsOneWidget);
+
+    final card = tester.getRect(find.byKey(const Key('rematch-overlay')));
+    final screen = tester.getRect(find.byType(VerdictScreen));
+    expect((card.center.dx - screen.center.dx).abs(), lessThan(1));
+    expect((card.center.dy - screen.center.dy).abs(), lessThan(1));
+
+    await tester.tapAt(const Offset(12, 12));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('rematch-overlay')), findsNothing);
+    expect(find.byKey(const Key('rematch-minimized-card')), findsOneWidget);
+    expect(find.text('Play again?'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('rematch-minimized-card')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('rematch-overlay')), findsOneWidget);
+    expect(find.byKey(const Key('rematch-minimized-card')), findsNothing);
   });
 
   testWidgets(
