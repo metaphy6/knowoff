@@ -22,6 +22,19 @@ import '../widgets/seat_tile.dart';
 class VerdictScreen extends ConsumerWidget {
   const VerdictScreen({super.key});
 
+  PlayerDto _withRevealedDonowerRole(PlayerDto player) {
+    return PlayerDto(
+      seat: player.seat,
+      name: player.name,
+      connected: player.connected,
+      eliminated: player.eliminated,
+      avatar: player.avatar,
+      bot: player.bot,
+      accountId: player.accountId,
+      role: 'donower',
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
@@ -31,6 +44,12 @@ class VerdictScreen extends ConsumerWidget {
         dto.winner ?? (session.myRole == 'donower' ? 'donower' : 'nower');
     final nowerWin = winner == 'nower';
     final iWon = nowerWin ? !session.isDonower : session.isDonower;
+    final verdictPlayers = dto.players.map((player) {
+      if (!nowerWin && dto.donowerSeats.contains(player.seat)) {
+        return _withRevealedDonowerRole(player);
+      }
+      return player;
+    });
 
     return KoScaffold(
       title: l10n.verdictTitle,
@@ -61,26 +80,6 @@ class VerdictScreen extends ConsumerWidget {
             accent: nowerWin ? KoColors.lime : KoColors.pink,
             celebrate: iWon,
           ),
-          if (!nowerWin && dto.donowerSeats.isNotEmpty) ...<Widget>[
-            const SizedBox(height: KoSpace.md),
-            KoContainer(
-              backgroundColor: KoColors.whiteWell,
-              padding: const EdgeInsets.all(KoSpace.md),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const DoodleIcon(Doodle.mask, size: 28),
-                  const SizedBox(width: KoSpace.sm),
-                  Expanded(
-                    child: Text(
-                      '${l10n.roleDonower}: ${dto.donowerSeats.map((seat) => session.playerBySeat(seat)?.name.isNotEmpty == true ? session.playerBySeat(seat)!.name : 'P$seat').join(', ')}',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
           const SizedBox(height: KoSpace.lg),
           Row(
             children: <Widget>[
@@ -115,7 +114,7 @@ class VerdictScreen extends ConsumerWidget {
             glyph: const DoodleIcon(Doodle.eye, size: 20),
             accent: KoColors.violet,
           ),
-          for (final player in dto.players)
+          for (final player in verdictPlayers)
             Padding(
               padding: const EdgeInsets.only(bottom: KoSpace.sm),
               child: SeatTile(
