@@ -487,12 +487,12 @@ void main() {
       );
 
       // Same container primitives as _HandCard: no stock Material chip/pill,
-      // and the ability now carries the shared "Specialty" footer label
-      // instead of being surfaced as a separate title-row pill.
+      // and the ability's footer is icon-only (no "Specialty" caption) plus
+      // its Donower/Nower-only note.
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.byType(Chip), findsNothing);
       expect(find.text('Shuffle'), findsOneWidget);
-      expect(find.text('Specialty'), findsOneWidget);
+      expect(find.text('Donowers only.'), findsOneWidget);
     });
 
     testWidgets('tapping the specialty card invokes its in-deck action',
