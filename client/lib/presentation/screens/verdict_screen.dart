@@ -20,8 +20,15 @@ import '../widgets/seat_tile.dart';
 /// Match verdict: who won, every Nown revealed to everyone, and the match's
 /// points. The generous end of the motion and colour budget lives here — it is
 /// a post-match screen with no timer to protect.
-class VerdictScreen extends ConsumerWidget {
+class VerdictScreen extends ConsumerStatefulWidget {
   const VerdictScreen({super.key});
+
+  @override
+  ConsumerState<VerdictScreen> createState() => _VerdictScreenState();
+}
+
+class _VerdictScreenState extends ConsumerState<VerdictScreen> {
+  bool _showRematchOverlay = true;
 
   PlayerDto _withRevealedDonowerRole(PlayerDto player) {
     return PlayerDto(
@@ -37,7 +44,7 @@ class VerdictScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final session = ref.watch(gameSessionProvider);
     final dto = session.dto;
@@ -45,12 +52,20 @@ class VerdictScreen extends ConsumerWidget {
         dto.winner ?? (session.myRole == 'donower' ? 'donower' : 'nower');
     final nowerWin = winner == 'nower';
     final iWon = nowerWin ? !session.isDonower : session.isDonower;
+    final showMinimizedRematch =
+        dto.phase == 'finished' && !_showRematchOverlay;
     final verdictPlayers = dto.players.map((player) {
       if (!nowerWin && dto.donowerSeats.contains(player.seat)) {
         return _withRevealedDonowerRole(player);
       }
       return player;
-    });
+    }).toList()
+      ..sort((a, b) {
+        final aLocal = a.seat == dto.seat ? 1 : 0;
+        final bLocal = b.seat == dto.seat ? 1 : 0;
+        if (aLocal != bLocal) return aLocal - bLocal;
+        return a.seat.compareTo(b.seat);
+      });
 
     return Stack(
       children: <Widget>[
@@ -61,17 +76,10 @@ class VerdictScreen extends ConsumerWidget {
           showBack: false,
           leadingGlyph:
               DoodleIcon(nowerWin ? Doodle.check : Doodle.mask, size: 30),
-          bottomBar: KoButton(
-            label: l10n.verdictBackToMenu,
-            size: KoButtonSize.large,
-            expand: true,
-            icon: const DoodleIcon(Doodle.cards, size: 24),
-            // Popping alone leaves the finished match's state (room code, phase,
-            // seat) in the shared session — the next Quick Play attempt would
-            // then see an existing room/seat and jump straight back into this
-            // same Verdict screen instead of queuing. restart() clears that
-            // state and gives the next queue join a fresh handshake.
-            onTap: () {
+          bottomBar: _VerdictBottomBar(
+            showRematchWakeButton: showMinimizedRematch,
+            onWakeRematch: () => setState(() => _showRematchOverlay = true),
+            onBackToMenu: () {
               ref.read(gameSessionProvider.notifier).restart();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
@@ -152,8 +160,82 @@ class VerdictScreen extends ConsumerWidget {
         // game.PhaseFinished). Gating on it precisely also keeps this
         // overlay out of the way of tests that build a session directly
         // with phase: 'verdict' for layout-only assertions.
-        if (dto.phase == 'finished') const RematchOverlay(),
+        if (dto.phase == 'finished' && _showRematchOverlay)
+          RematchOverlay(
+            onMinimize: () => setState(() => _showRematchOverlay = false),
+          ),
       ],
+    );
+  }
+}
+
+class _VerdictBottomBar extends StatelessWidget {
+  const _VerdictBottomBar({
+    required this.showRematchWakeButton,
+    required this.onWakeRematch,
+    required this.onBackToMenu,
+  });
+
+  final bool showRematchWakeButton;
+  final VoidCallback onWakeRematch;
+  final VoidCallback onBackToMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return Stack(
+      alignment: Alignment.centerRight,
+      children: <Widget>[
+        KoButton(
+          label: l10n.verdictBackToMenu,
+          size: KoButtonSize.large,
+          expand: true,
+          icon: const DoodleIcon(Doodle.cards, size: 24),
+          onTap: onBackToMenu,
+        ),
+        if (showRematchWakeButton)
+          Positioned(
+            right: KoSpace.md,
+            child: _RematchWakeButton(onTap: onWakeRematch),
+          ),
+      ],
+    );
+  }
+}
+
+class _RematchWakeButton extends StatelessWidget {
+  const _RematchWakeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: KoContainer(
+        key: const Key('rematch-minimized-card'),
+        backgroundColor: KoColors.lime,
+        borderWidth: KoBorders.regular,
+        shadow: KoShadows.lg,
+        padding: const EdgeInsets.symmetric(
+          horizontal: KoSpace.md,
+          vertical: KoSpace.sm,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Transform.rotate(
+              angle: KoTilt.loud,
+              child: const DoodleIcon(Doodle.cards, size: 24),
+            ),
+            const SizedBox(width: KoSpace.xs),
+            Text(l10n.rematchTitle, style: koDisplayStyle(size: 16)),
+          ],
+        ),
+      ),
     );
   }
 }
