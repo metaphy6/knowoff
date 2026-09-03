@@ -24,6 +24,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- The Revote card on the Knowoff screen is no longer violet-on-violet camouflage: it now wears the specialty's tangerine identity with a mask-in-ink medallion, twinkling corner sparkles and a stamp tilt — and during the window's last five seconds it switches to rush mode, heartbeat-pulsing with a thicker border, a tangerine glow, a live seconds numeral, and "Last seconds — slam it before the result locks!" copy.
 - The Verdict Play Again prompt now opens in the center of the screen and can be collapsed by tapping outside it, leaving a bright Play Again card inside the Back to menu bar so players can reopen it after reading the results.
 - Reveal a Hand now opens from its specialty card, filters out the owner and eliminated targets, announces the exposed player, and adds a once-per-player avatar doodle that opens the hand for three seconds during that round.
 - Donower-win verdicts now reveal each winning Donower directly on their player rectangle, matching caught-Donower results instead of listing winners in a separate declaration box.

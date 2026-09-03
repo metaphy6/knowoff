@@ -628,6 +628,26 @@
   "@specialtyRevoteAction": {
     "description": "Button to use the Revote specialty card."
   },
+  "revoteRushHint": "Last seconds — slam it before the result locks!",
+  "@revoteRushHint": {
+    "description": "Urgent Revote hint shown during the final five seconds of the result or ballot window."
+  },
+  "specialtyRevoteUsageHint": "The card is used during voting.",
+  "@specialtyRevoteUsageHint": {
+    "description": "Small note on the Revote card in-hand, revealed after a tap, explaining when it is played."
+  },
+  "specialtyRevoteOwnerHint": "Nowers only.",
+  "@specialtyRevoteOwnerHint": {
+    "description": "Small static note on the Revote card in-hand naming which role may use it."
+  },
+  "specialtyShuffleOwnerHint": "Donowers only.",
+  "@specialtyShuffleOwnerHint": {
+    "description": "Small static note on the Shuffle card in-hand naming which role may use it."
+  },
+  "specialtyShuffleUsageHint": "The card is used at the start of the round.",
+  "@specialtyShuffleUsageHint": {
+    "description": "Small note on the Shuffle card in-hand, revealed after a tap, explaining when it is played."
+  },
   "chooseRevealTargetTitle": "Choose a player to reveal",
   "@chooseRevealTargetTitle": {
     "description": "Dialog title when picking a Reveal specialty target."
