@@ -22,6 +22,8 @@ enum Doodle {
   clock,
   robot,
   ballotBox,
+  giftCard,
+  cardSwirl,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -91,6 +93,10 @@ class _DoodlePainter extends CustomPainter {
         _robot(canvas, size, paint);
       case Doodle.ballotBox:
         _ballotBox(canvas, size, paint);
+      case Doodle.giftCard:
+        _giftCard(canvas, size, paint);
+      case Doodle.cardSwirl:
+        _cardSwirl(canvas, size, paint);
     }
   }
 
@@ -325,6 +331,97 @@ class _DoodlePainter extends CustomPainter {
       paint,
     );
     canvas.restore();
+  }
+
+  void _giftCard(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    // The card itself, wrapped like a present.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTRB(w * 0.22, h * 0.32, w * 0.78, h * 0.86),
+        Radius.circular(w * 0.06),
+      ),
+      paint,
+    );
+    // The ribbon running down its face.
+    canvas.drawLine(
+        Offset(w * 0.5, h * 0.32), Offset(w * 0.5, h * 0.86), paint);
+    // The bow — the one shape that reads as "gift" rather than plain card.
+    final bowY = h * 0.28;
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(w * 0.39, bowY), width: w * 0.20, height: h * 0.16),
+      paint,
+    );
+    canvas.drawOval(
+      Rect.fromCenter(
+          center: Offset(w * 0.61, bowY), width: w * 0.20, height: h * 0.16),
+      paint,
+    );
+    canvas.drawCircle(Offset(w * 0.5, bowY), w * 0.05, paint);
+  }
+
+  void _cardSwirl(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+
+    void card(double dx, double angle) {
+      canvas.save();
+      canvas.translate(w * dx, h * 0.56);
+      canvas.rotate(angle);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+              center: Offset.zero, width: w * 0.30, height: h * 0.38),
+          Radius.circular(w * 0.05),
+        ),
+        paint,
+      );
+      canvas.restore();
+    }
+
+    card(0.44, -0.2);
+    card(0.56, 0.17);
+
+    // A swirl wrapping the pair — the motion that reads as "mixed", not just
+    // "two cards".
+    final c = Offset(w * 0.5, h * 0.54);
+    final r = w * 0.40;
+    const startAngle = -1.22; // ~-70°
+    const sweep = 4.89; // ~280°
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: r),
+      startAngle,
+      sweep,
+      false,
+      paint,
+    );
+
+    const endAngle = startAngle + sweep;
+    final tip = Offset(
+      c.dx + r * math.cos(endAngle),
+      c.dy + r * math.sin(endAngle),
+    );
+    const back = endAngle + math.pi / 2 + math.pi;
+    const spread = 0.45;
+    final headLen = w * 0.09;
+    final p2 = Offset(
+      tip.dx + headLen * math.cos(back - spread),
+      tip.dy + headLen * math.sin(back - spread),
+    );
+    final p3 = Offset(
+      tip.dx + headLen * math.cos(back + spread),
+      tip.dy + headLen * math.sin(back + spread),
+    );
+    final head = Path()
+      ..moveTo(tip.dx, tip.dy)
+      ..lineTo(p2.dx, p2.dy)
+      ..lineTo(p3.dx, p3.dy)
+      ..close();
+    canvas.drawPath(head, Paint()..color = paint.color);
   }
 
   @override
