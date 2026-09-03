@@ -6,6 +6,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- Knowoff result posters no longer show the stale ballot countdown or remaining-votes wheels; the result owns the full stage during its four-second display.
 - Knowoff result window is 8 seconds again (was cut to 4), restoring visible time for the Nower/Donower role-reveal poster — the four-second falling reveal previously consumed the entire window, so the poster and Revote button never rendered before the round advanced.
 - Discussion's Ready flag no longer carries over into the next round — it now resets when a fresh discussion phase opens, instead of leaving the button permanently locked from a Ready tapped last round.
 - Ready can now be taken back any time before the window finalizes (discussion, Knowoff ballot, and the post-ballot result window) — tapping Ready again un-readies instead of being ignored; the button only locks once every active seat has agreed or the window's timer runs out.
@@ -13,6 +14,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Donower-win verdicts now reveal each winning Donower directly on their player rectangle, matching caught-Donower results instead of listing winners in a separate declaration box.
 - Bots now draw one card from their personal pile when their playable hand runs close to their reserve, then continue the same turn and play instead of stalling.
 - Knowoff results now open with a four-second falling eliminated-player reveal, then show the Nower or Donower result card and Revote on the Knowoff screen without a Ready panel or duplicate result overlay.
 - Specialty-card plays are now announced to the whole table with short animated alerts, including the player who used the card.

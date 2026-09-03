@@ -19,8 +19,8 @@ import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
 import '../widgets/vote_board.dart';
 
-/// Knowoff voting screen — the open, live ballot (ADR-009) and the 15-second
-/// result window where a Revote can still land (Rules §4–5).
+/// Knowoff voting screen — the open, live ballot (ADR-009) and the result
+/// window where a Revote can still land (Rules §4–5).
 class KnowoffScreen extends ConsumerStatefulWidget {
   const KnowoffScreen({super.key});
 
@@ -83,26 +83,28 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
           canvasColor: KoColors.canvasDeep,
           showBack: false,
           leadingGlyph: const DoodleIcon(Doodle.eye, size: 30),
-          statusBar: Row(
-            children: <Widget>[
-              if (window > 0)
-                Expanded(
-                  child: KoTimerBar(
-                    remainingSeconds: remaining,
-                    totalSeconds: window,
-                    label: l10n.turnTimeRemaining(remaining),
-                  ),
-                )
-              else
-                const Spacer(),
-              const SizedBox(width: KoSpace.md),
-              KoVoteBudget(
-                remaining: dto.remainingVotes,
-                total: dto.players.length >= 6 ? 3 : 2,
-                label: l10n.voteBudgetLabel,
-              ),
-            ],
-          ),
+          statusBar: inResultWindow
+              ? null
+              : Row(
+                  children: <Widget>[
+                    if (window > 0)
+                      Expanded(
+                        child: KoTimerBar(
+                          remainingSeconds: remaining,
+                          totalSeconds: window,
+                          label: l10n.turnTimeRemaining(remaining),
+                        ),
+                      )
+                    else
+                      const Spacer(),
+                    const SizedBox(width: KoSpace.md),
+                    KoVoteBudget(
+                      remaining: dto.remainingVotes,
+                      total: dto.players.length >= 6 ? 3 : 2,
+                      label: l10n.voteBudgetLabel,
+                    ),
+                  ],
+                ),
           body: inResultWindow && result != null
               ? KoBody.single(
                   child: Column(
