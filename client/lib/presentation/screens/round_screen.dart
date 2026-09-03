@@ -22,12 +22,11 @@ import '../widgets/play_table.dart';
 import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
+import '../widgets/specialty_use_flow.dart';
 import '../widgets/dev_tools_overlay.dart';
-import '../widgets/discard_picker_sheet.dart';
 import '../widgets/draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
 import '../widgets/hand_reveal.dart';
-import '../widgets/reveal_setup_sheet.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
 /// the one action a turn allows.
@@ -80,59 +79,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
       notifier.clearSelection();
     } else {
       notifier.lockMove(cardId);
-    }
-  }
-
-  Future<void> _useSpecialtyFromHand(
-    BuildContext context,
-    GameSessionNotifier notifier,
-    GameSession session,
-    String specialty,
-    int remainingSeconds,
-  ) async {
-    switch (specialty) {
-      case 'pass':
-        await notifier.useSpecialty('pass');
-        return;
-      case 'reveal':
-        if (remainingSeconds <= session.dto.revealLockoutSeconds ||
-            session.dto.hand.cards.isEmpty) {
-          return;
-        }
-        final choice = await showRevealSetupSheet(
-          context,
-          targets: session.activePlayers
-              .where((player) => player.seat != session.seat)
-              .toList(),
-          cards: session.dto.hand.cards,
-        );
-        if (choice == null) return;
-        await notifier.useSpecialty(
-          'reveal',
-          discardCardId: choice.discardCardId,
-          targetSeat: choice.targetSeat,
-        );
-        return;
-      case 'one_more_free_card':
-        if (session.dto.hand.cards.isEmpty) return;
-        final discard = session.selectedCardId ??
-            await showDiscardPickerSheet(
-              context,
-              cards: session.dto.hand.cards,
-            );
-        if (discard == null) return;
-        await notifier.useSpecialty(
-          'one_more_free_card',
-          discardCardId: discard,
-        );
-        return;
-      case 'shuffle':
-        if (session.isDonower && session.dto.plays.isEmpty) {
-          await notifier.useSpecialty('shuffle');
-        }
-        return;
-      default:
-        return;
     }
   }
 
@@ -265,7 +211,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                       ? () => notifier.clearSelection()
                       : null,
                   onUseSpecialty: session.isMyTurn
-                      ? (specialty) => _useSpecialtyFromHand(
+                      ? (specialty) => useSpecialtyFromHand(
                             context,
                             notifier,
                             session,

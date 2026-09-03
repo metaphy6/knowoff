@@ -6,6 +6,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Debug builds now have a dev-only specialty picker in the bottom-right dev tools: pick any of the five specialty cards and the server drops it into your hand as if it had been dealt (disabled entirely in prod), then the normal use flow runs unchanged — handy for testing specialty behavior without waiting for the deal.
 - Verdict screen now opens a Play Again window once a match finishes: every seat picks "same table" (rematch with this exact table once everyone agrees) or "new table" (leaves for a fresh Quick Play match); a seat that left or never reconnected in time opens up for backfill, so a new player who simply clicks Quick Play can land straight into the reopened table instead of a brand new one.
 
 ### Fixed
