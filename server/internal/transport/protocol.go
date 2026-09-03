@@ -23,6 +23,10 @@ const (
 	IntentRematch          = "rematch"
 	IntentReportMedia      = "report_media"
 	IntentConvertPoints    = "convert_points"
+	// IntentDevGrantSpecialty is a dev-only hook: it drops a chosen specialty
+	// card into the sender's hand as if it had been dealt. The server rejects
+	// it when app.env is prod.
+	IntentDevGrantSpecialty = "dev_grant_specialty"
 
 	// Events — server → client
 	EventPhaseStarted        = "phase_started"

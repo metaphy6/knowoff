@@ -690,6 +690,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         if (targetSeat != null) 'target_seat': targetSeat,
       });
 
+  /// Dev-only hook (debug builds): asks the server to drop [specialty] into
+  /// this seat's hand as if it had been dealt. The server rejects it outright
+  /// when app.env is prod, so it can never ship as a cheat surface.
+  Future<void> devGrantSpecialty(String specialty) =>
+      _send('dev_grant_specialty', {'specialty': specialty});
+
   Future<void> viewRevealedHand(int targetSeat) async {
     if (state.handRevealViewed || state.handRevealTargetSeat != targetSeat) {
       return;

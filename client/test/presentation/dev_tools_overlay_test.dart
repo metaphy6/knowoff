@@ -5,11 +5,13 @@ import 'package:knowoff_client/core/navigation/root_navigator_key.dart';
 import 'package:knowoff_client/core/network/game_transport.dart' as gt;
 import 'package:knowoff_client/data/models/game_state_dto.dart';
 import 'package:knowoff_client/domain/entities/game_session.dart';
+import 'package:knowoff_client/l10n/app_localizations.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/widgets/dev_tools_overlay.dart';
 
 class _FakeTransport implements gt.GameTransport {
   int reconnectCount = 0;
+  final List<Map<String, dynamic>> sent = [];
 
   @override
   Stream<Map<String, dynamic>> get messages => const Stream.empty();
@@ -31,7 +33,7 @@ class _FakeTransport implements gt.GameTransport {
   Future<void> reconnect() async => reconnectCount++;
 
   @override
-  Future<void> send(Map<String, dynamic> message) async {}
+  Future<void> send(Map<String, dynamic> message) async => sent.add(message);
 }
 
 late WidgetRef _capturedRef;
@@ -50,6 +52,8 @@ Widget _wrap() {
     ],
     child: MaterialApp(
       navigatorKey: rootNavigatorKey,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Consumer(
         builder: (context, ref, _) {
           _capturedRef = ref;
@@ -104,6 +108,37 @@ void main() {
     await tester.pump();
     expect(find.byIcon(Icons.vibration_outlined), findsOneWidget);
     devEchoPokes.value = false;
+  });
+
+  testWidgets(
+      'specialty picker grants the card into the hand, then plays it like a '
+      'hand card', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Use a special card (dev)'));
+    await tester.pumpAndSettle();
+
+    // Every specialty the server can grant is offered.
+    for (final id in const [
+      'pass',
+      'reveal',
+      'one_more_free_card',
+      'shuffle',
+      'revote',
+    ]) {
+      expect(find.byKey(ValueKey<String>('dev-specialty-$id')), findsOneWidget);
+    }
+
+    await tester.tap(find.byKey(const ValueKey<String>('dev-specialty-pass')));
+    await tester.pumpAndSettle();
+
+    // The grant lands first so the server's "specialty not held" check passes,
+    // then the ordinary use_specialty intent follows — the rest of the system
+    // cannot tell this apart from a dealt card.
+    final kinds = _transport.sent.map((m) => m['kind']).toList();
+    expect(kinds, ['dev_grant_specialty', 'use_specialty']);
+    expect(_transport.sent.first['payload'], {'specialty': 'pass'});
   });
 
   testWidgets(

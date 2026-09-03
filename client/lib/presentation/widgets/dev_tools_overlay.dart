@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/navigation/root_navigator_key.dart';
+import '../../l10n/app_localizations.dart';
+import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
+import 'hand_fan.dart';
+import 'specialty_use_flow.dart';
 
 final ValueNotifier<bool> devEchoPokes = ValueNotifier<bool>(false);
 
@@ -12,6 +16,68 @@ final ValueNotifier<bool> devEchoPokes = ValueNotifier<bool>(false);
 /// restart the local session back to its pre-match shape.
 class DevToolsOverlay extends ConsumerWidget {
   const DevToolsOverlay({super.key});
+
+  /// Every specialty id the server's dev hook can grant (Rules §5).
+  static const _grantableSpecialties = <String>[
+    'pass',
+    'reveal',
+    'one_more_free_card',
+    'shuffle',
+    'revote',
+  ];
+
+  /// Lets a developer pick any specialty card and play it as if it had been
+  /// dealt into their hand: the server grants the card (dev_grant_specialty),
+  /// then the ordinary use_specialty flow runs unchanged, including its
+  /// target/discard sheets. The intent order matters — the grant must land
+  /// first so the server's "specialty not held" check passes.
+  Future<void> _pickSpecialty(WidgetRef ref) async {
+    // The overlay lives outside the app's Navigator (see main.dart), so the
+    // sheet and the specialty flow's own sheets must open from the root
+    // navigator's context — the reason rootNavigatorKey exists.
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return;
+    final l10n = AppLocalizations.of(navContext);
+    final picked = await showModalBottomSheet<String>(
+      context: navContext,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final id in _grantableSpecialties)
+              ListTile(
+                key: ValueKey<String>('dev-specialty-$id'),
+                leading: DoodleIcon(
+                  specialtyIcon(id),
+                  size: 28,
+                  color: specialtyColor(id),
+                ),
+                title: Text(specialtyLabel(l10n, id)),
+                onTap: () => Navigator.of(sheetContext).pop(id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !navContext.mounted) return;
+
+    final notifier = ref.read(gameSessionProvider.notifier);
+    final session = ref.read(gameSessionProvider);
+    await notifier.devGrantSpecialty(picked);
+    if (!navContext.mounted) return;
+    if (picked == 'revote') {
+      // Revote lives outside the play phase, so it has no round-screen flow
+      // to reuse — it just fires the intent during the result window.
+      await notifier.useSpecialty('revote');
+      return;
+    }
+    final deadline = session.dto.turnDeadline;
+    final remaining = deadline == null
+        ? 0
+        : deadline.difference(DateTime.now()).inSeconds.clamp(0, 999);
+    await useSpecialtyFromHand(
+        navContext, notifier, session, picked, remaining);
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,6 +91,14 @@ class DevToolsOverlay extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            FloatingActionButton.small(
+              heroTag: 'dev_specialty_fab',
+              tooltip: 'Use a special card (dev)',
+              backgroundColor: Colors.black87,
+              onPressed: () => _pickSpecialty(ref),
+              child: const Icon(Icons.style, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
             FloatingActionButton.small(
               heroTag: 'dev_restart_fab',
               tooltip: 'Restart game (dev)',

@@ -227,7 +227,7 @@ func (s *ConnectionState) run(ctx context.Context) error {
 				continue
 			}
 		}
-		if !transport.IntentIsPhase3(env.Kind) && env.Kind != transport.IntentConvertPoints && env.Kind != transport.IntentReportMedia {
+		if !transport.IntentIsPhase3(env.Kind) && env.Kind != transport.IntentConvertPoints && env.Kind != transport.IntentReportMedia && env.Kind != transport.IntentDevGrantSpecialty {
 			_ = s.sendError("expected_intent", "only intents accepted after join")
 			continue
 		}
@@ -347,6 +347,16 @@ func (s *ConnectionState) handleIntent(env *transport.Envelope) error {
 		}
 		mode, _ := env.Payload["mode"].(string)
 		return s.Room.HandleRematch(s.Seat, mode)
+	case transport.IntentDevGrantSpecialty:
+		if s.Room == nil {
+			return fmt.Errorf("not joined")
+		}
+		m := s.Room.Match()
+		if m == nil {
+			return fmt.Errorf("match not started")
+		}
+		specialty, _ := env.Payload["specialty"].(string)
+		return m.GrantSpecialty(s.Seat, specialty)
 	default:
 		if s.Room == nil {
 			return fmt.Errorf("not joined")
