@@ -75,6 +75,7 @@ class _FakeTransport implements gt.GameTransport {
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late _FakeTransport transport;
   late GameSessionNotifier notifier;
 
@@ -860,6 +861,31 @@ void main() {
           as Map<String, dynamic>)['access_token'],
       equals('fresh-token'),
     );
+  });
+
+  test('does not retry quickplay after a handshake rejection', () async {
+    final auth = _StubAuthService();
+    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
+    transport.emitState(gt.ConnectionState.connected);
+    await _settle();
+    await notifier.queueQuickPlay(4);
+    await _settle();
+    await _settle();
+    expect(transport.sent, hasLength(1));
+
+    transport.emit('error', <String, dynamic>{
+      'code': 'join_failed',
+      'params': <String, dynamic>{'message': 'cooldown active'},
+    });
+    await _settle();
+    expect(notifier.state.lastError, equals('join_failed'));
+    transport.emitState(gt.ConnectionState.disconnected);
+    transport.emitState(gt.ConnectionState.connected);
+    await _settle();
+    await _settle();
+
+    expect(transport.sent, hasLength(1));
+    expect(notifier.state.lastError, equals('join_failed'));
   });
 
   test('reclaims the room after a dropped authenticated socket', () async {

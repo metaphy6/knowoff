@@ -47,6 +47,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   // failure (e.g. the server restarted and forgot the room) can fall back
   // to a fresh queue attempt instead of retrying the same dead room forever.
   int? _pendingQuickPlaySize;
+  String? _terminalHandshakeError;
 
   static GameStateDto _initialDto() => const GameStateDto();
 
@@ -79,6 +80,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     _sessionToken = null;
     _rejoinPending = false;
     _pendingQuickPlaySize = null;
+    _terminalHandshakeError = null;
     state = GameSession(dto: _initialDto());
     unawaited(_transport.reconnect());
   }
@@ -270,6 +272,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
             (errorMessage == 'room not found' ||
                 errorMessage == 'invalid session token');
         if (staleRoom) {
+          _terminalHandshakeError = null;
           _sessionToken = null;
           _rejoinPending = false;
           state = state.copyWith(
@@ -277,6 +280,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
             lastError: code,
           );
           break;
+        }
+        if (code == 'join_failed') {
+          _terminalHandshakeError = code;
+          _pendingQuickPlaySize = null;
         }
         // A rejected ballot has to release the local lock, or the row stays
         // stamped for a vote the server never accepted. Scoped to a rejection
@@ -317,7 +324,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       state = state.copyWith(
         connectionState: connection,
         reconnectAttempts: 0,
-        lastError: null,
+        lastError: _terminalHandshakeError,
       );
       if (_rejoinPending) {
         unawaited(_reclaimRoom());
@@ -732,6 +739,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   }
 
   Future<void> queueQuickPlay(int size) async {
+    _terminalHandshakeError = null;
     _pendingQuickPlaySize = size;
     await _send('queue_quickplay', {
       'size': size,
