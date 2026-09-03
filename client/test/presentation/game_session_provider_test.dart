@@ -244,6 +244,48 @@ void main() {
     expect(notifier.state.dto.rematchChoices, isEmpty);
   });
 
+  test('a rematch restart clears the finished match state', () async {
+    // Play the old match to its verdict, accumulating every kind of stale
+    // state the bug report showed bleeding into round 0 of the new match.
+    transport.emit('role_assigned', <String, dynamic>{'role': 'donower'});
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'finished',
+      'winner': 'donower',
+      'match_points': 42,
+      'round': 0,
+      'plays': <String, dynamic>{
+        '0': <String, dynamic>{'id': 'old-card', 'type': 'text'},
+      },
+      'nowns': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'old-nown', 'type': 'text'},
+      ],
+      'donower_seats': <int>[1],
+    });
+    await _settle();
+    expect(notifier.state.isOver, isTrue);
+    expect(notifier.state.myRole, 'donower');
+    expect(notifier.state.dto.matchPoints, 42);
+
+    // The rematch resolves server-side and the same room's fresh match opens
+    // with prefetch — no new `joined` fires, so the client must reset here.
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'prefetch',
+      'round': 0,
+      'window_seconds': 3,
+    });
+    await _settle();
+
+    final dto = notifier.state.dto;
+    expect(dto.winner, isNull);
+    expect(dto.nowns, isEmpty);
+    expect(dto.donowerSeats, isEmpty);
+    expect(dto.matchPoints, 0);
+    expect(dto.plays, isEmpty);
+    expect(dto.result, isNull);
+    expect(notifier.state.myRole, isNull);
+    expect(notifier.state.specialtyAnnouncement, isNull);
+  });
+
   test('draw events add cards to the local hand without recording a play',
       () async {
     final drawTransport = _FakeTransport();
@@ -302,6 +344,96 @@ void main() {
 
     drawNotifier.dispose();
     await drawTransport.close();
+  });
+
+  test('One More Free Card banks a round-scoped free draw on the pile',
+      () async {
+    final freeTransport = _FakeTransport();
+    final freeNotifier = GameSessionNotifier(
+      transport: freeTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          hand: HandDto(
+            cards: [CardDto(id: 'kept', type: 'text')],
+            drawPile: [
+              CardDto(id: 'pile-1', type: 'text'),
+              CardDto(id: 'pile-2', type: 'text'),
+            ],
+            specialty: 'one_more_free_card',
+          ),
+        ),
+      ),
+    );
+
+    // Using the specialty clears the card, banks the token, and pops the
+    // pile counter — the price chip now reads FREE and the face counts the
+    // covered card-to-be (0 → 1 in this hand's pile).
+    freeTransport.emit('play_revealed', <String, dynamic>{
+      'seat': 0,
+      'specialty': 'one_more_free_card',
+      'free': true,
+    });
+    await _settle();
+    expect(freeNotifier.state.dto.hand.specialty, isNull);
+    expect(freeNotifier.state.dto.hand.freeDraws, 1);
+    expect(freeNotifier.state.dto.hand.drawPile, hasLength(2));
+    expect(freeNotifier.state.freeDrawPopTick, 1);
+
+    // The free draw itself consumes the token instead of costing points.
+    freeTransport.emit('play_revealed', <String, dynamic>{
+      'seat': 0,
+      'draw': 1,
+      'free': 1,
+      'cards': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'pile-1', 'type': 'text'},
+      ],
+    });
+    await _settle();
+    expect(freeNotifier.state.dto.hand.freeDraws, 0);
+    expect(freeNotifier.state.dto.hand.drawPile.single.id, 'pile-2');
+    expect(
+      freeNotifier.state.dto.hand.cards.any((card) => card.id == 'pile-1'),
+      isTrue,
+    );
+
+    freeNotifier.dispose();
+    await freeTransport.close();
+  });
+
+  test('a fresh round clears an unspent free draw token', () async {
+    final freeTransport = _FakeTransport();
+    final freeNotifier = GameSessionNotifier(
+      transport: freeTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          hand: HandDto(
+            cards: [CardDto(id: 'kept', type: 'text')],
+            drawPile: [CardDto(id: 'pile-1', type: 'text')],
+            specialty: null,
+            freeDraws: 1,
+          ),
+        ),
+      ),
+    );
+
+    freeTransport.emit('hand_dealt', <String, dynamic>{
+      'cards': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'kept', 'type': 'text'},
+      ],
+      'draw_pile': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'pile-1', 'type': 'text'},
+      ],
+      'specialty': null,
+      'free_draws': 0,
+    });
+    await _settle();
+
+    expect(freeNotifier.state.dto.hand.freeDraws, 0);
+
+    freeNotifier.dispose();
+    await freeTransport.close();
   });
 
   test('drawing cancels a pending auto-play selection', () async {

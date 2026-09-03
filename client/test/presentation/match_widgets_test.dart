@@ -721,6 +721,69 @@ void main() {
       await tester.pump();
       expect(draws, equals(0));
     });
+
+    testWidgets('shows FREE instead of the penalty while a free draw is banked',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(const CardPile(count: 3, penalty: 5, freeDraws: 1)),
+      );
+
+      expect(find.text('FREE'), findsOneWidget);
+      expect(find.text('-5'), findsNothing);
+    });
+
+    testWidgets('a banked free draw counts the covered card on the pile face',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(const CardPile(count: 3, penalty: 5, freeDraws: 1)),
+      );
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('3'), findsNothing);
+    });
+
+    testWidgets('an empty pile with a banked free draw shows the FREE ghost',
+        (tester) async {
+      await tester.pumpWidget(
+        _wrap(const CardPile(count: 0, penalty: 5, freeDraws: 1)),
+      );
+
+      expect(find.text('1'), findsOneWidget);
+      expect(find.text('FREE'), findsOneWidget);
+      expect(find.text('-5'), findsNothing);
+    });
+
+    testWidgets('the count pops bigger when a free draw lands', (tester) async {
+      // The face counts the covered free card: 3 + 1 = 4.
+      double countScale() => tester
+          .widget<Transform>(
+            find
+                .ancestor(
+                  of: find.text('4'),
+                  matching: find.byType(Transform),
+                )
+                .first,
+          )
+          .transform
+          .getMaxScaleOnAxis();
+
+      await tester.pumpWidget(
+        _wrap(const CardPile(count: 3, penalty: 5)),
+      );
+      // No token yet, so the face shows the bare count.
+      expect(find.text('3'), findsOneWidget);
+      await tester.pumpWidget(
+        _wrap(const CardPile(count: 3, penalty: 5, freeDraws: 1, popTick: 1)),
+      );
+      final before = countScale();
+
+      // Mid-animation the count is visibly larger; after it settles the
+      // scale returns to ~1.
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(countScale(), greaterThan(before));
+
+      await tester.pump(const Duration(milliseconds: 1200));
+      expect(countScale(), closeTo(1.0, 0.01));
+    });
   });
 
   group('SeatSheet', () {

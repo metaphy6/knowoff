@@ -323,8 +323,7 @@ void main() {
     expect(find.text('Reveal a Hand'), findsOneWidget);
   });
 
-  testWidgets(
-      'RoundScreen uses Free Card from its hand card and prompts for a discard',
+  testWidgets('RoundScreen fires Free Card from its hand card instantly',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1;
@@ -354,19 +353,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    // No card was pre-selected, so a discard picker sheet must appear
-    // instead of the tap silently doing nothing.
-    expect(find.byKey(const Key('one-more-discard-c1')), findsOneWidget);
-    expect(find.byKey(const Key('one-more-discard-c2')), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('one-more-discard-c1')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
+    // The Free Card banks its free draw the moment it is tapped — no discard
+    // toll, no picker sheet in the way of the celebration.
+    expect(find.byKey(const Key('one-more-discard-c1')), findsNothing);
+    expect(find.byKey(const Key('one-more-discard-c2')), findsNothing);
     expect(transport.sent.last['kind'], 'use_specialty');
     expect(transport.sent.last['payload'], <String, dynamic>{
       'specialty': 'one_more_free_card',
-      'discard_card_id': 'c1',
     });
   });
 

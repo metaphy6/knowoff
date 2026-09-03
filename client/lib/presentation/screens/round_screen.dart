@@ -25,6 +25,7 @@ import '../widgets/specialty_announcement.dart';
 import '../widgets/specialty_use_flow.dart';
 import '../widgets/dev_tools_overlay.dart';
 import '../widgets/draw_announcement.dart';
+import '../widgets/free_draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
 import '../widgets/hand_reveal.dart';
 
@@ -197,6 +198,8 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   cards: dto.hand.cards,
                   drawPile: dto.hand.drawPile,
                   specialty: dto.hand.specialty,
+                  freeDraws: dto.hand.freeDraws,
+                  popTick: session.freeDrawPopTick,
                   selectedCardId: session.selectedCardId,
                   myRole: session.myRole,
                   isMyTurn: session.isMyTurn,
@@ -204,7 +207,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   onSelect: session.canPickCard
                       ? (id) => notifier.selectCard(id)
                       : null,
-                  onConfirm: session.canPickCard
+                  onConfirm: session.canPickCard && dto.hand.freeDraws == 0
                       ? (id) => _confirmSelection(notifier, session, id)
                       : null,
                   onCancelSelection: session.selectedCardId != null
@@ -286,7 +289,8 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
           if (session.specialtyAnnouncement != null &&
               session.specialtyAnnouncementSeat != null &&
               (session.specialtyAnnouncement != 'reveal' ||
-                  session.handRevealTargetSeat == null))
+                  session.handRevealTargetSeat == null) &&
+              session.specialtyAnnouncement != 'one_more_free_card')
             SpecialtyAnnouncement(
               key: ValueKey<String>(
                 '${session.specialtyAnnouncementSeat}-${session.specialtyAnnouncement}',
@@ -295,6 +299,16 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   ? seatDisplayName(announcementPlayer)
                   : 'P${session.specialtyAnnouncementSeat}',
               specialty: session.specialtyAnnouncement!,
+            ),
+          if (session.specialtyAnnouncement == 'one_more_free_card' &&
+              session.specialtyAnnouncementSeat != null)
+            FreeDrawAnnouncement(
+              key: ValueKey<String>(
+                'free-${session.specialtyAnnouncementSeat}',
+              ),
+              playerName: announcementPlayer != null
+                  ? seatDisplayName(announcementPlayer)
+                  : 'P${session.specialtyAnnouncementSeat}',
             ),
           if (session.drawAnnouncementCount != null &&
               session.drawAnnouncementSeat != null)

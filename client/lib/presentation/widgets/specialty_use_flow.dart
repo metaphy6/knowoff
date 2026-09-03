@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/game_session.dart';
 import '../state/game_session_provider.dart';
-import 'discard_picker_sheet.dart';
 import 'reveal_setup_sheet.dart';
 
 /// Runs the use-a-specialty flow exactly as the hand's specialty card does on
@@ -41,17 +40,10 @@ Future<void> useSpecialtyFromHand(
       );
       return;
     case 'one_more_free_card':
-      if (session.dto.hand.cards.isEmpty) return;
-      final discard = session.selectedCardId ??
-          await showDiscardPickerSheet(
-            context,
-            cards: session.dto.hand.cards,
-          );
-      if (discard == null) return;
-      await notifier.useSpecialty(
-        'one_more_free_card',
-        discardCardId: discard,
-      );
+      // Free Card fires the instant it's tapped — no discard toll, no
+      // picker. It banks a round-scoped free pile draw, announced to the
+      // table and celebrated on the user's own pile (Rules §5).
+      await notifier.useSpecialty('one_more_free_card');
       return;
     case 'shuffle':
       if (session.isDonower && session.dto.plays.isEmpty) {

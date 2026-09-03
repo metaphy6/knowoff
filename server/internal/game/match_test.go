@@ -474,6 +474,62 @@ func TestMatch_SixPlayer_DoubleMissedVoteEndsDonowerWin(t *testing.T) {
 	}
 }
 
+func TestMatch_VerdictRevealsOnlyPlayedNowns(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+
+	// Play the first (and only) round out.
+	for range m.activeSeats() {
+		seat := m.turnOrder[m.currentTurn]
+		card := m.players[seat].Hand.Cards[0]
+		_ = m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	for _, s := range m.activeSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+
+	// Catch the only Donower on the first ballot; the match ends after one
+	// round even though the vote budget scheduled two Nowns.
+	donower := -1
+	for i, r := range m.Roles() {
+		if r == RoleDonower {
+			donower = i
+			break
+		}
+	}
+	if donower < 0 {
+		t.Fatal("no donower found")
+	}
+	for _, s := range m.activeSeats() {
+		if s != donower {
+			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(donower)}))
+		}
+	}
+	m.resolveBallot()
+	m.finalizeKnowoff()
+
+	if m.phase != PhaseFinished {
+		t.Fatalf("expected finished match after catching the Donower, got %s", m.phase)
+	}
+	events := bcast.findEvents(0, transport.EventMatchVerdict)
+	if len(events) != 1 {
+		t.Fatalf("expected one match_verdict event, got %d", len(events))
+	}
+	nowns, ok := events[0].Payload["nowns"].([]map[string]any)
+	if !ok {
+		t.Fatalf("verdict nowns payload has unexpected type %T", events[0].Payload["nowns"])
+	}
+	if len(nowns) != 1 {
+		t.Fatalf("one round played, but verdict revealed %d nowns", len(nowns))
+	}
+	if nowns[0]["id"] != m.nownSchedule[0] {
+		t.Fatalf("verdict nown = %v, want the round-1 nown %s", nowns[0]["id"], m.nownSchedule[0])
+	}
+}
+
 func TestMatch_RevoteNullifiesResult(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
@@ -861,6 +917,38 @@ func TestMatch_Disconnect_LowPopulationScored(t *testing.T) {
 	}
 }
 
+func TestMatch_VerdictRevealsNoNownsWhenNoRoundPlayed(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	// Low-population finish before the first round ever began: no Nown was
+	// shown to anyone, so the verdict must not reveal (or display) any.
+	nowers := []int{}
+	for i, r := range m.Roles() {
+		if r == RoleNower {
+			nowers = append(nowers, i)
+		}
+	}
+	if len(nowers) < 2 {
+		t.Fatal("expected at least 2 nowers")
+	}
+	m.SetConnected(nowers[0], false)
+	m.SetConnected(nowers[1], false)
+	m.OnGraceExpired(nowers[0])
+	m.OnGraceExpired(nowers[1])
+	if m.phase != PhaseFinished {
+		t.Fatalf("expected finished match by low population, got %s", m.phase)
+	}
+	events := bcast.findEvents(0, transport.EventMatchVerdict)
+	if len(events) != 1 {
+		t.Fatalf("expected one match_verdict event, got %d", len(events))
+	}
+	if nowns, ok := events[0].Payload["nowns"].([]map[string]any); !ok || len(nowns) != 0 {
+		t.Fatalf("no round played, but verdict revealed nowns: %v", events[0].Payload["nowns"])
+	}
+}
+
 func TestMatch_ReplayHarness_ReproducesEvents(t *testing.T) {
 	seed := int64(12345)
 
@@ -1210,16 +1298,13 @@ func TestMatch_Specialty_OneMoreFreeDrawNoPenalty(t *testing.T) {
 	m.beginRound()
 	seat := m.turnOrder[m.currentTurn]
 	m.players[seat].Hand.Specialty = SpecialtyOneMore
-	discard := m.players[seat].Hand.Cards[0]
-	before := m.players[seat].MatchPoints
 	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{
-		"specialty":       SpecialtyOneMore,
-		"discard_card_id": discard,
+		"specialty": SpecialtyOneMore,
 	})); err != nil {
 		t.Fatalf("one more: %v", err)
 	}
-	if m.players[seat].MatchPoints != before {
-		t.Fatalf("One More Free Card should not deduct points, got %d want %d", m.players[seat].MatchPoints, before)
+	if m.freeDrawsPending[seat] != 1 {
+		t.Fatalf("One More should bank one round-scoped free draw, got %d", m.freeDrawsPending[seat])
 	}
 	if m.turnOrder[m.currentTurn] != seat {
 		t.Fatal("One More user should remain on turn to play a card")
@@ -1227,6 +1312,115 @@ func TestMatch_Specialty_OneMoreFreeDrawNoPenalty(t *testing.T) {
 	m.autoPass(seat)
 	if m.plays[seat] != "" || m.lostCards[seat] == "" {
 		t.Fatal("One More user should receive the normal timeout auto-play penalty without a card")
+	}
+}
+
+func TestMatch_Specialty_OneMoreMakesNextPileDrawFree(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	m.players[seat].Hand.Specialty = SpecialtyOneMore
+	before := m.players[seat].MatchPoints
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{
+		"specialty": SpecialtyOneMore,
+	})); err != nil {
+		t.Fatalf("one more: %v", err)
+	}
+
+	// The next pile draw consumes the token instead of charging the penalty.
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentDrawCards, map[string]any{"count": float64(1)})); err != nil {
+		t.Fatalf("free draw: %v", err)
+	}
+	if got := m.players[seat].MatchPoints; got != before {
+		t.Fatalf("free draw should cost no points, got %d want %d", got, before)
+	}
+	if m.players[seat].FreeDraws != 1 {
+		t.Fatalf("expected 1 recorded free draw, got %d", m.players[seat].FreeDraws)
+	}
+	if m.freeDrawsPending[seat] != 0 {
+		t.Fatalf("token should be consumed, got %d", m.freeDrawsPending[seat])
+	}
+
+	// A further draw in the same turn is back to full price.
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentDrawCards, map[string]any{"count": float64(1)})); err != nil {
+		t.Fatalf("paid draw: %v", err)
+	}
+	want := before - m.deps.Config.Tuning.Points.DrawPenalty
+	if got := m.players[seat].MatchPoints; got != want {
+		t.Fatalf("second draw should cost the penalty, got %d want %d", got, want)
+	}
+}
+
+func TestMatch_Specialty_OneMoreTokenExpiresAfterRound(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	m.players[seat].Hand.Specialty = SpecialtyOneMore
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{
+		"specialty": SpecialtyOneMore,
+	})); err != nil {
+		t.Fatalf("one more: %v", err)
+	}
+	// Never spend it: finish the round (everyone plays, ready all, ballot
+	// misses) and confirm the token did not roll into round two.
+	for range m.activeSeats() {
+		s := m.turnOrder[m.currentTurn]
+		if s == seat {
+			m.autoPass(seat)
+			continue
+		}
+		card := m.players[s].Hand.Cards[0]
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
+	}
+	for _, s := range m.activeSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	for _, s := range m.activeSeats() {
+		m.ballots[s] = -1
+	}
+	m.resolveBallot()
+	m.finalizeKnowoff()
+	if m.phase == PhaseFinished {
+		t.Skip("match ended after one round")
+	}
+	if got := m.freeDrawsPending[seat]; got != 0 {
+		t.Fatalf("free draw token must not persist into the next round, got %d", got)
+	}
+}
+
+func TestMatch_Specialty_OneMoreBlocksPlayUntilDrawn(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	m.players[seat].Hand.Specialty = SpecialtyOneMore
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{
+		"specialty": SpecialtyOneMore,
+	})); err != nil {
+		t.Fatalf("one more: %v", err)
+	}
+	// Playing the turn's action card while the free draw is still pending
+	// would silently void the token — the server rejects it.
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{
+		"card_id": m.players[seat].Hand.Cards[0],
+	})); err == nil {
+		t.Fatal("expected play to be rejected while a free draw is pending")
+	}
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentDrawCards, map[string]any{"count": float64(1)})); err != nil {
+		t.Fatalf("free draw: %v", err)
+	}
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentPlayCard, map[string]any{
+		"card_id": m.players[seat].Hand.Cards[0],
+	})); err != nil {
+		t.Fatalf("play after free draw: %v", err)
 	}
 }
 

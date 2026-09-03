@@ -595,6 +595,23 @@
   "@drawPileEmpty": {
     "description": "Caption on the draw pile once every card is gone."
   },
+  "drawPileFreeChip": "FREE",
+  "@drawPileFreeChip": {
+    "description": "Price chip on the draw pile while a One More Free Card token makes the next draw free."
+  },
+  "freeDrawHeadline": "FREE CARD!",
+  "@freeDrawHeadline": {
+    "description": "Dramatic headline when a One More Free Card specialty banks a free draw."
+  },
+  "freeDrawBlurb": "{name}'s next pile draw costs 0!",
+  "@freeDrawBlurb": {
+    "description": "Public announcement that a One More Free Card made the player's next pile draw free.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "specialtyRevealAction": "Reveal a Hand",
   "@specialtyRevealAction": {
     "description": "Button to use the Reveal specialty card."

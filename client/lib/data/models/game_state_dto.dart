@@ -105,17 +105,23 @@ class HandDto {
     required this.cards,
     required this.drawPile,
     required this.specialty,
+    this.freeDraws = 0,
   });
 
   final List<CardDto> cards;
   final List<CardDto> drawPile;
   final String? specialty;
 
+  /// Unspent One More Free Card tokens for this round (Rules §5): the next
+  /// pile draw(s) cost no points. Never carried across rounds.
+  final int freeDraws;
+
   factory HandDto.fromJson(Map<String, dynamic> json) {
     return HandDto(
       cards: cardList(json['cards']),
       drawPile: cardList(json['draw_pile']),
       specialty: json['specialty'] as String?,
+      freeDraws: json['free_draws'] as int? ?? 0,
     );
   }
 }
@@ -158,7 +164,12 @@ class GameStateDto {
     this.seat = -1,
     this.remainingVotes = 0,
     this.players = const [],
-    this.hand = const HandDto(cards: [], drawPile: [], specialty: null),
+    this.hand = const HandDto(
+      cards: [],
+      drawPile: [],
+      specialty: null,
+      freeDraws: 0,
+    ),
     this.nown,
     this.decoy = false,
     this.turnSeat = -1,
@@ -293,6 +304,8 @@ class GameStateDto {
     bool clearTurnDeadline = false,
     bool clearLiveBallots = false,
     bool clearRematchChoices = false,
+    bool clearVerdict = false,
+    bool clearNown = false,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -301,7 +314,7 @@ class GameStateDto {
       remainingVotes: remainingVotes ?? this.remainingVotes,
       players: players ?? this.players,
       hand: hand ?? this.hand,
-      nown: nown ?? this.nown,
+      nown: clearNown ? null : (nown ?? this.nown),
       decoy: decoy ?? this.decoy,
       turnSeat: turnSeat ?? this.turnSeat,
       plays: plays ?? this.plays,
@@ -310,9 +323,10 @@ class GameStateDto {
       ballotReady: ballotReady ?? this.ballotReady,
       voteTarget: voteTarget ?? this.voteTarget,
       result: clearResult ? null : (result ?? this.result),
-      winner: winner ?? this.winner,
-      donowerSeats: donowerSeats ?? this.donowerSeats,
-      nowns: nowns ?? this.nowns,
+      winner: clearVerdict ? null : (winner ?? this.winner),
+      donowerSeats:
+          clearVerdict ? const [] : (donowerSeats ?? this.donowerSeats),
+      nowns: clearVerdict ? const [] : (nowns ?? this.nowns),
       log: log ?? this.log,
       matchPoints: matchPoints ?? this.matchPoints,
       roomCode: roomCode ?? this.roomCode,
