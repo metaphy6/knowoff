@@ -36,6 +36,8 @@ func testConfig(size int) *config.Config {
 				KnowoffBallot:       20,
 				KnowoffRunoff:       15,
 				VoteResultWindow:    15,
+				RevealLockout:       5,
+				RevealView:          3,
 				PrefetchCountdown:   0,
 			},
 			Hand: config.HandTuning{
@@ -956,6 +958,127 @@ func TestMatch_Specialty_PassEndsTurn(t *testing.T) {
 	}
 	if events[0].Payload["seat"] != seat || events[0].Payload["specialty"] != SpecialtyPass {
 		t.Fatalf("unexpected specialty_used payload: %v", events[0].Payload)
+	}
+}
+
+func TestMatch_Specialty_RevealRejectsInvalidTargetsAndFinalFiveSeconds(t *testing.T) {
+	tests := []struct {
+		name      string
+		targetFor func(seat int) int
+		prepare   func(m *Match, target int)
+	}{
+		{name: "self", targetFor: func(seat int) int { return seat }},
+		{
+			name:      "eliminated",
+			targetFor: func(seat int) int { return (seat + 1) % 4 },
+			prepare:   func(m *Match, target int) { m.eliminated[target] = true },
+		},
+		{
+			name:      "final five seconds",
+			targetFor: func(seat int) int { return (seat + 1) % 4 },
+			prepare: func(m *Match, _ int) {
+				m.turnDeadline = time.Now().Add(5 * time.Second)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+			if err := m.Start(); err != nil {
+				t.Fatalf("start: %v", err)
+			}
+			m.beginRound()
+			seat := m.turnOrder[m.currentTurn]
+			target := tt.targetFor(seat)
+			m.players[seat].Hand.Specialty = SpecialtyReveal
+			discard := m.players[seat].Hand.Cards[0]
+			if tt.prepare != nil {
+				tt.prepare(m, target)
+			}
+
+			err := m.HandleIntent(seat, transport.NewIntent(
+				transport.IntentUseSpecialty,
+				map[string]any{
+					"specialty":       SpecialtyReveal,
+					"target_seat":     float64(target),
+					"discard_card_id": discard,
+				},
+			))
+			if err == nil {
+				t.Fatal("expected Reveal to be rejected")
+			}
+			if m.players[seat].Hand.Specialty != SpecialtyReveal {
+				t.Fatal("rejected Reveal consumed the specialty")
+			}
+			if len(m.players[seat].Hand.Cards) != 5 {
+				t.Fatal("rejected Reveal consumed the discard")
+			}
+		})
+	}
+}
+
+func TestMatch_Specialty_RevealCanBeViewedOncePerPlayerDuringCurrentRound(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	target := (seat + 1) % 4
+	viewer := (seat + 2) % 4
+	m.players[seat].Hand.Specialty = SpecialtyReveal
+	discard := m.players[seat].Hand.Cards[0]
+	bcast.clear()
+
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{
+			"specialty":       SpecialtyReveal,
+			"target_seat":     float64(target),
+			"discard_card_id": discard,
+		},
+	)); err != nil {
+		t.Fatalf("use Reveal: %v", err)
+	}
+	available := bcast.findEvents(viewer, transport.EventHandRevealAvailable)
+	if len(available) != 1 {
+		t.Fatalf("expected one reveal availability event, got %d", len(available))
+	}
+	if _, leaked := available[0].Payload["cards"]; leaked {
+		t.Fatal("availability event leaked target cards before the viewer tapped")
+	}
+	dealt := bcast.findEvents(seat, transport.EventHandDealt)
+	if len(dealt) != 1 || len(dealt[0].Payload["cards"].([]map[string]any)) != 4 {
+		t.Fatalf("expected the Reveal owner to receive the updated private hand, got %+v", dealt)
+	}
+	exposedCard := m.players[target].Hand.Cards[0]
+	m.players[target].Hand.Cards = nil
+
+	bcast.clear()
+	view := transport.NewIntent(transport.IntentViewRevealedHand, map[string]any{
+		"target_seat": float64(target),
+	})
+	if err := m.HandleIntent(viewer, view); err != nil {
+		t.Fatalf("view revealed hand: %v", err)
+	}
+	viewed := bcast.findEvents(viewer, transport.EventHandRevealViewed)
+	if len(viewed) != 1 || len(viewed[0].Payload["cards"].([]map[string]any)) == 0 {
+		t.Fatalf("expected private revealed cards, got %+v", viewed)
+	}
+	if got := viewed[0].Payload["cards"].([]map[string]any)[0]["id"]; got != exposedCard {
+		t.Fatalf("revealed card = %v, want snapshot card %s", got, exposedCard)
+	}
+	if viewed[0].Payload["view_seconds"] != 3 {
+		t.Fatalf("view_seconds = %v, want 3", viewed[0].Payload["view_seconds"])
+	}
+	if err := m.HandleIntent(viewer, view); err == nil {
+		t.Fatal("expected a second view by the same player to be rejected")
+	}
+
+	m.beginRound()
+	if err := m.HandleIntent(seat, view); err == nil {
+		t.Fatal("expected the previous round's reveal to expire")
 	}
 }
 

@@ -116,7 +116,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'round_started':
         _setDto(state.dto.copyWith(plays: const {}));
-        state = state.copyWith(moveLocked: false, clearSelectedCard: true);
+        state = state.copyWith(
+          moveLocked: false,
+          clearSelectedCard: true,
+          clearHandReveal: true,
+        );
         _mergeState(payload);
         break;
       case 'play_revealed':
@@ -129,6 +133,47 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           state = state.copyWith(
             specialtyAnnouncementSeat: seat,
             specialtyAnnouncement: specialty,
+          );
+        }
+        break;
+      case 'hand_reveal_available':
+        final actorSeat = payload['seat'] as int?;
+        final targetSeat = payload['target_seat'] as int?;
+        final round = payload['round'] as int?;
+        if (actorSeat != null && targetSeat != null && round != null) {
+          var dto = state.dto;
+          if (actorSeat == dto.seat) {
+            dto = dto.copyWith(
+              hand: HandDto(
+                cards: dto.hand.cards,
+                drawPile: dto.hand.drawPile,
+                specialty: null,
+              ),
+            );
+          }
+          state = state.copyWith(
+            dto: dto,
+            handRevealActorSeat: actorSeat,
+            handRevealTargetSeat: targetSeat,
+            handRevealRound: round,
+            handRevealViewed: false,
+            clearRevealedHand: true,
+            clearSelectedCard: actorSeat == dto.seat,
+          );
+        }
+        break;
+      case 'hand_reveal_viewed':
+        final targetSeat = payload['target_seat'] as int?;
+        if (targetSeat != null) {
+          state = state.copyWith(
+            handRevealViewed: true,
+            revealedHand: RevealedHand(
+              targetSeat: targetSeat,
+              cards: cardList(payload['cards']),
+              drawPile: cardList(payload['draw_pile']),
+              viewSeconds: payload['view_seconds'] as int? ?? 0,
+              specialty: payload['specialty_held'] as String?,
+            ),
           );
         }
         break;
@@ -403,6 +448,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     _setDto(state.dto.copyWith(
       turnDeadline: DateTime.now().add(Duration(seconds: timeoutSeconds)),
       phaseWindow: timeoutSeconds,
+      revealLockoutSeconds: payload['reveal_lockout_seconds'] as int? ?? 0,
     ));
   }
 
@@ -629,6 +675,18 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         if (discardCardId != null) 'discard_card_id': discardCardId,
         if (targetSeat != null) 'target_seat': targetSeat,
       });
+
+  Future<void> viewRevealedHand(int targetSeat) async {
+    if (state.handRevealViewed || state.handRevealTargetSeat != targetSeat) {
+      return;
+    }
+    state = state.copyWith(handRevealViewed: true);
+    await _send('view_revealed_hand', {'target_seat': targetSeat});
+  }
+
+  void dismissRevealedHand() {
+    state = state.copyWith(clearRevealedHand: true);
+  }
 
   Future<void> drawCards(int count) {
     _pendingRequests.removeWhere((request) => request['kind'] == 'play_card');

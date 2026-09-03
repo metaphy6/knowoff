@@ -265,6 +265,179 @@ void main() {
     expect(find.text("It's Knowoff time!"), findsNothing);
   });
 
+  testWidgets(
+      'RoundScreen uses Reveal from its hand card and offers only valid targets',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    final base = _sampleSession();
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(
+          cards: [
+            CardDto(id: 'c1', type: 'text', content: 'one'),
+            CardDto(id: 'c2', type: 'text', content: 'two'),
+          ],
+          drawPile: [],
+          specialty: 'reveal',
+        ),
+        players: const [
+          PlayerDto(seat: 0, name: 'Alpha', connected: true, eliminated: false),
+          PlayerDto(seat: 1, name: 'Beta', connected: true, eliminated: false),
+          PlayerDto(seat: 2, name: 'Gamma', connected: true, eliminated: true),
+          PlayerDto(seat: 3, name: 'Delta', connected: true, eliminated: false),
+        ],
+        turnDeadline: DateTime.now().add(const Duration(seconds: 12)),
+      ),
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), session, transport: transport),
+    );
+
+    expect(find.text('Reveal a Hand'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hand-specialty-reveal')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('reveal-target-1')), findsOneWidget);
+    expect(find.byKey(const Key('reveal-target-3')), findsOneWidget);
+    expect(find.byKey(const Key('reveal-target-0')), findsNothing);
+    expect(find.byKey(const Key('reveal-target-2')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('reveal-target-1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('reveal-discard-c1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(transport.sent.last['kind'], 'use_specialty');
+    expect(transport.sent.last['payload'], <String, dynamic>{
+      'specialty': 'reveal',
+      'discard_card_id': 'c1',
+      'target_seat': 1,
+    });
+    expect(find.text('Reveal a Hand'), findsOneWidget);
+  });
+
+  testWidgets('RoundScreen announces an exposed hand and offers one avatar tap',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    final session = _sampleSession().copyWith(
+      handRevealActorSeat: 0,
+      handRevealTargetSeat: 1,
+      handRevealRound: 1,
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), session, transport: transport),
+    );
+
+    expect(find.byKey(const Key('hand-reveal-announcement')), findsOneWidget);
+    expect(find.text("Beta's hand is exposed!"), findsOneWidget);
+    final doodle = find.byKey(const Key('hand-reveal-doodle-1'));
+    expect(doodle, findsOneWidget);
+
+    await tester.tap(doodle);
+    await tester.pump();
+    await tester.tap(doodle);
+    await tester.pump();
+
+    expect(
+      transport.sent.where(
+        (message) => message['kind'] == 'view_revealed_hand',
+      ),
+      hasLength(1),
+    );
+  });
+
+  testWidgets('RoundScreen closes a revealed hand after three seconds',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final session = _sampleSession().copyWith(
+      handRevealActorSeat: 0,
+      handRevealTargetSeat: 1,
+      handRevealRound: 1,
+      handRevealViewed: true,
+      revealedHand: const RevealedHand(
+        targetSeat: 1,
+        cards: [CardDto(id: 'secret', type: 'text', content: 'Secret card')],
+        drawPile: [],
+        viewSeconds: 3,
+        specialty: 'pass',
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
+
+    expect(find.byKey(const Key('revealed-hand-overlay')), findsOneWidget);
+    expect(find.text('Secret card'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2900));
+    expect(find.byKey(const Key('revealed-hand-overlay')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byKey(const Key('revealed-hand-overlay')), findsNothing);
+  });
+
+  testWidgets('RoundScreen disables Reveal in the final five seconds',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final base = _sampleSession();
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(
+          cards: [CardDto(id: 'c1', type: 'text')],
+          drawPile: [],
+          specialty: 'reveal',
+        ),
+        turnDeadline: DateTime.now().add(const Duration(seconds: 5)),
+        revealLockoutSeconds: 5,
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hand-specialty-reveal')),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('reveal-target-1')), findsNothing);
+  });
+
+  testWidgets('Reveal access persists through Discussion and Knowoff',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final base = _sampleSession(phase: 'discussion');
+    final session = base.copyWith(
+      handRevealActorSeat: 0,
+      handRevealTargetSeat: 1,
+      handRevealRound: 1,
+    );
+
+    await tester.pumpWidget(
+      _wrapWithSession(const DiscussionScreen(), session),
+    );
+    expect(find.byKey(const Key('hand-reveal-seat-access')), findsOneWidget);
+    expect(find.byKey(const Key('hand-reveal-doodle-1')), findsOneWidget);
+
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const KnowoffScreen(),
+        session.copyWith(dto: session.dto.copyWith(phase: 'knowoff')),
+      ),
+    );
+    await tester.pump();
+    expect(find.byKey(const Key('hand-reveal-doodle-1')), findsOneWidget);
+  });
+
   testWidgets('DiscussionScreen renders without exception', (tester) async {
     await tester.pumpWidget(
       _wrapWithSession(

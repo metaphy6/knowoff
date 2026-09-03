@@ -21,6 +21,7 @@ class HandFan extends StatelessWidget {
     this.onSelect,
     this.onConfirm,
     this.onCancelSelection,
+    this.onUseSpecialty,
     this.isMyTurn = true,
     this.moveLocked = false,
     this.onDraw,
@@ -43,6 +44,7 @@ class HandFan extends StatelessWidget {
 
   /// Cancel affordance on the tap-to-confirm banner.
   final VoidCallback? onCancelSelection;
+  final ValueChanged<String>? onUseSpecialty;
 
   /// Drives the tap-to-confirm banner's wording: "play now" vs "play early".
   final bool isMyTurn;
@@ -115,6 +117,7 @@ class HandFan extends StatelessWidget {
                         selectedCardId: selectedCardId,
                         onSelect: onSelect,
                         onConfirm: onConfirm,
+                        onUseSpecialty: onUseSpecialty,
                         groups: groups,
                         maxCardWidth: layout.roleSquareSize,
                       ),
@@ -212,6 +215,7 @@ class _HandGrid extends StatelessWidget {
     required this.selectedCardId,
     required this.onSelect,
     required this.onConfirm,
+    required this.onUseSpecialty,
     required this.groups,
     required this.maxCardWidth,
   });
@@ -221,6 +225,7 @@ class _HandGrid extends StatelessWidget {
   final String? selectedCardId;
   final ValueChanged<String>? onSelect;
   final ValueChanged<String>? onConfirm;
+  final ValueChanged<String>? onUseSpecialty;
   final int groups;
   final double maxCardWidth;
 
@@ -245,7 +250,13 @@ class _HandGrid extends StatelessWidget {
                 .clamp(0.0, maxCardWidth);
         final items = <Widget>[
           if (specialty != null)
-            _SpecialtyCard(specialty: specialty!, width: cardWidth),
+            _SpecialtyCard(
+              specialty: specialty!,
+              width: cardWidth,
+              onTap: onUseSpecialty == null
+                  ? null
+                  : () => onUseSpecialty!(specialty!),
+            ),
           for (var i = 0; i < cards.length; i++)
             _HandCard(
               card: cards[i],
@@ -399,10 +410,15 @@ class _CardFooter extends StatelessWidget {
 /// other card in the hand (Rules §5 calls these "specialty cards" too) — only
 /// its accent colour, icon, and footer label set it apart.
 class _SpecialtyCard extends StatelessWidget {
-  const _SpecialtyCard({required this.specialty, required this.width});
+  const _SpecialtyCard({
+    required this.specialty,
+    required this.width,
+    required this.onTap,
+  });
 
   final String specialty;
   final double width;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -413,87 +429,91 @@ class _SpecialtyCard extends StatelessWidget {
 
     return Semantics(
       label: label,
-      child: Transform.rotate(
-        angle: specialtyTilt(specialty),
-        child: Container(
-          key: ValueKey<String>('hand-specialty-$specialty'),
-          width: width,
-          height: width,
-          padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
-          decoration: BoxDecoration(
-            color: color,
-            border: Border.all(width: KoBorders.thick, color: KoColors.ink),
-            borderRadius: BorderRadius.circular(KoRadii.card),
-            boxShadow: const <BoxShadow>[KoShadows.md],
-          ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              // A faint oversized echo of the same glyph behind the main
-              // icon — a static poster-print flourish, not a texture.
-              Positioned(
-                right: -width * 0.12,
-                top: -width * 0.08,
-                child: Opacity(
-                  opacity: 0.18,
-                  child:
-                      DoodleIcon(icon, size: width * 0.7, color: KoColors.ink),
+      button: onTap != null,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Transform.rotate(
+          angle: specialtyTilt(specialty),
+          child: Container(
+            key: ValueKey<String>('hand-specialty-$specialty'),
+            width: width,
+            height: width,
+            padding: EdgeInsets.all(width < 140 ? KoSpace.sm : KoSpace.md),
+            decoration: BoxDecoration(
+              color: color,
+              border: Border.all(width: KoBorders.thick, color: KoColors.ink),
+              borderRadius: BorderRadius.circular(KoRadii.card),
+              boxShadow: const <BoxShadow>[KoShadows.md],
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: <Widget>[
+                // A faint oversized echo of the same glyph behind the main
+                // icon — a static poster-print flourish, not a texture.
+                Positioned(
+                  right: -width * 0.12,
+                  top: -width * 0.08,
+                  child: Opacity(
+                    opacity: 0.18,
+                    child: DoodleIcon(icon,
+                        size: width * 0.7, color: KoColors.ink),
+                  ),
                 ),
-              ),
-              width < 140
-                  ? Stack(
-                      children: <Widget>[
-                        Center(child: DoodleIcon(icon, size: 20)),
-                        const Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Center(
-                              child: DoodleIcon(Doodle.sparkle, size: 14)),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Expanded(
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Container(
-                                  padding: const EdgeInsets.all(KoSpace.sm),
-                                  decoration: BoxDecoration(
-                                    color: KoColors.whiteWell,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        width: KoBorders.regular,
-                                        color: KoColors.ink),
+                width < 140
+                    ? Stack(
+                        children: <Widget>[
+                          Center(child: DoodleIcon(icon, size: 20)),
+                          const Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Center(
+                                child: DoodleIcon(Doodle.sparkle, size: 14)),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Expanded(
+                            child: Center(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Container(
+                                    padding: const EdgeInsets.all(KoSpace.sm),
+                                    decoration: BoxDecoration(
+                                      color: KoColors.whiteWell,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          width: KoBorders.regular,
+                                          color: KoColors.ink),
+                                    ),
+                                    child: DoodleIcon(icon, size: 26),
                                   ),
-                                  child: DoodleIcon(icon, size: 26),
-                                ),
-                                const SizedBox(height: KoSpace.xs),
-                                Text(
-                                  label,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ],
+                                  const SizedBox(height: KoSpace.xs),
+                                  Text(
+                                    label,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: KoSpace.sm),
-                        _CardFooter(
-                          width: width,
-                          icon: Doodle.sparkle,
-                          label: l10n.cardTypeSpecialty,
-                        ),
-                      ],
-                    ),
-            ],
+                          const SizedBox(height: KoSpace.sm),
+                          _CardFooter(
+                            width: width,
+                            icon: Doodle.sparkle,
+                            label: l10n.cardTypeSpecialty,
+                          ),
+                        ],
+                      ),
+              ],
+            ),
           ),
         ),
       ),

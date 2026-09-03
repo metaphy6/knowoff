@@ -10,30 +10,33 @@ const (
 	ProtocolVersion = 1
 
 	// Intents — client → server
-	IntentQueueQuickPlay = "queue_quickplay"
-	IntentJoinRoom       = "join_room"
-	IntentPlayCard       = "play_card"
-	IntentUseSpecialty   = "use_specialty"
-	IntentDrawCards      = "draw_cards"
-	IntentCastVote       = "cast_vote"
-	IntentQuickChat      = "quick_chat"
-	IntentReady          = "ready"
-	IntentPoke           = "poke"
-	IntentReportMedia    = "report_media"
-	IntentConvertPoints  = "convert_points"
+	IntentQueueQuickPlay   = "queue_quickplay"
+	IntentJoinRoom         = "join_room"
+	IntentPlayCard         = "play_card"
+	IntentUseSpecialty     = "use_specialty"
+	IntentViewRevealedHand = "view_revealed_hand"
+	IntentDrawCards        = "draw_cards"
+	IntentCastVote         = "cast_vote"
+	IntentQuickChat        = "quick_chat"
+	IntentReady            = "ready"
+	IntentPoke             = "poke"
+	IntentReportMedia      = "report_media"
+	IntentConvertPoints    = "convert_points"
 
 	// Events — server → client
-	EventPhaseStarted      = "phase_started"
-	EventRoleAssigned      = "role_assigned"
-	EventHandDealt         = "hand_dealt"
-	EventRoundStarted      = "round_started"
-	EventShow              = "show"
-	EventTurnStarted       = "turn_started"
-	EventPlayRevealed      = "play_revealed"
-	EventRoundResolved     = "round_resolved"
-	EventSpecialtyUsed     = "specialty_used"
-	EventShuffleOccurred   = "shuffle_occurred"
-	EventVoteResultPending = "vote_result_pending"
+	EventPhaseStarted        = "phase_started"
+	EventRoleAssigned        = "role_assigned"
+	EventHandDealt           = "hand_dealt"
+	EventRoundStarted        = "round_started"
+	EventShow                = "show"
+	EventTurnStarted         = "turn_started"
+	EventPlayRevealed        = "play_revealed"
+	EventRoundResolved       = "round_resolved"
+	EventSpecialtyUsed       = "specialty_used"
+	EventHandRevealAvailable = "hand_reveal_available"
+	EventHandRevealViewed    = "hand_reveal_viewed"
+	EventShuffleOccurred     = "shuffle_occurred"
+	EventVoteResultPending   = "vote_result_pending"
 	// EventVoteCast is broadcast on every ballot cast or change while the
 	// Knowoff/runoff window is open (attributed, live — Rules §4). It never
 	// carries the tally or the outcome, only the single seat->target pair
@@ -132,7 +135,7 @@ func NewErrorEnvelope(code string, params map[string]any, replyTo string) *Envel
 // intents parse cleanly but are rejected as unavailable.
 func IntentIsPhase3(kind string) bool {
 	switch kind {
-	case IntentJoinRoom, IntentPlayCard, IntentUseSpecialty, IntentDrawCards,
+	case IntentJoinRoom, IntentPlayCard, IntentUseSpecialty, IntentViewRevealedHand, IntentDrawCards,
 		IntentCastVote, IntentQuickChat, IntentReady, IntentPoke:
 		return true
 	default:
