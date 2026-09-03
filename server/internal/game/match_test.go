@@ -1264,6 +1264,61 @@ func TestMatch_Specialty_ShuffleOnlyAtRoundStart(t *testing.T) {
 	}
 }
 
+// TestMatch_GrantSpecialty covers the dev-only specialty grant: the card lands
+// in the seat's hand exactly as if dealt, and the seat's hand re-syncs over the
+// wire so the client renders it. No other seat is told.
+func TestMatch_GrantSpecialty(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	bcast.clear()
+
+	if err := m.GrantSpecialty(2, SpecialtyReveal); err != nil {
+		t.Fatalf("grant: %v", err)
+	}
+	if got := m.PlayerHand(2).Specialty; got != SpecialtyReveal {
+		t.Fatalf("expected granted specialty %q, got %q", SpecialtyReveal, got)
+	}
+	dealt := bcast.findEvents(2, transport.EventHandDealt)
+	if len(dealt) != 1 {
+		t.Fatalf("expected one hand_dealt re-sync for the granted seat, got %d", len(dealt))
+	}
+	if dealt[0].Payload["specialty"] != SpecialtyReveal {
+		t.Fatalf("hand_dealt should carry the granted specialty, got %v", dealt[0].Payload["specialty"])
+	}
+	for _, seat := range []int{0, 1, 3} {
+		if evs := bcast.findEvents(seat, transport.EventHandDealt); len(evs) != 0 {
+			t.Fatalf("seat %d must not be re-dealt someone else's hand, got %d events", seat, len(evs))
+		}
+	}
+}
+
+// TestMatch_GrantSpecialty_Rejected keeps the dev hook from becoming a cheat
+// surface: unknown ids are refused, and the hook is disabled outright in prod.
+func TestMatch_GrantSpecialty_Rejected(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	before := m.PlayerHand(1).Specialty
+
+	if err := m.GrantSpecialty(1, "nonsense"); err == nil {
+		t.Fatal("expected unknown specialty to be rejected")
+	}
+	if got := m.PlayerHand(1).Specialty; got != before {
+		t.Fatalf("unknown grant must not change the hand, got %q", got)
+	}
+
+	m.deps.Config.App.Env = "prod"
+	if err := m.GrantSpecialty(1, SpecialtyPass); err == nil {
+		t.Fatal("expected grant to be rejected in prod")
+	}
+	if got := m.PlayerHand(1).Specialty; got != before {
+		t.Fatalf("prod grant must not change the hand, got %q", got)
+	}
+}
+
 func TestMatch_CastVote_RejectsWrongPayloadKey(t *testing.T) {
 	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {

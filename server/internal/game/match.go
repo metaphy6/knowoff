@@ -208,6 +208,38 @@ func (m *Match) SetSpecialty(seat int, s string) {
 	m.players[seat].Hand.Specialty = s
 }
 
+// GrantSpecialty is the dev-only wire hook behind IntentDevGrantSpecialty: it
+// drops the requested specialty into the seat's hand exactly as if it had been
+// dealt, then re-syncs that seat's hand so the client renders the card. From
+// here on the normal use_specialty rules apply unchanged (turn, phase, role
+// gates and all) — the grant only changes what the hand holds. Disabled in
+// prod so it can never become a cheat surface.
+func (m *Match) GrantSpecialty(seat int, specialty string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.deps.Config != nil && m.deps.Config.App.Env == "prod" {
+		return fmt.Errorf("dev_grant_specialty unavailable")
+	}
+	if seat < 0 || seat >= m.size {
+		return fmt.Errorf("invalid seat")
+	}
+	if m.eliminated[seat] {
+		return fmt.Errorf("eliminated")
+	}
+	if !m.connected[seat] {
+		return fmt.Errorf("disconnected")
+	}
+	switch specialty {
+	case SpecialtyPass, SpecialtyReveal, SpecialtyOneMore, SpecialtyShuffle, SpecialtyRevote:
+	default:
+		return fmt.Errorf("unknown specialty")
+	}
+	p := m.players[seat]
+	p.Hand.Specialty = specialty
+	m.sendHandDealt(seat, p)
+	return nil
+}
+
 // SetConnected tells the match whether a seat is currently connected.
 // Disconnection alone does not mark a seat absent; the grace timer decides that.
 func (m *Match) SetConnected(seat int, connected bool) {
