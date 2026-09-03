@@ -19,6 +19,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- The Verdict Play Again prompt now opens in the center of the screen and can be collapsed by tapping outside it, leaving a bright Play Again card inside the Back to menu bar so players can reopen it after reading the results.
 - Reveal a Hand now opens from its specialty card, filters out the owner and eliminated targets, announces the exposed player, and adds a once-per-player avatar doodle that opens the hand for three seconds during that round.
 - Donower-win verdicts now reveal each winning Donower directly on their player rectangle, matching caught-Donower results instead of listing winners in a separate declaration box.
 - Bots now draw one card from their personal pile when their playable hand runs close to their reserve, then continue the same turn and play instead of stalling.
