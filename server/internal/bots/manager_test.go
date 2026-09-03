@@ -89,6 +89,35 @@ func waitFor(t *testing.T, timeout time.Duration, cond func() bool) {
 	}
 }
 
+func TestBotActors_DrawFromWellStockedPilesBeforePlaying(t *testing.T) {
+	m := newTestMatch(t, 1)
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
+
+	room := &fakeRoom{id: "room-draw", m: m}
+	actors := make([]*BotActor, 0, len(m.ActiveSeats()))
+	for _, seat := range m.ActiveSeats() {
+		actor := NewBotActor(room, seat, rand.New(rand.NewSource(int64(seat+1))), slog.Default(), 0, 0)
+		actor.Start()
+		actors = append(actors, actor)
+	}
+	defer func() {
+		for _, actor := range actors {
+			actor.Stop()
+		}
+	}()
+
+	waitFor(t, 4*time.Second, func() bool { return len(m.TablePlays()) == len(m.ActiveSeats()) })
+	for _, seat := range m.ActiveSeats() {
+		hand := m.PlayerHand(seat)
+		if got, want := len(hand.DrawPile), 2; got != want {
+			t.Errorf("seat %d draw pile = %d, want %d", seat, got, want)
+		}
+		if got, want := len(hand.Cards), 5; got != want {
+			t.Errorf("seat %d cards after draw and play = %d, want %d", seat, got, want)
+		}
+	}
+}
+
 // TestBotActor_ThinksBeforePlayingACard guards the fix for bots playing the
 // instant their turn starts, which made it look like they weren't acting at
 // all: a bot must wait out its randomized think delay before its card lands.

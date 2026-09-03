@@ -277,6 +277,20 @@ func (b *BotActor) playTurn(m *game.Match) bool {
 			}
 		}
 
+		// Refill only when the playable hand is running close to its reserve.
+		// After one draw the balance flips, preventing panic-drawing the pile.
+		if len(hand.Cards) > 1 && len(hand.DrawPile) > 0 && len(hand.Cards) <= len(hand.DrawPile)+2 {
+			b.logger.Debug("bot drawing from well-stocked pile")
+			err := m.HandleIntent(seat, &transport.Envelope{
+				Kind:    transport.IntentDrawCards,
+				Payload: map[string]any{"count": 1},
+			})
+			if err != nil {
+				b.logger.Warn("bot draw failed", "error", err)
+			}
+			return false
+		}
+
 		// Play a card: randomize selection to avoid mechanical tells, but avoid repeated
 		// plays of the same card in quick succession.
 		cardID := hand.Cards[b.rng.Intn(len(hand.Cards))]
@@ -301,7 +315,7 @@ func (b *BotActor) playTurn(m *game.Match) bool {
 			b.logger.Warn("bot draw failed", "error", err)
 			return false
 		}
-		return true
+		return false
 	}
 	b.logger.Debug("bot passing turn")
 	err := m.HandleIntent(seat, &transport.Envelope{

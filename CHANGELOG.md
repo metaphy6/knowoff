@@ -13,6 +13,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Bots now draw one card from their personal pile when their playable hand runs close to their reserve, then continue the same turn and play instead of stalling.
 - Knowoff results now open with a four-second falling eliminated-player reveal, then show the Nower or Donower result card and Revote on the Knowoff screen without a Ready panel or duplicate result overlay.
 - Specialty-card plays are now announced to the whole table with short animated alerts, including the player who used the card.
 - Revote cards now work from the result screen instead of being rejected as out-of-phase.
