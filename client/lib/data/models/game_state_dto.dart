@@ -180,6 +180,7 @@ class GameStateDto {
     this.chatEvents = const [],
     this.liveBallots = const {},
     this.readySeats = const [],
+    this.rematchChoices = const {},
   });
 
   final String phase;
@@ -221,6 +222,11 @@ class GameStateDto {
   /// moment a fresh ballot starts.
   final Map<String, int> liveBallots;
   final List<int> readySeats;
+
+  /// seat -> "same_table" | "new_table" | "vacated", accumulated from
+  /// `rematch_state` broadcasts while the Verdict screen's Play Again
+  /// window is open. Reset whenever a fresh match starts.
+  final Map<int, String> rematchChoices;
 
   factory GameStateDto.fromJson(Map<String, dynamic> json) {
     return GameStateDto(
@@ -282,9 +288,11 @@ class GameStateDto {
     List<ChatEventDto>? chatEvents,
     Map<String, int>? liveBallots,
     List<int>? readySeats,
+    Map<int, String>? rematchChoices,
     bool clearResult = false,
     bool clearTurnDeadline = false,
     bool clearLiveBallots = false,
+    bool clearRematchChoices = false,
   }) {
     return GameStateDto(
       phase: phase ?? this.phase,
@@ -316,6 +324,9 @@ class GameStateDto {
       liveBallots:
           clearLiveBallots ? const {} : (liveBallots ?? this.liveBallots),
       readySeats: readySeats ?? this.readySeats,
+      rematchChoices: clearRematchChoices
+          ? const {}
+          : (rematchChoices ?? this.rematchChoices),
     );
   }
 }

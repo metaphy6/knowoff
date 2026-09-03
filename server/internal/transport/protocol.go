@@ -20,6 +20,7 @@ const (
 	IntentQuickChat        = "quick_chat"
 	IntentReady            = "ready"
 	IntentPoke             = "poke"
+	IntentRematch          = "rematch"
 	IntentReportMedia      = "report_media"
 	IntentConvertPoints    = "convert_points"
 
@@ -57,6 +58,11 @@ const (
 	// its locked-in state.
 	EventReadyAck   = "ready_ack"
 	EventReadyState = "ready_state"
+	// EventRematchState broadcasts one seat's Play Again choice — "same_table",
+	// "new_table", or "vacated" (the seat left or never reconnected in time)
+	// — so the rest of the table can see who is staying while everyone still
+	// on the Verdict screen decides.
+	EventRematchState = "rematch_state"
 )
 
 // Envelope is the unit of communication on the WebSocket. Every frame is a
@@ -136,7 +142,7 @@ func NewErrorEnvelope(code string, params map[string]any, replyTo string) *Envel
 func IntentIsPhase3(kind string) bool {
 	switch kind {
 	case IntentJoinRoom, IntentPlayCard, IntentUseSpecialty, IntentViewRevealedHand, IntentDrawCards,
-		IntentCastVote, IntentQuickChat, IntentReady, IntentPoke:
+		IntentCastVote, IntentQuickChat, IntentReady, IntentPoke, IntentRematch:
 		return true
 	default:
 		return false
