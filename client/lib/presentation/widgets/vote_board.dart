@@ -30,6 +30,9 @@ class VoteBoard extends StatelessWidget {
     this.tally,
     this.ballots,
     this.eliminatedSeat = -1,
+    this.revealTargetSeat,
+    this.revealViewed = false,
+    this.onViewReveal,
     super.key,
   });
 
@@ -46,6 +49,9 @@ class VoteBoard extends StatelessWidget {
   /// corresponding target-row stamp.
   final Map<String, int>? ballots;
   final int eliminatedSeat;
+  final int? revealTargetSeat;
+  final bool revealViewed;
+  final ValueChanged<int>? onViewReveal;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +77,9 @@ class VoteBoard extends StatelessWidget {
               voters: _votersFor(player.seat),
               localSeat: localSeat,
               eliminated: eliminatedSeat == player.seat,
+              revealAvailable: player.seat == revealTargetSeat,
+              revealViewed: revealViewed,
+              onViewReveal: onViewReveal,
               onVote: onVote == null ||
                       player.seat == localSeat ||
                       votedSeat == player.seat
@@ -102,6 +111,9 @@ class _BallotRow extends StatefulWidget {
     required this.eliminated,
     required this.onVote,
     required this.voteLabel,
+    required this.revealAvailable,
+    required this.revealViewed,
+    required this.onViewReveal,
   });
 
   final PlayerDto player;
@@ -112,6 +124,9 @@ class _BallotRow extends StatefulWidget {
   final bool eliminated;
   final VoidCallback? onVote;
   final String voteLabel;
+  final bool revealAvailable;
+  final bool revealViewed;
+  final ValueChanged<int>? onViewReveal;
 
   @override
   State<_BallotRow> createState() => _BallotRowState();
@@ -227,6 +242,11 @@ class _BallotRowState extends State<_BallotRow> {
                       ),
                       player: widget.player,
                       size: 48,
+                      revealAvailable: widget.revealAvailable,
+                      revealViewed: widget.revealViewed,
+                      onViewReveal: widget.onViewReveal == null
+                          ? null
+                          : () => widget.onViewReveal!(widget.player.seat),
                       onTap: () => showSeatSheet(
                         context,
                         player: widget.player,

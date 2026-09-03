@@ -6,6 +6,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- Reveal a Hand no longer depends on a separate button below the hand, publicly broadcasts hidden cards before anyone asks to view them, or remains usable during the final five seconds of a turn.
 - Knowoff result posters no longer show the stale ballot countdown or remaining-votes wheels; the result owns the full stage during its four-second display.
 - Knowoff result window is 8 seconds again (was cut to 4), restoring visible time for the Nower/Donower role-reveal poster — the four-second falling reveal previously consumed the entire window, so the poster and Revote button never rendered before the round advanced.
 - Discussion's Ready flag no longer carries over into the next round — it now resets when a fresh discussion phase opens, instead of leaving the button permanently locked from a Ready tapped last round.
@@ -14,6 +15,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Reveal a Hand now opens from its specialty card, filters out the owner and eliminated targets, announces the exposed player, and adds a once-per-player avatar doodle that opens the hand for three seconds during that round.
 - Donower-win verdicts now reveal each winning Donower directly on their player rectangle, matching caught-Donower results instead of listing winners in a separate declaration box.
 - Bots now draw one card from their personal pile when their playable hand runs close to their reserve, then continue the same turn and play instead of stalling.
 - Knowoff results now open with a four-second falling eliminated-player reveal, then show the Nower or Donower result card and Revote on the Knowoff screen without a Ready panel or duplicate result overlay.
