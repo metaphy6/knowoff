@@ -326,6 +326,33 @@ String specialtyLabel(AppLocalizations l10n, String specialty) {
   }
 }
 
+/// Where a specialty card is played — revealed under its label on first tap
+/// and left showing afterwards (Rules §5: Shuffle fires at round start,
+/// Revote during voting/the result window).
+String? specialtyUsageHint(AppLocalizations l10n, String specialty) {
+  switch (specialty) {
+    case 'revote':
+      return l10n.specialtyRevoteUsageHint;
+    case 'shuffle':
+      return l10n.specialtyShuffleUsageHint;
+    default:
+      return null;
+  }
+}
+
+/// Who's allowed to play a specialty card — a static footer note next to
+/// "Specialty" (Rules §5: Shuffle is Donower-only, Revote is Nower-only).
+String? specialtyOwnerHint(AppLocalizations l10n, String specialty) {
+  switch (specialty) {
+    case 'revote':
+      return l10n.specialtyRevoteOwnerHint;
+    case 'shuffle':
+      return l10n.specialtyShuffleOwnerHint;
+    default:
+      return null;
+  }
+}
+
 /// Localized name for a card media type (`text | image | gif`).
 String cardTypeLabel(AppLocalizations l10n, String type) {
   switch (type) {
@@ -349,7 +376,9 @@ Doodle specialtyIcon(String specialty) {
     case 'shuffle':
       return Doodle.staticBurst;
     case 'revote':
-      return Doodle.mask;
+      // A ballot box, not the identity-hiding mask used elsewhere — Revote is
+      // fundamentally another election, not a disguise.
+      return Doodle.ballotBox;
     case 'one_more_free_card':
     default:
       return Doodle.sparkle;
@@ -399,28 +428,56 @@ double specialtyTilt(String specialty) {
 /// Degrades to icon-only once [width] is too tight for a legible label.
 class _CardFooter extends StatelessWidget {
   const _CardFooter(
-      {required this.width, required this.icon, required this.label});
+      {required this.width, this.icon, this.label, this.trailing});
 
   final double width;
-  final Doodle icon;
-  final String label;
+
+  /// Card-type icon (omitted entirely for specialty cards — the big icon
+  /// above already carries the meaning, no need to repeat it in the footer).
+  final Doodle? icon;
+
+  /// Card-type label (Text/Image/Gif). Omitted entirely for specialty cards
+  /// — their icon already carries the meaning, no "Specialty" caption needed.
+  final String? label;
+
+  /// Extra static note beside [label] (e.g. who may play the card) — omitted
+  /// entirely in the icon-only compact layout.
+  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
     if (width < 140) {
-      return Center(child: DoodleIcon(icon, size: 14));
+      return icon == null
+          ? const SizedBox.shrink()
+          : Center(child: DoodleIcon(icon!, size: 14));
     }
-    return Row(
+    final iconAndLabel = Row(
       children: <Widget>[
-        DoodleIcon(icon, size: 16),
-        const SizedBox(width: KoSpace.xs),
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        if (icon != null) DoodleIcon(icon!, size: 16),
+        if (label != null) ...<Widget>[
+          const SizedBox(width: KoSpace.xs),
+          Expanded(
+            child: Text(
+              label!,
+              style: Theme.of(context).textTheme.labelSmall,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
+        ],
+      ],
+    );
+    if (trailing == null) return iconAndLabel;
+    // Its own line under the icon+label row — the full note always fits, no
+    // ellipsis needed.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        iconAndLabel,
+        Text(
+          trailing!,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(fontSize: 10),
         ),
       ],
     );
@@ -430,7 +487,7 @@ class _CardFooter extends StatelessWidget {
 /// The specialty ability, rendered as a card the same shape and size as every
 /// other card in the hand (Rules §5 calls these "specialty cards" too) — only
 /// its accent colour, icon, and footer label set it apart.
-class _SpecialtyCard extends StatelessWidget {
+class _SpecialtyCard extends StatefulWidget {
   const _SpecialtyCard({
     required this.specialty,
     required this.width,
@@ -442,17 +499,34 @@ class _SpecialtyCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<_SpecialtyCard> createState() => _SpecialtyCardState();
+}
+
+class _SpecialtyCardState extends State<_SpecialtyCard> {
+  // Sticks once tapped — the hint doesn't hide again after the first reveal.
+  bool _usageHintRevealed = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final specialty = widget.specialty;
+    final width = widget.width;
     final label = specialtyLabel(l10n, specialty);
     final color = specialtyColor(specialty);
     final icon = specialtyIcon(specialty);
+    final usageHint = specialtyUsageHint(l10n, specialty);
+    final ownerHint = specialtyOwnerHint(l10n, specialty);
 
     return Semantics(
       label: label,
-      button: onTap != null,
+      button: widget.onTap != null,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: () {
+          if (usageHint != null && !_usageHintRevealed) {
+            setState(() => _usageHintRevealed = true);
+          }
+          widget.onTap?.call();
+        },
         child: Transform.rotate(
           angle: specialtyTilt(specialty),
           child: Container(
@@ -521,6 +595,15 @@ class _SpecialtyCard extends StatelessWidget {
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
+                                  if (usageHint != null && _usageHintRevealed)
+                                    Text(
+                                      usageHint,
+                                      textAlign: TextAlign.center,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(fontSize: 10),
+                                    ),
                                 ],
                               ),
                             ),
@@ -528,8 +611,7 @@ class _SpecialtyCard extends StatelessWidget {
                           const SizedBox(height: KoSpace.sm),
                           _CardFooter(
                             width: width,
-                            icon: Doodle.sparkle,
-                            label: l10n.cardTypeSpecialty,
+                            trailing: ownerHint,
                           ),
                         ],
                       ),

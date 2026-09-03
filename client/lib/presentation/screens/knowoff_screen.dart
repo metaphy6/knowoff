@@ -9,13 +9,13 @@ import '../state/game_session_provider.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
 import '../widgets/ko_body.dart';
-import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
 import '../widgets/hand_reveal.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ready_button.dart';
 import '../widgets/ready_status.dart';
+import '../widgets/revote_card.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
 import '../widgets/vote_board.dart';
@@ -127,12 +127,8 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                         ),
                       if (canRevote) ...<Widget>[
                         const SizedBox(height: KoSpace.lg),
-                        KoButton(
-                          label: l10n.specialtyRevoteAction,
-                          subLabel: l10n.revoteHint,
-                          expand: true,
-                          backgroundColor: KoColors.violet,
-                          icon: const DoodleIcon(Doodle.sparkle, size: 24),
+                        RevoteCard(
+                          remainingSeconds: remaining,
                           onTap: () => notifier.useSpecialty('revote'),
                         ),
                       ],
@@ -148,12 +144,8 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                     if (!session.amEliminated) ...<Widget>[
                       if (canRevote) ...<Widget>[
                         const SizedBox(height: KoSpace.lg),
-                        KoButton(
-                          label: l10n.specialtyRevoteAction,
-                          subLabel: l10n.revoteHint,
-                          expand: true,
-                          backgroundColor: KoColors.violet,
-                          icon: const DoodleIcon(Doodle.mask, size: 24),
+                        RevoteCard(
+                          remainingSeconds: remaining,
                           onTap: () => notifier.useSpecialty('revote'),
                         ),
                       ],

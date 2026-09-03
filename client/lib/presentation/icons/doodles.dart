@@ -21,6 +21,7 @@ enum Doodle {
   mask,
   clock,
   robot,
+  ballotBox,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -88,6 +89,8 @@ class _DoodlePainter extends CustomPainter {
         _clock(canvas, size, paint);
       case Doodle.robot:
         _robot(canvas, size, paint);
+      case Doodle.ballotBox:
+        _ballotBox(canvas, size, paint);
     }
   }
 
@@ -293,6 +296,35 @@ class _DoodlePainter extends CustomPainter {
     canvas.drawCircle(Offset(w * 0.62, h * 0.52), w * 0.05, paint);
     canvas.drawLine(
         Offset(w * 0.36, h * 0.68), Offset(w * 0.64, h * 0.68), paint);
+  }
+
+  void _ballotBox(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    // The box: a simple trapezoid, wider at the base.
+    final box = Path()
+      ..moveTo(w * 0.18, h * 0.44)
+      ..lineTo(w * 0.82, h * 0.44)
+      ..lineTo(w * 0.72, h * 0.82)
+      ..lineTo(w * 0.28, h * 0.82)
+      ..close();
+    canvas.drawPath(box, paint);
+    // The slot in the lid.
+    canvas.drawLine(
+        Offset(w * 0.38, h * 0.44), Offset(w * 0.62, h * 0.44), paint);
+    // A ballot card, tilted mid-drop through the slot.
+    canvas.save();
+    canvas.translate(w * 0.5, h * 0.30);
+    canvas.rotate(-0.3);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: w * 0.30, height: h * 0.3),
+        Radius.circular(w * 0.04),
+      ),
+      paint,
+    );
+    canvas.restore();
   }
 
   @override
