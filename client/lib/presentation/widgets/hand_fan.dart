@@ -27,6 +27,8 @@ class HandFan extends StatelessWidget {
     this.onDraw,
     this.drawPenalty = 5,
     this.myRole,
+    this.freeDraws = 0,
+    this.popTick = 0,
     super.key,
   });
 
@@ -61,6 +63,13 @@ class HandFan extends StatelessWidget {
 
   /// `points.draw_penalty` — surfaced because Rules §3 prices panic-drawing.
   final int drawPenalty;
+
+  /// Unspent One More Free Card tokens (Rules §5) — the pile chip reads FREE
+  /// while the next draw is paid for.
+  final int freeDraws;
+
+  /// Bump to replay the draw pile's celebratory pop when a Free Card lands.
+  final int popTick;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +139,8 @@ class HandFan extends StatelessWidget {
                   drawPenalty: drawPenalty,
                   onDraw: onDraw,
                   layout: layout,
+                  freeDraws: freeDraws,
+                  popTick: popTick,
                 ),
               ],
             ],
@@ -143,6 +154,8 @@ class HandFan extends StatelessWidget {
             drawPenalty: drawPenalty,
             onDraw: onDraw,
             layout: layout,
+            freeDraws: freeDraws,
+            popTick: popTick,
           ),
         ],
       ],
@@ -157,6 +170,8 @@ class _HandSupport extends StatelessWidget {
     required this.drawPenalty,
     required this.onDraw,
     required this.layout,
+    required this.freeDraws,
+    required this.popTick,
   });
 
   final String? myRole;
@@ -164,6 +179,8 @@ class _HandSupport extends StatelessWidget {
   final int drawPenalty;
   final VoidCallback? onDraw;
   final KoLayout layout;
+  final int freeDraws;
+  final int popTick;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +202,8 @@ class _HandSupport extends StatelessWidget {
                 width: layout.roleSquareSize,
                 height: layout.roleSquareSize,
                 onDraw: onDraw,
+                freeDraws: freeDraws,
+                popTick: popTick,
               ),
             ],
           ),
@@ -202,6 +221,8 @@ class _HandSupport extends StatelessWidget {
           width: layout.roleSquareSize,
           height: layout.roleSquareSize,
           onDraw: onDraw,
+          freeDraws: freeDraws,
+          popTick: popTick,
         ),
       ],
     );

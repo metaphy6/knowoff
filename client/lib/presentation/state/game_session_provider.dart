@@ -106,6 +106,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         ));
         break;
       case 'phase_started':
+        _resetForFreshMatchIfNeeded(payload);
         _mergeState(payload);
         _applyPhaseWindow(payload);
         break;
@@ -148,6 +149,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
                 cards: dto.hand.cards,
                 drawPile: dto.hand.drawPile,
                 specialty: null,
+                freeDraws: dto.hand.freeDraws,
               ),
             );
           }
@@ -374,19 +376,76 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     }
   }
 
+  /// A rematch (Play Again → same table, or a backfilled table) restarts the
+  /// same room's match server-side — no `joined` re-fires — so the finished
+  /// match's state has to be dropped here when the fresh match's first phase
+  /// (prefetch) opens. Without this, the verdict's winner/nowns/points, the
+  /// last round's table plays, ballots, chat and the old role all bleed into
+  /// round 0 of the new match.
+  void _resetForFreshMatchIfNeeded(Map<String, dynamic> payload) {
+    final phase = payload['phase'] as String?;
+    if (phase != 'prefetch' && phase != 'role_reveal') return;
+    if (!state.isOver) return;
+
+    _bufferedMessages.clear();
+    final dto = state.dto.copyWith(
+      // Match-ended markers.
+      clearVerdict: true,
+      // Match-scoped accumulators.
+      matchPoints: 0,
+      chatEvents: const [],
+      liveBallots: const {},
+      readySeats: const [],
+      voteTarget: -1,
+      // Round-scoped leftovers the fresh round/phase events will re-fill,
+      // but which must not render in the meantime.
+      plays: const {},
+      turnSeat: -1,
+      clearResult: true,
+      clearNown: true,
+      decoy: false,
+      clearTurnDeadline: true,
+      phaseWindow: 0,
+      clearRematchChoices: true,
+    );
+    state = state.copyWith(
+      dto: dto,
+      lastError: null,
+      clearSelectedCard: true,
+      moveLocked: false,
+      clearFinalElimination: true,
+      clearHandReveal: true,
+      clearRevealedHand: true,
+      clearSpecialtyAnnouncement: true,
+      clearDrawAnnouncement: true,
+      clearMyRole: true,
+    );
+  }
+
   void _mergePlayRevealed(Map<String, dynamic> payload) {
     final seat = payload['seat'] as int?;
     final cardId = payload['card_id'] as String?;
-    if (seat != null &&
-        payload.containsKey('specialty') &&
-        seat == state.dto.seat) {
-      _setDto(state.dto.copyWith(
-        hand: HandDto(
-          cards: state.dto.hand.cards,
-          drawPile: state.dto.hand.drawPile,
-          specialty: null,
-        ),
-      ));
+    if (seat != null && payload.containsKey('specialty')) {
+      if (seat == state.dto.seat) {
+        final specialtyId = payload['specialty'] as String?;
+        // One More Free Card grants a round-scoped free draw: the pile count
+        // pops (the specialty pays for the next draw) and the price chip
+        // drops to 0 until the token is spent.
+        final freeDraws = specialtyId == 'one_more_free_card'
+            ? state.dto.hand.freeDraws + 1
+            : state.dto.hand.freeDraws;
+        _setDto(state.dto.copyWith(
+          hand: HandDto(
+            cards: state.dto.hand.cards,
+            drawPile: state.dto.hand.drawPile,
+            specialty: null,
+            freeDraws: freeDraws,
+          ),
+        ));
+        if (specialtyId == 'one_more_free_card') {
+          state = state.copyWith(freeDrawPopTick: state.freeDrawPopTick + 1);
+        }
+      }
     }
     if (seat == null) return;
     if (payload.containsKey('draw')) {
@@ -403,11 +462,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           .map(CardDto.fromJson)
           .toList();
       final count = payload['draw'] as int? ?? drawn.length;
+      final free = (payload['free'] as int? ?? 0).clamp(
+        0,
+        state.dto.hand.freeDraws,
+      );
       _setDto(state.dto.copyWith(
         hand: HandDto(
           cards: [...state.dto.hand.cards, ...drawn],
           drawPile: state.dto.hand.drawPile.skip(count).toList(),
           specialty: state.dto.hand.specialty,
+          freeDraws: state.dto.hand.freeDraws - free,
         ),
       ));
       return;
@@ -428,6 +492,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
             cards: current.hand.cards.where((c) => c.id != lostId).toList(),
             drawPile: current.hand.drawPile,
             specialty: current.hand.specialty,
+            freeDraws: current.hand.freeDraws,
           ),
         );
       }
@@ -679,8 +744,12 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         'access_token': await _freshAccessToken(),
       });
 
-  Future<void> playCard(String cardId) =>
-      _send('play_card', {'card_id': cardId});
+  Future<void> playCard(String cardId) {
+    // A One More Free Card token must be spent first — the server rejects the
+    // play, and tapping the pile right here is exactly what the card is for.
+    if (state.dto.hand.freeDraws > 0) return Future<void>.value();
+    return _send('play_card', {'card_id': cardId});
+  }
 
   Future<void> useSpecialty(String specialty,
           {String? discardCardId, int? targetSeat}) =>
