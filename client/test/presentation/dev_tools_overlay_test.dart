@@ -111,8 +111,8 @@ void main() {
   });
 
   testWidgets(
-      'specialty picker grants the card into the hand, then plays it like a '
-      'hand card', (tester) async {
+      'specialty picker grants the card into the hand without playing it',
+      (tester) async {
     await tester.pumpWidget(_wrap());
     await tester.pump();
 
@@ -133,32 +133,11 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('dev-specialty-pass')));
     await tester.pumpAndSettle();
 
-    // The grant lands first so the server's "specialty not held" check passes,
-    // then the ordinary use_specialty intent follows — the rest of the system
-    // cannot tell this apart from a dealt card.
+    // Only the grant is sent — the card lands in the hand (replacing whatever
+    // specialty was held) and is played later through the normal hand UI.
     final kinds = _transport.sent.map((m) => m['kind']).toList();
-    expect(kinds, ['dev_grant_specialty', 'use_specialty']);
+    expect(kinds, ['dev_grant_specialty']);
     expect(_transport.sent.first['payload'], {'specialty': 'pass'});
-  });
-
-  testWidgets(
-      'granting the Free Card from the dev picker fires its use intent '
-      'straight after the grant', (tester) async {
-    await tester.pumpWidget(_wrap());
-    await tester.pump();
-
-    await tester.tap(find.byTooltip('Use a special card (dev)'));
-    await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey<String>('dev-specialty-one_more_free_card')),
-    );
-    await tester.pumpAndSettle();
-
-    final kinds = _transport.sent.map((m) => m['kind']).toList();
-    expect(kinds, ['dev_grant_specialty', 'use_specialty']);
-    expect(_transport.sent.last['payload'], {
-      'specialty': 'one_more_free_card',
-    });
   });
 
   testWidgets(

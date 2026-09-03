@@ -374,14 +374,14 @@ Doodle specialtyIcon(String specialty) {
     case 'reveal':
       return Doodle.eye;
     case 'shuffle':
-      return Doodle.staticBurst;
+      return Doodle.cardSwirl;
     case 'revote':
       // A ballot box, not the identity-hiding mask used elsewhere — Revote is
       // fundamentally another election, not a disguise.
       return Doodle.ballotBox;
     case 'one_more_free_card':
     default:
-      return Doodle.sparkle;
+      return Doodle.giftCard;
   }
 }
 

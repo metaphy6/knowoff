@@ -7,7 +7,6 @@ import '../../l10n/app_localizations.dart';
 import '../icons/doodles.dart';
 import '../state/game_session_provider.dart';
 import 'hand_fan.dart';
-import 'specialty_use_flow.dart';
 
 final ValueNotifier<bool> devEchoPokes = ValueNotifier<bool>(false);
 
@@ -26,11 +25,10 @@ class DevToolsOverlay extends ConsumerWidget {
     'revote',
   ];
 
-  /// Lets a developer pick any specialty card and play it as if it had been
-  /// dealt into their hand: the server grants the card (dev_grant_specialty),
-  /// then the ordinary use_specialty flow runs unchanged, including its
-  /// target/discard sheets. The intent order matters — the grant must land
-  /// first so the server's "specialty not held" check passes.
+  /// Lets a developer pick any specialty card and drop it into their hand
+  /// (dev_grant_specialty), replacing whatever specialty card was held
+  /// before. It is not played automatically — the normal hand UI is used to
+  /// play it afterwards, exactly like a dealt card.
   Future<void> _pickSpecialty(WidgetRef ref) async {
     // The overlay lives outside the app's Navigator (see main.dart), so the
     // sheet and the specialty flow's own sheets must open from the root
@@ -63,23 +61,6 @@ class DevToolsOverlay extends ConsumerWidget {
 
     final notifier = ref.read(gameSessionProvider.notifier);
     await notifier.devGrantSpecialty(picked);
-    if (!navContext.mounted) return;
-    if (picked == 'revote') {
-      // Revote lives outside the play phase, so it has no round-screen flow
-      // to reuse — it just fires the intent during the result window.
-      await notifier.useSpecialty('revote');
-      return;
-    }
-    // Read the session AFTER the grant reply: the use flow's gates (Free
-    // Card's turn check, Reveal's card list) must see the dealt card, not a
-    // snapshot taken before the server's hand_dealt arrived.
-    final session = ref.read(gameSessionProvider);
-    final deadline = session.dto.turnDeadline;
-    final remaining = deadline == null
-        ? 0
-        : deadline.difference(DateTime.now()).inSeconds.clamp(0, 999);
-    await useSpecialtyFromHand(
-        navContext, notifier, session, picked, remaining);
   }
 
   @override
