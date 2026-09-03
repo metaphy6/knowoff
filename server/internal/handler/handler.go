@@ -341,6 +341,12 @@ func (s *ConnectionState) handleIntent(env *transport.Envelope) error {
 		return s.handleConvertPoints(env)
 	case transport.IntentReportMedia:
 		return s.handleReportMedia(env)
+	case transport.IntentRematch:
+		if s.Room == nil {
+			return fmt.Errorf("not joined")
+		}
+		mode, _ := env.Payload["mode"].(string)
+		return s.Room.HandleRematch(s.Seat, mode)
 	default:
 		if s.Room == nil {
 			return fmt.Errorf("not joined")

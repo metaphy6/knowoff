@@ -934,6 +934,42 @@
   "@verdictDonowerBlurb": {
     "description": "Verdict subtitle after a Donower win."
   },
+  "rematchTitle": "Play again?",
+  "@rematchTitle": {
+    "description": "Heading on the post-match rematch window."
+  },
+  "rematchPrompt": "Stay at this table, or head to a fresh one.",
+  "@rematchPrompt": {
+    "description": "Subtitle explaining the two rematch choices."
+  },
+  "rematchSameTable": "Same table",
+  "@rematchSameTable": {
+    "description": "Button: rematch with the same players."
+  },
+  "rematchNewTable": "New table",
+  "@rematchNewTable": {
+    "description": "Button: leave for a fresh Quick Play table."
+  },
+  "rematchWaitingSameTable": "Waiting for the rest of the table\u2026",
+  "@rematchWaitingSameTable": {
+    "description": "Status once this seat picked same table, before the rematch resolves."
+  },
+  "rematchWaitingNewTable": "Heading to a new table\u2026",
+  "@rematchWaitingNewTable": {
+    "description": "Status once this seat picked a new table."
+  },
+  "rematchDecidedCount": "{decided} of {total} decided",
+  "@rematchDecidedCount": {
+    "description": "How many seats have chosen a rematch option so far.",
+    "placeholders": {
+      "decided": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "rematchVacantSeatHint": "Waiting for a new player to click Quick Play\u2026",
+  "@rematchVacantSeatHint": {
+    "description": "Shown once a seat opened up for Quick Play backfill."
+  },
   "noticesEmpty": "Nothing to report.",
   "@noticesEmpty": {
     "description": "Empty state for the notice inbox."
