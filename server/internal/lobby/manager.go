@@ -22,11 +22,12 @@ const roomMappingTTL = 24 * time.Hour
 type Manager struct {
 	deps Deps
 
-	mu     sync.RWMutex
-	rooms  map[string]*Room      // by Room.ID
-	codes  map[string]*Room      // by short join code
-	queues map[int][]*queueEntry // size -> FIFO entries
-	ready  atomic.Bool
+	mu       sync.RWMutex
+	rooms    map[string]*Room      // by Room.ID
+	codes    map[string]*Room      // by short join code
+	queues   map[int][]*queueEntry // size -> FIFO entries
+	reopened map[int][]*Room       // size -> rematch rooms with vacant seats, oldest first
+	ready    atomic.Bool
 }
 
 // Config returns the server configuration.
@@ -59,10 +60,11 @@ type QueueAssignment struct {
 // NewManager returns an empty lobby manager.
 func NewManager(deps Deps) *Manager {
 	m := &Manager{
-		deps:   deps,
-		rooms:  make(map[string]*Room),
-		codes:  make(map[string]*Room),
-		queues: make(map[int][]*queueEntry),
+		deps:     deps,
+		rooms:    make(map[string]*Room),
+		codes:    make(map[string]*Room),
+		queues:   make(map[int][]*queueEntry),
+		reopened: make(map[int][]*Room),
 	}
 	m.ready.Store(true)
 	return m
@@ -197,13 +199,19 @@ func (m *Manager) RemoveFromQueue(queueID string) {
 	}
 }
 
-// ProcessQueue matches waiting players into rooms. It fills rooms with humans
-// only; backfill is handled separately by ProcessBackfill.
+// ProcessQueue matches waiting players into rooms. Rematch rooms with
+// vacant seats (see Room.HandleRematch) are backfilled first — a same-table
+// rematch waiting on a missing player should win over spinning up a brand
+// new table — then rooms with humans only; bot backfill is handled
+// separately by ProcessBackfill.
 func (m *Manager) ProcessQueue(ctx context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for size := range m.queues {
+		m.reopened[size] = fillReopenedRoomsLocked(m.reopened[size], m.queues[size], func(consumed int) {
+			m.queues[size] = m.queues[size][consumed:]
+		})
 		for len(m.queues[size]) >= size {
 			r, err := m.makeRoomLocked(size)
 			if err != nil {
@@ -217,6 +225,43 @@ func (m *Manager) ProcessQueue(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// fillReopenedRoomsLocked assigns queued entries into rematch rooms' vacant
+// seats, oldest room first, dropping rooms that are already full or have
+// been filled by someone else in the meantime. It returns the surviving
+// room list (still-vacant rooms only).
+func fillReopenedRoomsLocked(rooms []*Room, queue []*queueEntry, consume func(n int)) []*Room {
+	consumed := 0
+	kept := rooms[:0]
+	for _, r := range rooms {
+		for r.HasVacantSeats() && consumed < len(queue) {
+			entry := queue[consumed]
+			seat, token, ok := r.ClaimVacantSeat(entry.accountID)
+			if !ok {
+				break
+			}
+			consumed++
+			entry.assigned <- QueueAssignment{Room: r, Seat: seat, SessionToken: token}
+		}
+		if r.HasVacantSeats() {
+			kept = append(kept, r)
+		}
+	}
+	if consume != nil && consumed > 0 {
+		consume(consumed)
+	}
+	return kept
+}
+
+// RegisterReopenedRoom makes a rematch room's vacant seats available to the
+// Quick Play queue and immediately tries to fill them from anyone already
+// waiting.
+func (m *Manager) RegisterReopenedRoom(r *Room) {
+	m.mu.Lock()
+	m.reopened[r.Size] = append(m.reopened[r.Size], r)
+	m.mu.Unlock()
+	m.ProcessQueue(context.Background())
 }
 
 // ProcessBackfill tops up Quick Play queues with labeled bots once the oldest
@@ -264,6 +309,32 @@ func (m *Manager) ProcessBackfill(ctx context.Context) {
 			m.deps.Logger.Info("backfilled room with bots", "room_id", r.ID, "size", size, "humans", humans, "bots", bots)
 		}
 	}
+
+	// Rematch rooms sitting on vacant seats past the same timeout get the
+	// same last-resort bot fill, gated by the same min_humans floor as a
+	// fresh room — a same-table rematch never bot-fills a nearly-empty
+	// table either.
+	for size, rooms := range m.reopened {
+		kept := rooms[:0]
+		for _, r := range rooms {
+			if !r.HasVacantSeats() {
+				continue
+			}
+			if time.Since(r.ReopenedAt()) < timeout {
+				kept = append(kept, r)
+				continue
+			}
+			if r.HumansSeated() < minHumans {
+				kept = append(kept, r)
+				continue
+			}
+			r.FillVacantSeatsWithBots()
+			if r.HasVacantSeats() {
+				kept = append(kept, r)
+			}
+		}
+		m.reopened[size] = kept
+	}
 }
 
 func (m *Manager) makeRoomLocked(size int) (*Room, error) {
@@ -297,6 +368,7 @@ func (m *Manager) makeRoomLocked(size int) (*Room, error) {
 		return nil
 	})
 	r.SetOnDestroy(func(r *Room) { m.DestroyRoom(r.ID) })
+	r.SetOnRematchOpen(func(r *Room) { m.RegisterReopenedRoom(r) })
 	m.rooms[id] = r
 	m.codes[code] = r
 	if m.deps.Redis != nil {

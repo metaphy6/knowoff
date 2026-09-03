@@ -232,6 +232,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'quick_chat':
         _appendChatEvent(payload);
         break;
+      case 'rematch_state':
+        final seat = payload['seat'] as int?;
+        final mode = payload['mode'] as String?;
+        if (seat != null && mode != null) {
+          final choices = Map<int, String>.of(state.dto.rematchChoices)
+            ..[seat] = mode;
+          _setDto(state.dto.copyWith(rematchChoices: choices));
+        }
+        break;
       case 'role_assigned':
         final role = payload['role'] as String?;
         state = state.copyWith(myRole: role);
@@ -466,7 +475,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     // Every fresh phase starts with a clean slate — otherwise a Ready tapped
     // last round (e.g. discussionReady) rides along into the next one and
     // permanently locks the button since it never gets un-set.
-    var dto = state.dto.copyWith(readySeats: const [], discussionReady: false);
+    var dto = state.dto.copyWith(
+      readySeats: const [],
+      discussionReady: false,
+      clearRematchChoices: true,
+    );
     if (opensBallot) {
       dto = dto.copyWith(
         voteTarget: -1,
@@ -568,6 +581,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       chatEvents: current.chatEvents,
       liveBallots: current.liveBallots,
       readySeats: current.readySeats,
+      rematchChoices: current.rematchChoices,
     );
     state = state.copyWith(dto: updated, lastError: null);
   }
@@ -687,6 +701,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   void dismissRevealedHand() {
     state = state.copyWith(clearRevealedHand: true);
   }
+
+  /// Sends this seat's Play Again choice once the match has finished:
+  /// "same_table" waits for the rest of the table, "new_table" leaves the
+  /// seat open for Quick Play backfill immediately. Safe to call again
+  /// before the table resolves — same_table can still change its mind to
+  /// new_table (see server Room.HandleRematch).
+  Future<void> rematch(String mode) => _send('rematch', {'mode': mode});
 
   Future<void> drawCards(int count) {
     _pendingRequests.removeWhere((request) => request['kind'] == 'play_card');

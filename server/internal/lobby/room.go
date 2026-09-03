@@ -55,6 +55,16 @@ type Room struct {
 	started    bool
 	finished   bool
 	botActors  []*bots.BotActor
+
+	// Rematch: once a match finishes, connected human seats each choose
+	// "same_table" or "new_table" (see HandleRematch). vacantSeats holds
+	// seats released by a new_table choice or an abandoned reconnect, open
+	// for Quick Play backfill until the room fills and restarts.
+	rematchChoices  map[int]string
+	awaitingRematch bool
+	vacantSeats     map[int]bool
+	reopenedAt      time.Time
+	onRematchOpen   func(r *Room)
 }
 
 // NewRoom creates a room in the waiting phase.
@@ -86,6 +96,15 @@ func (r *Room) SetOnDestroy(fn func(r *Room)) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.onDestroy = fn
+}
+
+// SetOnRematchOpen registers a callback invoked when a rematch resolves with
+// vacant seats still open (see HandleRematch) — the lobby Manager uses it to
+// make those seats available to the Quick Play queue.
+func (r *Room) SetOnRematchOpen(fn func(r *Room)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.onRematchOpen = fn
 }
 
 // StartMatch initializes the authoritative match. It may be called once the
@@ -279,6 +298,13 @@ func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
 			r.match.SetConnected(seat, true)
 		}
 	}
+	r.maybeAutoStartLocked()
+}
+
+// maybeAutoStartLocked fires onStart once every seat is bound. The caller
+// must hold r.mu; it is shared by a fresh room filling up (SetConnection)
+// and a rematch resolving with no vacant seats (HandleRematch).
+func (r *Room) maybeAutoStartLocked() {
 	if !r.started && r.onStart != nil && r.boundCount >= r.Size {
 		r.started = true
 		r.deps.Logger.Info("starting match", "room_id", r.ID, "bound_count", r.boundCount, "size", r.Size)
@@ -290,6 +316,15 @@ func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
 			}
 		}()
 	}
+}
+
+// tryAutoStart is maybeAutoStartLocked's lock-acquiring counterpart, for
+// callers that aren't already holding r.mu (e.g. after resolving a rematch
+// or backfilling vacant seats).
+func (r *Room) tryAutoStart() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.maybeAutoStartLocked()
 }
 
 func (r *Room) scheduleGraceLocked(seat int) {
@@ -322,14 +357,198 @@ func (r *Room) onGraceExpired(seat int) {
 	if r.match != nil {
 		r.match.OnGraceExpired(seat)
 	}
-	// Tear down the room once the match has finished.
-	if r.match != nil && r.match.Phase() == game.PhaseFinished {
+	// Tear down the room once the match has finished and every seat that
+	// was ever connected has left \u2014 not merely the seat whose grace just
+	// expired, so the rest of the table can still be watching Verdict (and,
+	// with a rematch decision in progress, still resolve it) after one
+	// player disappears.
+	if r.match != nil && r.match.Phase() == game.PhaseFinished && len(r.conns) == 0 {
 		r.finished = true
 		r.stopBotsLocked()
 		if r.onDestroy != nil {
 			go r.onDestroy(r)
 		}
 	}
+}
+
+// HandleRematch records seat's Play Again choice once its match has
+// finished: "same_table" keeps the seat bound, waiting for the rest of the
+// table; "new_table" releases it immediately so the seat can be backfilled.
+// Once every still-connected human seat has chosen, the table resolves \u2014
+// any seat that picked new_table, plus any seat that never reconnected, is
+// opened to Quick Play, and the match restarts the moment every seat is
+// bound and connected again (same mechanism as a fresh room filling up).
+//
+// Private/local rooms (QuickPlay == false) never open vacant seats to the
+// public Quick Play queue \u2014 only same_table is meaningful there, matching
+// how the room was created (by code, not by matchmaking).
+func (r *Room) HandleRematch(seat int, mode string) error {
+	if mode != "same_table" && mode != "new_table" {
+		return fmt.Errorf("invalid rematch mode")
+	}
+
+	r.mu.Lock()
+	if r.match == nil || r.match.Phase() != game.PhaseFinished {
+		r.mu.Unlock()
+		return fmt.Errorf("no finished match to rematch")
+	}
+	b, ok := r.bindings[seat]
+	if !ok || b.Bot {
+		r.mu.Unlock()
+		return fmt.Errorf("invalid seat")
+	}
+	if r.rematchChoices == nil {
+		r.rematchChoices = make(map[int]string)
+	}
+	r.rematchChoices[seat] = mode
+	r.awaitingRematch = true
+	if mode == "new_table" {
+		r.releaseSeatLocked(seat)
+	}
+	resolve := r.everyoneDecidedLocked()
+	var vacant []int
+	if resolve {
+		vacant = r.resolveRematchLocked()
+	}
+	r.mu.Unlock()
+
+	r.Broadcast(transport.NewEvent(transport.EventRematchState, map[string]any{
+		"seat": seat, "mode": mode,
+	}), -1)
+
+	if resolve {
+		if len(vacant) == 0 {
+			r.tryAutoStart()
+		} else if r.QuickPlay && r.onRematchOpen != nil {
+			r.onRematchOpen(r)
+		}
+	}
+	return nil
+}
+
+// releaseSeatLocked frees seat \u2014 unbinding its connection if still present
+// \u2014 and marks it vacant for backfill. The caller must hold r.mu.
+func (r *Room) releaseSeatLocked(seat int) {
+	if _, ok := r.conns[seat]; ok {
+		delete(r.conns, seat)
+		r.boundCount--
+	}
+	delete(r.bindings, seat)
+	if r.vacantSeats == nil {
+		r.vacantSeats = make(map[int]bool)
+	}
+	r.vacantSeats[seat] = true
+}
+
+// everyoneDecidedLocked reports whether every currently-connected human seat
+// has made a rematch choice. Disconnected seats never block resolution \u2014
+// an abandoned player cannot hold the rest of the table hostage. The caller
+// must hold r.mu.
+func (r *Room) everyoneDecidedLocked() bool {
+	for seat, b := range r.bindings {
+		if b.Bot {
+			continue
+		}
+		if _, connected := r.conns[seat]; !connected {
+			continue
+		}
+		if _, chose := r.rematchChoices[seat]; !chose {
+			return false
+		}
+	}
+	return true
+}
+
+// resolveRematchLocked finalizes the table's rematch decision: any human
+// seat that's disconnected (abandoned mid-decision) is released just like
+// an explicit new_table pick, the finished match is cleared so a fresh one
+// can start, and the seats now open for backfill are returned. The caller
+// must hold r.mu.
+func (r *Room) resolveRematchLocked() []int {
+	for seat, b := range r.bindings {
+		if b.Bot {
+			continue
+		}
+		if _, connected := r.conns[seat]; !connected {
+			r.releaseSeatLocked(seat)
+		}
+	}
+	r.stopBotsLocked()
+	r.match = nil
+	r.started = false
+	r.rematchChoices = nil
+	r.awaitingRematch = false
+	r.reopenedAt = time.Now()
+	vacant := make([]int, 0, len(r.vacantSeats))
+	for s := range r.vacantSeats {
+		vacant = append(vacant, s)
+	}
+	return vacant
+}
+
+// HasVacantSeats reports whether the room has rematch-opened seats still
+// waiting for a player.
+func (r *Room) HasVacantSeats() bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return len(r.vacantSeats) > 0
+}
+
+// ReopenedAt returns when the room last resolved a rematch with vacant
+// seats, for the Quick Play backfill timeout.
+func (r *Room) ReopenedAt() time.Time {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.reopenedAt
+}
+
+// ClaimVacantSeat assigns accountID to one of the room's rematch-opened
+// seats, mirroring ClaimSeat for a fresh room. It returns -1, "", false if
+// no seat is open.
+func (r *Room) ClaimVacantSeat(accountID string) (int, string, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for seat := range r.vacantSeats {
+		delete(r.vacantSeats, seat)
+		token := uuid.NewString()
+		r.bindings[seat] = &SeatBinding{
+			Seat: seat, AccountID: accountID, SessionToken: token, BoundAt: time.Now(),
+		}
+		return seat, token, true
+	}
+	return -1, "", false
+}
+
+// FillVacantSeatsWithBots backfills every still-open rematch seat with a
+// labeled bot, the same fairness-limited last resort used for a slow fresh
+// Quick Play queue (BLUEPRINT 🎮 §1), and tries to start the match.
+func (r *Room) FillVacantSeatsWithBots() {
+	r.mu.Lock()
+	for seat := range r.vacantSeats {
+		delete(r.vacantSeats, seat)
+		r.bindings[seat] = &SeatBinding{
+			Seat: seat, Bot: true, BotName: bots.BotNickname(r.ID, seat),
+			SessionToken: uuid.NewString(), BoundAt: time.Now(),
+		}
+		// Bot seats have no WebSocket connection; count them as bound
+		// immediately, same as ClaimSeat's bot path.
+		r.boundCount++
+	}
+	r.mu.Unlock()
+	r.tryAutoStart()
+}
+
+// HumansSeated counts non-bot seats currently bound (connected or not).
+func (r *Room) HumansSeated() int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	n := 0
+	for _, b := range r.bindings {
+		if !b.Bot {
+			n++
+		}
+	}
+	return n
 }
 
 // Connection returns the current connection for a seat.

@@ -1006,6 +1006,52 @@ void main() {
     expect(session.dto.phase, equals('waiting'));
   });
 
+  testWidgets(
+      'VerdictScreen offers Play Again once the match is actually finished',
+      (tester) async {
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const VerdictScreen(),
+        _sampleSession(phase: 'finished'),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('rematch-overlay')), findsOneWidget);
+    expect(find.text('Play again?'), findsOneWidget);
+    expect(find.byKey(const Key('rematch-same-table')), findsOneWidget);
+    expect(find.byKey(const Key('rematch-new-table')), findsOneWidget);
+  });
+
+  testWidgets(
+      'VerdictScreen sends the chosen rematch mode and shows a waiting state',
+      (tester) async {
+    final transport = _ControllableTransport();
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const VerdictScreen(),
+        _sampleSession(phase: 'finished'),
+        transport: transport,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('rematch-same-table')));
+    await tester.pump();
+
+    // The button send itself is fire-and-forget; the UI only flips to the
+    // waiting state once the server echoes the choice back, same as Ready.
+    transport.emit(<String, dynamic>{
+      'kind': 'rematch_state',
+      'payload': <String, dynamic>{'seat': 0, 'mode': 'same_table'},
+    });
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Waiting for the rest of the table…'), findsOneWidget);
+    expect(find.byKey(const Key('rematch-same-table')), findsNothing);
+  });
+
   group('design guardrails hold on every live match screen', () {
     final screens = <String, (Widget, String)>{
       'round': (const RoundScreen(), 'play'),

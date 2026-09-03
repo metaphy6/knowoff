@@ -206,6 +206,44 @@ void main() {
     expect(notifier.state.dto.discussionReady, isFalse);
   });
 
+  test('rematch sends the chosen mode and rematch_state accumulates choices',
+      () async {
+    await notifier.rematch('same_table');
+    expect(transport.sent.last['kind'], 'rematch');
+    expect(transport.sent.last['payload'], <String, dynamic>{
+      'mode': 'same_table',
+    });
+
+    transport.emit('rematch_state', <String, dynamic>{
+      'seat': 0,
+      'mode': 'same_table',
+    });
+    transport.emit('rematch_state', <String, dynamic>{
+      'seat': 3,
+      'mode': 'new_table',
+    });
+    await _settle();
+
+    expect(notifier.state.dto.rematchChoices, <int, String>{
+      0: 'same_table',
+      3: 'new_table',
+    });
+  });
+
+  test('rematchChoices resets once a fresh match phase starts', () async {
+    transport.emit('rematch_state', <String, dynamic>{
+      'seat': 0,
+      'mode': 'same_table',
+    });
+    await _settle();
+    expect(notifier.state.dto.rematchChoices, isNotEmpty);
+
+    transport.emit('phase_started', <String, dynamic>{'phase': 'prefetch'});
+    await _settle();
+
+    expect(notifier.state.dto.rematchChoices, isEmpty);
+  });
+
   test('draw events add cards to the local hand without recording a play',
       () async {
     final drawTransport = _FakeTransport();

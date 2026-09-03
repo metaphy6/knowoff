@@ -90,5 +90,13 @@
   "gameStartSubtitle": "[Roles are dealt. The first Nown is on its way.]",
   "pokedByLabel": "[{name} poked you]",
   "chatLogEmpty": "[No chatter yet.]",
-  "pokedTargetLog": "[{name} poked {target}]"
+  "pokedTargetLog": "[{name} poked {target}]",
+  "rematchTitle": "[Play again?]",
+  "rematchPrompt": "[Stay at this table, or head to a fresh one.]",
+  "rematchSameTable": "[Same table]",
+  "rematchNewTable": "[New table]",
+  "rematchWaitingSameTable": "[Waiting for the rest of the table\u2026]",
+  "rematchWaitingNewTable": "[Heading to a new table\u2026]",
+  "rematchDecidedCount": "[{decided} of {total} decided]",
+  "rematchVacantSeatHint": "[Waiting for a new player to click Quick Play\u2026]"
 }
