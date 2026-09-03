@@ -19,9 +19,11 @@ import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
+import 'package:knowoff_client/presentation/widgets/ko_meters.dart';
 import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 import 'package:knowoff_client/presentation/widgets/ready_status.dart';
 import 'package:knowoff_client/presentation/widgets/draw_announcement.dart';
+import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
 
 GameSession _sampleSession({String phase = 'play'}) {
@@ -497,6 +499,27 @@ void main() {
     expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
   });
 
+  testWidgets('Knowoff result hides the ballot timer and vote budget',
+      (tester) async {
+    final base = _sampleSession(phase: 'result');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        phaseWindow: 20,
+        turnDeadline: DateTime.now().add(const Duration(seconds: 12)),
+        result: const VoteResultDto(
+          eliminatedSeat: 1,
+          role: 'nower',
+          tally: {'1': 3},
+        ),
+      ),
+    );
+    await tester.pumpWidget(_wrapWithSession(const KnowoffScreen(), session));
+    await tester.pump();
+
+    expect(find.byType(KoTimerBar), findsNothing);
+    expect(find.byType(KoVoteBudget), findsNothing);
+  });
+
   testWidgets('KnowoffScreen exposes Revote during an open ballot',
       (tester) async {
     final base = _sampleSession(phase: 'knowoff');
@@ -718,12 +741,13 @@ void main() {
     expect(find.text('A dog on a skateboard'), findsOneWidget);
   });
 
-  testWidgets('VerdictScreen declares the winning Donower', (tester) async {
+  testWidgets('VerdictScreen labels winning Donowers on their seat tiles',
+      (tester) async {
     final base = _sampleSession(phase: 'verdict');
     final session = base.copyWith(
       dto: base.dto.copyWith(
         winner: 'donower',
-        donowerSeats: const [1],
+        donowerSeats: const [1, 2],
       ),
       myRole: 'donower',
     );
@@ -731,7 +755,17 @@ void main() {
       _wrapWithSession(const VerdictScreen(), session),
     );
 
-    expect(find.text('Donower: Beta'), findsOneWidget);
+    for (final seat in const [1, 2]) {
+      final seatTile = find.byWidgetPredicate(
+        (widget) => widget is SeatTile && widget.player.seat == seat,
+      );
+      await tester.scrollUntilVisible(seatTile, 300);
+      expect(
+        find.descendant(of: seatTile, matching: find.text('Donower')),
+        findsOneWidget,
+      );
+    }
+    expect(find.text('Donower: Beta, Gamma'), findsNothing);
   });
 
   testWidgets('VerdictScreen opens the seat sheet when a seat is tapped',
