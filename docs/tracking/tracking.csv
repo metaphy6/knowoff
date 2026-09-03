@@ -222,3 +222,8 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-03T09:22:58Z,run-20260903092258-327927,human,client,commit,completed,style(knowoff): make the Play Again overlay translucent so the roster reads through,,pending
 2026-09-03T09:24:59Z,run-20260903092459-332396,human,client,commit,completed,style(knowoff): drop the Play Again scrim so the translucent card shows the roster instead of grey,,pending
 2026-09-03T09:35:41Z,run-20260903093541-351150,copilot,client,commit,completed,fix(client): make verdict rematch prompt collapsible,,pending
+2026-09-03T09:54:13Z,specialty-card-turn-0903,copilot,game,commit,completed,fix(game): require a card after non-pass specialties,server/internal/game/match.go;server/internal/game/match_test.go,pending
+2026-09-03T10:00:05Z,specialty-card-turn-0903,copilot,game,commit,completed,fix(game): render Pass as a table card,server/internal/game/match.go;server/internal/game/match_test.go,pending
+2026-09-03T10:10:13Z,run-20260903101013-423205,human,general,commit,completed,fix(client): prompt for a discard when using the Free Card specialty,,pending
+2026-09-03T10:10:38Z,free-card-specialty-0903,copilot,client,commit,completed,fix(client): prompt for a discard when using the Free Card specialty,client/lib/presentation/screens/round_screen.dart;client/lib/presentation/widgets/discard_picker_sheet.dart;client/test/presentation/screens_test.dart,pending
+2026-09-03T10:10:47Z,run-20260903101013-423205,copilot,client,note,completed,"tracking correction: agent=copilot, refs attached",client/lib/presentation/screens/round_screen.dart;client/lib/presentation/widgets/discard_picker_sheet.dart;client/test/presentation/screens_test.dart,

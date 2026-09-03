@@ -323,6 +323,53 @@ void main() {
     expect(find.text('Reveal a Hand'), findsOneWidget);
   });
 
+  testWidgets(
+      'RoundScreen uses Free Card from its hand card and prompts for a discard',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    final base = _sampleSession();
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(
+          cards: [
+            CardDto(id: 'c1', type: 'text', content: 'one'),
+            CardDto(id: 'c2', type: 'text', content: 'two'),
+          ],
+          drawPile: [],
+          specialty: 'one_more_free_card',
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), session, transport: transport),
+    );
+
+    expect(find.text('Free Card'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hand-specialty-one_more_free_card')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // No card was pre-selected, so a discard picker sheet must appear
+    // instead of the tap silently doing nothing.
+    expect(find.byKey(const Key('one-more-discard-c1')), findsOneWidget);
+    expect(find.byKey(const Key('one-more-discard-c2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('one-more-discard-c1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(transport.sent.last['kind'], 'use_specialty');
+    expect(transport.sent.last['payload'], <String, dynamic>{
+      'specialty': 'one_more_free_card',
+      'discard_card_id': 'c1',
+    });
+  });
+
   testWidgets('RoundScreen announces an exposed hand and offers one avatar tap',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
