@@ -142,6 +142,26 @@ void main() {
   });
 
   testWidgets(
+      'granting the Free Card from the dev picker fires its use intent '
+      'straight after the grant', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Use a special card (dev)'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('dev-specialty-one_more_free_card')),
+    );
+    await tester.pumpAndSettle();
+
+    final kinds = _transport.sent.map((m) => m['kind']).toList();
+    expect(kinds, ['dev_grant_specialty', 'use_specialty']);
+    expect(_transport.sent.last['payload'], {
+      'specialty': 'one_more_free_card',
+    });
+  });
+
+  testWidgets(
       'tapping restart resets the session and pops back to the first route',
       (tester) async {
     await tester.pumpWidget(_wrap());

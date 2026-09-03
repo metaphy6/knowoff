@@ -62,7 +62,6 @@ class DevToolsOverlay extends ConsumerWidget {
     if (picked == null || !navContext.mounted) return;
 
     final notifier = ref.read(gameSessionProvider.notifier);
-    final session = ref.read(gameSessionProvider);
     await notifier.devGrantSpecialty(picked);
     if (!navContext.mounted) return;
     if (picked == 'revote') {
@@ -71,6 +70,10 @@ class DevToolsOverlay extends ConsumerWidget {
       await notifier.useSpecialty('revote');
       return;
     }
+    // Read the session AFTER the grant reply: the use flow's gates (Free
+    // Card's turn check, Reveal's card list) must see the dealt card, not a
+    // snapshot taken before the server's hand_dealt arrived.
+    final session = ref.read(gameSessionProvider);
     final deadline = session.dto.turnDeadline;
     final remaining = deadline == null
         ? 0

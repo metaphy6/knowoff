@@ -103,7 +103,7 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 
 * **Pass** (occasional): skip playing a card this round. Only the Pass card is spent.
 * **Reveal** (rare): expose another active player's entire hand — media and specialty cards alike. It cannot target its owner or an eliminated player, and it cannot be played during the final `timers.reveal_lockout` seconds of the owner's turn. The table gets a public announcement and an eye doodle on the exposed player's avatar for the rest of that round; each player may tap it once, receiving a private `timers.reveal_view`-second view before it closes. The exposed cards never ride the public announcement event. Safe by design: since any specialty can sit in any hand (dealing is role-blind), seeing a Shuffle or a Revote proves nothing about its holder's role. Costs one extra discard.
-* **One More Free Card** (occasional): usable during your turn without spending your action — draw 1 fresh card from the mesh, **free of the draw penalty** (§3). Used before touching your pile, it serves as a penalty-free first draw — that's its edge. Costs one extra discard.
+* **One More Free Card** (occasional): usable during your turn without spending your action — it banks a round-scoped token so your **next pile draw this round is free of the draw penalty** (§3): the pile's price chip flips to FREE and the table gets a loud announcement. An unspent token expires when the round ends, and the turn's action card can't be played while the free draw is still pending — spend it or lose it.
 
 **Type B — Unique (free, use restricted by role, once per match):**
 

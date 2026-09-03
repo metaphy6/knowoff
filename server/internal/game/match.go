@@ -25,6 +25,12 @@ type Match struct {
 	round  int
 	active int
 
+	// roundsStarted counts how many rounds actually began (i.e. how many
+	// scheduled Nowns were revealed to the table). The schedule itself is
+	// sized to the full vote budget, so the verdict must key off this, not
+	// off len(nownSchedule), or it reveals Nowns from rounds never played.
+	roundsStarted int
+
 	roles        []Role
 	eliminated   []bool
 	connected    []bool
@@ -59,6 +65,12 @@ type Match struct {
 	revealedHand     PlayerHand
 	revealViewers    map[int]bool
 
+	// freeDrawsPending counts unconsumed One More Free Card tokens for the
+	// current round (seat -> count). The specialty buys your *first pile draw*
+	// free instead of the penalty (Rules §5); an unused token never carries
+	// into the next round.
+	freeDrawsPending map[int]int
+
 	intentScript []IntentRecord
 	replay       bool
 
@@ -92,6 +104,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		uniqueUsed:          make(map[string]bool),
 		revealedHandSeat:    -1,
 		revealViewers:       make(map[int]bool),
+		freeDrawsPending:    make(map[int]int),
 		eliminatedThisRound: -1,
 		resultReady:         make(map[int]bool),
 	}
@@ -337,6 +350,26 @@ func (m *Match) checkTeamForfeitOrLowPop() {
 	}
 }
 
+// playedNowns builds the verdict's Nown reveal list: exactly the Nowns of
+// the rounds that began, in play order. The schedule is padded to the full
+// vote budget, so revealing it wholesale would show (and leak) Nowns from
+// rounds the table never played.
+func (m *Match) playedNowns() []map[string]any {
+	rounds := m.roundsStarted
+	if rounds > len(m.nownSchedule) {
+		rounds = len(m.nownSchedule)
+	}
+	nowns := make([]map[string]any, 0, rounds)
+	for _, id := range m.nownSchedule[:rounds] {
+		n, err := m.deps.Renderer.MediaPayload(m.roundID(), id)
+		if err != nil {
+			continue
+		}
+		nowns = append(nowns, n)
+	}
+	return nowns
+}
+
 // finishMatchScored ends the match without a team result, awarding accrued
 // match points to everyone including disconnected players.
 func (m *Match) finishMatchScored() {
@@ -351,18 +384,10 @@ func (m *Match) finishMatchScored() {
 		}
 	}
 
-	nowns := make([]map[string]any, 0, len(m.nownSchedule))
-	for _, id := range m.nownSchedule {
-		n, err := m.deps.Renderer.MediaPayload(m.roundID(), id)
-		if err != nil {
-			continue
-		}
-		nowns = append(nowns, n)
-	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventMatchVerdict, map[string]any{
 		"winner": "none",
 		"reason": "low_population",
-		"nowns":  nowns,
+		"nowns":  m.playedNowns(),
 	}), -1)
 
 	for seat, p := range m.players {
@@ -604,11 +629,15 @@ func (m *Match) beginRound() {
 func (m *Match) beginRoundLocked() {
 	m.stopTimers()
 	m.phase = PhasePlay
+	m.roundsStarted++
 	m.plays = make(map[int]string)
 	m.lostCards = make(map[int]string)
 	m.revealedHandSeat = -1
 	m.revealedHand = PlayerHand{}
 	m.revealViewers = make(map[int]bool)
+	// One More Free Card tokens die with the round they were bought in — a
+	// free draw never rolls over (Rules §5).
+	m.freeDrawsPending = make(map[int]int)
 	for _, p := range m.players {
 		p.Ready = false
 		p.PokesUsed = make(map[int]bool)
@@ -767,6 +796,11 @@ func (m *Match) handlePlayCard(seat int, payload map[string]any) error {
 	if idx < 0 {
 		return fmt.Errorf("card not in hand")
 	}
+	// A pending One More Free Card token must be spent first — playing the
+	// turn's action card without taking the free draw would silently void it.
+	if m.freeDrawsPending[seat] > 0 {
+		return fmt.Errorf("free draw pending")
+	}
 	p.Hand.Cards = append(p.Hand.Cards[:idx], p.Hand.Cards[idx+1:]...)
 	m.plays[seat] = cardID
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
@@ -897,22 +931,18 @@ func (m *Match) handleViewRevealedHand(seat int, payload map[string]any) error {
 }
 
 func (m *Match) useOneMore(seat int, payload map[string]any) error {
-	if !m.requireDiscard(seat, payload) {
-		return fmt.Errorf("discard required")
-	}
 	m.players[seat].Hand.Specialty = ""
-	cardID := m.drawFreshCard(seat)
-	if cardID == "" {
-		return fmt.Errorf("no fresh card available")
-	}
-	m.players[seat].FreeDraws++
+	// Grant a round-scoped token: the seat's next pile draw this round skips
+	// the penalty (Rules §5 — the free draw comes from your own pile, free
+	// of the draw cost, not from a fresh mesh card).
+	m.freeDrawsPending[seat]++
 	m.announceSpecialty(seat, SpecialtyOneMore)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":      seat,
 		"specialty": SpecialtyOneMore,
-		"drew":      m.cardPayload(cardID),
 		"free":      true,
 	}), -1)
+	m.sendHandDealt(seat, m.players[seat])
 	return nil
 }
 
@@ -959,29 +989,6 @@ func (m *Match) requireDiscard(seat int, payload map[string]any) bool {
 	return false
 }
 
-func (m *Match) drawFreshCard(seat int) string {
-	held := map[string]bool{}
-	p := m.players[seat]
-	for _, c := range p.Hand.Cards {
-		held[c] = true
-	}
-	for _, c := range p.Hand.DrawPile {
-		held[c] = true
-	}
-	var avail []string
-	for _, c := range m.deps.Pack.Cards {
-		if !held[c.ID] {
-			avail = append(avail, c.ID)
-		}
-	}
-	if len(avail) == 0 {
-		return ""
-	}
-	idx := m.rng.Intn(len(avail))
-	p.Hand.Cards = append(p.Hand.Cards, avail[idx])
-	return avail[idx]
-}
-
 func (m *Match) handleDrawCards(seat int, payload map[string]any) error {
 	if m.phase != PhasePlay {
 		return fmt.Errorf("not play phase")
@@ -1001,16 +1008,31 @@ func (m *Match) handleDrawCards(seat int, payload map[string]any) error {
 	if count == 0 {
 		return fmt.Errorf("draw pile empty")
 	}
+	// A One More Free Card token makes the first draw(s) of this round free
+	// of the draw penalty (Rules §5) instead of charging points.
+	free := 0
+	if m.freeDrawsPending[seat] > 0 {
+		free = m.freeDrawsPending[seat]
+		if free > count {
+			free = count
+		}
+		m.freeDrawsPending[seat] -= free
+	}
 	drawn := p.Hand.DrawPile[:count]
 	p.Hand.DrawPile = p.Hand.DrawPile[count:]
 	p.Hand.Cards = append(p.Hand.Cards, drawn...)
 	p.PileDraws += count
-	p.MatchPoints -= count * m.deps.Config.Tuning.Points.DrawPenalty
-	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
+	p.FreeDraws += free
+	p.MatchPoints -= (count - free) * m.deps.Config.Tuning.Points.DrawPenalty
+	drawPayload := map[string]any{
 		"seat":  seat,
 		"draw":  count,
 		"cards": m.cardPayloads(drawn),
-	}), -1)
+	}
+	if free > 0 {
+		drawPayload["free"] = free
+	}
+	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, drawPayload), -1)
 	return nil
 }
 
@@ -1464,15 +1486,8 @@ func (m *Match) finishMatch(winner Role) {
 		m.deps.OnFinish(winner, result)
 	}
 
-	// Verdict: all Nowns revealed to everyone.
-	nowns := make([]map[string]any, 0, len(m.nownSchedule))
-	for _, id := range m.nownSchedule {
-		n, err := m.deps.Renderer.MediaPayload(m.roundID(), id)
-		if err != nil {
-			continue
-		}
-		nowns = append(nowns, n)
-	}
+	// Verdict: the Nowns of the rounds actually played, revealed to everyone.
+	nowns := m.playedNowns()
 	donowerSeats := make([]int, 0)
 	for seat, role := range m.roles {
 		if role == RoleDonower {
@@ -1675,9 +1690,10 @@ func (m *Match) timeoutPayload(seat int) map[string]any {
 // sendHandDealt sends one seat's full hand, draw pile, and specialty.
 func (m *Match) sendHandDealt(seat int, p *PlayerState) {
 	m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandDealt, map[string]any{
-		"cards":     m.cardPayloads(p.Hand.Cards),
-		"draw_pile": m.cardPayloads(p.Hand.DrawPile),
-		"specialty": p.Hand.Specialty,
+		"cards":      m.cardPayloads(p.Hand.Cards),
+		"draw_pile":  m.cardPayloads(p.Hand.DrawPile),
+		"specialty":  p.Hand.Specialty,
+		"free_draws": m.freeDrawsPending[seat],
 	}))
 }
 

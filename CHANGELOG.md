@@ -6,11 +6,15 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Using the Free Card specialty now fires a loud "FREE CARD!" announcement for the whole table while the draw pile celebrates: the card count swells big for a beat and the price chip flips from −5 to a bouncing FREE until the free draw is spent.
 - Debug builds now have a dev-only specialty picker in the bottom-right dev tools: pick any of the five specialty cards and the server drops it into your hand as if it had been dealt (disabled entirely in prod), then the normal use flow runs unchanged — handy for testing specialty behavior without waiting for the deal.
 - Verdict screen now opens a Play Again window once a match finishes: every seat picks "same table" (rematch with this exact table once everyone agrees) or "new table" (leaves for a fresh Quick Play match); a seat that left or never reconnected in time opens up for backfill, so a new player who simply clicks Quick Play can land straight into the reopened table instead of a brand new one.
 
 ### Fixed
 
+- Play Again → same table no longer boots the fresh match into the previous one's leftovers: the client now drops the finished match's winner, revealed Nowns, points, table plays, ballots, chat, announcements and the old role the moment the new match's countdown opens, so round 0 starts clean with the players who stayed.
+- The Free Card specialty now actually makes your next pile draw free instead of pulling a random out-of-nowhere card: it fires the moment it's tapped (no discard toll, no picker), banks a round-scoped token that zeroes the −5 draw cost for that turn's first pile draw, an unused token expires with the round, and the turn's card can't be played while the free draw is still pending.
+- The Verdict screen no longer reveals Nowns from rounds that were never played: the schedule is sized to the full vote budget, so a match that ended early (for example the Donower caught on the first ballot) used to display every scheduled Nown as if each had been played — now exactly the rounds that began are revealed.
 - Reveal a Hand no longer depends on a separate button below the hand, publicly broadcasts hidden cards before anyone asks to view them, or remains usable during the final five seconds of a turn.
 - Knowoff result posters no longer show the stale ballot countdown or remaining-votes wheels; the result owns the full stage during its four-second display.
 - Knowoff result window is 8 seconds again (was cut to 4), restoring visible time for the Nower/Donower role-reveal poster — the four-second falling reveal previously consumed the entire window, so the poster and Revote button never rendered before the round advanced.

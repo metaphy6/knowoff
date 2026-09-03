@@ -46,6 +46,7 @@ class GameSession {
     this.handRevealRound = -1,
     this.handRevealViewed = false,
     this.revealedHand,
+    this.freeDrawPopTick = 0,
   });
 
   final GameStateDto dto;
@@ -77,6 +78,10 @@ class GameSession {
   final bool handRevealViewed;
   final RevealedHand? revealedHand;
 
+  /// Bumped every time the local seat banks a One More Free Card token —
+  /// drives the draw pile's celebratory pop animation (Rules §5).
+  final int freeDrawPopTick;
+
   GameSession copyWith({
     GameStateDto? dto,
     String? myRole,
@@ -99,13 +104,17 @@ class GameSession {
     int? handRevealRound,
     bool? handRevealViewed,
     RevealedHand? revealedHand,
+    int? freeDrawPopTick,
     bool clearFinalElimination = false,
     bool clearHandReveal = false,
     bool clearRevealedHand = false,
+    bool clearMyRole = false,
+    bool clearSpecialtyAnnouncement = false,
+    bool clearDrawAnnouncement = false,
   }) {
     return GameSession(
       dto: dto ?? this.dto,
-      myRole: myRole ?? this.myRole,
+      myRole: clearMyRole ? null : (myRole ?? this.myRole),
       lastError: lastError,
       selectedCardId:
           clearSelectedCard ? null : (selectedCardId ?? this.selectedCardId),
@@ -119,13 +128,18 @@ class GameSession {
       finalEliminatedRole: clearFinalElimination
           ? null
           : (finalEliminatedRole ?? this.finalEliminatedRole),
-      specialtyAnnouncementSeat:
-          specialtyAnnouncementSeat ?? this.specialtyAnnouncementSeat,
-      specialtyAnnouncement:
-          specialtyAnnouncement ?? this.specialtyAnnouncement,
-      drawAnnouncementSeat: drawAnnouncementSeat ?? this.drawAnnouncementSeat,
-      drawAnnouncementCount:
-          drawAnnouncementCount ?? this.drawAnnouncementCount,
+      specialtyAnnouncementSeat: clearSpecialtyAnnouncement
+          ? null
+          : (specialtyAnnouncementSeat ?? this.specialtyAnnouncementSeat),
+      specialtyAnnouncement: clearSpecialtyAnnouncement
+          ? null
+          : (specialtyAnnouncement ?? this.specialtyAnnouncement),
+      drawAnnouncementSeat: clearDrawAnnouncement
+          ? null
+          : (drawAnnouncementSeat ?? this.drawAnnouncementSeat),
+      drawAnnouncementCount: clearDrawAnnouncement
+          ? null
+          : (drawAnnouncementCount ?? this.drawAnnouncementCount),
       drawAnnouncementId: drawAnnouncementId ?? this.drawAnnouncementId,
       handRevealActorSeat: clearHandReveal
           ? null
@@ -140,6 +154,7 @@ class GameSession {
       revealedHand: clearHandReveal || clearRevealedHand
           ? null
           : (revealedHand ?? this.revealedHand),
+      freeDrawPopTick: freeDrawPopTick ?? this.freeDrawPopTick,
     );
   }
 
