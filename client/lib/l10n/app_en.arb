@@ -615,6 +615,35 @@
   "@chooseRevealTargetTitle": {
     "description": "Dialog title when picking a Reveal specialty target."
   },
+  "chooseRevealDiscardTitle": "Choose one card to burn",
+  "@chooseRevealDiscardTitle": {
+    "description": "Second Reveal step where the player pays the required discard."
+  },
+  "handRevealHeadline": "HAND HEIST!",
+  "@handRevealHeadline": {
+    "description": "Dramatic headline when a Reveal specialty exposes a hand."
+  },
+  "handRevealAnnouncement": "{name}'s hand is exposed!",
+  "@handRevealAnnouncement": {
+    "description": "Public Reveal announcement naming the exposed player.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "viewRevealedHand": "View {name}'s exposed hand",
+  "@viewRevealedHand": {
+    "description": "Accessibility label for the one-time Reveal doodle on a seat avatar.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "revealedHandTitle": "{name}'s exposed hand",
+  "@revealedHandTitle": {
+    "description": "Title above a privately opened Reveal hand view.",
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "turnTimeRemaining": "{seconds}s left",
   "@turnTimeRemaining": {
     "description": "Turn timer countdown label.",

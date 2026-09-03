@@ -207,6 +207,8 @@ type TimersTuning struct {
 	KnowoffBallot       int `yaml:"knowoff_ballot"`
 	KnowoffRunoff       int `yaml:"knowoff_runoff"`
 	VoteResultWindow    int `yaml:"vote_result_window"`
+	RevealLockout       int `yaml:"reveal_lockout"`
+	RevealView          int `yaml:"reveal_view"`
 	PrefetchCountdown   int `yaml:"prefetch_countdown"`
 }
 

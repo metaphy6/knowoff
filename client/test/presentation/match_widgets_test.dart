@@ -494,6 +494,27 @@ void main() {
       expect(find.text('Shuffle'), findsOneWidget);
       expect(find.text('Specialty'), findsOneWidget);
     });
+
+    testWidgets('tapping the specialty card invokes its in-deck action',
+        (tester) async {
+      String? used;
+      await tester.pumpWidget(
+        _wrap(
+          HandFan(
+            cards: cards,
+            drawPile: const [],
+            specialty: 'reveal',
+            onUseSpecialty: (specialty) => used = specialty,
+          ),
+        ),
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('hand-specialty-reveal')),
+      );
+
+      expect(used, 'reveal');
+    });
   });
 
   group('KoVoteBudget', () {

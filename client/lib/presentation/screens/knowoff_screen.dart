@@ -12,6 +12,7 @@ import '../widgets/ko_body.dart';
 import '../widgets/ko_button.dart';
 import '../widgets/ko_container.dart';
 import '../widgets/ko_meters.dart';
+import '../widgets/hand_reveal.dart';
 import '../widgets/ko_scaffold.dart';
 import '../widgets/ready_button.dart';
 import '../widgets/ready_status.dart';
@@ -63,6 +64,9 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
     final canRevote = session.isNower && dto.hand.specialty == 'revote';
     final announcedPlayer =
         result == null ? null : session.playerBySeat(result.eliminatedSeat);
+    final handRevealTarget = session.playerBySeat(
+      session.handRevealTargetSeat ?? -1,
+    );
 
     final window = dto.phaseWindow;
     final deadline = dto.turnDeadline;
@@ -170,6 +174,9 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                       localSeat: session.seat,
                       votedSeat: dto.voteTarget,
                       ballots: dto.liveBallots,
+                      revealTargetSeat: session.handRevealTargetSeat,
+                      revealViewed: session.handRevealViewed,
+                      onViewReveal: notifier.viewRevealedHand,
                       onVote: session.amEliminated
                           ? null
                           : (seat) => notifier.castVote(seat),
@@ -221,6 +228,14 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                 ? seatDisplayName(announcementPlayer)
                 : 'P${session.specialtyAnnouncementSeat}',
             specialty: session.specialtyAnnouncement!,
+          ),
+        if (session.revealedHand != null && handRevealTarget != null)
+          Positioned.fill(
+            child: RevealedHandOverlay(
+              playerName: seatDisplayName(handRevealTarget),
+              hand: session.revealedHand!,
+              onExpired: notifier.dismissRevealedHand,
+            ),
           ),
       ],
     );

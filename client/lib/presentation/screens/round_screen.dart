@@ -25,6 +25,8 @@ import '../widgets/specialty_announcement.dart';
 import '../widgets/dev_tools_overlay.dart';
 import '../widgets/draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
+import '../widgets/hand_reveal.dart';
+import '../widgets/reveal_setup_sheet.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
 /// the one action a turn allows.
@@ -80,78 +82,52 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     }
   }
 
-  Future<void> _useReveal(
+  Future<void> _useSpecialtyFromHand(
     BuildContext context,
     GameSessionNotifier notifier,
     GameSession session,
+    String specialty,
+    int remainingSeconds,
   ) async {
-    final l10n = AppLocalizations.of(context);
-    final discardCardId = session.selectedCardId;
-    if (discardCardId == null) return;
-    final targets =
-        session.activePlayers.where((p) => p.seat != session.seat).toList();
-    final target = await showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: Text(l10n.chooseRevealTargetTitle),
-        children: targets
-            .map((p) => SimpleDialogOption(
-                  onPressed: () => Navigator.of(context).pop(p.seat),
-                  child: Text(seatDisplayName(p)),
-                ))
-            .toList(),
-      ),
-    );
-    if (target == null) return;
-    await notifier.useSpecialty('reveal',
-        discardCardId: discardCardId, targetSeat: target);
-  }
-
-  Widget? _specialtyAction(
-    BuildContext context,
-    GameSessionNotifier notifier,
-    GameSession session,
-    GameStateDto dto,
-  ) {
-    final l10n = AppLocalizations.of(context);
-    final selectedCardId = session.selectedCardId;
-    switch (dto.hand.specialty) {
+    switch (specialty) {
       case 'pass':
-        return KoButton(
-          label: l10n.passTurn,
-          backgroundColor: specialtyColor('pass'),
-          icon: DoodleIcon(specialtyIcon('pass'), size: 20),
-          onTap: () => notifier.useSpecialty('pass'),
-        );
+        await notifier.useSpecialty('pass');
+        return;
       case 'reveal':
-        return KoButton(
-          label: l10n.specialtyRevealAction,
-          backgroundColor: specialtyColor('reveal'),
-          icon: DoodleIcon(specialtyIcon('reveal'), size: 20),
-          onTap: selectedCardId != null
-              ? () => _useReveal(context, notifier, session)
-              : null,
+        if (remainingSeconds <= session.dto.revealLockoutSeconds ||
+            session.dto.hand.cards.isEmpty) {
+          return;
+        }
+        final choice = await showRevealSetupSheet(
+          context,
+          targets: session.activePlayers
+              .where((player) => player.seat != session.seat)
+              .toList(),
+          cards: session.dto.hand.cards,
         );
+        if (choice == null) return;
+        await notifier.useSpecialty(
+          'reveal',
+          discardCardId: choice.discardCardId,
+          targetSeat: choice.targetSeat,
+        );
+        return;
       case 'one_more_free_card':
-        return KoButton(
-          label: l10n.specialtyOneMoreAction,
-          backgroundColor: specialtyColor('one_more_free_card'),
-          icon: DoodleIcon(specialtyIcon('one_more_free_card'), size: 20),
-          onTap: selectedCardId != null
-              ? () => notifier.useSpecialty('one_more_free_card',
-                  discardCardId: selectedCardId)
-              : null,
-        );
+        final discard = session.selectedCardId;
+        if (discard != null) {
+          await notifier.useSpecialty(
+            'one_more_free_card',
+            discardCardId: discard,
+          );
+        }
+        return;
       case 'shuffle':
-        if (!session.isDonower || dto.plays.isNotEmpty) return null;
-        return KoButton(
-          label: l10n.specialtyShuffleAction,
-          backgroundColor: specialtyColor('shuffle'),
-          icon: DoodleIcon(specialtyIcon('shuffle'), size: 20),
-          onTap: () => notifier.useSpecialty('shuffle'),
-        );
+        if (session.isDonower && session.dto.plays.isEmpty) {
+          await notifier.useSpecialty('shuffle');
+        }
+        return;
       default:
-        return null;
+        return;
     }
   }
 
@@ -179,6 +155,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final drawAnnouncementPlayer = session.playerBySeat(
       session.drawAnnouncementSeat ?? -1,
     );
+    final handRevealTarget = session.playerBySeat(
+      session.handRevealTargetSeat ?? -1,
+    );
     final notifier = ref.read(gameSessionProvider.notifier);
 
     // Reset poke tracking when phase changes
@@ -192,8 +171,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final remaining = deadline == null
         ? 0
         : deadline.difference(DateTime.now()).inSeconds.clamp(0, 999);
-
-    final specialty = _specialtyAction(context, notifier, session, dto);
 
     // The pre-match countdown announces itself with the game-start splash: a
     // hero card that holds centre stage, then dives into the timer bar below.
@@ -247,6 +224,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                           if (devEchoPokes.value) setState(() => _pokeCount++);
                         }
                       },
+                      revealTargetSeat: session.handRevealTargetSeat,
+                      revealViewed: session.handRevealViewed,
+                      onViewReveal: (seat) => notifier.viewRevealedHand(seat),
                     ),
                     const SizedBox(width: KoSpace.md),
                     Expanded(
@@ -279,22 +259,19 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   onCancelSelection: session.selectedCardId != null
                       ? () => notifier.clearSelection()
                       : null,
+                  onUseSpecialty: session.isMyTurn
+                      ? (specialty) => _useSpecialtyFromHand(
+                            context,
+                            notifier,
+                            session,
+                            specialty,
+                            remaining,
+                          )
+                      : null,
                   onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
                 ),
-                const SizedBox(height: KoSpace.lg),
-                if (session.isMyTurn)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      if (specialty != null)
-                        Wrap(
-                          spacing: KoSpace.md,
-                          runSpacing: KoSpace.md,
-                          children: <Widget>[specialty],
-                        ),
-                    ],
-                  )
-                else
+                if (!session.isMyTurn) ...<Widget>[
+                  const SizedBox(height: KoSpace.lg),
                   KoContainer(
                     backgroundColor: session.amEliminated
                         ? KoColors.surface
@@ -342,6 +319,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -355,7 +333,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               ),
             ),
           if (session.specialtyAnnouncement != null &&
-              session.specialtyAnnouncementSeat != null)
+              session.specialtyAnnouncementSeat != null &&
+              (session.specialtyAnnouncement != 'reveal' ||
+                  session.handRevealTargetSeat == null))
             SpecialtyAnnouncement(
               key: ValueKey<String>(
                 '${session.specialtyAnnouncementSeat}-${session.specialtyAnnouncement}',
@@ -375,6 +355,22 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
               count: session.drawAnnouncementCount!,
               announcementId: session.drawAnnouncementId,
             ),
+          if (handRevealTarget != null && session.handRevealActorSeat != null)
+            HandRevealAnnouncement(
+              key: ValueKey<String>(
+                'hand-reveal-${session.handRevealRound}-${handRevealTarget.seat}',
+              ),
+              playerName: seatDisplayName(handRevealTarget),
+              round: session.handRevealRound,
+            ),
+          if (session.revealedHand != null && handRevealTarget != null)
+            Positioned.fill(
+              child: RevealedHandOverlay(
+                playerName: seatDisplayName(handRevealTarget),
+                hand: session.revealedHand!,
+                onExpired: notifier.dismissRevealedHand,
+              ),
+            ),
         ],
       ),
     );
@@ -392,12 +388,18 @@ class _TurnRail extends StatelessWidget {
     required this.dto,
     this.onPoke,
     this.pokedThisPhase,
+    this.revealTargetSeat,
+    this.revealViewed = false,
+    this.onViewReveal,
   });
 
   final GameSession session;
   final GameStateDto dto;
   final ValueChanged<int>? onPoke;
   final Set<int>? pokedThisPhase;
+  final int? revealTargetSeat;
+  final bool revealViewed;
+  final ValueChanged<int>? onViewReveal;
 
   @override
   Widget build(BuildContext context) {
@@ -444,6 +446,11 @@ class _TurnRail extends StatelessWidget {
                         player: player,
                         dimmed: player.eliminated,
                         size: avatarSize,
+                        revealAvailable: player.seat == revealTargetSeat,
+                        revealViewed: revealViewed,
+                        onViewReveal: onViewReveal == null
+                            ? null
+                            : () => onViewReveal!(player.seat),
                       ),
                       if (onPoke != null &&
                           player.seat != session.seat &&

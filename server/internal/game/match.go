@@ -32,10 +32,11 @@ type Match struct {
 	players      []*PlayerState
 	nownSchedule []string
 
-	turnOrder   []int
-	currentTurn int
-	plays       map[int]string
-	chatFilter  *profanityFilter
+	turnOrder    []int
+	currentTurn  int
+	turnDeadline time.Time
+	plays        map[int]string
+	chatFilter   *profanityFilter
 	// lostCards is the random-discard penalty card for a seat that timed
 	// out this round (Rules §3) — kept so the play_revealed and
 	// round_resolved payloads can show what was auto-discarded instead of a
@@ -52,8 +53,11 @@ type Match struct {
 	eliminatedThisRound int
 	resultReady         map[int]bool
 
-	remainingVotes int
-	uniqueUsed     map[string]bool
+	remainingVotes   int
+	uniqueUsed       map[string]bool
+	revealedHandSeat int
+	revealedHand     PlayerHand
+	revealViewers    map[int]bool
 
 	intentScript []IntentRecord
 	replay       bool
@@ -86,6 +90,8 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 		ballots:             make(map[int]int),
 		ballotReady:         make(map[int]bool),
 		uniqueUsed:          make(map[string]bool),
+		revealedHandSeat:    -1,
+		revealViewers:       make(map[int]bool),
 		eliminatedThisRound: -1,
 		resultReady:         make(map[int]bool),
 	}
@@ -359,6 +365,8 @@ func (m *Match) HandleIntent(seat int, env *transport.Envelope) error {
 		return m.handlePlayCard(seat, env.Payload)
 	case transport.IntentUseSpecialty:
 		return m.handleUseSpecialty(seat, env.Payload)
+	case transport.IntentViewRevealedHand:
+		return m.handleViewRevealedHand(seat, env.Payload)
 	case transport.IntentDrawCards:
 		return m.handleDrawCards(seat, env.Payload)
 	case transport.IntentReady:
@@ -566,6 +574,9 @@ func (m *Match) beginRoundLocked() {
 	m.phase = PhasePlay
 	m.plays = make(map[int]string)
 	m.lostCards = make(map[int]string)
+	m.revealedHandSeat = -1
+	m.revealedHand = PlayerHand{}
+	m.revealViewers = make(map[int]bool)
 	for _, p := range m.players {
 		p.Ready = false
 		p.PokesUsed = make(map[int]bool)
@@ -634,10 +645,14 @@ func (m *Match) scheduleTurn() {
 		return
 	}
 	seat := m.turnOrder[m.currentTurn]
+	m.turnDeadline = time.Now().Add(
+		time.Duration(m.deps.Config.Tuning.Timers.PlayTurn) * time.Second,
+	)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventTurnStarted, map[string]any{
-		"turn_seat": seat,
-		"round":     m.round,
-		"timeout":   m.deps.Config.Tuning.Timers.PlayTurn,
+		"turn_seat":              seat,
+		"round":                  m.round,
+		"timeout":                m.deps.Config.Tuning.Timers.PlayTurn,
+		"reveal_lockout_seconds": m.deps.Config.Tuning.Timers.RevealLockout,
 	}), -1)
 	if !m.connected[seat] {
 		m.autoPass(seat)
@@ -780,26 +795,66 @@ func (m *Match) usePass(seat int) error {
 }
 
 func (m *Match) useReveal(seat int, payload map[string]any) error {
-	targetF, _ := payload["target_seat"].(float64)
-	target := int(targetF)
-	if target < 0 || target >= m.size || m.eliminated[target] {
+	targetF, ok := payload["target_seat"].(float64)
+	if !ok {
 		return fmt.Errorf("invalid target")
+	}
+	target := int(targetF)
+	if target < 0 || target >= m.size || target == seat || m.eliminated[target] {
+		return fmt.Errorf("invalid target")
+	}
+	lockout := time.Duration(m.deps.Config.Tuning.Timers.RevealLockout) * time.Second
+	if lockout > 0 && !m.turnDeadline.IsZero() && time.Until(m.turnDeadline) <= lockout {
+		return fmt.Errorf("reveal unavailable near turn end")
 	}
 	if !m.requireDiscard(seat, payload) {
 		return fmt.Errorf("discard required")
 	}
 	m.players[seat].Hand.Specialty = ""
-	m.announceSpecialty(seat, SpecialtyReveal)
-	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
-		"seat":           seat,
-		"specialty":      SpecialtyReveal,
-		"target":         target,
-		"cards":          m.cardPayloads(m.players[target].Hand.Cards),
-		"draw_pile":      m.cardPayloads(m.players[target].Hand.DrawPile),
-		"specialty_held": m.players[target].Hand.Specialty,
+	m.revealedHandSeat = target
+	targetHand := m.players[target].Hand
+	m.revealedHand = PlayerHand{
+		Cards:     append([]string(nil), targetHand.Cards...),
+		DrawPile:  append([]string(nil), targetHand.DrawPile...),
+		Specialty: targetHand.Specialty,
+	}
+	m.revealViewers = make(map[int]bool)
+	m.bcast.Broadcast(transport.NewEvent(transport.EventHandRevealAvailable, map[string]any{
+		"seat":        seat,
+		"target_seat": target,
+		"round":       m.round,
 	}), -1)
+	m.sendHandDealt(seat, m.players[seat])
 	m.stopTurnTimer()
 	m.advanceTurn()
+	return nil
+}
+
+func (m *Match) handleViewRevealedHand(seat int, payload map[string]any) error {
+	if m.phase != PhasePlay && m.phase != PhaseDiscussion &&
+		m.phase != PhaseKnowoff && m.phase != PhaseRunoff && m.phase != PhaseResult {
+		return fmt.Errorf("revealed hand unavailable")
+	}
+	targetF, ok := payload["target_seat"].(float64)
+	if !ok {
+		return fmt.Errorf("revealed hand unavailable")
+	}
+	target := int(targetF)
+	if m.revealedHandSeat < 0 || target != m.revealedHandSeat {
+		return fmt.Errorf("revealed hand unavailable")
+	}
+	if m.revealViewers[seat] {
+		return fmt.Errorf("revealed hand already viewed")
+	}
+	m.revealViewers[seat] = true
+	m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandRevealViewed, map[string]any{
+		"target_seat":    target,
+		"round":          m.round,
+		"view_seconds":   m.deps.Config.Tuning.Timers.RevealView,
+		"cards":          m.cardPayloads(m.revealedHand.Cards),
+		"draw_pile":      m.cardPayloads(m.revealedHand.DrawPile),
+		"specialty_held": m.revealedHand.Specialty,
+	}))
 	return nil
 }
 
@@ -1602,6 +1657,7 @@ func (m *Match) stopTimers() {
 }
 
 func (m *Match) stopTurnTimer() {
+	m.turnDeadline = time.Time{}
 	if m.turnTimer != nil {
 		m.turnTimer.Stop()
 		m.turnTimer = nil

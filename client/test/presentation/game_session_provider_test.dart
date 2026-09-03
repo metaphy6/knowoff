@@ -111,6 +111,55 @@ void main() {
     expect(notifier.state.specialtyAnnouncement, equals('reveal'));
   });
 
+  test('Reveal availability is round-scoped and viewable through one intent',
+      () async {
+    transport.emit('hand_reveal_available', <String, dynamic>{
+      'seat': 0,
+      'target_seat': 2,
+      'round': 3,
+    });
+    await _settle();
+
+    expect(notifier.state.handRevealActorSeat, 0);
+    expect(notifier.state.handRevealTargetSeat, 2);
+    expect(notifier.state.handRevealRound, 3);
+    expect(notifier.state.handRevealViewed, isFalse);
+
+    await notifier.viewRevealedHand(2);
+    expect(transport.sent.last['kind'], 'view_revealed_hand');
+    expect(transport.sent.last['payload'], <String, dynamic>{'target_seat': 2});
+    expect(notifier.state.handRevealViewed, isTrue);
+
+    await notifier.viewRevealedHand(2);
+    expect(
+      transport.sent
+          .where((message) => message['kind'] == 'view_revealed_hand'),
+      hasLength(1),
+    );
+
+    transport.emit('hand_reveal_viewed', <String, dynamic>{
+      'target_seat': 2,
+      'round': 3,
+      'view_seconds': 3,
+      'cards': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'secret', 'type': 'text', 'content': 'Secret'},
+      ],
+      'draw_pile': <Map<String, dynamic>>[],
+      'specialty_held': 'pass',
+    });
+    await _settle();
+
+    expect(notifier.state.handRevealViewed, isTrue);
+    expect(notifier.state.revealedHand?.cards.single.id, 'secret');
+    expect(notifier.state.revealedHand?.viewSeconds, 3);
+    expect(notifier.state.revealedHand?.specialty, 'pass');
+
+    transport.emit('round_started', <String, dynamic>{'round': 4});
+    await _settle();
+    expect(notifier.state.handRevealTargetSeat, isNull);
+    expect(notifier.state.revealedHand, isNull);
+  });
+
   test('public Ready events retain every ready seat for the current phase',
       () async {
     transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});

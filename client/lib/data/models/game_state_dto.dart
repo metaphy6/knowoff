@@ -176,6 +176,7 @@ class GameStateDto {
     this.roomCode = '',
     this.turnDeadline,
     this.phaseWindow = 0,
+    this.revealLockoutSeconds = 0,
     this.chatEvents = const [],
     this.liveBallots = const {},
     this.readySeats = const [],
@@ -212,6 +213,7 @@ class GameStateDto {
   /// Wall-clock length of the current server-driven window, in seconds.
   /// Display-only: the server owns the phase clock.
   final int phaseWindow;
+  final int revealLockoutSeconds;
   final List<ChatEventDto> chatEvents;
 
   /// Live seat->target ballot, filled in from `vote_cast` events while the
@@ -248,6 +250,7 @@ class GameStateDto {
       log: stringList(json['log']),
       matchPoints: json['match_points'] as int? ?? 0,
       roomCode: json['room_code'] as String? ?? '',
+      revealLockoutSeconds: json['reveal_lockout_seconds'] as int? ?? 0,
     );
   }
 
@@ -275,6 +278,7 @@ class GameStateDto {
     String? roomCode,
     DateTime? turnDeadline,
     int? phaseWindow,
+    int? revealLockoutSeconds,
     List<ChatEventDto>? chatEvents,
     Map<String, int>? liveBallots,
     List<int>? readySeats,
@@ -307,6 +311,7 @@ class GameStateDto {
       turnDeadline:
           clearTurnDeadline ? null : (turnDeadline ?? this.turnDeadline),
       phaseWindow: phaseWindow ?? this.phaseWindow,
+      revealLockoutSeconds: revealLockoutSeconds ?? this.revealLockoutSeconds,
       chatEvents: chatEvents ?? this.chatEvents,
       liveBallots:
           clearLiveBallots ? const {} : (liveBallots ?? this.liveBallots),

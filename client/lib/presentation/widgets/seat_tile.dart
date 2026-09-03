@@ -65,6 +65,9 @@ class SeatAvatar extends StatelessWidget {
     this.size = 56,
     this.dimmed = false,
     this.onTap,
+    this.revealAvailable = false,
+    this.revealViewed = false,
+    this.onViewReveal,
     super.key,
   });
 
@@ -75,6 +78,9 @@ class SeatAvatar extends StatelessWidget {
   /// crossed-out doodle, not the colour, carries the meaning.
   final bool dimmed;
   final VoidCallback? onTap;
+  final bool revealAvailable;
+  final bool revealViewed;
+  final VoidCallback? onViewReveal;
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +118,49 @@ class SeatAvatar extends StatelessWidget {
       ),
       child: child,
     );
-    if (onTap == null) return avatar;
+    final decoratedAvatar = !revealAvailable
+        ? avatar
+        : Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              avatar,
+              Positioned(
+                right: -5,
+                top: -5,
+                child: GestureDetector(
+                  key: ValueKey<String>('hand-reveal-doodle-${player.seat}'),
+                  behavior: HitTestBehavior.opaque,
+                  onTap: revealViewed ? null : onViewReveal,
+                  child: Semantics(
+                    button: !revealViewed,
+                    label: AppLocalizations.of(context)
+                        .viewRevealedHand(seatDisplayName(player)),
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: revealViewed
+                            ? KoColors.surface
+                            : KoColors.tangerine,
+                        border: Border.all(
+                          width: KoBorders.regular,
+                          color: KoColors.ink,
+                        ),
+                        shape: BoxShape.circle,
+                        boxShadow: const <BoxShadow>[KoShadows.sm],
+                      ),
+                      child: DoodleIcon(
+                        revealViewed ? Doodle.check : Doodle.eye,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+    if (onTap == null) return decoratedAvatar;
 
     return Semantics(
       button: true,
@@ -120,7 +168,7 @@ class SeatAvatar extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: avatar,
+        child: decoratedAvatar,
       ),
     );
   }

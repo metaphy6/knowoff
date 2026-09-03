@@ -18,6 +18,8 @@ timers:                             # seconds; which windows may fast-forward is
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
   vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster/Revote window
+  reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
+  reveal_view: 3                    # each player may view an exposed hand for this many seconds
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:

@@ -3,6 +3,23 @@ import 'package:flutter/foundation.dart';
 import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 
+@immutable
+class RevealedHand {
+  const RevealedHand({
+    required this.targetSeat,
+    required this.cards,
+    required this.drawPile,
+    required this.viewSeconds,
+    this.specialty,
+  });
+
+  final int targetSeat;
+  final List<CardDto> cards;
+  final List<CardDto> drawPile;
+  final int viewSeconds;
+  final String? specialty;
+}
+
 /// Domain view of the current match session.
 ///
 /// Mirrors [GameStateDto] but exposes helper getters for the UI.
@@ -24,6 +41,11 @@ class GameSession {
     this.drawAnnouncementSeat,
     this.drawAnnouncementCount,
     this.drawAnnouncementId = 0,
+    this.handRevealActorSeat,
+    this.handRevealTargetSeat,
+    this.handRevealRound = -1,
+    this.handRevealViewed = false,
+    this.revealedHand,
   });
 
   final GameStateDto dto;
@@ -49,6 +71,11 @@ class GameSession {
   final int? drawAnnouncementSeat;
   final int? drawAnnouncementCount;
   final int drawAnnouncementId;
+  final int? handRevealActorSeat;
+  final int? handRevealTargetSeat;
+  final int handRevealRound;
+  final bool handRevealViewed;
+  final RevealedHand? revealedHand;
 
   GameSession copyWith({
     GameStateDto? dto,
@@ -67,7 +94,14 @@ class GameSession {
     int? drawAnnouncementSeat,
     int? drawAnnouncementCount,
     int? drawAnnouncementId,
+    int? handRevealActorSeat,
+    int? handRevealTargetSeat,
+    int? handRevealRound,
+    bool? handRevealViewed,
+    RevealedHand? revealedHand,
     bool clearFinalElimination = false,
+    bool clearHandReveal = false,
+    bool clearRevealedHand = false,
   }) {
     return GameSession(
       dto: dto ?? this.dto,
@@ -93,6 +127,19 @@ class GameSession {
       drawAnnouncementCount:
           drawAnnouncementCount ?? this.drawAnnouncementCount,
       drawAnnouncementId: drawAnnouncementId ?? this.drawAnnouncementId,
+      handRevealActorSeat: clearHandReveal
+          ? null
+          : (handRevealActorSeat ?? this.handRevealActorSeat),
+      handRevealTargetSeat: clearHandReveal
+          ? null
+          : (handRevealTargetSeat ?? this.handRevealTargetSeat),
+      handRevealRound:
+          clearHandReveal ? -1 : (handRevealRound ?? this.handRevealRound),
+      handRevealViewed:
+          clearHandReveal ? false : (handRevealViewed ?? this.handRevealViewed),
+      revealedHand: clearHandReveal || clearRevealedHand
+          ? null
+          : (revealedHand ?? this.revealedHand),
     );
   }
 
