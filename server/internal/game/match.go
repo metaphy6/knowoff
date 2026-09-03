@@ -785,9 +785,16 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 func (m *Match) usePass(seat int) error {
 	m.players[seat].Hand.Specialty = ""
 	m.announceSpecialty(seat, SpecialtyPass)
+	m.plays[seat] = SpecialtyPass
 	m.bcast.Broadcast(transport.NewEvent(transport.EventPlayRevealed, map[string]any{
 		"seat":      seat,
 		"specialty": SpecialtyPass,
+		"card_id":   SpecialtyPass,
+		"card": map[string]any{
+			"id":      SpecialtyPass,
+			"type":    "text",
+			"content": "Pass",
+		},
 	}), -1)
 	m.stopTurnTimer()
 	m.advanceTurn()
@@ -819,14 +826,13 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 		Specialty: targetHand.Specialty,
 	}
 	m.revealViewers = make(map[int]bool)
+	m.announceSpecialty(seat, SpecialtyReveal)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventHandRevealAvailable, map[string]any{
 		"seat":        seat,
 		"target_seat": target,
 		"round":       m.round,
 	}), -1)
 	m.sendHandDealt(seat, m.players[seat])
-	m.stopTurnTimer()
-	m.advanceTurn()
 	return nil
 }
 
@@ -875,8 +881,6 @@ func (m *Match) useOneMore(seat int, payload map[string]any) error {
 		"drew":      m.cardPayload(cardID),
 		"free":      true,
 	}), -1)
-	m.stopTurnTimer()
-	m.advanceTurn()
 	return nil
 }
 
@@ -895,7 +899,6 @@ func (m *Match) useShuffle(seat int) error {
 	if err := m.dealHands(); err != nil {
 		return err
 	}
-	m.announceSpecialty(seat, SpecialtyShuffle)
 	m.bcast.Broadcast(transport.NewEvent(transport.EventShuffleOccurred, map[string]any{
 		"round": m.round,
 	}), -1)
@@ -1608,6 +1611,14 @@ func (m *Match) playsPayload() map[int]map[string]any {
 	for seat, cardID := range m.plays {
 		if cardID == "" {
 			out[seat] = m.timeoutPayload(seat)
+			continue
+		}
+		if cardID == SpecialtyPass {
+			out[seat] = map[string]any{
+				"id":      SpecialtyPass,
+				"type":    "text",
+				"content": "Pass",
+			}
 			continue
 		}
 		out[seat] = m.cardPayload(cardID)

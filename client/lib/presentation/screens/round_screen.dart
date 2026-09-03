@@ -23,6 +23,7 @@ import '../widgets/seat_sheet.dart';
 import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
 import '../widgets/dev_tools_overlay.dart';
+import '../widgets/discard_picker_sheet.dart';
 import '../widgets/draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
 import '../widgets/hand_reveal.dart';
@@ -113,13 +114,17 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
         );
         return;
       case 'one_more_free_card':
-        final discard = session.selectedCardId;
-        if (discard != null) {
-          await notifier.useSpecialty(
-            'one_more_free_card',
-            discardCardId: discard,
-          );
-        }
+        if (session.dto.hand.cards.isEmpty) return;
+        final discard = session.selectedCardId ??
+            await showDiscardPickerSheet(
+              context,
+              cards: session.dto.hand.cards,
+            );
+        if (discard == null) return;
+        await notifier.useSpecialty(
+          'one_more_free_card',
+          discardCardId: discard,
+        );
         return;
       case 'shuffle':
         if (session.isDonower && session.dto.plays.isEmpty) {

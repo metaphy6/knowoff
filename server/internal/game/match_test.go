@@ -959,6 +959,79 @@ func TestMatch_Specialty_PassEndsTurn(t *testing.T) {
 	if events[0].Payload["seat"] != seat || events[0].Payload["specialty"] != SpecialtyPass {
 		t.Fatalf("unexpected specialty_used payload: %v", events[0].Payload)
 	}
+	plays := bcast.findEvents(1, transport.EventPlayRevealed)
+	if len(plays) != 1 || plays[0].Payload["card_id"] != SpecialtyPass {
+		t.Fatalf("Pass should reveal a table card, got %v", plays)
+	}
+	card, ok := plays[0].Payload["card"].(map[string]any)
+	if !ok || card["id"] != SpecialtyPass || card["content"] != "Pass" {
+		t.Fatalf("Pass table card payload = %v", plays[0].Payload["card"])
+	}
+	resolved := m.playsPayload()[seat]
+	if resolved["id"] != SpecialtyPass || resolved["content"] != "Pass" || resolved["timed_out"] == true {
+		t.Fatalf("Pass round-resolved payload = %v", resolved)
+	}
+}
+
+func TestMatch_Specialty_RevealRequiresCardOrUsesExistingTimeout(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	target := m.turnOrder[(m.currentTurn+1)%len(m.turnOrder)]
+	m.players[seat].Hand.Specialty = SpecialtyReveal
+	discard := m.players[seat].Hand.Cards[0]
+	bcast.clear()
+
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{
+			"specialty":       SpecialtyReveal,
+			"target_seat":     float64(target),
+			"discard_card_id": discard,
+		},
+	)); err != nil {
+		t.Fatalf("use Reveal: %v", err)
+	}
+	if m.turnOrder[m.currentTurn] != seat {
+		t.Fatal("Reveal user should remain on turn to play a card")
+	}
+	events := bcast.findEvents(target, transport.EventSpecialtyUsed)
+	if len(events) != 1 || events[0].Payload["seat"] != seat || events[0].Payload["specialty"] != SpecialtyReveal {
+		t.Fatalf("expected public Reveal declaration, got %v", events)
+	}
+
+	m.autoPass(seat)
+	if m.plays[seat] != "" || m.lostCards[seat] == "" {
+		t.Fatal("Reveal user should receive the normal timeout auto-play penalty without a card")
+	}
+}
+
+func TestMatch_Specialty_ShuffleIsAnonymousAndRequiresCard(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := m.turnOrder[m.currentTurn]
+	m.roles[seat] = RoleDonower
+	m.players[seat].Hand.Specialty = SpecialtyShuffle
+	bcast.clear()
+
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{"specialty": SpecialtyShuffle},
+	)); err != nil {
+		t.Fatalf("use Shuffle: %v", err)
+	}
+	if m.turnOrder[m.currentTurn] != seat {
+		t.Fatal("Shuffle user should remain on turn to play a card")
+	}
+	if events := bcast.findEvents((seat+1)%m.size, transport.EventSpecialtyUsed); len(events) != 0 {
+		t.Fatalf("Shuffle should not publicly declare its user, got %v", events)
+	}
 }
 
 func TestMatch_Specialty_RevealRejectsInvalidTargetsAndFinalFiveSeconds(t *testing.T) {
@@ -1147,6 +1220,13 @@ func TestMatch_Specialty_OneMoreFreeDrawNoPenalty(t *testing.T) {
 	}
 	if m.players[seat].MatchPoints != before {
 		t.Fatalf("One More Free Card should not deduct points, got %d want %d", m.players[seat].MatchPoints, before)
+	}
+	if m.turnOrder[m.currentTurn] != seat {
+		t.Fatal("One More user should remain on turn to play a card")
+	}
+	m.autoPass(seat)
+	if m.plays[seat] != "" || m.lostCards[seat] == "" {
+		t.Fatal("One More user should receive the normal timeout auto-play penalty without a card")
 	}
 }
 
