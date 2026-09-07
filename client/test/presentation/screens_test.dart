@@ -569,6 +569,7 @@ void main() {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
     final base = _sampleSession(phase: 'discussion');
     final session = base.copyWith(
       handRevealActorSeat: 0,
@@ -577,10 +578,21 @@ void main() {
     );
 
     await tester.pumpWidget(
-      _wrapWithSession(const DiscussionScreen(), session),
+      _wrapWithSession(
+        const DiscussionScreen(),
+        session,
+        transport: transport,
+      ),
     );
     expect(find.byKey(const Key('hand-reveal-seat-access')), findsOneWidget);
     expect(find.byKey(const Key('hand-reveal-doodle-1')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('hand-reveal-seat-access')));
+    await tester.pump();
+    expect(transport.sent.last['kind'], 'view_revealed_hand');
+    expect(
+      transport.sent.last['payload'],
+      <String, dynamic>{'target_seat': 1},
+    );
 
     await tester.pumpWidget(
       _wrapWithSession(

@@ -28,30 +28,34 @@ class HandRevealSeatAccess extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return KoContainer(
+    return GestureDetector(
       key: const Key('hand-reveal-seat-access'),
-      backgroundColor: KoColors.tangerine,
-      borderWidth: KoBorders.thick,
-      shadow: KoShadows.lg,
-      padding: const EdgeInsets.all(KoSpace.md),
-      child: Row(
-        children: <Widget>[
-          SeatAvatar(
-            player: player,
-            size: 52,
-            revealAvailable: true,
-            revealViewed: viewed,
-            onViewReveal: viewed ? null : onView,
-          ),
-          const SizedBox(width: KoSpace.md),
-          Expanded(
-            child: Text(
-              l10n.viewRevealedHand(seatDisplayName(player)),
-              style: Theme.of(context).textTheme.titleLarge,
+      behavior: HitTestBehavior.opaque,
+      onTap: viewed ? null : onView,
+      child: KoContainer(
+        backgroundColor: KoColors.tangerine,
+        borderWidth: KoBorders.thick,
+        shadow: KoShadows.lg,
+        padding: const EdgeInsets.all(KoSpace.md),
+        child: Row(
+          children: <Widget>[
+            SeatAvatar(
+              player: player,
+              size: 52,
+              revealAvailable: true,
+              revealViewed: viewed,
+              onViewReveal: viewed ? null : onView,
             ),
-          ),
-          DoodleIcon(viewed ? Doodle.check : Doodle.eye, size: 30),
-        ],
+            const SizedBox(width: KoSpace.md),
+            Expanded(
+              child: Text(
+                l10n.viewRevealedHand(seatDisplayName(player)),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            DoodleIcon(viewed ? Doodle.check : Doodle.eye, size: 30),
+          ],
+        ),
       ),
     );
   }
