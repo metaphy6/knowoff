@@ -179,6 +179,20 @@ func TestBotActor_UsesShuffleSpecialtyWhenHeld(t *testing.T) {
 	waitFor(t, 2*time.Second, func() bool { return len(m.TablePlays()) != 0 })
 }
 
+func TestBotActor_ContinuesAfterOneMoreSpecialty(t *testing.T) {
+	m := newTestMatch(t, 1)
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
+
+	seat := m.CurrentTurnSeat()
+	m.SetSpecialty(seat, game.SpecialtyOneMore)
+	room := &fakeRoom{id: "room-one-more", m: m}
+	actor := NewBotActor(room, seat, rand.New(rand.NewSource(1)), slog.Default(), 0, 0)
+	actor.Start()
+	defer actor.Stop()
+
+	waitFor(t, 2*time.Second, func() bool { return len(m.TablePlays()) != 0 })
+}
+
 // TestBotActor_MarksReadyDuringResultWindow guards that a bot also uses
 // Ready to skip the Revote window (Rules §4) once the table agrees, not
 // just the Discussion window.
@@ -236,6 +250,64 @@ func TestBotActor_MarksReadyDuringResultWindow(t *testing.T) {
 	}
 
 	waitFor(t, 2*time.Second, func() bool { return !m.ResultWindowActive() })
+}
+
+func TestBotActor_UsesRevoteBeforeReady(t *testing.T) {
+	m := newTestMatch(t, 1)
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
+
+	for range m.ActiveSeats() {
+		seat := m.CurrentTurnSeat()
+		card := m.PlayerHand(seat).Cards[0]
+		if err := m.HandleIntent(seat, transport.NewIntent(
+			transport.IntentPlayCard, map[string]any{"card_id": card},
+		)); err != nil {
+			t.Fatalf("play card: %v", err)
+		}
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseDiscussion })
+	for _, s := range m.ActiveSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseKnowoff })
+
+	active := m.ActiveSeats()
+	botSeat := -1
+	for _, s := range active {
+		if m.PlayerRole(s) == game.RoleNower {
+			botSeat = s
+			break
+		}
+	}
+	if botSeat < 0 {
+		t.Fatal("test match has no Nower")
+	}
+	target := active[0]
+	if target == botSeat {
+		target = active[1]
+	}
+	for _, s := range active {
+		voteFor := target
+		if s == target {
+			voteFor = botSeat
+		}
+		_ = m.HandleIntent(s, transport.NewIntent(
+			transport.IntentCastVote, map[string]any{"target_seat": float64(voteFor)},
+		))
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.ResultWindowActive() })
+
+	m.SetSpecialty(botSeat, game.SpecialtyRevote)
+	room := &fakeRoom{id: "room-revote", m: m}
+	actor := NewBotActor(room, botSeat, rand.New(rand.NewSource(1)), slog.Default(), 0, 0)
+	actor.Start()
+	defer actor.Stop()
+
+	waitFor(t, 2*time.Second, func() bool {
+		return m.Phase() == game.PhaseKnowoff &&
+			m.PlayerHand(botSeat).Specialty == ""
+	})
 }
 
 func TestBotActor_VotesInKnowoff(t *testing.T) {

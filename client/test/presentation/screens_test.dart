@@ -18,11 +18,14 @@ import 'package:knowoff_client/presentation/screens/verdict_screen.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_theme.dart';
 import 'package:knowoff_client/presentation/theme/knowoff_tokens.dart';
+import 'package:knowoff_client/presentation/widgets/card_pile.dart';
 import 'package:knowoff_client/presentation/widgets/guardrail_audit.dart';
 import 'package:knowoff_client/presentation/widgets/ko_meters.dart';
 import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 import 'package:knowoff_client/presentation/widgets/ready_status.dart';
 import 'package:knowoff_client/presentation/widgets/draw_announcement.dart';
+import 'package:knowoff_client/presentation/widgets/rematch_overlay.dart';
+import 'package:knowoff_client/presentation/widgets/shuffle_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
 
@@ -85,6 +88,40 @@ Widget _wrapWithSession(
   );
 }
 
+/// Mirrors main.dart's app-root overlay: the app navigator as the first child
+/// with RematchOverlay stacked above it, so tests exercise the same hit-test
+/// layering the PWA runs with.
+Widget _wrapRootOverlay({gt.GameTransport? transport}) {
+  return ProviderScope(
+    overrides: [
+      gameSessionProvider.overrideWith(
+        (ref) => GameSessionNotifier(
+          transport: transport ?? _FakeTransport(),
+          initialState: _sampleSession(phase: 'finished'),
+        ),
+      ),
+    ],
+    child: MaterialApp(
+      theme: knowoffTheme(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: const Text('verdict underneath'),
+      builder: (context, child) => Overlay(
+        initialEntries: [
+          OverlayEntry(
+            builder: (context) => Stack(
+              children: [
+                if (child != null) child,
+                const RematchOverlay(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class _FakeTransport implements gt.GameTransport {
   _FakeTransport({this.stateStream})
       : _stateStream = stateStream ?? const Stream.empty();
@@ -122,6 +159,7 @@ class _FakeTransport implements gt.GameTransport {
 class _ControllableTransport implements gt.GameTransport {
   final StreamController<Map<String, dynamic>> _controller =
       StreamController<Map<String, dynamic>>.broadcast();
+  final List<Map<String, dynamic>> sent = [];
 
   void emit(Map<String, dynamic> message) => _controller.add(message);
 
@@ -147,7 +185,9 @@ class _ControllableTransport implements gt.GameTransport {
   Future<void> reconnect() async {}
 
   @override
-  Future<void> send(Map<String, dynamic> message) async {}
+  Future<void> send(Map<String, dynamic> message) async {
+    sent.add(message);
+  }
 }
 
 void main() {
@@ -213,6 +253,23 @@ void main() {
     expect(find.text('A dog on a skateboard'), findsOneWidget);
   });
 
+  testWidgets('RoundScreen allows drawing while another player has the turn',
+      (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    final base = _sampleSession();
+    final session = base.copyWith(dto: base.dto.copyWith(turnSeat: 1));
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), session, transport: transport),
+    );
+
+    await tester.tap(find.byType(CardPile));
+
+    expect(transport.sent.single['kind'], 'draw_cards');
+  });
+
   testWidgets('RoundScreen announces who drew cards', (tester) async {
     final session = _sampleSession().copyWith(
       drawAnnouncementSeat: 1,
@@ -224,6 +281,29 @@ void main() {
 
     expect(find.byType(DrawAnnouncement), findsOneWidget);
     expect(find.text('Beta drew 2 cards'), findsOneWidget);
+  });
+
+  testWidgets('RoundScreen announces an anonymous Shuffle', (tester) async {
+    final session = _sampleSession().copyWith(shuffleAnnouncementId: 1);
+    await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
+    await tester.pump();
+
+    expect(find.byType(ShuffleAnnouncement), findsOneWidget);
+    expect(find.text('The table got shuffled!'), findsOneWidget);
+    expect(find.text('Everybody\'s hands changed. Blame the cards.'),
+        findsOneWidget);
+
+    // Anonymity is about the announcement itself: no player name appears
+    // inside it, even though names legitimately render in the turn rail.
+    for (final name in const ['Alpha', 'Beta', 'Gamma', 'Delta']) {
+      expect(
+        find.descendant(
+          of: find.byType(ShuffleAnnouncement),
+          matching: find.text(name),
+        ),
+        findsNothing,
+      );
+    }
   });
 
   testWidgets(
@@ -1067,6 +1147,9 @@ void main() {
   testWidgets(
       'VerdictScreen offers Play Again once the match is actually finished',
       (tester) async {
+    // The modal now lives at the app-root overlay (see main.dart); the verdict
+    // screen only shows it through the shared visibility flag, default open.
+    rematchOverlayVisible.value = true;
     await tester.pumpWidget(
       _wrapWithSession(
         const VerdictScreen(),
@@ -1075,45 +1158,28 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('rematch-overlay')), findsOneWidget);
-    expect(find.text('Play again?'), findsOneWidget);
-    expect(find.byKey(const Key('rematch-same-table')), findsOneWidget);
-    expect(find.byKey(const Key('rematch-new-table')), findsOneWidget);
-
-    final card = tester.getRect(find.byKey(const Key('rematch-overlay')));
-    final screen = tester.getRect(find.byType(VerdictScreen));
-    expect((card.center.dx - screen.center.dx).abs(), lessThan(1));
-    expect((card.center.dy - screen.center.dy).abs(), lessThan(1));
-
-    await tester.tapAt(const Offset(12, 12));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('rematch-overlay')), findsNothing);
-    expect(find.byKey(const Key('rematch-minimized-card')), findsOneWidget);
-    expect(find.text('Play again?'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('rematch-minimized-card')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('rematch-overlay')), findsOneWidget);
     expect(find.byKey(const Key('rematch-minimized-card')), findsNothing);
+    rematchOverlayVisible.value = true;
   });
 
   testWidgets(
-      'VerdictScreen sends the chosen rematch mode and shows a waiting state',
-      (tester) async {
+      'RematchOverlay at the app root sends the chosen mode and shows a '
+      'waiting state', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    rematchOverlayVisible.value = true;
     final transport = _ControllableTransport();
     await tester.pumpWidget(
-      _wrapWithSession(
-        const VerdictScreen(),
-        _sampleSession(phase: 'finished'),
-        transport: transport,
-      ),
+      _wrapRootOverlay(transport: transport),
     );
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('rematch-same-table')));
     await tester.pump();
+
+    expect(transport.sent.single['kind'], 'rematch');
+    expect(transport.sent.single['payload'], {'mode': 'same_table'});
 
     // The button send itself is fire-and-forget; the UI only flips to the
     // waiting state once the server echoes the choice back, same as Ready.
@@ -1126,6 +1192,49 @@ void main() {
 
     expect(find.text('Waiting for the rest of the table…'), findsOneWidget);
     expect(find.byKey(const Key('rematch-same-table')), findsNothing);
+    rematchOverlayVisible.value = true;
+  });
+
+  testWidgets(
+      'RematchOverlay at the app root delivers both Play Again taps to the '
+      'rematch intent', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    rematchOverlayVisible.value = true;
+    final transport = _FakeTransport();
+
+    await tester.pumpWidget(_wrapRootOverlay(transport: transport));
+    await tester.pump();
+
+    expect(find.byKey(const Key('rematch-overlay')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('rematch-new-table')));
+    await tester.pump();
+    expect(transport.sent.single['kind'], 'rematch');
+    expect(transport.sent.single['payload'], {'mode': 'new_table'});
+    rematchOverlayVisible.value = true;
+  });
+
+  testWidgets(
+      'VerdictScreen no longer hosts the overlay itself; the minimized card '
+      're-opens the root overlay', (tester) async {
+    rematchOverlayVisible.value = false;
+    await tester.pumpWidget(
+      _wrapWithSession(
+        const VerdictScreen(),
+        _sampleSession(phase: 'finished'),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('rematch-overlay')), findsNothing);
+    expect(find.byKey(const Key('rematch-minimized-card')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('rematch-minimized-card')));
+    await tester.pump();
+    expect(rematchOverlayVisible.value, isTrue);
+    rematchOverlayVisible.value = true;
   });
 
   group('design guardrails hold on every live match screen', () {

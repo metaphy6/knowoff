@@ -33,13 +33,17 @@ type ConnectionState struct {
 	AccountID    string
 	accessToken  string
 	sessionToken string
-	Lobby        *lobby.Manager
-	Logger       *slog.Logger
-	Auth         *auth.Manager
-	Profile      *profile.Manager
-	Audit        *audit.Logger
-	Economy      *economy.Manager
-	Redis        interface {
+	// pendingRoleOverride stores a dev_force_role choice made before the seat
+	// exists (the menu's role picker can fire while the socket is still
+	// connecting), so joining a room can apply it the moment a seat is claimed.
+	pendingRoleOverride string
+	Lobby               *lobby.Manager
+	Logger              *slog.Logger
+	Auth                *auth.Manager
+	Profile             *profile.Manager
+	Audit               *audit.Logger
+	Economy             *economy.Manager
+	Redis               interface {
 		AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error)
 	}
 	rateLimiter *ratelimit.Limiter
@@ -227,7 +231,7 @@ func (s *ConnectionState) run(ctx context.Context) error {
 				continue
 			}
 		}
-		if !transport.IntentIsPhase3(env.Kind) && env.Kind != transport.IntentConvertPoints && env.Kind != transport.IntentReportMedia && env.Kind != transport.IntentDevGrantSpecialty {
+		if !transport.IntentIsPhase3(env.Kind) && env.Kind != transport.IntentConvertPoints && env.Kind != transport.IntentReportMedia && env.Kind != transport.IntentDevGrantSpecialty && env.Kind != transport.IntentDevForceRole {
 			_ = s.sendError("expected_intent", "only intents accepted after join")
 			continue
 		}
@@ -300,6 +304,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		s.Seat = seat
 		s.sessionToken = token
 		s.Room.SetConnection(seat, s.Conn)
+		s.applyPendingRoleOverride()
 		s.Logger = s.Logger.With("room_id", room.ID, "seat", seat)
 		s.Logger.Info("player joined room", "code", code, "account", s.AccountID, "room_size", room.Size, "reclaimed", token != "")
 		return s.sendOK("joined", map[string]any{"room_id": room.ID, "seat": seat, "code": room.Code, "size": room.Size, "session_token": token})
@@ -326,6 +331,7 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		}
 		// Bind connection; the room auto-starts once every seat binds.
 		s.Room.SetConnection(s.Seat, s.Conn)
+		s.applyPendingRoleOverride()
 		s.Logger = s.Logger.With("room_id", s.Room.ID, "seat", s.Seat)
 		s.Logger.Info("player assigned from quickplay queue", "account", s.AccountID, "size", s.Room.Size, "code", s.Room.Code, "queue_id", queueID)
 		return s.sendOK("joined", map[string]any{"room_id": s.Room.ID, "seat": s.Seat, "code": s.Room.Code, "size": s.Room.Size, "session_token": s.sessionToken})
@@ -357,6 +363,25 @@ func (s *ConnectionState) handleIntent(env *transport.Envelope) error {
 		}
 		specialty, _ := env.Payload["specialty"].(string)
 		return m.GrantSpecialty(s.Seat, specialty)
+	case transport.IntentDevForceRole:
+		// Dev-only: rejected outright in prod so it can never become a cheat
+		// surface (mirrors the dev_grant_specialty gate in game.Match).
+		if cfg := s.Config(); cfg != nil && cfg.App.Env == "prod" {
+			return fmt.Errorf("dev_force_role unavailable")
+		}
+		role, _ := env.Payload["role"].(string)
+		// No room yet (picked from the menu before queueing): stash it and let
+		// the join path apply it as soon as this connection claims a seat.
+		if s.Room == nil {
+			switch role {
+			case "", "nower", "donower":
+				s.pendingRoleOverride = role
+				return nil
+			default:
+				return fmt.Errorf("unknown role %q", role)
+			}
+		}
+		return s.Room.SetDevRoleOverride(s.Seat, role)
 	default:
 		if s.Room == nil {
 			return fmt.Errorf("not joined")
@@ -412,6 +437,19 @@ func (s *ConnectionState) handleReportMedia(env *transport.Envelope) error {
 
 func (s *ConnectionState) sendOK(key string, payload map[string]any) error {
 	return s.send(transport.NewEvent("joined_"+key, payload))
+}
+
+// applyPendingRoleOverride carries a dev_force_role choice made before join
+// into the room the connection just claimed a seat in. A no-op when none is
+// pending or the stored value is no longer applicable.
+func (s *ConnectionState) applyPendingRoleOverride() {
+	if s.pendingRoleOverride == "" || s.Room == nil {
+		return
+	}
+	if err := s.Room.SetDevRoleOverride(s.Seat, s.pendingRoleOverride); err != nil {
+		s.Logger.Warn("pending dev role override failed",
+			"seat", s.Seat, "role", s.pendingRoleOverride, "error", err)
+	}
 }
 
 func (s *ConnectionState) sendError(code, message string) error {

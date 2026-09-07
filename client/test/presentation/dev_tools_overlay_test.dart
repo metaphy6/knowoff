@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,9 +14,15 @@ import 'package:knowoff_client/presentation/widgets/dev_tools_overlay.dart';
 class _FakeTransport implements gt.GameTransport {
   int reconnectCount = 0;
   final List<Map<String, dynamic>> sent = [];
+  final StreamController<Map<String, dynamic>> _controller =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  void emit(String kind, Map<String, dynamic> payload) {
+    _controller.add(<String, dynamic>{'kind': kind, 'payload': payload});
+  }
 
   @override
-  Stream<Map<String, dynamic>> get messages => const Stream.empty();
+  Stream<Map<String, dynamic>> get messages => _controller.stream;
 
   @override
   Stream<gt.ConnectionState> get state =>
@@ -138,6 +146,59 @@ void main() {
     final kinds = _transport.sent.map((m) => m['kind']).toList();
     expect(kinds, ['dev_grant_specialty']);
     expect(_transport.sent.first['payload'], {'specialty': 'pass'});
+  });
+
+  testWidgets('role picker forces my next match role (dev)', (tester) async {
+    await tester.pumpWidget(_wrap());
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Choose my role (dev)'));
+    await tester.pumpAndSettle();
+
+    expect(
+        find.byKey(const ValueKey<String>('dev-role-nower')), findsOneWidget);
+    expect(
+        find.byKey(const ValueKey<String>('dev-role-donower')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('dev-role-none')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('dev-role-donower')));
+    await tester.pumpAndSettle();
+
+    expect(_transport.sent.map((m) => m['kind']), ['dev_force_role']);
+    expect(_transport.sent.first['payload'], {'role': 'donower'});
+
+    // Choosing "random" clears the forced role client-side and on the server.
+    await tester.tap(find.byTooltip('Choose my role (dev)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('dev-role-none')));
+    await tester.pumpAndSettle();
+
+    expect(_transport.sent.last['kind'], 'dev_force_role');
+    expect(_transport.sent.last['payload'], {'role': ''});
+  });
+
+  test('a role picked before join re-fires once the seat exists', () async {
+    final transport = _FakeTransport();
+    final notifier = GameSessionNotifier(transport: transport);
+    addTearDown(notifier.dispose);
+
+    // Menu-time pick: no socket, no room — the send fails or lands pre-join,
+    // but the choice is remembered locally.
+    await notifier.devForceRole('donower');
+    expect(notifier.state.devForcedRole, 'donower');
+
+    // Once the server assigns a seat, the choice re-fires so the server can
+    // actually honor it.
+    transport.sent.clear();
+    transport.emit('joined', <String, dynamic>{
+      'seat': 2,
+      'code': 'ABCDEF',
+      'session_token': 'tok',
+    });
+    await Future<void>.delayed(Duration.zero);
+
+    expect(transport.sent.single['kind'], 'dev_force_role');
+    expect(transport.sent.single['payload'], {'role': 'donower'});
   });
 
   testWidgets(

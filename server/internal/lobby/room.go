@@ -65,21 +65,26 @@ type Room struct {
 	vacantSeats     map[int]bool
 	reopenedAt      time.Time
 	onRematchOpen   func(r *Room)
+
+	// devRoleOverrides records a seat's dev-only forced role (nower/donower)
+	// so the next match start can apply it. Empty means random.
+	devRoleOverrides map[int]game.Role
 }
 
 // NewRoom creates a room in the waiting phase.
 func NewRoom(id, code string, size int, hostSeat int, quickPlay bool, deps Deps) *Room {
 	return &Room{
-		ID:         id,
-		Code:       code,
-		Size:       size,
-		HostSeat:   hostSeat,
-		QuickPlay:  quickPlay,
-		deps:       deps,
-		conns:      make(map[int]*websocket.Conn),
-		bindings:   make(map[int]*SeatBinding),
-		identities: make(map[int]game.SeatIdentity),
-		nextSeat:   0,
+		ID:               id,
+		Code:             code,
+		Size:             size,
+		HostSeat:         hostSeat,
+		QuickPlay:        quickPlay,
+		deps:             deps,
+		conns:            make(map[int]*websocket.Conn),
+		bindings:         make(map[int]*SeatBinding),
+		identities:       make(map[int]game.SeatIdentity),
+		nextSeat:         0,
+		devRoleOverrides: make(map[int]game.Role),
 	}
 }
 
@@ -107,6 +112,37 @@ func (r *Room) SetOnRematchOpen(fn func(r *Room)) {
 	r.onRematchOpen = fn
 }
 
+// SetDevRoleOverride is the dev-only store behind IntentDevForceRole: it
+// remembers a seat's forced role (nower/donower) so the next match start can
+// apply it. An empty role clears the override back to random. Only known
+// roles are accepted; the prod gate lives at the handler.
+func (r *Room) SetDevRoleOverride(seat int, role string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if seat < 0 || seat >= r.Size {
+		return fmt.Errorf("invalid seat")
+	}
+	if r.bindings[seat] == nil {
+		return fmt.Errorf("seat not claimed")
+	}
+	switch game.Role(role) {
+	case game.RoleNower, game.RoleDonower:
+		r.devRoleOverrides[seat] = game.Role(role)
+	case "":
+		delete(r.devRoleOverrides, seat)
+	default:
+		return fmt.Errorf("unknown role %q", role)
+	}
+	return nil
+}
+
+// DevRoleOverride reports the seat's stored forced role, or empty for random.
+func (r *Room) DevRoleOverride(seat int) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return string(r.devRoleOverrides[seat])
+}
+
 // StartMatch initializes the authoritative match. It may be called once the
 // room is full.
 func (r *Room) StartMatch(deps game.Dependencies) error {
@@ -120,7 +156,11 @@ func (r *Room) StartMatch(deps game.Dependencies) error {
 	r.deps.Logger.Info("creating match", "room_id", r.ID)
 	r.LoadIdentities()
 	bcast := &roomBcast{room: r}
-	m := game.NewMatch(r.Size, deps, bcast)
+	var opts []game.MatchOption
+	for seat, role := range r.devRoleOverrides {
+		opts = append(opts, game.WithDevRoleOverride(seat, role))
+	}
+	m := game.NewMatch(r.Size, deps, bcast, opts...)
 	r.deps.Logger.Info("starting match engine", "room_id", r.ID)
 	if err := m.Start(); err != nil {
 		return err
