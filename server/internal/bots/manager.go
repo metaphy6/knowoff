@@ -187,6 +187,10 @@ func (b *BotActor) act(m *game.Match) {
 	switch {
 	case m.CurrentTurnSeat() == seat:
 		key = "turn"
+	case m.ResultWindowActive() &&
+		m.PlayerRole(seat) == game.RoleNower &&
+		m.PlayerHand(seat).Specialty == game.SpecialtyRevote:
+		key = "revote:" + m.Phase()
 	case m.IsDiscussionReadyAllowed(), m.ResultWindowActive():
 		// Discussion and result windows are the bot's easiest skip conditions:
 		// they should click Ready as soon as the window is active, not wait for
@@ -221,6 +225,8 @@ func (b *BotActor) act(m *game.Match) {
 			b.actAt = time.Now().Add(b.thinkDelay())
 			return
 		}
+	case strings.HasPrefix(key, "revote:"):
+		b.useRevote(m)
 	case strings.HasPrefix(key, "ready:"):
 		if !b.markReady(m) {
 			return
@@ -231,6 +237,16 @@ func (b *BotActor) act(m *game.Match) {
 		}
 	}
 	b.acted = true
+}
+
+func (b *BotActor) useRevote(m *game.Match) {
+	err := m.HandleIntent(b.seat, &transport.Envelope{
+		Kind:    transport.IntentUseSpecialty,
+		Payload: map[string]any{"specialty": game.SpecialtyRevote},
+	})
+	if err != nil {
+		b.logger.Warn("bot revote failed", "error", err)
+	}
 }
 
 // playTurn takes this seat's turn action and reports whether the turn ended.
@@ -273,7 +289,10 @@ func (b *BotActor) playTurn(m *game.Match) bool {
 				b.logger.Warn("bot specialty failed", "specialty", hand.Specialty, "error", err)
 				// Fall through to play a regular card instead
 			} else {
-				return true
+				// One More and Reveal do not end the authoritative turn; the
+				// bot must poll again for the follow-up draw or play.
+				return hand.Specialty != game.SpecialtyOneMore &&
+					hand.Specialty != game.SpecialtyReveal
 			}
 		}
 

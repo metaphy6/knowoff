@@ -41,17 +41,25 @@ class GameSession {
     this.drawAnnouncementSeat,
     this.drawAnnouncementCount,
     this.drawAnnouncementId = 0,
+    this.shuffleAnnouncementId = 0,
     this.handRevealActorSeat,
     this.handRevealTargetSeat,
     this.handRevealRound = -1,
     this.handRevealViewed = false,
     this.revealedHand,
     this.freeDrawPopTick = 0,
+    this.devForcedRole,
   });
 
   final GameStateDto dto;
   final String? myRole;
   final String? lastError;
+
+  /// Dev-only: the role forced for the next match via dev_force_role
+  /// ('nower' / 'donower'), remembered so a pick made before the socket or
+  /// the room was ready re-fires on join instead of being lost. Null/empty
+  /// means random.
+  final String? devForcedRole;
   final String? selectedCardId;
   final ConnectionState connectionState;
   final int reconnectAttempts;
@@ -72,6 +80,7 @@ class GameSession {
   final int? drawAnnouncementSeat;
   final int? drawAnnouncementCount;
   final int drawAnnouncementId;
+  final int shuffleAnnouncementId;
   final int? handRevealActorSeat;
   final int? handRevealTargetSeat;
   final int handRevealRound;
@@ -99,12 +108,14 @@ class GameSession {
     int? drawAnnouncementSeat,
     int? drawAnnouncementCount,
     int? drawAnnouncementId,
+    int? shuffleAnnouncementId,
     int? handRevealActorSeat,
     int? handRevealTargetSeat,
     int? handRevealRound,
     bool? handRevealViewed,
     RevealedHand? revealedHand,
     int? freeDrawPopTick,
+    String? devForcedRole,
     bool clearFinalElimination = false,
     bool clearHandReveal = false,
     bool clearRevealedHand = false,
@@ -141,6 +152,8 @@ class GameSession {
           ? null
           : (drawAnnouncementCount ?? this.drawAnnouncementCount),
       drawAnnouncementId: drawAnnouncementId ?? this.drawAnnouncementId,
+      shuffleAnnouncementId:
+          shuffleAnnouncementId ?? this.shuffleAnnouncementId,
       handRevealActorSeat: clearHandReveal
           ? null
           : (handRevealActorSeat ?? this.handRevealActorSeat),
@@ -155,6 +168,7 @@ class GameSession {
           ? null
           : (revealedHand ?? this.revealedHand),
       freeDrawPopTick: freeDrawPopTick ?? this.freeDrawPopTick,
+      devForcedRole: devForcedRole ?? this.devForcedRole,
     );
   }
 

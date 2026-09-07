@@ -7,6 +7,7 @@ import '../../core/logging/app_logger.dart';
 import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../domain/entities/game_session.dart';
+import '../widgets/rematch_overlay.dart' show rematchOverlayVisible;
 
 /// Provides the live [GameSession] state for the current match.
 final gameSessionProvider =
@@ -81,7 +82,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     _rejoinPending = false;
     _pendingQuickPlaySize = null;
     _terminalHandshakeError = null;
-    state = GameSession(dto: _initialDto());
+    // The dev-forced role is a user choice for the *next* match, not part of
+    // the finished match's state — keep it across the reset so it re-fires on
+    // the next join instead of being lost with the restart.
+    state = GameSession(
+      dto: _initialDto(),
+      devForcedRole: state.devForcedRole,
+    );
     unawaited(_transport.reconnect());
   }
 
@@ -106,6 +113,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
           seat: payload['seat'] as int? ?? state.dto.seat,
           roomCode: payload['code'] as String? ?? state.dto.roomCode,
         ));
+        // A role picked before the socket or room was ready never reached the
+        // server — re-fire it now that this seat exists, so the menu choice
+        // is never silently dropped.
+        final forcedRole = state.devForcedRole;
+        if (forcedRole != null && forcedRole.isNotEmpty) {
+          unawaited(devForceRole(forcedRole));
+        }
         break;
       case 'phase_started':
         _resetForFreshMatchIfNeeded(payload);
@@ -133,7 +147,19 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         final seat = payload['seat'] as int?;
         final specialty = payload['specialty'] as String?;
         if (seat != null && specialty != null) {
+          var dto = state.dto;
+          if (seat == dto.seat && dto.hand.specialty == specialty) {
+            dto = dto.copyWith(
+              hand: HandDto(
+                cards: dto.hand.cards,
+                drawPile: dto.hand.drawPile,
+                specialty: null,
+                freeDraws: dto.hand.freeDraws,
+              ),
+            );
+          }
           state = state.copyWith(
+            dto: dto,
             specialtyAnnouncementSeat: seat,
             specialtyAnnouncement: specialty,
           );
@@ -182,8 +208,13 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         }
         break;
       case 'round_resolved':
-      case 'shuffle_occurred':
       case 'vote_result_pending':
+        _mergeState(payload);
+        break;
+      case 'shuffle_occurred':
+        state = state.copyWith(
+          shuffleAnnouncementId: state.shuffleAnnouncementId + 1,
+        );
         _mergeState(payload);
         break;
       case 'vote_cast':
@@ -395,6 +426,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     if (!state.isOver) return;
 
     _bufferedMessages.clear();
+    // A fresh match opens its own Play Again window when it finishes; drop
+    // any minimized state left over from the match that just ended.
+    rematchOverlayVisible.value = true;
     final dto = state.dto.copyWith(
       // Match-ended markers.
       clearVerdict: true,
@@ -426,6 +460,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       clearSpecialtyAnnouncement: true,
       clearDrawAnnouncement: true,
       clearMyRole: true,
+      shuffleAnnouncementId: 0,
     );
   }
 
@@ -772,6 +807,15 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// when app.env is prod, so it can never ship as a cheat surface.
   Future<void> devGrantSpecialty(String specialty) =>
       _send('dev_grant_specialty', {'specialty': specialty});
+
+  /// Dev-only hook (debug builds): forces this seat's role for the next match
+  /// in the room ('nower' / 'donower'), or clears the override with an empty
+  /// value back to random. Remembered in session state so a pick made before
+  /// the socket or room was ready re-fires on join. Rejected in prod.
+  Future<void> devForceRole(String role) {
+    state = state.copyWith(devForcedRole: role.isEmpty ? null : role);
+    return _send('dev_force_role', {'role': role});
+  }
 
   Future<void> viewRevealedHand(int targetSeat) async {
     if (state.handRevealViewed || state.handRevealTargetSeat != targetSeat) {

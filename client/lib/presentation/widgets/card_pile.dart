@@ -44,7 +44,8 @@ class CardPile extends StatefulWidget {
   /// of their own, so without it they would try to grow forever.
   final double height;
 
-  /// Null when drawing is not currently legal (not your turn, empty pile).
+  /// Null when drawing is not currently legal (for example, outside play or
+  /// when the pile is empty).
   final VoidCallback? onDraw;
 
   @override

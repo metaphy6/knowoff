@@ -12,6 +12,7 @@ import 'presentation/state/game_session_provider.dart';
 import 'presentation/theme/knowoff_theme.dart';
 import 'presentation/theme/ko_scroll_behavior.dart';
 import 'presentation/widgets/dev_tools_overlay.dart';
+import 'presentation/widgets/rematch_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,6 +64,11 @@ class KnowoffApp extends StatelessWidget {
             builder: (context) => Stack(
               children: [
                 if (child != null) child,
+                // Play Again sits at the app root, above the Navigator, so its
+                // card and backdrop always own hit-testing on the verdict
+                // screen (a navigator-nested Stack let the navigator swallow
+                // the buttons' pointer events).
+                const RematchOverlay(),
                 const DevToolsOverlay(),
               ],
             ),

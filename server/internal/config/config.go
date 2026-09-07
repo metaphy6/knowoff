@@ -209,6 +209,7 @@ type TimersTuning struct {
 	VoteResultWindow    int `yaml:"vote_result_window"`
 	RevealLockout       int `yaml:"reveal_lockout"`
 	RevealView          int `yaml:"reveal_view"`
+	ShuffleBonusSeconds int `yaml:"shuffle_bonus_seconds"`
 	PrefetchCountdown   int `yaml:"prefetch_countdown"`
 }
 

@@ -28,8 +28,6 @@ class VerdictScreen extends ConsumerStatefulWidget {
 }
 
 class _VerdictScreenState extends ConsumerState<VerdictScreen> {
-  bool _showRematchOverlay = true;
-
   PlayerDto _withRevealedDonowerRole(PlayerDto player) {
     return PlayerDto(
       seat: player.seat,
@@ -52,8 +50,8 @@ class _VerdictScreenState extends ConsumerState<VerdictScreen> {
         dto.winner ?? (session.myRole == 'donower' ? 'donower' : 'nower');
     final nowerWin = winner == 'nower';
     final iWon = nowerWin ? !session.isDonower : session.isDonower;
-    final showMinimizedRematch =
-        dto.phase == 'finished' && !_showRematchOverlay;
+    // The modal card itself lives at the app-root overlay; here we only keep
+    // the minimized wake affordance in the bottom bar.
     final verdictPlayers = dto.players.map((player) {
       if (!nowerWin && dto.donowerSeats.contains(player.seat)) {
         return _withRevealedDonowerRole(player);
@@ -67,104 +65,101 @@ class _VerdictScreenState extends ConsumerState<VerdictScreen> {
         return a.seat.compareTo(b.seat);
       });
 
-    return Stack(
-      children: <Widget>[
-        KoScaffold(
-          title: l10n.verdictTitle,
-          accent: nowerWin ? KoColors.lime : KoColors.pink,
-          canvasColor: KoColors.canvas,
-          showBack: false,
-          leadingGlyph:
-              DoodleIcon(nowerWin ? Doodle.check : Doodle.mask, size: 30),
-          bottomBar: _VerdictBottomBar(
-            showRematchWakeButton: showMinimizedRematch,
-            onWakeRematch: () => setState(() => _showRematchOverlay = true),
-            onBackToMenu: () {
-              ref.read(gameSessionProvider.notifier).restart();
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-          ),
-          body: KoBody(
-            children: <Widget>[
-              _WinnerBanner(
-                headline: nowerWin ? l10n.nowerWin : l10n.donowerWin,
-                blurb: nowerWin
-                    ? l10n.verdictNowerBlurb
-                    : l10n.verdictDonowerBlurb,
-                accent: nowerWin ? KoColors.lime : KoColors.pink,
-                celebrate: iWon,
+    return ValueListenableBuilder<bool>(
+      valueListenable: rematchOverlayVisible,
+      builder: (context, overlayVisible, _) {
+        final showMinimizedRematch = dto.phase == 'finished' && !overlayVisible;
+        return Stack(
+          children: <Widget>[
+            KoScaffold(
+              title: l10n.verdictTitle,
+              accent: nowerWin ? KoColors.lime : KoColors.pink,
+              canvasColor: KoColors.canvas,
+              showBack: false,
+              leadingGlyph:
+                  DoodleIcon(nowerWin ? Doodle.check : Doodle.mask, size: 30),
+              bottomBar: _VerdictBottomBar(
+                showRematchWakeButton: showMinimizedRematch,
+                onWakeRematch: () => rematchOverlayVisible.value = true,
+                onBackToMenu: () {
+                  ref.read(gameSessionProvider.notifier).restart();
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
               ),
-              const SizedBox(height: KoSpace.lg),
-              Row(
+              body: KoBody(
                 children: <Widget>[
-                  Expanded(
-                    child: KoStatTile(
-                      value: '${dto.matchPoints}',
-                      label: l10n.verdictPointsLabel,
-                      accent: KoColors.tangerine,
-                      glyph: Doodle.sparkle,
-                      numeralSize: 40,
-                      shadow: KoShadows.md,
-                      rotation: KoTilt.subtle,
-                    ),
+                  _WinnerBanner(
+                    headline: nowerWin ? l10n.nowerWin : l10n.donowerWin,
+                    blurb: nowerWin
+                        ? l10n.verdictNowerBlurb
+                        : l10n.verdictDonowerBlurb,
+                    accent: nowerWin ? KoColors.lime : KoColors.pink,
+                    celebrate: iWon,
                   ),
-                  const SizedBox(width: KoSpace.md),
-                  Expanded(
-                    child: KoStatTile(
-                      value: '${dto.round}',
-                      label: l10n.roundTitle,
-                      accent: KoColors.aqua,
-                      glyph: Doodle.clock,
-                      numeralSize: 40,
-                      shadow: KoShadows.md,
-                      rotation: KoTilt.soft,
-                    ),
+                  const SizedBox(height: KoSpace.lg),
+                  Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: KoStatTile(
+                          value: '${dto.matchPoints}',
+                          label: l10n.verdictPointsLabel,
+                          accent: KoColors.tangerine,
+                          glyph: Doodle.sparkle,
+                          numeralSize: 40,
+                          shadow: KoShadows.md,
+                          rotation: KoTilt.subtle,
+                        ),
+                      ),
+                      const SizedBox(width: KoSpace.md),
+                      Expanded(
+                        child: KoStatTile(
+                          value: '${dto.round}',
+                          label: l10n.roundTitle,
+                          accent: KoColors.aqua,
+                          glyph: Doodle.clock,
+                          numeralSize: 40,
+                          shadow: KoShadows.md,
+                          rotation: KoTilt.soft,
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: KoSpace.xl),
+                  KoSectionHeader(
+                    label: l10n.knowoffTitle,
+                    glyph: const DoodleIcon(Doodle.eye, size: 20),
+                    accent: KoColors.violet,
+                  ),
+                  for (final player in verdictPlayers)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: KoSpace.sm),
+                      child: SeatTile(
+                        player: player,
+                        isLocal: player.seat == session.seat,
+                        onTap: () => showSeatSheet(
+                          context,
+                          player: player,
+                          isLocal: player.seat == session.seat,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: KoSpace.xl),
+                  KoSectionHeader(
+                    label: l10n.verdictNownsTitle,
+                    glyph: const DoodleIcon(Doodle.staticBurst, size: 20),
+                    accent: KoColors.pink,
+                  ),
+                  for (var i = 0; i < dto.nowns.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: KoSpace.lg),
+                      child: _NownTile(nown: dto.nowns[i], index: i),
+                    ),
                 ],
               ),
-              const SizedBox(height: KoSpace.xl),
-              KoSectionHeader(
-                label: l10n.knowoffTitle,
-                glyph: const DoodleIcon(Doodle.eye, size: 20),
-                accent: KoColors.violet,
-              ),
-              for (final player in verdictPlayers)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: KoSpace.sm),
-                  child: SeatTile(
-                    player: player,
-                    isLocal: player.seat == session.seat,
-                    onTap: () => showSeatSheet(
-                      context,
-                      player: player,
-                      isLocal: player.seat == session.seat,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: KoSpace.xl),
-              KoSectionHeader(
-                label: l10n.verdictNownsTitle,
-                glyph: const DoodleIcon(Doodle.staticBurst, size: 20),
-                accent: KoColors.pink,
-              ),
-              for (var i = 0; i < dto.nowns.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: KoSpace.lg),
-                  child: _NownTile(nown: dto.nowns[i], index: i),
-                ),
-            ],
-          ),
-        ),
-        // Wire phase is always literally "finished" — "verdict" is a legacy
-        // phase constant that's never actually sent (see server
-        // game.PhaseFinished). Gating on it precisely also keeps this
-        // overlay out of the way of tests that build a session directly
-        // with phase: 'verdict' for layout-only assertions.
-        if (dto.phase == 'finished' && _showRematchOverlay)
-          RematchOverlay(
-            onMinimize: () => setState(() => _showRematchOverlay = false),
-          ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

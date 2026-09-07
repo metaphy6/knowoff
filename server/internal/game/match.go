@@ -38,6 +38,13 @@ type Match struct {
 	players      []*PlayerState
 	nownSchedule []string
 
+	// devRoleOverride forces one seat's team before random assignment (dev
+	// hook only; WithDevRoleOverride). A seat forced Donower swaps with an
+	// originally-random Donower so the configured team counts never change.
+	devRoleSeat int
+	devRole     Role
+	hasDevRole  bool
+
 	turnOrder    []int
 	currentTurn  int
 	turnDeadline time.Time
@@ -143,6 +150,22 @@ func (m *Match) Start() error {
 	}
 	for i := 0; i < donowers; i++ {
 		m.roles[perm[i]] = RoleDonower
+	}
+	// Dev-only forced role: the seat joins the requested team by swapping with
+	// a seat from the other team, so configured team counts stay exact.
+	if m.hasDevRole && m.devRoleSeat >= 0 && m.devRoleSeat < m.size {
+		if m.roles[m.devRoleSeat] != m.devRole {
+			swap := -1
+			for s := 0; s < m.size; s++ {
+				if s != m.devRoleSeat && m.roles[s] == m.devRole {
+					swap = s
+					break
+				}
+			}
+			if swap >= 0 {
+				m.roles[swap], m.roles[m.devRoleSeat] = m.roles[m.devRoleSeat], m.roles[swap]
+			}
+		}
 	}
 	for i, p := range m.players {
 		p.Role = m.roles[i]
@@ -705,21 +728,34 @@ func (m *Match) scheduleTurn() {
 		m.beginDiscussion()
 		return
 	}
-	seat := m.turnOrder[m.currentTurn]
-	m.turnDeadline = time.Now().Add(
+	m.scheduleTurnAt(time.Now().Add(
 		time.Duration(m.deps.Config.Tuning.Timers.PlayTurn) * time.Second,
-	)
+	))
+}
+
+func (m *Match) scheduleTurnAt(deadline time.Time) {
+	if m.currentTurn >= len(m.turnOrder) {
+		m.beginDiscussion()
+		return
+	}
+	seat := m.turnOrder[m.currentTurn]
+	m.turnDeadline = deadline
+	remaining := time.Until(deadline)
+	timeout := int((remaining + time.Second - 1) / time.Second)
+	if timeout < 1 {
+		timeout = 1
+	}
 	m.bcast.Broadcast(transport.NewEvent(transport.EventTurnStarted, map[string]any{
 		"turn_seat":              seat,
 		"round":                  m.round,
-		"timeout":                m.deps.Config.Tuning.Timers.PlayTurn,
+		"timeout":                timeout,
 		"reveal_lockout_seconds": m.deps.Config.Tuning.Timers.RevealLockout,
 	}), -1)
 	if !m.connected[seat] {
 		m.autoPass(seat)
 		return
 	}
-	d := time.Duration(m.deps.Config.Tuning.Timers.PlayTurn) * time.Second
+	d := remaining
 	if d <= 0 {
 		d = 1 * time.Millisecond
 	}
@@ -950,12 +986,10 @@ func (m *Match) useShuffle(seat int) error {
 	if m.roles[seat] != RoleDonower {
 		return fmt.Errorf("off-role specialty")
 	}
-	if m.currentTurn != 0 || len(m.plays) != 0 {
-		return fmt.Errorf("shuffle only at round start")
-	}
 	if m.uniqueUsed[SpecialtyShuffle] {
 		return fmt.Errorf("shuffle already used")
 	}
+	deadline := m.turnDeadline
 	m.uniqueUsed[SpecialtyShuffle] = true
 	m.players[seat].Hand.Specialty = ""
 	if err := m.dealHands(); err != nil {
@@ -970,7 +1004,11 @@ func (m *Match) useShuffle(seat int) error {
 		m.sendHandDealt(s, p)
 	}
 	m.stopTurnTimer()
-	m.scheduleTurn()
+	if deadline.IsZero() {
+		deadline = time.Now()
+	}
+	bonus := time.Duration(m.deps.Config.Tuning.Timers.ShuffleBonusSeconds) * time.Second
+	m.scheduleTurnAt(deadline.Add(bonus))
 	return nil
 }
 
@@ -992,9 +1030,6 @@ func (m *Match) requireDiscard(seat int, payload map[string]any) bool {
 func (m *Match) handleDrawCards(seat int, payload map[string]any) error {
 	if m.phase != PhasePlay {
 		return fmt.Errorf("not play phase")
-	}
-	if m.turnOrder[m.currentTurn] != seat {
-		return fmt.Errorf("out of turn")
 	}
 	countF, _ := payload["count"].(float64)
 	count := int(countF)
@@ -1688,11 +1723,17 @@ func (m *Match) timeoutPayload(seat int) map[string]any {
 }
 
 // sendHandDealt sends one seat's full hand, draw pile, and specialty.
+// An empty specialty must encode as JSON null — a bare empty string would
+// render client-side as a nameless, unusable card in the specialty slot.
 func (m *Match) sendHandDealt(seat int, p *PlayerState) {
+	var specialty any
+	if p.Hand.Specialty != "" {
+		specialty = p.Hand.Specialty
+	}
 	m.bcast.SendTo(seat, transport.NewEvent(transport.EventHandDealt, map[string]any{
 		"cards":      m.cardPayloads(p.Hand.Cards),
 		"draw_pile":  m.cardPayloads(p.Hand.DrawPile),
-		"specialty":  p.Hand.Specialty,
+		"specialty":  specialty,
 		"free_draws": m.freeDrawsPending[seat],
 	}))
 }

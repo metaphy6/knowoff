@@ -27,6 +27,10 @@ const (
 	// card into the sender's hand as if it had been dealt. The server rejects
 	// it when app.env is prod.
 	IntentDevGrantSpecialty = "dev_grant_specialty"
+	// IntentDevForceRole is a dev-only hook: it forces the sender's role for the
+	// next match in the room (or clears the forced role with an empty value).
+	// Rejected when app.env is prod so it can never ship as a cheat surface.
+	IntentDevForceRole = "dev_force_role"
 
 	// Events — server → client
 	EventPhaseStarted        = "phase_started"

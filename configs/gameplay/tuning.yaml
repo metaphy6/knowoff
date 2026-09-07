@@ -20,6 +20,7 @@ timers:                             # seconds; which windows may fast-forward is
   vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster/Revote window
   reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
   reveal_view: 3                    # each player may view an exposed hand for this many seconds
+  shuffle_bonus_seconds: 10         # extra time granted when Shuffle is used
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
 
 hand:

@@ -121,3 +121,27 @@ func TestRoom_GraceExpiryMarksAbsent(t *testing.T) {
 		t.Fatal("expected disconnected after grace")
 	}
 }
+
+// Dev-only role forcing (dev_force_role): the room remembers a seat's chosen
+// role so a later match start can apply it. Only valid roles stick, and the
+// override can be cleared by forcing an empty role.
+func TestRoom_DevRoleOverrideStoresAndClears(t *testing.T) {
+	r := NewRoom("r1", "AAAAAA", 4, 0, false, testDeps())
+	seat, _, _ := r.ClaimSeat("", false)
+
+	if err := r.SetDevRoleOverride(seat, "donower"); err != nil {
+		t.Fatalf("set override: %v", err)
+	}
+	if got := r.DevRoleOverride(seat); got != "donower" {
+		t.Fatalf("override = %q, want donower", got)
+	}
+	if err := r.SetDevRoleOverride(seat, "bogus"); err == nil {
+		t.Fatal("expected an unknown role to be rejected")
+	}
+	if err := r.SetDevRoleOverride(seat, ""); err != nil {
+		t.Fatalf("clear override: %v", err)
+	}
+	if got := r.DevRoleOverride(seat); got != "" {
+		t.Fatalf("cleared override = %q, want empty", got)
+	}
+}
