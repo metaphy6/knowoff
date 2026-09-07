@@ -346,7 +346,7 @@ void main() {
   });
 
   testWidgets(
-      'RoundScreen uses Reveal from its hand card and offers only valid targets',
+      'RoundScreen uses Reveal without a burn-card picker and offers only valid targets',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1;
@@ -390,16 +390,15 @@ void main() {
 
     await tester.tap(find.byKey(const Key('reveal-target-1')));
     await tester.pump();
-    await tester.tap(find.byKey(const Key('reveal-discard-c1')));
-    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(transport.sent.last['kind'], 'use_specialty');
     expect(transport.sent.last['payload'], <String, dynamic>{
       'specialty': 'reveal',
-      'discard_card_id': 'c1',
       'target_seat': 1,
     });
+    expect(find.byKey(const Key('reveal-discard-c1')), findsNothing);
+    expect(find.byKey(const Key('hand-card-c1')), findsOneWidget);
     expect(find.text('Reveal a Hand'), findsOneWidget);
   });
 

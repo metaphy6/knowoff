@@ -12,6 +12,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- Reveal a Hand no longer opens a burn-card picker or silently consumes a hand card; after choosing the player to expose, the owner uses the normal hand interaction to place their card on the table.
 - Play Again → same table no longer boots the fresh match into the previous one's leftovers: the client now drops the finished match's winner, revealed Nowns, points, table plays, ballots, chat, announcements and the old role the moment the new match's countdown opens, so round 0 starts clean with the players who stayed.
 - The Free Card specialty now actually makes your next pile draw free instead of pulling a random out-of-nowhere card: it fires the moment it's tapped (no discard toll, no picker), banks a round-scoped token that zeroes the −5 draw cost for that turn's first pile draw, an unused token expires with the round, and the turn's card can't be played while the free draw is still pending.
 - The Verdict screen no longer reveals Nowns from rounds that were never played: the schedule is sized to the full vote budget, so a match that ended early (for example the Donower caught on the first ballot) used to display every scheduled Nown as if each had been played — now exactly the rounds that began are revealed.
