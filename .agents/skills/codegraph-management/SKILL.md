@@ -19,8 +19,8 @@ every assistant sees it:
 
 | File | Client | Path strategy |
 |---|---|---|
-| [`.mcp.json`](../../.mcp.json) | Claude Code, Cursor, generic MCP clients | Absolute path — edit by hand for your machine/clone (no `scaffold.sh` in this repo) |
-| [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot | No `codegraph` entry — relies on a global/user-level registration instead |
+| [`.mcp.json`](../../.mcp.json) | Claude Code, Cursor, generic MCP clients | Client-provided workspace root |
+| [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot | Project-scoped `codegraph` entry, also using the workspace root |
 
 The on-disk index lives under [`.codegraph/`](../../.codegraph/) (gitignored
 except for `.gitignore` itself). If the directory doesn't exist, the server
@@ -98,9 +98,8 @@ and explains any subsequent behaviour change to the next session.
 - ❌ `rm -rf .codegraph/` instead of `codegraph init .` (the init command
   handles the reset internally and writes proper file permissions).
 - ❌ Committing `.codegraph/` contents. Only `.codegraph/.gitignore` is tracked.
-- ❌ Putting `codegraph` in `.vscode/mcp.json` *and* `.mcp.json` — VS Code
-  starts both, the second one stays inactive, tools silently fail.
-  `.vscode/mcp.json` intentionally carries no `codegraph` entry for this
-  reason — leave it that way.
+- ❌ Relying on a global/user-level registration when the workspace needs
+  `codegraph/*` — custom agents may not inherit it. Keep the project entry in
+  `.vscode/mcp.json` synchronized with `.mcp.json`.
 - ❌ Running `codegraph init` without a tracking row — the next session
   can't tell whether stale results are from a bug or a missed re-index.
