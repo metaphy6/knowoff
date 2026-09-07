@@ -11,8 +11,8 @@
 | [`.mcp.json`](../../.mcp.json) | Claude Code, Cursor, generic MCP clients. |
 | [`.vscode/mcp.json`](../../.vscode/mcp.json) | VS Code Copilot. |
 
-Keep the `mcpServers` block synchronised across both for any
-**project-scoped** servers you add. All MCP clients read `.mcp.json` directly.
+Keep the CodeGraph server definition synchronized across both files so
+project custom agents work in VS Code and other MCP clients.
 
 ## CodeGraph
 
@@ -24,27 +24,26 @@ included in the repo MCP configs with the correct invocation:
 "codegraph": {
   "type": "stdio",
   "command": "npx",
-  "args": ["-y", "@colbymchenry/codegraph", "serve", "--mcp", "--path", "/absolute/path/to/project"]
+  "args": ["-y", "@colbymchenry/codegraph", "serve", "--mcp"]
 }
 ```
+
+In MCP mode CodeGraph uses the client's workspace root. Do not add a
+machine-specific `--path`; the same checked-in config then works across
+clones, usernames, and operating systems.
 
 **Two config files, two strategies:**
 
 | File | Used by | Path strategy |
 |---|---|---|
-| `.vscode/mcp.json` | VS Code Copilot | No `codegraph` entry — relies on a global/user-level registration so it isn't loaded twice alongside `.mcp.json` |
-| `.mcp.json` | Claude Code, Cursor, generic clients | Absolute path — edit by hand for your machine/clone |
-
-This repo has no `scaffold.sh`. If `.mcp.json`'s `--path` is ever wrong (a
-fresh clone, a move to a new machine or directory), edit it by hand — there
-is no regeneration command to run instead.
+| `.vscode/mcp.json` | VS Code Copilot | Project-scoped `codegraph` entry |
+| `.mcp.json` | Claude Code, Cursor, generic clients | Client-provided workspace root |
 
 ### Works alongside a global install
 
 If you have codegraph installed globally (`codegraph install --location=global`),
-VS Code and Cursor apply workspace-scope configs with higher precedence than
-user-scope ones for the same server name. The workspace entry replaces the global
-one in this project — no duplication, no conflict.
+the workspace-scoped entry takes precedence for this project. No global
+registration is required.
 
 ### First-time setup
 
@@ -85,11 +84,11 @@ re-index in the tracking log.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| MCP panel shows two `codegraph` entries, one inactive | `codegraph` defined in both `.vscode/mcp.json` *and* `.mcp.json` | Remove the duplicate from `.vscode/mcp.json` (scaffolder does this) |
-| `mcp_codegraph_*` tools missing from picker | Server failed to start, no `.codegraph/` | Run `codegraph init .` |
+| MCP panel shows two `codegraph` entries, one inactive | Duplicate global and workspace registrations | Remove the duplicate global registration |
+| `mcp_codegraph_*` tools missing from picker | Server is not registered in `.vscode/mcp.json`, failed to start, or no `.codegraph/` | Check the project entry, then run `codegraph init .` if the index is missing |
 | Stale results after a rename | Index lag or partial update | Full re-init |
 | `npx -y @colbymchenry/codegraph` prints help | Missing `serve --mcp` args | Check the `args` array in your MCP config |
-| MCP entry shows the wrong project's symbols | `--path` not absolute, or stale for this machine | Edit `--path` in `.mcp.json` by hand (no `scaffold.sh` in this repo) |
+| MCP entry shows the wrong project's symbols | Client opened the wrong workspace, or a stale index | Open the intended workspace and run `npx -y @colbymchenry/codegraph init .` if needed |
 
 ## Adding a project-scoped server
 
@@ -103,13 +102,10 @@ tool server living under `xops/`), add it to all three files:
 
 ### VS Code merge semantics
 
-VS Code Copilot **merges** the workspace `.vscode/mcp.json` with the global
-`~/.config/Code/User/mcp.json`. A server name defined in both files
-appears **twice** in the MCP panel, and whichever entry loads last wins (or
-both fail, depending on the version). To avoid this:
-
-- Do not put globally-installed servers (codegraph, filesystem, etc.) in `.vscode/mcp.json`.
-- Only put servers that are genuinely unique to this project here.
+VS Code Copilot merges the workspace `.vscode/mcp.json` with the global
+`~/.config/Code/User/mcp.json`. The workspace entry supplies this project's
+server definition; remove a duplicate global `codegraph` registration if VS
+Code shows two entries or reports a startup conflict.
 
 ## Anti-patterns
 
