@@ -111,7 +111,25 @@ func (m *Manager) UpdateAvatar(ctx context.Context, accountID, avatar string) er
 func (m *Manager) ApplyMatchResult(ctx context.Context, accountID string, nower, won bool, correctVotes, pokes int, points int64) error {
 	wonNower := nower && won
 	wonDonower := !nower && won
-	_, err := m.db.ExecContext(ctx, `
+	deltaXP := m.xpForMatch(won, correctVotes)
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin apply match result: %w", err)
+	}
+	defer tx.Rollback()
+
+	level := 0
+	if deltaXP > 0 {
+		var currentXP int
+		if err := tx.QueryRowContext(ctx,
+			"SELECT xp FROM profiles WHERE account_id = $1 FOR UPDATE", accountID,
+		).Scan(&currentXP); err != nil {
+			return fmt.Errorf("load xp: %w", err)
+		}
+		level = levelForXP(m.prog.LevelThresholds, currentXP+deltaXP)
+	}
+
+	_, err = tx.ExecContext(ctx, `
 		UPDATE profiles SET
 			matches_played = matches_played + 1,
 			matches_won_nower = matches_won_nower + $2,
@@ -122,6 +140,8 @@ func (m *Manager) ApplyMatchResult(ctx context.Context, accountID string, nower,
 			donower_survivals = donower_survivals + $7,
 			overall_points = overall_points + $8,
 			non_converted_points = non_converted_points + $8,
+			xp = xp + $9,
+			level = CASE WHEN $9 > 0 THEN $10 ELSE level END,
 			updated_at = now()
 		WHERE account_id = $1`,
 		accountID,
@@ -132,11 +152,16 @@ func (m *Manager) ApplyMatchResult(ctx context.Context, accountID string, nower,
 		boolInt(!nower),
 		boolInt(!nower && won),
 		points,
+		deltaXP,
+		level,
 	)
 	if err != nil {
 		return fmt.Errorf("apply match result: %w", err)
 	}
-	return m.addXP(ctx, accountID, m.xpForMatch(won, correctVotes))
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit apply match result: %w", err)
+	}
+	return nil
 }
 
 // ConvertPoints converts Non-Converted Points to Noin. It is one-way and atomic.
@@ -163,34 +188,6 @@ func (m *Manager) ConvertPoints(ctx context.Context, accountID string, points in
 		return 0, fmt.Errorf("insufficient non-converted points")
 	}
 	return noin, nil
-}
-
-func (m *Manager) addXP(ctx context.Context, accountID string, delta int) error {
-	if delta <= 0 {
-		return nil
-	}
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	var current int
-	if err := tx.QueryRowContext(ctx, "SELECT xp FROM profiles WHERE account_id = $1", accountID).Scan(&current); err != nil {
-		return fmt.Errorf("load xp: %w", err)
-	}
-	newLevel := levelForXP(m.prog.LevelThresholds, current+delta)
-	_, err = tx.ExecContext(ctx, `
-		UPDATE profiles SET
-			xp = xp + $2,
-			level = $3,
-			updated_at = now()
-		WHERE account_id = $1`,
-		accountID, delta, newLevel,
-	)
-	if err != nil {
-		return fmt.Errorf("add xp: %w", err)
-	}
-	return tx.Commit()
 }
 
 // AvatarPresets is the free curated avatar gallery.

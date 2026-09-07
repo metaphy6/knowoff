@@ -25,6 +25,15 @@ class _StubAuthService extends AuthService {
   }
 }
 
+class _UnavailableAuthService extends AuthService {
+  _UnavailableAuthService() : super(baseUrl: 'http://test');
+
+  @override
+  Future<void> ensureSession() async {
+    throw StateError('backend unavailable');
+  }
+}
+
 class _FakeTransport implements gt.GameTransport {
   final StreamController<Map<String, dynamic>> _controller =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -860,6 +869,17 @@ void main() {
       (transport.sent.single['payload']
           as Map<String, dynamic>)['access_token'],
       equals('fresh-token'),
+    );
+  });
+
+  test('app configuration initializes when the backend is unavailable',
+      () async {
+    await expectLater(
+      AppConfig.initialize(
+        ClientConfig.defaultConfig(),
+        _UnavailableAuthService(),
+      ),
+      completes,
     );
   });
 
