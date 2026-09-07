@@ -1111,6 +1111,28 @@ void main() {
     );
   });
 
+  test('new game request includes the selected dev role', () async {
+    final roleNotifier = GameSessionNotifier(
+      transport: transport,
+      initialState: const GameSession(
+        dto: GameStateDto(),
+        devForcedRole: 'donower',
+      ),
+    );
+    addTearDown(roleNotifier.dispose);
+
+    await AppConfig.initialize(
+        ClientConfig.defaultConfig(), _StubAuthService());
+    await roleNotifier.queueQuickPlay(4);
+
+    expect(transport.sent.single['payload'], <String, dynamic>{
+      'size': 4,
+      'access_token': 'fresh-token',
+      'dev': true,
+      'dev_role': 'donower',
+    });
+  });
+
   test('app configuration initializes when the backend is unavailable',
       () async {
     await expectLater(

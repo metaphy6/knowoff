@@ -806,10 +806,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   Future<void> queueQuickPlay(int size) async {
     _terminalHandshakeError = null;
     _pendingQuickPlaySize = size;
-    await _send('queue_quickplay', {
+    final payload = <String, dynamic>{
       'size': size,
       'access_token': await _freshAccessToken(),
-    });
+    };
+    final devRole = state.devForcedRole;
+    if (devRole != null) {
+      payload['dev'] = true;
+      payload['dev_role'] = devRole;
+    }
+    await _send('queue_quickplay', payload);
   }
 
   Future<void> joinRoom(String code) async => _send('join_room', {

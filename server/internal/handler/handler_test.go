@@ -277,6 +277,7 @@ func TestHandleJoinIntent_RejectsInvalidToken(t *testing.T) {
 func TestHandleIntent_DevForceRoleBeforeJoin(t *testing.T) {
 	mgr := lobby.NewManager(lobby.Deps{
 		Config: &config.Config{},
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Pack:   &media.Pack{},
 	})
 	room, err := mgr.CreateRoom(4)
@@ -309,6 +310,33 @@ func TestHandleIntent_DevForceRoleBeforeJoin(t *testing.T) {
 	s.applyPendingRoleOverride()
 	if got := room.DevRoleOverride(seat); got != "donower" {
 		t.Fatalf("room override = %q, want donower", got)
+	}
+}
+
+func TestQueueIntent_DevRoleIsCapturedBeforeMatchmaking(t *testing.T) {
+	mgr := lobby.NewManager(lobby.Deps{
+		Config: &config.Config{},
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Pack:   &media.Pack{},
+	})
+	s := &ConnectionState{
+		Lobby:  mgr,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	err := s.handleJoinIntent(&transport.Envelope{
+		Kind: transport.IntentQueueQuickPlay,
+		Payload: map[string]any{
+			"size":     float64(3),
+			"dev":      true,
+			"dev_role": "donower",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid room size") {
+		t.Fatalf("expected queue validation error, got %v", err)
+	}
+	if s.pendingRoleOverride != "donower" {
+		t.Fatalf("pending role = %q, want donower", s.pendingRoleOverride)
 	}
 }
 
