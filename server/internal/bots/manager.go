@@ -220,9 +220,10 @@ func (b *BotActor) act(m *game.Match) {
 	switch {
 	case key == "turn":
 		if !b.playTurn(m) {
-			// Shuffle re-dealt this seat's hand but Rules §5 doesn't end the
-			// turn on it — think again before taking the turn's real action.
-			b.actAt = time.Now().Add(b.thinkDelay())
+			// Shuffle re-deals this seat's hand but leaves its turn active.
+			// Its original turn delay has already elapsed, so continue on the
+			// next polling tick rather than making the bot think twice.
+			b.actAt = time.Now()
 			return
 		}
 	case strings.HasPrefix(key, "revote:"):

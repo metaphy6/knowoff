@@ -75,12 +75,14 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// connection left over from the previous match would reject the next
   /// queue attempt with `expected_intent` — reconnecting gives the next
   /// queue call a fresh handshake to join on.
-  void restart() {
+  void restart() => _restart();
+
+  void _restart({int? quickPlaySize}) {
     _bufferedMessages.clear();
     _pendingRequests.clear();
     _sessionToken = null;
     _rejoinPending = false;
-    _pendingQuickPlaySize = null;
+    _pendingQuickPlaySize = quickPlaySize;
     _terminalHandshakeError = null;
     // The dev-forced role is a user choice for the *next* match, not part of
     // the finished match's state — keep it across the reset so it re-fires on
@@ -273,6 +275,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         final seat = payload['seat'] as int?;
         final mode = payload['mode'] as String?;
         if (seat != null && mode != null) {
+          if (seat == state.dto.seat && mode == 'new_table') {
+            _restart(quickPlaySize: state.dto.players.length);
+            break;
+          }
           final choices = Map<int, String>.of(state.dto.rematchChoices)
             ..[seat] = mode;
           _setDto(state.dto.copyWith(rematchChoices: choices));

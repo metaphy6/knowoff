@@ -41,8 +41,9 @@ type Room struct {
 	HostSeat  int
 	QuickPlay bool
 
-	deps Deps
-	mu   sync.RWMutex
+	deps    Deps
+	mu      sync.RWMutex
+	writeMu sync.Mutex
 
 	match      *game.Match
 	conns      map[int]*websocket.Conn
@@ -442,7 +443,9 @@ func (r *Room) HandleRematch(seat int, mode string) error {
 	}
 	r.rematchChoices[seat] = mode
 	r.awaitingRematch = true
+	var departingConn *websocket.Conn
 	if mode == "new_table" {
+		departingConn = r.conns[seat]
 		r.releaseSeatLocked(seat)
 	}
 	resolve := r.everyoneDecidedLocked()
@@ -452,9 +455,13 @@ func (r *Room) HandleRematch(seat int, mode string) error {
 	}
 	r.mu.Unlock()
 
-	r.Broadcast(transport.NewEvent(transport.EventRematchState, map[string]any{
+	event := transport.NewEvent(transport.EventRematchState, map[string]any{
 		"seat": seat, "mode": mode,
-	}), -1)
+	})
+	if departingConn != nil {
+		_ = r.write(departingConn, event)
+	}
+	r.Broadcast(event, -1)
 
 	if resolve {
 		if len(vacant) == 0 {
@@ -641,6 +648,9 @@ func (r *Room) SendTo(seat int, env *transport.Envelope) {
 }
 
 func (r *Room) write(conn *websocket.Conn, env *transport.Envelope) error {
+	r.writeMu.Lock()
+	defer r.writeMu.Unlock()
+
 	data, err := json.Marshal(env)
 	if err != nil {
 		return err
