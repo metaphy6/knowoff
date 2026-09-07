@@ -88,7 +88,6 @@
   "specialtyShuffleOwnerHint": "[Donowers only.]",
   "specialtyShuffleUsageHint": "[The card is used at the start of the round.]",
   "chooseRevealTargetTitle": "[Choose a player to reveal]",
-  "chooseRevealDiscardTitle": "[Choose one card to burn]",
   "handRevealHeadline": "[HAND HEIST!]",
   "handRevealAnnouncement": "[{name}'s hand is exposed!]",
   "viewRevealedHand": "[View {name}'s exposed hand]",

@@ -1112,7 +1112,7 @@ func TestMatch_Specialty_PassEndsTurn(t *testing.T) {
 	}
 }
 
-func TestMatch_Specialty_RevealRequiresCardOrUsesExistingTimeout(t *testing.T) {
+func TestMatch_Specialty_RevealLeavesCardPlayForTheTurn(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
 		t.Fatalf("start: %v", err)
@@ -1121,15 +1121,14 @@ func TestMatch_Specialty_RevealRequiresCardOrUsesExistingTimeout(t *testing.T) {
 	seat := m.turnOrder[m.currentTurn]
 	target := m.turnOrder[(m.currentTurn+1)%len(m.turnOrder)]
 	m.players[seat].Hand.Specialty = SpecialtyReveal
-	discard := m.players[seat].Hand.Cards[0]
+	card := m.players[seat].Hand.Cards[0]
 	bcast.clear()
 
 	if err := m.HandleIntent(seat, transport.NewIntent(
 		transport.IntentUseSpecialty,
 		map[string]any{
-			"specialty":       SpecialtyReveal,
-			"target_seat":     float64(target),
-			"discard_card_id": discard,
+			"specialty":   SpecialtyReveal,
+			"target_seat": float64(target),
 		},
 	)); err != nil {
 		t.Fatalf("use Reveal: %v", err)
@@ -1137,14 +1136,15 @@ func TestMatch_Specialty_RevealRequiresCardOrUsesExistingTimeout(t *testing.T) {
 	if m.turnOrder[m.currentTurn] != seat {
 		t.Fatal("Reveal user should remain on turn to play a card")
 	}
+	if got := m.players[seat].Hand.Cards[0]; got != card {
+		t.Fatalf("Reveal should not consume the next hand card: got %q, want %q", got, card)
+	}
 	events := bcast.findEvents(target, transport.EventSpecialtyUsed)
 	if len(events) != 1 || events[0].Payload["seat"] != seat || events[0].Payload["specialty"] != SpecialtyReveal {
 		t.Fatalf("expected public Reveal declaration, got %v", events)
 	}
-
-	m.autoPass(seat)
-	if m.plays[seat] != "" || m.lostCards[seat] == "" {
-		t.Fatal("Reveal user should receive the normal timeout auto-play penalty without a card")
+	if plays := bcast.findEvents(target, transport.EventPlayRevealed); len(plays) != 0 {
+		t.Fatalf("Reveal should not play a card automatically, got %v", plays)
 	}
 }
 
@@ -1262,15 +1262,13 @@ func TestMatch_Specialty_RevealCanBeViewedOncePerPlayerDuringCurrentRound(t *tes
 	target := (seat + 1) % 4
 	viewer := (seat + 2) % 4
 	m.players[seat].Hand.Specialty = SpecialtyReveal
-	discard := m.players[seat].Hand.Cards[0]
 	bcast.clear()
 
 	if err := m.HandleIntent(seat, transport.NewIntent(
 		transport.IntentUseSpecialty,
 		map[string]any{
-			"specialty":       SpecialtyReveal,
-			"target_seat":     float64(target),
-			"discard_card_id": discard,
+			"specialty":   SpecialtyReveal,
+			"target_seat": float64(target),
 		},
 	)); err != nil {
 		t.Fatalf("use Reveal: %v", err)
@@ -1283,7 +1281,7 @@ func TestMatch_Specialty_RevealCanBeViewedOncePerPlayerDuringCurrentRound(t *tes
 		t.Fatal("availability event leaked target cards before the viewer tapped")
 	}
 	dealt := bcast.findEvents(seat, transport.EventHandDealt)
-	if len(dealt) != 1 || len(dealt[0].Payload["cards"].([]map[string]any)) != 4 {
+	if len(dealt) != 1 || len(dealt[0].Payload["cards"].([]map[string]any)) != 5 {
 		t.Fatalf("expected the Reveal owner to receive the updated private hand, got %+v", dealt)
 	}
 	exposedCard := m.players[target].Hand.Cards[0]

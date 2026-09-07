@@ -652,10 +652,6 @@
   "@chooseRevealTargetTitle": {
     "description": "Dialog title when picking a Reveal specialty target."
   },
-  "chooseRevealDiscardTitle": "Choose one card to burn",
-  "@chooseRevealDiscardTitle": {
-    "description": "Second Reveal step where the player pays the required discard."
-  },
   "handRevealHeadline": "HAND HEIST!",
   "@handRevealHeadline": {
     "description": "Dramatic headline when a Reveal specialty exposes a hand."

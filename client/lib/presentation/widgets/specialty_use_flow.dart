@@ -5,8 +5,8 @@ import '../state/game_session_provider.dart';
 import 'reveal_setup_sheet.dart';
 
 /// Runs the use-a-specialty flow exactly as the hand's specialty card does on
-/// the round screen: collects whatever the chosen specialty needs (a reveal
-/// target, a discard) and sends the `use_specialty` intent. Shared by the hand
+/// the round screen: collects whatever the chosen specialty needs and sends the
+/// `use_specialty` intent. Shared by the hand
 /// itself and by the debug-build specialty picker in the dev tools overlay, so
 /// a dev-granted card goes through the identical path as a dealt one.
 Future<void> useSpecialtyFromHand(
@@ -21,8 +21,7 @@ Future<void> useSpecialtyFromHand(
       await notifier.useSpecialty('pass');
       return;
     case 'reveal':
-      if (remainingSeconds <= session.dto.revealLockoutSeconds ||
-          session.dto.hand.cards.isEmpty) {
+      if (remainingSeconds <= session.dto.revealLockoutSeconds) {
         return;
       }
       final choice = await showRevealSetupSheet(
@@ -30,12 +29,10 @@ Future<void> useSpecialtyFromHand(
         targets: session.activePlayers
             .where((player) => player.seat != session.seat)
             .toList(),
-        cards: session.dto.hand.cards,
       );
       if (choice == null) return;
       await notifier.useSpecialty(
         'reveal',
-        discardCardId: choice.discardCardId,
         targetSeat: choice.targetSeat,
       );
       return;
