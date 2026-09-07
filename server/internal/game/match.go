@@ -917,9 +917,6 @@ func (m *Match) useReveal(seat int, payload map[string]any) error {
 	if lockout > 0 && !m.turnDeadline.IsZero() && time.Until(m.turnDeadline) <= lockout {
 		return fmt.Errorf("reveal unavailable near turn end")
 	}
-	if !m.requireDiscard(seat, payload) {
-		return fmt.Errorf("discard required")
-	}
 	m.players[seat].Hand.Specialty = ""
 	m.revealedHandSeat = target
 	targetHand := m.players[target].Hand
