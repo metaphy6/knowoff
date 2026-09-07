@@ -231,6 +231,22 @@ func waitForRematchStates(t *testing.T, conn *websocket.Conn, count int) {
 	}
 }
 
+func waitForRematchState(t *testing.T, conn *websocket.Conn, seat int) {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		env := readEnvelope(t, conn, 3*time.Second)
+		if env.Kind != transport.EventRematchState {
+			continue
+		}
+		seatF, _ := env.Payload["seat"].(float64)
+		if int(seatF) == seat {
+			return
+		}
+	}
+	t.Fatalf("timed out waiting for rematch_state for seat %d", seat)
+}
+
 // waitForCondition polls cond until it returns true or timeout elapses.
 func waitForCondition(t *testing.T, timeout time.Duration, cond func() bool, msg string) {
 	t.Helper()
@@ -327,6 +343,7 @@ func TestRematch_NewTableSeatIsBackfilledByQuickPlay(t *testing.T) {
 	// resolved — the four writes above race the server's four independent
 	// per-connection read loops.
 	waitForRematchStates(t, conns[0].conn, len(conns))
+	waitForRematchState(t, conns[3].conn, leavingSeat)
 
 	if !room.HasVacantSeats() {
 		t.Fatal("expected the new_table seat to open a vacant seat for backfill")

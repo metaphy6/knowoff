@@ -167,7 +167,8 @@ func TestBotActor_UsesShuffleSpecialtyWhenHeld(t *testing.T) {
 	m.SetSpecialty(seat, game.SpecialtyShuffle)
 
 	room := &fakeRoom{id: "room-2", m: m}
-	actor := NewBotActor(room, seat, rand.New(rand.NewSource(1)), slog.Default(), 0, 0)
+	actor := NewBotActor(room, seat, rand.New(rand.NewSource(1)), slog.Default(),
+		300*time.Millisecond, 300*time.Millisecond)
 	actor.Start()
 	defer actor.Stop()
 
@@ -175,8 +176,9 @@ func TestBotActor_UsesShuffleSpecialtyWhenHeld(t *testing.T) {
 		return m.PlayerHand(seat).Specialty != game.SpecialtyShuffle
 	})
 	// Shuffle re-deals hands but Rules §5 leaves the turn open — the bot
-	// must still take its real action afterward instead of stalling.
-	waitFor(t, 2*time.Second, func() bool { return len(m.TablePlays()) != 0 })
+	// must promptly take its real action afterward instead of thinking twice.
+	// The fresh hand may take one normal draw before its card play.
+	waitFor(t, 600*time.Millisecond, func() bool { return len(m.TablePlays()) != 0 })
 }
 
 func TestBotActor_ContinuesAfterOneMoreSpecialty(t *testing.T) {
