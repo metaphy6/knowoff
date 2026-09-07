@@ -12,6 +12,8 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- The exposed-hand panel no longer triggers a Flutter web layout assertion that could leave the game stuck on a Knowoff result screen after focus changed.
+- The full “View [player]’s exposed hand” panel is tappable again; previously only its small avatar control received taps, so clicking the visible central button did nothing.
 - Reveal a Hand no longer opens a burn-card picker or silently consumes a hand card; after choosing the player to expose, the owner uses the normal hand interaction to place their card on the table.
 - Play Again → same table no longer boots the fresh match into the previous one's leftovers: the client now drops the finished match's winner, revealed Nowns, points, table plays, ballots, chat, announcements and the old role the moment the new match's countdown opens, so round 0 starts clean with the players who stayed.
 - The Free Card specialty now actually makes your next pile draw free instead of pulling a random out-of-nowhere card: it fires the moment it's tapped (no discard toll, no picker), banks a round-scoped token that zeroes the −5 draw cost for that turn's first pile draw, an unused token expires with the round, and the turn's card can't be played while the free draw is still pending.
