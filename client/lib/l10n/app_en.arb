@@ -644,7 +644,7 @@
   "@specialtyShuffleOwnerHint": {
     "description": "Small static note on the Shuffle card in-hand naming which role may use it."
   },
-  "specialtyShuffleUsageHint": "The card is used at the start of the round.",
+  "specialtyShuffleUsageHint": "Before any play.",
   "@specialtyShuffleUsageHint": {
     "description": "Small note on the Shuffle card in-hand, revealed after a tap, explaining when it is played."
   },

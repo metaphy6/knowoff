@@ -107,7 +107,7 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 
 **Type B — Unique (free, use restricted by role, once per match):**
 
-* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before the first turn begins. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table is told *who used Shuffle* with a brief, dramatic alert, and everyone's hand visibly changes. It wipes out the plans Nowers built around saved cards.
+* **Shuffle** (rare — **usable by Donowers only**): usable only at the very start of a round, before anyone has played. Every player's unplayed hand is returned and re-dealt fresh (draw piles untouched). The table gets a brief, dramatic anonymous alert, and everyone's hand visibly changes. It wipes out the plans Nowers built around saved cards.
 * **Revote** (rare — **usable by Nowers only**): playable during an open Knowoff ballot or its 8-second result window. It resets the current ballot or cancels the shown result without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 

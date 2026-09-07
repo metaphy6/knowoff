@@ -243,6 +243,80 @@ void main() {
     expect(notifier.state.dto.discussionReady, isFalse);
   });
 
+  test(
+      'a new Play phase clears the prior round play so the new hand is tappable',
+      () async {
+    final roundTransport = _FakeTransport();
+    final roundNotifier = GameSessionNotifier(
+      transport: roundTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          phase: 'discussion',
+          round: 1,
+          seat: 0,
+          hand: HandDto(
+            cards: [CardDto(id: 'new-card', type: 'text')],
+            drawPile: [],
+            specialty: 'reveal',
+          ),
+          plays: {'0': CardDto(id: 'prior-round-card', type: 'text')},
+        ),
+      ),
+    );
+
+    roundTransport.emit('phase_started', <String, dynamic>{
+      'phase': 'play',
+      'round': 2,
+      'turn_seat': 1,
+    });
+    await _settle();
+
+    expect(roundNotifier.state.dto.plays, isEmpty);
+    expect(roundNotifier.state.canPickCard, isTrue);
+
+    roundNotifier.dispose();
+    await roundTransport.close();
+  });
+
+  test(
+      'a newer turn event drops a prior round auto-play lock when round events '
+      'were missed', () async {
+    final turnTransport = _FakeTransport();
+    final turnNotifier = GameSessionNotifier(
+      transport: turnTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          phase: 'play',
+          round: 1,
+          seat: 0,
+          hand: HandDto(
+            cards: [CardDto(id: 'stale-card', type: 'text')],
+            drawPile: [],
+            specialty: null,
+          ),
+          plays: {'0': CardDto(id: 'prior-round-card', type: 'text')},
+        ),
+        selectedCardId: 'stale-card',
+        moveLocked: true,
+      ),
+    );
+
+    turnTransport.emit('turn_started', <String, dynamic>{
+      'round': 2,
+      'turn_seat': 0,
+      'timeout': 15,
+    });
+    await _settle();
+
+    expect(turnNotifier.state.selectedCardId, isNull);
+    expect(turnNotifier.state.moveLocked, isFalse);
+    expect(turnNotifier.state.dto.plays, isEmpty);
+    expect(turnTransport.sent, isEmpty);
+
+    turnNotifier.dispose();
+    await turnTransport.close();
+  });
+
   test('rematch sends the chosen mode and rematch_state accumulates choices',
       () async {
     await notifier.rematch('same_table');
@@ -264,6 +338,18 @@ void main() {
     expect(notifier.state.dto.rematchChoices, <int, String>{
       0: 'same_table',
       3: 'new_table',
+    });
+  });
+
+  test('rematch resumes a frozen session before sending the choice', () async {
+    notifier.setFrozen(true);
+
+    await notifier.rematch('same_table');
+
+    expect(notifier.state.frozen, isFalse);
+    expect(transport.sent.single['kind'], 'rematch');
+    expect(transport.sent.single['payload'], <String, dynamic>{
+      'mode': 'same_table',
     });
   });
 
@@ -321,6 +407,26 @@ void main() {
     expect(dto.result, isNull);
     expect(notifier.state.myRole, isNull);
     expect(notifier.state.specialtyAnnouncement, isNull);
+  });
+
+  test('a rematch keeps the new role assigned before its prefetch phase',
+      () async {
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'finished',
+      'winner': 'nower',
+    });
+    await _settle();
+    expect(notifier.state.isOver, isTrue);
+
+    // Match.Start sends role_assigned before its prefetch phase broadcast.
+    transport.emit('role_assigned', <String, dynamic>{'role': 'donower'});
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'prefetch',
+      'round': 0,
+    });
+    await _settle();
+
+    expect(notifier.state.myRole, 'donower');
   });
 
   test('draw events add cards to the local hand without recording a play',

@@ -1173,6 +1173,28 @@ func TestMatch_Specialty_ShuffleIsAnonymousAndRequiresCard(t *testing.T) {
 	}
 }
 
+func TestMatch_Specialty_ShuffleAllowsDonowerBeforeFirstPlayRegardlessOfTurn(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	firstTurnSeat := m.turnOrder[m.currentTurn]
+	shuffleSeat := m.turnOrder[(m.currentTurn+1)%len(m.turnOrder)]
+	m.roles[shuffleSeat] = RoleDonower
+	m.players[shuffleSeat].Hand.Specialty = SpecialtyShuffle
+
+	if err := m.HandleIntent(shuffleSeat, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{"specialty": SpecialtyShuffle},
+	)); err != nil {
+		t.Fatalf("use Shuffle before the first play: %v", err)
+	}
+	if m.turnOrder[m.currentTurn] != firstTurnSeat {
+		t.Fatal("Shuffle must not take the first seat's turn")
+	}
+}
+
 func TestMatch_Specialty_RevealRejectsInvalidTargetsAndFinalFiveSeconds(t *testing.T) {
 	tests := []struct {
 		name      string
