@@ -112,6 +112,10 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
       session.handRevealTargetSeat ?? -1,
     );
     final notifier = ref.read(gameSessionProvider.notifier);
+    final canUseSpecialty = session.isMyTurn ||
+        (session.isDonower &&
+            dto.hand.specialty == 'shuffle' &&
+            dto.plays.isEmpty);
 
     // Reset poke tracking when phase changes
     if (_lastPhase != dto.phase) {
@@ -214,7 +218,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                   onCancelSelection: session.selectedCardId != null
                       ? () => notifier.clearSelection()
                       : null,
-                  onUseSpecialty: session.isMyTurn
+                  onUseSpecialty: canUseSpecialty
                       ? (specialty) => useSpecialtyFromHand(
                             context,
                             notifier,

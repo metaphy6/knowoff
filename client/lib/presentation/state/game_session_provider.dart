@@ -125,20 +125,22 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         _resetForFreshMatchIfNeeded(payload);
         _mergeState(payload);
         _applyPhaseWindow(payload);
+        if (state.dto.phase == 'play') {
+          _resetRoundHandInteraction();
+        }
         break;
       case 'turn_started':
+        final startsNewRound = _startsNewRound(payload);
         _mergeState(payload);
+        if (startsNewRound) {
+          _resetRoundHandInteraction();
+        }
         _setTurnDeadline(payload);
         _autoPlayLockedMove();
         break;
       case 'round_started':
-        _setDto(state.dto.copyWith(plays: const {}));
-        state = state.copyWith(
-          moveLocked: false,
-          clearSelectedCard: true,
-          clearHandReveal: true,
-        );
         _mergeState(payload);
+        _resetRoundHandInteraction();
         break;
       case 'play_revealed':
         _mergePlayRevealed(payload);
@@ -278,6 +280,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         break;
       case 'role_assigned':
         final role = payload['role'] as String?;
+        if (role != null && state.isOver) {
+          _resetForFreshMatchIfNeeded(const {'phase': 'role_reveal'});
+        }
         state = state.copyWith(myRole: role);
         break;
       case 'hand_dealt':
@@ -430,6 +435,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     // any minimized state left over from the match that just ended.
     rematchOverlayVisible.value = true;
     final dto = state.dto.copyWith(
+      phase: phase,
       // Match-ended markers.
       clearVerdict: true,
       // Match-scoped accumulators.
@@ -605,6 +611,24 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
             phaseWindow: window,
           );
     _setDto(dto);
+  }
+
+  /// A played card, locked selection, and exposed hand belong to one round.
+  /// Clear them after merging the next round event so an omitted or stale
+  /// `plays` field cannot leave the new hand permanently disabled.
+  void _resetRoundHandInteraction() {
+    state = state.copyWith(
+      dto: state.dto.copyWith(plays: const {}),
+      moveLocked: false,
+      clearSelectedCard: true,
+      clearHandReveal: true,
+      clearRevealedHand: true,
+    );
+  }
+
+  bool _startsNewRound(Map<String, dynamic> payload) {
+    final round = payload['round'] as int?;
+    return state.dto.round > 0 && round != null && round > state.dto.round;
   }
 
   /// Rules §4 (open ballot): every cast or change of mind lands here live,
@@ -834,7 +858,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// seat open for Quick Play backfill immediately. Safe to call again
   /// before the table resolves — same_table can still change its mind to
   /// new_table (see server Room.HandleRematch).
-  Future<void> rematch(String mode) => _send('rematch', {'mode': mode});
+  Future<void> rematch(String mode) {
+    setFrozen(false);
+    return _send('rematch', {'mode': mode});
+  }
 
   Future<void> drawCards(int count) {
     _pendingRequests.removeWhere((request) => request['kind'] == 'play_card');

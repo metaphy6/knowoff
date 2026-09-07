@@ -866,7 +866,8 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 	if m.phase != PhasePlay {
 		return fmt.Errorf("not play phase")
 	}
-	if m.turnOrder[m.currentTurn] != seat {
+	canShuffleBeforeFirstPlay := specialty == SpecialtyShuffle && len(m.plays) == 0
+	if !canShuffleBeforeFirstPlay && m.turnOrder[m.currentTurn] != seat {
 		return fmt.Errorf("out of turn")
 	}
 
