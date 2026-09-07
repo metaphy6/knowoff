@@ -303,13 +303,25 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		s.Room = room
 		s.Seat = seat
 		s.sessionToken = token
-		s.Room.SetConnection(seat, s.Conn)
 		s.applyPendingRoleOverride()
+		s.Room.SetConnection(seat, s.Conn)
 		s.Logger = s.Logger.With("room_id", room.ID, "seat", seat)
 		s.Logger.Info("player joined room", "code", code, "account", s.AccountID, "room_size", room.Size, "reclaimed", token != "")
 		return s.sendOK("joined", map[string]any{"room_id": room.ID, "seat": seat, "code": room.Code, "size": room.Size, "session_token": token})
 
 	case transport.IntentQueueQuickPlay:
+		if dev, _ := env.Payload["dev"].(bool); dev {
+			if cfg := s.Config(); cfg != nil && cfg.App.Env == "prod" {
+				return fmt.Errorf("dev mode unavailable")
+			}
+			role, _ := env.Payload["dev_role"].(string)
+			switch role {
+			case "", "nower", "donower":
+				s.pendingRoleOverride = role
+			default:
+				return fmt.Errorf("unknown role %q", role)
+			}
+		}
 		sizeF, _ := env.Payload["size"].(float64)
 		size := int(sizeF)
 		queueID, assigned, err := s.Lobby.QueueQuickPlay(size, s.AccountID)
@@ -330,8 +342,8 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 			return fmt.Errorf("queue timeout")
 		}
 		// Bind connection; the room auto-starts once every seat binds.
-		s.Room.SetConnection(s.Seat, s.Conn)
 		s.applyPendingRoleOverride()
+		s.Room.SetConnection(s.Seat, s.Conn)
 		s.Logger = s.Logger.With("room_id", s.Room.ID, "seat", s.Seat)
 		s.Logger.Info("player assigned from quickplay queue", "account", s.AccountID, "size", s.Room.Size, "code", s.Room.Code, "queue_id", queueID)
 		return s.sendOK("joined", map[string]any{"room_id": s.Room.ID, "seat": s.Seat, "code": s.Room.Code, "size": s.Room.Size, "session_token": s.sessionToken})
