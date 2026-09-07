@@ -121,6 +121,33 @@ void main() {
     expect(notifier.state.specialtyAnnouncement, equals('reveal'));
   });
 
+  test('using the local Revote clears it from the hand', () async {
+    final revoteTransport = _FakeTransport();
+    final revoteNotifier = GameSessionNotifier(
+      transport: revoteTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          hand: HandDto(
+            cards: [],
+            drawPile: [],
+            specialty: 'revote',
+          ),
+        ),
+      ),
+    );
+
+    revoteTransport.emit('specialty_used', <String, dynamic>{
+      'seat': 0,
+      'specialty': 'revote',
+    });
+    await _settle();
+
+    expect(revoteNotifier.state.dto.hand.specialty, isNull);
+    revoteNotifier.dispose();
+    await revoteTransport.close();
+  });
+
   test('Reveal availability is round-scoped and viewable through one intent',
       () async {
     transport.emit('hand_reveal_available', <String, dynamic>{
@@ -354,6 +381,55 @@ void main() {
 
     drawNotifier.dispose();
     await drawTransport.close();
+  });
+
+  test('shuffle events retain an anonymous table announcement', () async {
+    final shuffleTransport = _FakeTransport();
+    final shuffleNotifier = GameSessionNotifier(
+      transport: shuffleTransport,
+      initialState: const GameSession(dto: GameStateDto(seat: 0)),
+    );
+
+    shuffleTransport.emit('shuffle_occurred', <String, dynamic>{'round': 2});
+    await _settle();
+
+    expect(shuffleNotifier.state.shuffleAnnouncementId, equals(1));
+
+    shuffleNotifier.dispose();
+    await shuffleTransport.close();
+  });
+
+  // The server zeroes a spent specialty to "" before the hand re-sync; the
+  // DTO must treat that as "no card", or the hand renders a nameless,
+  // unusable specialty slot.
+  test('hand_dealt with an empty specialty clears the slot', () async {
+    final handTransport = _FakeTransport();
+    final handNotifier = GameSessionNotifier(
+      transport: handTransport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          hand: HandDto(
+            cards: [],
+            drawPile: [],
+            specialty: 'shuffle',
+          ),
+        ),
+      ),
+    );
+
+    handTransport.emit('hand_dealt', <String, dynamic>{
+      'cards': <Map<String, dynamic>>[],
+      'draw_pile': <Map<String, dynamic>>[],
+      'specialty': '',
+      'free_draws': 0,
+    });
+    await _settle();
+
+    expect(handNotifier.state.dto.hand.specialty, isNull);
+
+    handNotifier.dispose();
+    await handTransport.close();
   });
 
   test('One More Free Card banks a round-scoped free draw on the pile',

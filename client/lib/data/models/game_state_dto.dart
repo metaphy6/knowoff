@@ -117,10 +117,13 @@ class HandDto {
   final int freeDraws;
 
   factory HandDto.fromJson(Map<String, dynamic> json) {
+    // Defensive: an empty string means "no specialty held" (a spent card's
+    // slot), never a renderable card.
+    final specialty = json['specialty'] as String?;
     return HandDto(
       cards: cardList(json['cards']),
       drawPile: cardList(json['draw_pile']),
-      specialty: json['specialty'] as String?,
+      specialty: specialty == null || specialty.isEmpty ? null : specialty,
       freeDraws: json['free_draws'] as int? ?? 0,
     );
   }

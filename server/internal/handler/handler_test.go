@@ -270,6 +270,48 @@ func TestHandleJoinIntent_RejectsInvalidToken(t *testing.T) {
 	}
 }
 
+// TestHandleIntent_DevForceRoleBeforeJoin pins the menu-picked role that used
+// to be lost when the socket hadn't joined a room yet: the server rejected
+// dev_force_role with "not joined" and the choice vanished. The handler now
+// stashes it on the connection and applies it the moment a seat is claimed.
+func TestHandleIntent_DevForceRoleBeforeJoin(t *testing.T) {
+	mgr := lobby.NewManager(lobby.Deps{
+		Config: &config.Config{},
+		Pack:   &media.Pack{},
+	})
+	room, err := mgr.CreateRoom(4)
+	if err != nil {
+		t.Fatalf("create room: %v", err)
+	}
+	s := &ConnectionState{
+		Lobby:  mgr,
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+	}
+
+	// Fire the intent before any join: it must not error, only stash.
+	if err := s.handleIntent(&transport.Envelope{
+		Kind:    transport.IntentDevForceRole,
+		Payload: map[string]any{"role": "donower"},
+	}); err != nil {
+		t.Fatalf("pre-join dev_force_role: %v", err)
+	}
+	if s.pendingRoleOverride != "donower" {
+		t.Fatalf("pending role = %q, want donower", s.pendingRoleOverride)
+	}
+
+	// Claim a seat in that room, then apply — the room must now remember it.
+	seat, _, ok := room.ClaimSeat("", false)
+	if !ok {
+		t.Fatal("claim seat failed")
+	}
+	s.Room = room
+	s.Seat = seat
+	s.applyPendingRoleOverride()
+	if got := room.DevRoleOverride(seat); got != "donower" {
+		t.Fatalf("room override = %q, want donower", got)
+	}
+}
+
 func TestRoomJoinHandler_JSON(t *testing.T) {
 	mgr := testLobby(t)
 	r, _ := mgr.CreateRoom(4)

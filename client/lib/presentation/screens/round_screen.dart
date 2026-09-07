@@ -28,6 +28,7 @@ import '../widgets/draw_announcement.dart';
 import '../widgets/free_draw_announcement.dart';
 import '../widgets/game_start_splash.dart';
 import '../widgets/hand_reveal.dart';
+import '../widgets/shuffle_announcement.dart';
 
 /// Round screen: Nown, the turn order rail, the evidence table, your hand, and
 /// the one action a turn allows.
@@ -222,7 +223,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                             remaining,
                           )
                       : null,
-                  onDraw: session.isMyTurn ? () => notifier.drawCards(1) : null,
+                  onDraw: () => notifier.drawCards(1),
                 ),
                 if (!session.isMyTurn) ...<Widget>[
                   const SizedBox(height: KoSpace.lg),
@@ -285,6 +286,11 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
                 anchor: _timerBarKey,
                 onDone: () => setState(() => _startSplashDone = true),
               ),
+            ),
+          if (session.shuffleAnnouncementId > 0)
+            ShuffleAnnouncement(
+              key: ValueKey<int>(session.shuffleAnnouncementId),
+              announcementId: session.shuffleAnnouncementId,
             ),
           if (session.specialtyAnnouncement != null &&
               session.specialtyAnnouncementSeat != null &&

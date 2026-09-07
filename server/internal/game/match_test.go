@@ -38,6 +38,7 @@ func testConfig(size int) *config.Config {
 				VoteResultWindow:    15,
 				RevealLockout:       5,
 				RevealView:          3,
+				ShuffleBonusSeconds: 10,
 				PrefetchCountdown:   0,
 			},
 			Hand: config.HandTuning{
@@ -226,6 +227,30 @@ func TestMatch_Start_RolesAndDealing(t *testing.T) {
 	}
 }
 
+// The dev-only role override (WithDevRoleOverride, behind dev_force_role on
+// the wire) must land the requesting seat on the chosen team without breaking
+// the configured team counts: in a 4-seat room there is exactly one Donower,
+// so forcing seat 0 Donower swaps that seat with whoever held the slot.
+func TestMatch_DevRoleOverrideSwapsTeamCounts(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithDevRoleOverride(0, RoleDonower))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	roles := m.Roles()
+	if roles[0] != RoleDonower {
+		t.Fatalf("seat 0 role = %s, want donower", roles[0])
+	}
+	donowers := 0
+	for _, r := range roles {
+		if r == RoleDonower {
+			donowers++
+		}
+	}
+	if donowers != 1 {
+		t.Fatalf("forcing one seat's role must keep the 4-seat Donower count at 1, got %d", donowers)
+	}
+}
+
 func TestMatch_NownPayloadScoping(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
@@ -310,6 +335,32 @@ func TestMatch_OutOfTurnRejected(t *testing.T) {
 	err := m.HandleIntent(other, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": "x"}))
 	if err == nil {
 		t.Fatal("expected out-of-turn error")
+	}
+}
+
+func TestMatch_OutOfTurnDrawAllowed(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	current := m.turnOrder[m.currentTurn]
+	other := (current + 1) % 4
+	if other == current {
+		other = (current + 2) % 4
+	}
+	before := len(m.players[other].Hand.Cards)
+
+	if err := m.HandleIntent(other, transport.NewIntent(
+		transport.IntentDrawCards, map[string]any{"count": float64(1)},
+	)); err != nil {
+		t.Fatalf("out-of-turn draw: %v", err)
+	}
+	if len(m.players[other].Hand.Cards) != before+1 {
+		t.Fatalf("draw changed hand size from %d to %d", before, len(m.players[other].Hand.Cards))
+	}
+	if m.currentTurn != 0 {
+		t.Fatalf("draw changed current turn to %d", m.currentTurn)
 	}
 }
 
@@ -1424,37 +1475,79 @@ func TestMatch_Specialty_OneMoreBlocksPlayUntilDrawn(t *testing.T) {
 	}
 }
 
-func TestMatch_Specialty_ShuffleOnlyAtRoundStart(t *testing.T) {
-	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+// A spent specialty leaves Hand.Specialty == "" server-side; the hand_dealt
+// re-sync must encode that as JSON null, not the empty string — otherwise the
+// client renders a nameless, unusable card in the specialty slot.
+func TestMatch_HandDealtEncodesEmptySpecialtyAsNull(t *testing.T) {
+	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	m.beginRound()
 	seat := m.turnOrder[m.currentTurn]
-	if m.roles[seat] != RoleDonower {
-		// Find a Donower to test with.
-		for _, s := range m.activeSeats() {
-			if m.roles[s] == RoleDonower {
-				seat = s
-				break
-			}
+	m.players[seat].Hand.Specialty = SpecialtyOneMore
+	bcast.clear()
+
+	if err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{
+		"specialty": SpecialtyOneMore,
+	})); err != nil {
+		t.Fatalf("one more: %v", err)
+	}
+
+	events := bcast.findEvents(seat, transport.EventHandDealt)
+	if len(events) != 1 {
+		t.Fatalf("expected one hand_dealt re-sync, got %d", len(events))
+	}
+	specialty, ok := events[0].Payload["specialty"]
+	if !ok {
+		t.Fatal("hand_dealt payload omitted the specialty key")
+	}
+	if specialty != nil {
+		t.Fatalf("spent specialty must encode as null, got %v (%T)", specialty, specialty)
+	}
+}
+
+func TestMatch_Specialty_ShuffleWorksMidRoundAndAddsTime(t *testing.T) {
+	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+	if err := m.Start(); err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	m.beginRound()
+	seat := -1
+	turnIndex := -1
+	for i, s := range m.turnOrder {
+		if i > 0 && m.roles[s] == RoleDonower {
+			seat = s
+			turnIndex = i
+			break
 		}
 	}
-	if m.roles[seat] != RoleDonower {
-		t.Fatal("no donower available")
+	if seat < 0 {
+		t.Fatal("no Donower after the first turn")
+	}
+	for i := 0; i < turnIndex; i++ {
+		current := m.turnOrder[m.currentTurn]
+		card := m.players[current].Hand.Cards[0]
+		if err := m.HandleIntent(current, transport.NewIntent(
+			transport.IntentPlayCard,
+			map[string]any{"card_id": card},
+		)); err != nil {
+			t.Fatalf("play before Shuffle: %v", err)
+		}
 	}
 	m.players[seat].Hand.Specialty = SpecialtyShuffle
-	// Play one card so shuffle should fail (not at round start).
-	firstSeat := m.turnOrder[m.currentTurn]
-	card := m.players[firstSeat].Hand.Cards[0]
-	_ = m.HandleIntent(firstSeat, transport.NewIntent(transport.IntentPlayCard, map[string]any{"card_id": card}))
-	if firstSeat == seat {
-		seat = m.turnOrder[m.currentTurn]
-		m.players[seat].Hand.Specialty = SpecialtyShuffle
+	before := m.turnDeadline
+	if err := m.HandleIntent(seat, transport.NewIntent(
+		transport.IntentUseSpecialty,
+		map[string]any{"specialty": SpecialtyShuffle},
+	)); err != nil {
+		t.Fatalf("use Shuffle mid-round: %v", err)
 	}
-	err := m.HandleIntent(seat, transport.NewIntent(transport.IntentUseSpecialty, map[string]any{"specialty": SpecialtyShuffle}))
-	if err == nil {
-		t.Fatal("expected shuffle rejected after first play")
+	if m.turnOrder[m.currentTurn] != seat {
+		t.Fatal("Shuffle user should remain on turn to play a card")
+	}
+	if m.turnDeadline.Before(before.Add(10 * time.Second)) {
+		t.Fatalf("Shuffle deadline = %v, want at least %v", m.turnDeadline, before.Add(10*time.Second))
 	}
 }
 

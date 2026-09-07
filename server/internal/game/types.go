@@ -144,6 +144,17 @@ func WithSeed(seed int64) MatchOption {
 	}
 }
 
+// WithDevRoleOverride forces one seat onto a team before random assignment
+// (dev hook only). The match swaps the seat with an originally-random member
+// of that team, so configured team counts are preserved exactly.
+func WithDevRoleOverride(seat int, role Role) MatchOption {
+	return func(m *Match) {
+		m.devRoleSeat = seat
+		m.devRole = role
+		m.hasDevRole = true
+	}
+}
+
 // Play records one card play.
 type Play struct {
 	Seat   int

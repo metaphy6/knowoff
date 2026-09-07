@@ -63,6 +63,43 @@ class DevToolsOverlay extends ConsumerWidget {
     await notifier.devGrantSpecialty(picked);
   }
 
+  /// Lets a developer force their role for the next match in the room
+  /// (dev_force_role) — Nower, Donower, or back to random. The server keeps
+  /// configured team counts exact by swapping the seat with a random member
+  /// of the requested team; the pick persists until changed or cleared.
+  Future<void> _pickRole(WidgetRef ref) async {
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return;
+    const options = <(String, String, IconData)>[
+      ('nower', 'Nower — I see Nown', Icons.visibility),
+      ('donower', 'Donower — I can\'t see Nown', Icons.visibility_off),
+      ('', 'Random — back to luck', Icons.casino),
+    ];
+    final picked = await showModalBottomSheet<String>(
+      context: navContext,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final (role, label, icon) in options)
+              ListTile(
+                key: ValueKey<String>(
+                  'dev-role-${role.isEmpty ? 'none' : role}',
+                ),
+                leading: Icon(icon),
+                title: Text(label),
+                onTap: () => Navigator.of(sheetContext).pop(role),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || !navContext.mounted) return;
+
+    final notifier = ref.read(gameSessionProvider.notifier);
+    await notifier.devForceRole(picked);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (!kDebugMode) return const SizedBox.shrink();
@@ -81,6 +118,14 @@ class DevToolsOverlay extends ConsumerWidget {
               backgroundColor: Colors.black87,
               onPressed: () => _pickSpecialty(ref),
               child: const Icon(Icons.style, color: Colors.white),
+            ),
+            const SizedBox(height: 8),
+            FloatingActionButton.small(
+              heroTag: 'dev_role_fab',
+              tooltip: 'Choose my role (dev)',
+              backgroundColor: Colors.black87,
+              onPressed: () => _pickRole(ref),
+              child: const Icon(Icons.switch_account, color: Colors.white),
             ),
             const SizedBox(height: 8),
             FloatingActionButton.small(
