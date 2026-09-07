@@ -443,6 +443,41 @@ void main() {
     });
   });
 
+  testWidgets(
+      'RoundScreen lets a Donower Shuffle before the first play while waiting '
+      'for another seat', (tester) async {
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _FakeTransport();
+    final base = _sampleSession();
+    final session = base.copyWith(
+      myRole: 'donower',
+      dto: base.dto.copyWith(
+        turnSeat: 1,
+        plays: const {},
+        hand: const HandDto(
+          cards: [CardDto(id: 'c1', type: 'text', content: 'one')],
+          drawPile: [],
+          specialty: 'shuffle',
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const RoundScreen(), session, transport: transport),
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('hand-specialty-shuffle')),
+    );
+    await tester.pump();
+
+    expect(transport.sent.last['kind'], 'use_specialty');
+    expect(transport.sent.last['payload'], <String, dynamic>{
+      'specialty': 'shuffle',
+    });
+  });
+
   testWidgets('RoundScreen announces an exposed hand and offers one avatar tap',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);

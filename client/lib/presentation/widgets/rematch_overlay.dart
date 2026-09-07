@@ -62,73 +62,69 @@ class RematchOverlay extends ConsumerWidget {
                   padding: EdgeInsets.all(
                     KoSpace.lg + MediaQuery.viewPaddingOf(context).bottom,
                   ),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {},
-                    child: KoContainer(
-                      key: const Key('rematch-overlay'),
-                      width: 440,
-                      backgroundColor: KoColors.surface,
-                      borderWidth: KoBorders.thick,
-                      shadow: KoShadows.lg,
-                      padding: const EdgeInsets.all(KoSpace.xl),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Text(l10n.rematchTitle,
-                              style: koDisplayStyle(size: 32)),
-                          const SizedBox(height: KoSpace.sm),
-                          Text(
-                            l10n.rematchPrompt,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                  child: KoContainer(
+                    key: const Key('rematch-overlay'),
+                    width: 440,
+                    backgroundColor: KoColors.surface,
+                    borderWidth: KoBorders.thick,
+                    shadow: KoShadows.lg,
+                    padding: const EdgeInsets.all(KoSpace.xl),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        Text(l10n.rematchTitle,
+                            style: koDisplayStyle(size: 32)),
+                        const SizedBox(height: KoSpace.sm),
+                        Text(
+                          l10n.rematchPrompt,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: KoSpace.lg),
+                        if (myChoice == null) ...<Widget>[
+                          KoButton(
+                            key: const Key('rematch-same-table'),
+                            label: l10n.rematchSameTable,
+                            icon: const DoodleIcon(Doodle.check, size: 24),
+                            backgroundColor: KoColors.lime,
+                            expand: true,
+                            onTap: () => notifier.rematch('same_table'),
                           ),
-                          const SizedBox(height: KoSpace.lg),
-                          if (myChoice == null) ...<Widget>[
-                            KoButton(
-                              key: const Key('rematch-same-table'),
-                              label: l10n.rematchSameTable,
-                              icon: const DoodleIcon(Doodle.check, size: 24),
-                              backgroundColor: KoColors.lime,
-                              expand: true,
-                              onTap: () => notifier.rematch('same_table'),
+                          const SizedBox(height: KoSpace.md),
+                          KoButton(
+                            key: const Key('rematch-new-table'),
+                            label: l10n.rematchNewTable,
+                            icon: const DoodleIcon(Doodle.cards, size: 24),
+                            backgroundColor: KoColors.violet,
+                            expand: true,
+                            onTap: () => notifier.rematch('new_table'),
+                          ),
+                        ] else ...<Widget>[
+                          Text(
+                            myChoice == 'same_table'
+                                ? l10n.rematchWaitingSameTable
+                                : l10n.rematchWaitingNewTable,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: KoSpace.md),
+                          Text(
+                            l10n.rematchDecidedCount(
+                              decided,
+                              connectedSeats.length,
                             ),
-                            const SizedBox(height: KoSpace.md),
-                            KoButton(
-                              key: const Key('rematch-new-table'),
-                              label: l10n.rematchNewTable,
-                              icon: const DoodleIcon(Doodle.cards, size: 24),
-                              backgroundColor: KoColors.violet,
-                              expand: true,
-                              onTap: () => notifier.rematch('new_table'),
-                            ),
-                          ] else ...<Widget>[
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          if (myChoice == 'same_table' &&
+                              dto.players.length >
+                                  connectedSeats.length) ...<Widget>[
+                            const SizedBox(height: KoSpace.sm),
                             Text(
-                              myChoice == 'same_table'
-                                  ? l10n.rematchWaitingSameTable
-                                  : l10n.rematchWaitingNewTable,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: KoSpace.md),
-                            Text(
-                              l10n.rematchDecidedCount(
-                                decided,
-                                connectedSeats.length,
-                              ),
+                              l10n.rematchVacantSeatHint,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
-                            if (myChoice == 'same_table' &&
-                                dto.players.length >
-                                    connectedSeats.length) ...<Widget>[
-                              const SizedBox(height: KoSpace.sm),
-                              Text(
-                                l10n.rematchVacantSeatHint,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
                           ],
                         ],
-                      ),
+                      ],
                     ),
                   ),
                 ),

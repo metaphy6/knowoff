@@ -516,6 +516,7 @@ class _SpecialtyCardState extends State<_SpecialtyCard> {
     final icon = specialtyIcon(specialty);
     final usageHint = specialtyUsageHint(l10n, specialty);
     final ownerHint = specialtyOwnerHint(l10n, specialty);
+    final showUsageHint = usageHint != null && _usageHintRevealed;
 
     return Semantics(
       label: label,
@@ -576,7 +577,9 @@ class _SpecialtyCardState extends State<_SpecialtyCard> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
                                   Container(
-                                    padding: const EdgeInsets.all(KoSpace.sm),
+                                    padding: EdgeInsets.all(
+                                      showUsageHint ? KoSpace.xs : KoSpace.sm,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: KoColors.whiteWell,
                                       shape: BoxShape.circle,
@@ -584,21 +587,26 @@ class _SpecialtyCardState extends State<_SpecialtyCard> {
                                           width: KoBorders.regular,
                                           color: KoColors.ink),
                                     ),
-                                    child: DoodleIcon(icon, size: 26),
+                                    child: DoodleIcon(
+                                      icon,
+                                      size: showUsageHint ? 20 : 26,
+                                    ),
                                   ),
                                   const SizedBox(height: KoSpace.xs),
                                   Text(
                                     label,
                                     textAlign: TextAlign.center,
-                                    maxLines: 2,
+                                    maxLines: showUsageHint ? 1 : 2,
                                     overflow: TextOverflow.ellipsis,
                                     style:
                                         Theme.of(context).textTheme.titleMedium,
                                   ),
-                                  if (usageHint != null && _usageHintRevealed)
+                                  if (showUsageHint)
                                     Text(
                                       usageHint,
                                       textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
