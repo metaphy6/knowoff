@@ -14,7 +14,8 @@ class AppConfig {
       [ClientConfig? config, dynamic authService]) async {
     final cfg = config ?? await ClientConfig.load();
     _instance = AppConfig._(cfg, authService);
-    await _instance!.authService.ensureSession();
+    // Authentication is refreshed lazily by actions that need a token. Do
+    // not make mounting the public shell depend on backend availability.
     return _instance!;
   }
 
