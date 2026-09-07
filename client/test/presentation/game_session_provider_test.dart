@@ -353,6 +353,63 @@ void main() {
     });
   });
 
+  test('new table rematch resets the finished session and queues Quick Play',
+      () async {
+    await AppConfig.initialize(
+        ClientConfig.defaultConfig(), _StubAuthService());
+    transport.emit('joined', <String, dynamic>{
+      'seat': 0,
+      'code': 'OLD1',
+      'session_token': 'old-session',
+    });
+    transport.emit('phase_started', <String, dynamic>{
+      'phase': 'finished',
+      'winner': 'nower',
+      'match_points': 42,
+      'round': 3,
+      'plays': <String, dynamic>{
+        '0': <String, dynamic>{'id': 'old-card', 'type': 'text'},
+      },
+      'nowns': <Map<String, dynamic>>[
+        <String, dynamic>{'id': 'old-nown', 'type': 'text'},
+      ],
+      'players': <Map<String, dynamic>>[
+        <String, dynamic>{'seat': 0, 'name': 'Me'},
+        <String, dynamic>{'seat': 1, 'name': 'Player 1'},
+        <String, dynamic>{'seat': 2, 'name': 'Player 2'},
+        <String, dynamic>{'seat': 3, 'name': 'Player 3'},
+      ],
+    });
+    await _settle();
+
+    await notifier.rematch('new_table');
+    transport.emit('rematch_state', <String, dynamic>{
+      'seat': 0,
+      'mode': 'new_table',
+    });
+    await _settle();
+
+    expect(notifier.state.dto.phase, 'waiting');
+    expect(notifier.state.dto.roomCode, isEmpty);
+    expect(notifier.state.dto.matchPoints, 0);
+    expect(notifier.state.dto.nowns, isEmpty);
+    expect(notifier.state.dto.plays, isEmpty);
+    expect(transport.reconnectCount, 1);
+
+    transport.emitState(gt.ConnectionState.connected);
+    await _settle();
+    await _settle();
+
+    expect(transport.sent.map((message) => message['kind']), <String>[
+      'rematch',
+      'queue_quickplay',
+    ]);
+    expect(transport.sent.last['payload'], <String, dynamic>{
+      'size': 4,
+      'access_token': 'fresh-token',
+    });
+  });
+
   test('rematchChoices resets once a fresh match phase starts', () async {
     transport.emit('rematch_state', <String, dynamic>{
       'seat': 0,
