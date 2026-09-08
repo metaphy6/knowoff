@@ -609,6 +609,10 @@ void main() {
       expect(specialtyIcon('pass'), equals(Doodle.pass));
     });
 
+    test('uses the cards-and-eye doodle for the Reveal specialty', () {
+      expect(specialtyIcon('reveal'), equals(Doodle.eyeCards));
+    });
+
     test('recognizes the server-reserved bot nickname prefix', () {
       const bot = PlayerDto(
           seat: 2, name: 'Bot_abc_2', connected: true, eliminated: false);

@@ -48,7 +48,7 @@ class ChatFeed extends StatelessWidget {
           children: <Widget>[
             Transform.rotate(
               angle: KoTilt.soft,
-              child: const DoodleIcon(Doodle.cloud, size: 26),
+              child: const DoodleIcon(Doodle.quietBubble, size: 26),
             ),
             const SizedBox(width: KoSpace.md),
             Expanded(

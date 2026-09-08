@@ -372,7 +372,7 @@ Doodle specialtyIcon(String specialty) {
     case 'pass':
       return Doodle.pass;
     case 'reveal':
-      return Doodle.eye;
+      return Doodle.eyeCards;
     case 'shuffle':
       return Doodle.cardSwirl;
     case 'revote':

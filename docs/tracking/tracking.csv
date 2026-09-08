@@ -276,3 +276,20 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-07T18:02:27Z,run-20260907180227-1047473,copilot,gameplay,commit,completed,fix(gameplay): send developer role with new game request,,pending
 2026-09-08T09:41:21Z,run-20260908094121-30876,copilot,ui,commit,completed,feat(ui): add a pass card doodle,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/hand_fan.dart;client/test/presentation/match_widgets_test.dart,pending
 2026-09-08T10:36:09Z,run-20260908103609-146668,copilot,ui,commit,completed,feat(ui): compose reveal eye with cards,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T10:39:35Z,run-20260908103935-153457,copilot,ui,commit,completed,feat(ui): add quiet chat empty doodle,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/chat_feed.dart,pending
+2026-09-08T10:42:53Z,run-20260908104253-160284,copilot,ui,commit,completed,fix(ui): restore regular eye doodle,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/hand_fan.dart;client/test/presentation/match_widgets_test.dart,pending
+2026-09-08T10:47:04Z,run-20260908104704-172141,copilot,ui,commit,completed,feat(ui): align draw pile card styling,client/lib/presentation/widgets/card_pile.dart,pending
+2026-09-08T10:52:55Z,run-20260908105255-182262,copilot,ui,commit,completed,fix(ui): sync draw pile role card sizing,client/lib/presentation/widgets/card_pile.dart,pending
+2026-09-08T10:54:45Z,run-20260908105445-186456,copilot,ui,commit,completed,feat(ui): use stacked cards for draw pile,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/card_pile.dart,pending
+2026-09-08T11:01:00Z,run-20260908110100-197234,copilot,ui,commit,completed,fix(ui): refine draw pile card stack,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:05:26Z,run-20260908110526-207296,copilot,ui,commit,completed,fix(ui): simplify draw pile deck doodle,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/card_pile.dart,pending
+2026-09-08T11:06:33Z,run-20260908110633-210420,copilot,ui,commit,completed,fix(ui): use corner marks for draw pile,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:07:36Z,run-20260908110736-213506,copilot,ui,commit,completed,fix(ui): layer draw pile card edges,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:09:31Z,run-20260908110931-217852,copilot,ui,commit,completed,fix(ui): offset draw pile card outlines,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:11:21Z,run-20260908111121-222098,copilot,ui,commit,completed,fix(ui): add deck tabs to draw pile,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:12:46Z,run-20260908111246-225725,copilot,ui,commit,completed,fix(ui): simplify draw pile icon,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:20:03Z,run-20260908112003-238234,copilot,ui,commit,completed,fix(ui): use card sandwich draw pile icon,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:21:13Z,run-20260908112113-241618,copilot,ui,commit,completed,fix(ui): use stacked card corners,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:30:16Z,run-20260908113016-256659,copilot,ui,commit,completed,fix(ui): redesign draw pile deck outline,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:31:22Z,run-20260908113122-260063,copilot,ui,commit,completed,fix(ui): thin draw pile doodle,client/lib/presentation/icons/doodles.dart,pending
+2026-09-08T11:33:32Z,run-20260908113332-264849,copilot,ui,commit,completed,fix(ui): refine layered draw pile edge,client/lib/presentation/icons/doodles.dart,pending
