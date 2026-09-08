@@ -294,3 +294,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-08T11:31:22Z,run-20260908113122-260063,copilot,ui,commit,completed,fix(ui): thin draw pile doodle,client/lib/presentation/icons/doodles.dart,pending
 2026-09-08T11:33:32Z,run-20260908113332-264849,copilot,ui,commit,completed,fix(ui): refine layered draw pile edge,client/lib/presentation/icons/doodles.dart,pending
 2026-09-08T12:12:55Z,run-20260908121255-343495,copilot,client,commit,completed,fix(client): remove a played card from the local hand so tap-to-play keeps working next round,client/lib/presentation/state/game_session_provider.dart;client/test/presentation/game_session_provider_test.dart;client/test/presentation/screens_test.dart,pending
+2026-09-08T12:36:12Z,run-20260908123612-384312,human,client,commit,completed,feat(client): update Donower role reveal doodle to incognito icon,,pending
