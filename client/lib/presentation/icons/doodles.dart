@@ -25,6 +25,9 @@ enum Doodle {
   giftCard,
   cardSwirl,
   pass,
+  eyeCards,
+  quietBubble,
+  cardStack,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -100,6 +103,12 @@ class _DoodlePainter extends CustomPainter {
         _cardSwirl(canvas, size, paint);
       case Doodle.pass:
         _pass(canvas, size, paint);
+      case Doodle.eyeCards:
+        _eyeCards(canvas, size, paint);
+      case Doodle.quietBubble:
+        _quietBubble(canvas, size, paint);
+      case Doodle.cardStack:
+        _cardStack(canvas, size, paint);
     }
   }
 
@@ -133,8 +142,18 @@ class _DoodlePainter extends CustomPainter {
   }
 
   void _eye(Canvas canvas, Size size, Paint paint) {
-    final w = size.shortestSide;
-    final h = size.shortestSide;
+    final c = size.center(Offset.zero);
+    final w = size.shortestSide * 0.4;
+    final h = size.shortestSide * 0.25;
+    final path = Path()
+      ..addOval(Rect.fromCenter(center: c, width: w * 2, height: h * 2));
+    canvas.drawPath(path, paint..style = PaintingStyle.stroke);
+    canvas.drawCircle(c, w * 0.25, paint..style = PaintingStyle.fill);
+  }
+
+  void _eyeCards(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
 
     void card(double x, double y, double angle) {
       canvas.save();
@@ -239,6 +258,40 @@ class _DoodlePainter extends CustomPainter {
 
     card(0.34, -0.28);
     card(0.62, 0.22);
+  }
+
+  void _cardStack(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+
+    final backPaint = Paint()
+      ..color = paint.color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = paint.strokeWidth * 0.65
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(
+          center: Offset(w * 0.50, h * 0.43),
+          width: w * 0.40,
+          height: h * 0.46,
+        ),
+        Radius.circular(w * 0.045),
+      ),
+      paint,
+    );
+
+    for (var i = 0; i < 3; i++) {
+      final y = h * (0.72 + i * 0.07);
+      final halfWidth = w * (0.14 - i * 0.015);
+      canvas.drawLine(
+        Offset(w * 0.50 - halfWidth, y),
+        Offset(w * 0.50 + halfWidth, y),
+        backPaint,
+      );
+    }
   }
 
   void _check(Canvas canvas, Size size, Paint paint) {
@@ -409,6 +462,34 @@ class _DoodlePainter extends CustomPainter {
       Offset(center.dx - radius * 0.52, center.dy + radius * 0.52),
       paint,
     );
+  }
+
+  void _quietBubble(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+
+    final bubble = Path()
+      ..moveTo(w * 0.18, h * 0.28)
+      ..quadraticBezierTo(w * 0.18, h * 0.18, w * 0.30, h * 0.18)
+      ..lineTo(w * 0.72, h * 0.18)
+      ..quadraticBezierTo(w * 0.84, h * 0.18, w * 0.84, h * 0.30)
+      ..lineTo(w * 0.84, h * 0.55)
+      ..quadraticBezierTo(w * 0.84, h * 0.67, w * 0.72, h * 0.67)
+      ..lineTo(w * 0.42, h * 0.67)
+      ..lineTo(w * 0.25, h * 0.82)
+      ..lineTo(w * 0.28, h * 0.67)
+      ..lineTo(w * 0.30, h * 0.67)
+      ..quadraticBezierTo(w * 0.18, h * 0.67, w * 0.18, h * 0.55)
+      ..close();
+    canvas.drawPath(bubble, paint);
+
+    final dots = Paint()
+      ..color = paint.color
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w * 0.39, h * 0.43), w * 0.055, dots);
+    canvas.drawCircle(Offset(w * 0.52, h * 0.43), w * 0.040, dots);
+    canvas.drawCircle(Offset(w * 0.63, h * 0.43), w * 0.025, dots);
   }
 
   void _cardSwirl(Canvas canvas, Size size, Paint paint) {

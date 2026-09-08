@@ -140,6 +140,7 @@ class _CardPileState extends State<CardPile>
                   freeDraws: widget.freeDraws,
                   freeLabel: l10n.drawPileFreeChip,
                   pop: _pop,
+                  faceHeight: widget.height,
                 ),
         ),
       ],
@@ -218,6 +219,7 @@ class _PileFace extends StatelessWidget {
     required this.freeDraws,
     required this.freeLabel,
     required this.pop,
+    required this.faceHeight,
   });
 
   final int count;
@@ -229,6 +231,7 @@ class _PileFace extends StatelessWidget {
   final int freeDraws;
   final String freeLabel;
   final Animation<double> pop;
+  final double faceHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -243,6 +246,10 @@ class _PileFace extends StatelessWidget {
       color: free ? const Color(0xFF4E7A00) : KoColors.ink,
     );
     final chipStyle = Theme.of(context).textTheme.labelSmall;
+    final iconSize = (faceHeight * 0.30).clamp(28.0, 54.0);
+    final labelStyle = faceHeight >= 120
+        ? Theme.of(context).textTheme.labelLarge
+        : Theme.of(context).textTheme.labelMedium;
     return AnimatedBuilder(
       animation: pop,
       builder: (context, _) {
@@ -261,7 +268,6 @@ class _PileFace extends StatelessWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                const DoodleIcon(Doodle.cards, size: 16),
                 const Spacer(),
                 Transform.scale(
                   scale: 1 + 0.9 * swell,
@@ -269,14 +275,21 @@ class _PileFace extends StatelessWidget {
                 ),
               ],
             ),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                DoodleIcon(Doodle.cardStack, size: iconSize),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: labelStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
             Transform.scale(
               scale: free ? 1 + 0.35 * swell : 1,
