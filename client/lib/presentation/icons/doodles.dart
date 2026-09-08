@@ -24,6 +24,7 @@ enum Doodle {
   ballotBox,
   giftCard,
   cardSwirl,
+  pass,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -97,6 +98,8 @@ class _DoodlePainter extends CustomPainter {
         _giftCard(canvas, size, paint);
       case Doodle.cardSwirl:
         _cardSwirl(canvas, size, paint);
+      case Doodle.pass:
+        _pass(canvas, size, paint);
     }
   }
 
@@ -361,6 +364,26 @@ class _DoodlePainter extends CustomPainter {
       paint,
     );
     canvas.drawCircle(Offset(w * 0.5, bowY), w * 0.05, paint);
+  }
+
+  void _pass(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+
+    final center = Offset(w * 0.50, h * 0.50);
+    final radius = size.shortestSide * 0.34;
+    canvas.drawCircle(center, radius, paint);
+    canvas.drawLine(
+      Offset(center.dx - radius * 0.52, center.dy - radius * 0.52),
+      Offset(center.dx + radius * 0.52, center.dy + radius * 0.52),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(center.dx + radius * 0.52, center.dy - radius * 0.52),
+      Offset(center.dx - radius * 0.52, center.dy + radius * 0.52),
+      paint,
+    );
   }
 
   void _cardSwirl(Canvas canvas, Size size, Paint paint) {

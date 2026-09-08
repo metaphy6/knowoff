@@ -274,3 +274,4 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-07T16:08:28Z,run-20260907160828-776154,copilot,gameplay,commit,completed,fix(gameplay): restore exposed-hand panel tap,client/lib/presentation/widgets/hand_reveal.dart;client/test/presentation/screens_test.dart;CHANGELOG.md,pending
 2026-09-07T16:18:31Z,run-20260907161831-797817,copilot,gameplay,commit,completed,fix(gameplay): prevent exposed-hand web layout crash,client/lib/presentation/widgets/hand_reveal.dart;CHANGELOG.md,pending
 2026-09-07T18:02:27Z,run-20260907180227-1047473,copilot,gameplay,commit,completed,fix(gameplay): send developer role with new game request,,pending
+2026-09-08T09:41:21Z,run-20260908094121-30876,copilot,ui,commit,completed,feat(ui): add a pass card doodle,client/lib/presentation/icons/doodles.dart;client/lib/presentation/widgets/hand_fan.dart;client/test/presentation/match_widgets_test.dart,pending

@@ -605,6 +605,10 @@ void main() {
   });
 
   group('seat identity helpers', () {
+    test('uses a passing card doodle for the Pass specialty', () {
+      expect(specialtyIcon('pass'), equals(Doodle.pass));
+    });
+
     test('recognizes the server-reserved bot nickname prefix', () {
       const bot = PlayerDto(
           seat: 2, name: 'Bot_abc_2', connected: true, eliminated: false);
