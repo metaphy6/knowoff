@@ -133,13 +133,38 @@ class _DoodlePainter extends CustomPainter {
   }
 
   void _eye(Canvas canvas, Size size, Paint paint) {
-    final c = size.center(Offset.zero);
-    final w = size.shortestSide * 0.4;
-    final h = size.shortestSide * 0.25;
+    final w = size.shortestSide;
+    final h = size.shortestSide;
+
+    void card(double x, double y, double angle) {
+      canvas.save();
+      canvas.translate(w * x, h * y);
+      canvas.rotate(angle);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset.zero,
+            width: w * 0.20,
+            height: h * 0.34,
+          ),
+          Radius.circular(w * 0.03),
+        ),
+        paint,
+      );
+      canvas.restore();
+    }
+
+    card(0.20, 0.42, -0.20);
+    card(0.35, 0.55, -0.08);
+
+    final c = Offset(w * 0.70, h * 0.50);
+    final eyeWidth = w * 0.32;
+    final eyeHeight = h * 0.20;
     final path = Path()
-      ..addOval(Rect.fromCenter(center: c, width: w * 2, height: h * 2));
+      ..addOval(Rect.fromCenter(
+          center: c, width: eyeWidth * 2, height: eyeHeight * 2));
     canvas.drawPath(path, paint..style = PaintingStyle.stroke);
-    canvas.drawCircle(c, w * 0.25, paint..style = PaintingStyle.fill);
+    canvas.drawCircle(c, eyeWidth * 0.25, paint..style = PaintingStyle.fill);
   }
 
   void _cloud(Canvas canvas, Size size, Paint paint) {
