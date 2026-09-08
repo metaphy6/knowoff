@@ -25,6 +25,7 @@ import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 import 'package:knowoff_client/presentation/widgets/ready_status.dart';
 import 'package:knowoff_client/presentation/widgets/draw_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/rematch_overlay.dart';
+import 'package:knowoff_client/presentation/widgets/round_log_panel.dart';
 import 'package:knowoff_client/presentation/widgets/shuffle_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
 import 'package:knowoff_client/presentation/widgets/vote_board.dart';
@@ -353,7 +354,28 @@ void main() {
     await tester.pump();
 
     expect(find.byType(DrawAnnouncement), findsOneWidget);
-    expect(find.text('Beta drew 2 cards'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(DrawAnnouncement),
+        matching: find.text('Beta drew 2 cards'),
+      ),
+      findsOneWidget,
+    );
+    // The static round log below the turn status box keeps the same line
+    // readable after the pop-up banner moves on.
+    await tester.scrollUntilVisible(
+      find.byType(RoundLogPanel),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.byType(RoundLogPanel), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(RoundLogPanel),
+        matching: find.text('Beta drew 2 cards'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('RoundScreen announces an anonymous Shuffle', (tester) async {
