@@ -644,10 +644,6 @@
   "@specialtyShuffleOwnerHint": {
     "description": "Small static note on the Shuffle card in-hand naming which role may use it."
   },
-  "specialtyShuffleUsageHint": "Before any play.",
-  "@specialtyShuffleUsageHint": {
-    "description": "Small note on the Shuffle card in-hand, revealed after a tap, explaining when it is played."
-  },
   "chooseRevealTargetTitle": "Choose a player to reveal",
   "@chooseRevealTargetTitle": {
     "description": "Dialog title when picking a Reveal specialty target."

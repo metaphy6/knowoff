@@ -28,6 +28,7 @@ String _serializeTokens() {
   buffer.writeln('KoColors.canvasDeep=${_colorValue(KoColors.canvasDeep)}');
   buffer.writeln('KoColors.tangerine=${_colorValue(KoColors.tangerine)}');
   buffer.writeln('KoColors.aqua=${_colorValue(KoColors.aqua)}');
+  buffer.writeln('KoColors.sky=${_colorValue(KoColors.sky)}');
   buffer.writeln('KoRadii.card=${KoRadii.card}');
   buffer.writeln('KoRadii.sheet=${KoRadii.sheet}');
   buffer.writeln('KoRadii.button=${KoRadii.button}');

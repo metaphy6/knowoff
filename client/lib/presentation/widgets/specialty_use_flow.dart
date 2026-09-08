@@ -43,7 +43,8 @@ Future<void> useSpecialtyFromHand(
       await notifier.useSpecialty('one_more_free_card');
       return;
     case 'shuffle':
-      if (session.isDonower && session.dto.plays.isEmpty) {
+      // Any time during the round, in or out of turn (Rules §5).
+      if (session.isDonower) {
         await notifier.useSpecialty('shuffle');
       }
       return;

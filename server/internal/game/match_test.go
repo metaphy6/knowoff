@@ -1173,25 +1173,59 @@ func TestMatch_Specialty_ShuffleIsAnonymousAndRequiresCard(t *testing.T) {
 	}
 }
 
-func TestMatch_Specialty_ShuffleAllowsDonowerBeforeFirstPlayRegardlessOfTurn(t *testing.T) {
-	m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
-	if err := m.Start(); err != nil {
-		t.Fatalf("start: %v", err)
+func TestMatch_Specialty_ShuffleAllowsDonowerAnyTimeRegardlessOfTurn(t *testing.T) {
+	// Rules §5: Shuffle is usable at any point in the round, in or out of
+	// turn — at the very start or after cards have already landed. Either
+	// way the table is swept and the round's turn order restarts.
+	newShufflingDonower := func(t *testing.T, playsBefore int) (*Match, int) {
+		t.Helper()
+		m, _ := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
+		if err := m.Start(); err != nil {
+			t.Fatalf("start: %v", err)
+		}
+		m.beginRound()
+		for i := 0; i < playsBefore; i++ {
+			current := m.turnOrder[m.currentTurn]
+			card := m.players[current].Hand.Cards[0]
+			if err := m.HandleIntent(current, transport.NewIntent(
+				transport.IntentPlayCard,
+				map[string]any{"card_id": card},
+			)); err != nil {
+				t.Fatalf("play before Shuffle: %v", err)
+			}
+		}
+		shuffleSeat := m.turnOrder[(m.currentTurn+1)%len(m.turnOrder)]
+		m.roles[shuffleSeat] = RoleDonower
+		m.players[shuffleSeat].Hand.Specialty = SpecialtyShuffle
+		return m, shuffleSeat
 	}
-	m.beginRound()
-	firstTurnSeat := m.turnOrder[m.currentTurn]
-	shuffleSeat := m.turnOrder[(m.currentTurn+1)%len(m.turnOrder)]
-	m.roles[shuffleSeat] = RoleDonower
-	m.players[shuffleSeat].Hand.Specialty = SpecialtyShuffle
 
-	if err := m.HandleIntent(shuffleSeat, transport.NewIntent(
-		transport.IntentUseSpecialty,
-		map[string]any{"specialty": SpecialtyShuffle},
-	)); err != nil {
-		t.Fatalf("use Shuffle before the first play: %v", err)
-	}
-	if m.turnOrder[m.currentTurn] != firstTurnSeat {
-		t.Fatal("Shuffle must not take the first seat's turn")
+	for _, tc := range []struct {
+		name        string
+		playsBefore int
+	}{
+		{name: "at round start", playsBefore: 0},
+		{name: "mid-round after plays", playsBefore: 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m, shuffleSeat := newShufflingDonower(t, tc.playsBefore)
+
+			if err := m.HandleIntent(shuffleSeat, transport.NewIntent(
+				transport.IntentUseSpecialty,
+				map[string]any{"specialty": SpecialtyShuffle},
+			)); err != nil {
+				t.Fatalf("use Shuffle out of turn: %v", err)
+			}
+			if m.currentTurn != 0 {
+				t.Fatalf("Shuffle must restart the round's turn order, currentTurn = %d", m.currentTurn)
+			}
+			if len(m.plays) != 0 {
+				t.Fatalf("Shuffle must sweep the table's played cards, got %d plays", len(m.plays))
+			}
+			if m.players[shuffleSeat].Hand.Specialty != "" {
+				t.Fatal("Shuffle must spend itself once used")
+			}
+		})
 	}
 }
 
@@ -1563,8 +1597,11 @@ func TestMatch_Specialty_ShuffleWorksMidRoundAndAddsTime(t *testing.T) {
 	)); err != nil {
 		t.Fatalf("use Shuffle mid-round: %v", err)
 	}
-	if m.turnOrder[m.currentTurn] != seat {
-		t.Fatal("Shuffle user should remain on turn to play a card")
+	if m.currentTurn != 0 {
+		t.Fatalf("Shuffle must restart the round's turn order, currentTurn = %d", m.currentTurn)
+	}
+	if len(m.plays) != 0 {
+		t.Fatalf("Shuffle must sweep the table's played cards, got %d plays", len(m.plays))
 	}
 	if m.turnDeadline.Before(before.Add(10 * time.Second)) {
 		t.Fatalf("Shuffle deadline = %v, want at least %v", m.turnDeadline, before.Add(10*time.Second))

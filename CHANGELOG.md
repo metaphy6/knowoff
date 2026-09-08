@@ -27,6 +27,9 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Shuffle's anonymous table announcement is a proper sky-blue burst now: the deck-swirl doodle spins into a stamped medallion while "RESHUFFLE! — New hands, who dis?" double-pops onto the screen, then the whole thing slides off — replacing the plain lime banner.
+- Shuffle now mulligans the whole round: every card already on the table goes back with the hands into the re-deal, the turn order restarts from the first seat, and the restarted turn gets a fresh full window plus the 10-second Shuffle bonus on top.
+- Shuffle is no longer a round-start-only play: Donowers can fire it at any point in the round, in or out of turn, and the card now wears its own sky-blue identity instead of the generic violet chrome shared with buttons and timers.
 - The Revote card on the Knowoff screen is no longer violet-on-violet camouflage: it now wears the specialty's tangerine identity with a mask-in-ink medallion, twinkling corner sparkles and a stamp tilt — and during the window's last five seconds it switches to rush mode, heartbeat-pulsing with a thicker border, a tangerine glow, a live seconds numeral, and "Last seconds — slam it before the result locks!" copy.
 - The Verdict Play Again prompt now opens in the center of the screen and can be collapsed by tapping outside it, leaving a bright Play Again card inside the Back to menu bar so players can reopen it after reading the results.
 - Reveal a Hand now opens from its specialty card, filters out the owner and eliminated targets, announces the exposed player, and adds a once-per-player avatar doodle that opens the hand for three seconds during that round.

@@ -866,8 +866,9 @@ func (m *Match) handleUseSpecialty(seat int, payload map[string]any) error {
 	if m.phase != PhasePlay {
 		return fmt.Errorf("not play phase")
 	}
-	canShuffleBeforeFirstPlay := specialty == SpecialtyShuffle && len(m.plays) == 0
-	if !canShuffleBeforeFirstPlay && m.turnOrder[m.currentTurn] != seat {
+	// Shuffle is usable at any point in the round, in or out of turn
+	// (Rules §5); every other specialty still waits for its owner's turn.
+	if specialty != SpecialtyShuffle && m.turnOrder[m.currentTurn] != seat {
 		return fmt.Errorf("out of turn")
 	}
 
@@ -987,9 +988,13 @@ func (m *Match) useShuffle(seat int) error {
 	if m.uniqueUsed[SpecialtyShuffle] {
 		return fmt.Errorf("shuffle already used")
 	}
-	deadline := m.turnDeadline
 	m.uniqueUsed[SpecialtyShuffle] = true
 	m.players[seat].Hand.Specialty = ""
+	// The whole round mulligans (Rules §5): every card already on the table
+	// goes back, all hands are re-dealt fresh, and the round's turn order
+	// restarts from the first seat.
+	m.plays = make(map[int]string)
+	m.lostCards = make(map[int]string)
 	if err := m.dealHands(); err != nil {
 		return err
 	}
@@ -1002,11 +1007,13 @@ func (m *Match) useShuffle(seat int) error {
 		m.sendHandDealt(s, p)
 	}
 	m.stopTurnTimer()
-	if deadline.IsZero() {
-		deadline = time.Now()
-	}
+	m.currentTurn = 0
+	// The restarted first turn gets a fresh full window plus the Shuffle
+	// bonus on top (timers.shuffle_bonus_seconds).
 	bonus := time.Duration(m.deps.Config.Tuning.Timers.ShuffleBonusSeconds) * time.Second
-	m.scheduleTurnAt(deadline.Add(bonus))
+	m.scheduleTurnAt(time.Now().Add(
+		time.Duration(m.deps.Config.Tuning.Timers.PlayTurn)*time.Second + bonus,
+	))
 	return nil
 }
 

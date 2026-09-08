@@ -8,6 +8,7 @@ KoColors.pink=ffff9ed2
 KoColors.canvasDeep=ffc4a8f0
 KoColors.tangerine=ffffb020
 KoColors.aqua=ff7fe7dc
+KoColors.sky=ff8fcbf5
 KoRadii.card=16.0
 KoRadii.sheet=16.0
 KoRadii.button=12.0
