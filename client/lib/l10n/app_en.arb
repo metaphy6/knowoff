@@ -446,6 +446,14 @@
   "@noticeTypeAnnouncement": {
     "description": "Label for announcement notice type."
   },
+  "roundLogTitle": "Round log",
+  "@roundLogTitle": {
+    "description": "Title of the static round log panel next to Nown."
+  },
+  "roundLogEmpty": "No actions yet.",
+  "@roundLogEmpty": {
+    "description": "Empty state for the round log panel."
+  },
   "reportTitle": "Report",
   "@reportTitle": {
     "description": "Report dialog title."
