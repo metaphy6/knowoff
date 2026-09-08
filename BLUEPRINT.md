@@ -91,7 +91,7 @@ Architecture decision records:
   * **Local rooms:** talk happens out loud at the table.
   * **Online rooms:** players argue through **Quick Chat** — canned phrases and reactions plus moderated free text. Every typed message carries the player's selected client language; the server masks configured English words for every message and additionally masks the configured list for that language before broadcasting it. The client never performs the authoritative moderation decision.
 * Then **Knowoff**: a 20-second open ballot. Everyone still in the match votes for one player (never themselves); every cast lands live and attributed for the whole table to see, and a voter may change their target as many times as they like right up until the ballot resolves. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; if the runoff is still tied, the vote is a miss: it counts as one survived voting for the Donowers, eliminates nobody, and reveals no role.
-* **Result window:** every vote's outcome is displayed for 8 seconds before it becomes final — a 4-second falling reveal followed by 4 seconds on the role-result poster, where a Revote card (§5) can still land. Ends early once every connected active player marks Ready (any Revote holder simply doesn't ready up until they've decided). Then it applies.
+* **Result window:** every vote's outcome is displayed for 8 seconds before it becomes final — a 4-second falling reveal followed by 4 seconds on the role-result poster. A Revote can no longer land here: once the eliminated player's role is exposed, the result stands (§5). Ends early once every connected active player marks Ready. Then it applies.
 * An eliminated player — Nower or Donower — watches the rest of the match: no plays, no votes, no chat, no pokes. Their screen no longer shows Nown (a revealed Donower could otherwise feed it to a surviving partner). Staying connected to the end collects their points as normal (§6, §7).
 * After the match, the verdict screen shows all Nowns to everyone; Donowers finally see what they survived.
 
@@ -108,7 +108,7 @@ Five specialties in two types. **Dealing is role-blind: any specialty can land i
 **Type B — Unique (free, use restricted by role, once per match):**
 
 * **Shuffle** (rare — **usable by Donowers only**): usable at any point in the round, in or out of turn. Every card already on the table goes back and every player's unplayed hand is re-dealt fresh (draw piles untouched); the round's turn order restarts from the first seat with `timers.shuffle_bonus_seconds` added to the clock. The table gets a brief, dramatic anonymous alert, and everyone's hand visibly changes. Its owner then plays a normal hand card through the regular hand interaction when their turn comes. It wipes out the plans Nowers built around saved cards.
-* **Revote** (rare — **usable by Nowers only**): playable during an open Knowoff ballot or its 8-second result window. It resets the current ballot or cancels the shown result without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
+* **Revote** (rare — **usable by Nowers only**): playable only while a Knowoff ballot or runoff is open — never after the ballot has resolved and the eliminated player's role is on the poster. It resets the current ballot without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. Played after the reveal it would erase a known outcome and gut the Donowers' odds, so the window closes with the ballot. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
 * **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
 
 ### 6. Match Points & Noin Earnings
@@ -428,7 +428,7 @@ timers:                             # seconds; which windows may fast-forward is
   discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster/Revote window
+  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
   reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
   reveal_view: 3                    # each player may view an exposed hand for this many seconds
   prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget

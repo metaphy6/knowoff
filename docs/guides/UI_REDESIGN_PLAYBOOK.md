@@ -151,8 +151,8 @@ were read first:
   decision-relevant number on the table, and the old UI never showed it.
 - The **draw penalty** surfaced on the hand (`-5 pts each`) — Rules §3 prices
   panic-drawing, so the price belongs on the control.
-- The **result window** being cancellable — Rules §5 says a Revote reveals
-  nobody, which is why the pending result deliberately omits the role.
+- The **pending result** deliberately omitting the role — Rules §5 keeps the
+  eliminated seat's role hidden until the reveal lands.
 
 You cannot invent those from a screenshot.
 

@@ -5,15 +5,15 @@ import '../icons/doodles.dart';
 import '../theme/knowoff_tokens.dart';
 import '../theme/knowoff_typography.dart';
 
-/// The Revote specialty's stage (Rules §5): the one card that can un-eliminate
-/// a result, so it gets the loudest single-button treatment on the Knowoff
+/// The Revote specialty's stage (Rules §5): the one card that can reset an open
+/// ballot, so it gets the loudest single-button treatment on the Knowoff
 /// screen — tangerine (the specialty's identity colour) against the violet
 /// ballot canvas, twinkling sparkles, and a slight stamp tilt.
 ///
-/// In the window's final [rushSeconds] the card switches to rush mode: the
+/// In the ballot's final [rushSeconds] the card switches to rush mode: the
 /// border thickens, a tangerine glow shadow replaces the hard shadow, the hint
-/// swaps to the urgent copy, and the whole card heartbeats — slam it now or
-/// the result locks.
+/// swaps to the urgent copy, and the whole card heartbeats — slam it now or the
+/// ballot closes.
 class RevoteCard extends StatefulWidget {
   const RevoteCard({
     required this.onTap,

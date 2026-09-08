@@ -20,8 +20,8 @@ import '../widgets/seat_tile.dart';
 import '../widgets/specialty_announcement.dart';
 import '../widgets/vote_board.dart';
 
-/// Knowoff voting screen — the open, live ballot (ADR-009) and the result
-/// window where a Revote can still land (Rules §4–5).
+/// Knowoff voting screen — the open, live ballot (ADR-009) where a Revote can
+/// still land, and the result window that follows it (Rules §4–5).
 class KnowoffScreen extends ConsumerStatefulWidget {
   const KnowoffScreen({super.key});
 
@@ -61,7 +61,10 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
     final result = dto.result;
     final isRunoff = dto.phase == 'runoff';
     final inResultWindow = dto.phase == 'result' || result != null;
-    final canRevote = session.isNower && dto.hand.specialty == 'revote';
+    // Rules §5: Revote only lands on an open ballot — once the result window
+    // has exposed the eliminated seat's role the card is dead for the round.
+    final canRevote =
+        session.isNower && dto.hand.specialty == 'revote' && !inResultWindow;
     final announcedPlayer =
         result == null ? null : session.playerBySeat(result.eliminatedSeat);
     final handRevealTarget = session.playerBySeat(
@@ -125,13 +128,6 @@ class _KnowoffScreenState extends ConsumerState<KnowoffScreen> {
                           isBot: false,
                           eliminated: false,
                         ),
-                      if (canRevote) ...<Widget>[
-                        const SizedBox(height: KoSpace.lg),
-                        RevoteCard(
-                          remainingSeconds: remaining,
-                          onTap: () => notifier.useSpecialty('revote'),
-                        ),
-                      ],
                     ],
                   ),
                 )

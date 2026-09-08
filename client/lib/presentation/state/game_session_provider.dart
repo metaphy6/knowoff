@@ -49,6 +49,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   // to a fresh queue attempt instead of retrying the same dead room forever.
   int? _pendingQuickPlaySize;
   String? _terminalHandshakeError;
+  Future<void>? _authReset;
 
   static GameStateDto _initialDto() => const GameStateDto();
 
@@ -246,7 +247,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         }
         break;
       case 'vote_nullified':
-        // A Revote cancels the shown result outright: it reveals nobody and
+        // A Revote resets the open ballot outright: it reveals nobody and
         // eliminates nobody (Rules §5).
         _mergeState(payload);
         _setDto(state.dto.copyWith(
@@ -318,7 +319,16 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         final staleRoom = code == 'join_failed' &&
             (errorMessage == 'room not found' ||
                 errorMessage == 'invalid session token');
-        if (staleRoom) {
+        // The stored credentials themselves are dead (revoked, or signed by a
+        // server key that no longer exists). Re-sending them on every rejoin
+        // wedges the client on a screen it can never advance, so reissue them
+        // and fall back to a fresh join.
+        final staleAuth =
+            code == 'join_failed' && errorMessage == 'invalid access token';
+        if (staleAuth) {
+          _authReset = AppConfig.instance.authService.invalidateSession();
+        }
+        if (staleRoom || staleAuth) {
           _terminalHandshakeError = null;
           _sessionToken = null;
           _rejoinPending = false;
@@ -809,6 +819,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// often the first thing an idle tab does, so refresh before sending it.
   Future<String> _freshAccessToken() async {
     final auth = AppConfig.instance.authService;
+    // A reissue triggered by a rejected token has to land first, or the join
+    // goes out carrying the same credentials the server just refused.
+    await _authReset;
     await auth.ensureSession();
     return auth.accessToken ?? '';
   }

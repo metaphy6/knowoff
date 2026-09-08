@@ -581,7 +581,10 @@ func TestMatch_VerdictRevealsOnlyPlayedNowns(t *testing.T) {
 	}
 }
 
-func TestMatch_RevoteNullifiesResult(t *testing.T) {
+// TestMatch_RevoteRejectedInResultWindow guards Rules §5: once the ballot has
+// resolved and the eliminated seat's role is exposed, the Revote card can no
+// longer undo it.
+func TestMatch_RevoteRejectedInResultWindow(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
 		t.Fatalf("start: %v", err)
@@ -628,18 +631,17 @@ func TestMatch_RevoteNullifiesResult(t *testing.T) {
 	if err := m.HandleIntent(revoter, transport.NewIntent(
 		transport.IntentUseSpecialty,
 		map[string]any{"specialty": SpecialtyRevote},
-	)); err != nil {
-		t.Fatalf("revote: %v", err)
+	)); err == nil {
+		t.Fatal("revote should be rejected during the result window")
 	}
-	if m.eliminatedThisRound != -1 {
-		t.Fatal("revote should nullify elimination target")
+	if m.eliminatedThisRound != 0 {
+		t.Fatal("a rejected revote must leave the elimination target intact")
 	}
-	if m.remainingVotes != 2 {
-		t.Fatalf("revote should not consume a vote, got remaining %d", m.remainingVotes)
+	if m.players[revoter].Hand.Specialty != SpecialtyRevote {
+		t.Fatal("a rejected revote must not consume the card")
 	}
-	nulls := bcast.findEvents(revoter, transport.EventVoteNullified)
-	if len(nulls) != 1 {
-		t.Fatalf("expected vote_nullified event, got %d", len(nulls))
+	if nulls := bcast.findEvents(revoter, transport.EventVoteNullified); len(nulls) != 0 {
+		t.Fatalf("expected no vote_nullified event, got %d", len(nulls))
 	}
 }
 

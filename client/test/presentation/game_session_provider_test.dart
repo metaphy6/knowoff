@@ -13,6 +13,7 @@ class _StubAuthService extends AuthService {
   _StubAuthService() : super(baseUrl: 'http://test');
 
   int ensureCalls = 0;
+  int invalidateCalls = 0;
   String? _token = 'expired-token';
 
   @override
@@ -22,6 +23,12 @@ class _StubAuthService extends AuthService {
   Future<void> ensureSession() async {
     ensureCalls++;
     _token = 'fresh-token';
+  }
+
+  @override
+  Future<void> invalidateSession() async {
+    invalidateCalls++;
+    _token = 'reissued-token';
   }
 }
 
@@ -1216,6 +1223,31 @@ void main() {
       'session_token': 'reclaim-token',
       'access_token': 'fresh-token',
     });
+  });
+
+  // Regression: a server restart (new signing key) or a revoked token made
+  // every rejoin fail with the same dead credentials, leaving the match screen
+  // frozen with taps that silently queued forever.
+  test('a rejected access token reissues credentials instead of wedging',
+      () async {
+    final auth = _StubAuthService();
+    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
+    transport.emit('joined', <String, dynamic>{
+      'seat': 0,
+      'code': 'ABC123',
+      'session_token': 'reclaim-token',
+    });
+    await _settle();
+
+    transport.emit('error', <String, dynamic>{
+      'code': 'join_failed',
+      'params': <String, dynamic>{'message': 'invalid access token'},
+    });
+    await _settle();
+
+    expect(auth.invalidateCalls, equals(1));
+    expect(notifier.state.dto.roomCode, isEmpty);
+    expect(notifier.state.dto.seat, equals(-1));
   });
 
   test('lockMove marks the pending card locked without sending anything',

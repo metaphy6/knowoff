@@ -284,8 +284,9 @@ duplicate-unique, and late intents are rejected without state change and
 the turn order re-randomizes every round; a missed vote eliminates the
 Nower it names, whose later intents are rejected while stay-to-the-end
 points still pay; a 6-player match with two missed votes auto-ends after
-the second Knowoff as a Donower win; a Revote nullifies the shown result
-and its survival credit; a still-tied runoff counts as one survived voting
+the second Knowoff as a Donower win; a Revote resets an open ballot without
+consuming a vote and is rejected once the result window has exposed the
+eliminated player's role; a still-tied runoff counts as one survived voting
 for Donowers; pile draws deduct `points.draw_penalty` each, a One More
 Free Card draw deducts nothing, and a match's net floors at 0; a fully
 absent Donower team forfeits after exactly the grace period.

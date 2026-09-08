@@ -17,7 +17,7 @@ timers:                             # seconds; which windows may fast-forward is
   discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
   knowoff_ballot: 20                # always runs full
   knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster/Revote window
+  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
   reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
   reveal_view: 3                    # each player may view an exposed hand for this many seconds
   shuffle_bonus_seconds: 10         # extra time granted when Shuffle is used

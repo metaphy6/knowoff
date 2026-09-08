@@ -22,7 +22,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Revote'), findsOneWidget);
-      expect(find.text('Only a Nower can cancel this result.'), findsOneWidget);
+      expect(find.text('Only a Nower can reset this ballot.'), findsOneWidget);
       final container = tester.widget<AnimatedContainer>(
         find.descendant(
           of: find.byType(RevoteCard),
@@ -52,7 +52,7 @@ void main() {
 
       // Urgent copy + a live countdown numeral replace the calm hint.
       expect(
-        find.text('Last seconds — slam it before the result locks!'),
+        find.text('Last seconds — slam it before the ballot closes!'),
         findsOneWidget,
       );
       expect(find.byKey(const Key('revote-rush-countdown')), findsOneWidget);
@@ -63,7 +63,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pump(const Duration(milliseconds: 350));
       expect(
-        find.text('Only a Nower can cancel this result.'),
+        find.text('Only a Nower can reset this ballot.'),
         findsNothing,
       );
     });
@@ -80,7 +80,7 @@ void main() {
       );
       await tester.pump();
       expect(find.byKey(const Key('revote-rush-countdown')), findsNothing);
-      expect(find.text('Only a Nower can cancel this result.'), findsOneWidget);
+      expect(find.text('Only a Nower can reset this ballot.'), findsOneWidget);
     });
   });
 }
