@@ -1131,9 +1131,9 @@ func (m *Match) handleReady(seat int, payload map[string]any) error {
 			m.checkDiscussionReady()
 		}
 	case PhaseResult:
-		// Rules §4's Revote window otherwise always runs its full length even
-		// when nobody intends to use it — Ready lets the table skip the wait
-		// once everyone agrees the result can finalize now.
+		// Rules §4's result window otherwise always runs its full length even
+		// when the table has already read the outcome — Ready lets it skip the
+		// wait once everyone agrees the result can finalize now.
 		next := !m.resultReady[seat]
 		m.resultReady[seat] = next
 		m.bcast.Broadcast(transport.NewEvent(transport.EventReadyState, map[string]any{
@@ -1553,8 +1553,10 @@ func (m *Match) finishMatch(winner Role) {
 }
 
 func (m *Match) useRevote(seat int) error {
-	if m.phase != PhaseResult && m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
-		return fmt.Errorf("not result window")
+	// Rules §5: Revote only lands on an open ballot. Once the result window has
+	// exposed the eliminated seat's role, the card is dead for the round.
+	if m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
+		return fmt.Errorf("not a voting phase")
 	}
 	if m.roles[seat] != RoleNower {
 		return fmt.Errorf("off-role specialty")
@@ -1652,7 +1654,7 @@ func (m *Match) KnowoffActive() bool {
 	return m.phase == PhaseKnowoff || m.phase == PhaseRunoff
 }
 
-// ResultWindowActive reports whether the post-ballot Revote window is open.
+// ResultWindowActive reports whether the post-ballot result window is open.
 func (m *Match) ResultWindowActive() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()

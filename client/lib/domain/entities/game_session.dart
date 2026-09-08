@@ -210,7 +210,7 @@ class GameSession {
   bool get canReady =>
       !amEliminated && (phase == 'discussion' || phase == 'role_reveal');
 
-  /// Rules §4's post-ballot Revote window otherwise always runs its full
+  /// Rules §4's post-ballot result window otherwise always runs its full
   /// length; Ready lets the table skip the wait once everyone agrees.
   bool get canReadyResult => !amEliminated && hasResult;
 

@@ -254,7 +254,10 @@ func TestBotActor_MarksReadyDuringResultWindow(t *testing.T) {
 	waitFor(t, 2*time.Second, func() bool { return !m.ResultWindowActive() })
 }
 
-func TestBotActor_UsesRevoteBeforeReady(t *testing.T) {
+// TestBotActor_UsesRevoteDuringBallot guards Rules §5: a Nower bot holding
+// Revote spends it on the open ballot, not after the result window has already
+// exposed the eliminated seat's role.
+func TestBotActor_UsesRevoteDuringBallot(t *testing.T) {
 	m := newTestMatch(t, 1)
 	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
 
@@ -273,9 +276,8 @@ func TestBotActor_UsesRevoteBeforeReady(t *testing.T) {
 	}
 	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseKnowoff })
 
-	active := m.ActiveSeats()
 	botSeat := -1
-	for _, s := range active {
+	for _, s := range m.ActiveSeats() {
 		if m.PlayerRole(s) == game.RoleNower {
 			botSeat = s
 			break
@@ -284,21 +286,6 @@ func TestBotActor_UsesRevoteBeforeReady(t *testing.T) {
 	if botSeat < 0 {
 		t.Fatal("test match has no Nower")
 	}
-	target := active[0]
-	if target == botSeat {
-		target = active[1]
-	}
-	for _, s := range active {
-		voteFor := target
-		if s == target {
-			voteFor = botSeat
-		}
-		_ = m.HandleIntent(s, transport.NewIntent(
-			transport.IntentCastVote, map[string]any{"target_seat": float64(voteFor)},
-		))
-		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
-	}
-	waitFor(t, 2*time.Second, func() bool { return m.ResultWindowActive() })
 
 	m.SetSpecialty(botSeat, game.SpecialtyRevote)
 	room := &fakeRoom{id: "room-revote", m: m}

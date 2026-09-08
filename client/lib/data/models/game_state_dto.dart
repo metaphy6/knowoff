@@ -209,7 +209,7 @@ class GameStateDto {
   final Map<String, CardDto> plays;
   final bool discussionReady;
 
-  /// True once this seat has marked Ready during the post-ballot Revote
+  /// True once this seat has marked Ready during the post-ballot result
   /// window (Rules §4) — skips the wait once everyone agrees to finalize.
   final bool resultReady;
 

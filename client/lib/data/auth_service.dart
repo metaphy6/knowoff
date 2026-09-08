@@ -99,6 +99,21 @@ class AuthService {
     await _persist(data);
   }
 
+  /// Drops credentials the server has rejected outright and authenticates the
+  /// device again. Without this a token the server can no longer validate (a
+  /// revoked session, or one signed by a previous server key) is re-sent on
+  /// every rejoin, wedging the client on a screen it can never advance.
+  Future<void> invalidateSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_accessKey);
+    await prefs.remove(_refreshKey);
+    await prefs.remove(_accountKey);
+    _accessToken = null;
+    _refreshToken = null;
+    _accountId = null;
+    await ensureSession();
+  }
+
   Future<void> _persist(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     _accessToken = data['access_token'] as String?;

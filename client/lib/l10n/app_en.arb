@@ -636,9 +636,9 @@
   "@specialtyRevoteAction": {
     "description": "Button to use the Revote specialty card."
   },
-  "revoteRushHint": "Last seconds — slam it before the result locks!",
+  "revoteRushHint": "Last seconds — slam it before the ballot closes!",
   "@revoteRushHint": {
-    "description": "Urgent Revote hint shown during the final five seconds of the result or ballot window."
+    "description": "Urgent Revote hint shown during the final five seconds of the ballot window."
   },
   "specialtyRevoteUsageHint": "The card is used during voting.",
   "@specialtyRevoteUsageHint": {
@@ -931,7 +931,7 @@
       }
     }
   },
-  "revoteHint": "Only a Nower can cancel this result.",
+  "revoteHint": "Only a Nower can reset this ballot.",
   "@revoteHint": {
     "description": "Explains who may play the Revote card."
   },
