@@ -123,6 +123,11 @@ type BotActor struct {
 	pending string
 	actAt   time.Time
 	acted   bool
+
+	// True once this seat has cast a ballot in the open Knowoff, so a held
+	// Revote resets a ballot the bot has actually seen rather than nuking it
+	// the instant voting opens.
+	voted bool
 }
 
 // Start runs the bot loop until the match finishes.
@@ -187,7 +192,7 @@ func (b *BotActor) act(m *game.Match) {
 	switch {
 	case m.CurrentTurnSeat() == seat:
 		key = "turn"
-	case m.ResultWindowActive() &&
+	case b.voted && m.KnowoffActive() &&
 		m.PlayerRole(seat) == game.RoleNower &&
 		m.PlayerHand(seat).Specialty == game.SpecialtyRevote:
 		key = "revote:" + m.Phase()
@@ -205,6 +210,7 @@ func (b *BotActor) act(m *game.Match) {
 	if key == "" {
 		b.pending = ""
 		b.acted = false
+		b.voted = false
 		return
 	}
 	if b.pending != key {
@@ -229,6 +235,8 @@ func (b *BotActor) act(m *game.Match) {
 		}
 	case strings.HasPrefix(key, "revote:"):
 		b.useRevote(m)
+		// The fresh ballot has to be voted on again before another reset.
+		b.voted = false
 	case strings.HasPrefix(key, "ready:"):
 		if !b.markReady(m) {
 			return
@@ -237,6 +245,7 @@ func (b *BotActor) act(m *game.Match) {
 		if !b.castVote(m) {
 			return
 		}
+		b.voted = true
 	}
 	b.acted = true
 }

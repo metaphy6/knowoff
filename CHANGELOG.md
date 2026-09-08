@@ -12,6 +12,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- A match no longer freezes for good when the server rejects the stored access token (a restart with a new signing key, or a revoked session): the client now reissues its device credentials and drops the dead room instead of re-sending the same refused token on every rejoin, which used to leave the screen stuck on a stale phase where every tap silently queued.
 - The exposed-hand panel no longer triggers a Flutter web layout assertion that could leave the game stuck on a Knowoff result screen after focus changed.
 - The full “View [player]’s exposed hand” panel is tappable again; previously only its small avatar control received taps, so clicking the visible central button did nothing.
 - Reveal a Hand no longer opens a burn-card picker or silently consumes a hand card; after choosing the player to expose, the owner uses the normal hand interaction to place their card on the table.
@@ -26,6 +27,8 @@ All notable changes to Knowoff are documented in this file.
 - "Back to menu" on the Verdict screen now clears the finished match's session state (room code, seat, phase) before popping back — previously the stale state made the next Quick Play jump straight back into the same finished match instead of queuing.
 
 ### Changed
+
+- Revote is now a ballot-only card: it can be played while a Knowoff ballot or runoff is open, but no longer during the result window after the eliminated player's role has been exposed. Undoing a result you have already seen was overkill and left Donowers with no odds.
 
 - Shuffle's anonymous table announcement is a proper sky-blue burst now: the deck-swirl doodle spins into a stamped medallion while "RESHUFFLE! — New hands, who dis?" double-pops onto the screen, then the whole thing slides off — replacing the plain lime banner.
 - Shuffle now mulligans the whole round: every card already on the table goes back with the hands into the re-deal, the turn order restarts from the first seat, and the restarted turn gets a fresh full window plus the 10-second Shuffle bonus on top.

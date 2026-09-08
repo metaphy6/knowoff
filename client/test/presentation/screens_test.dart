@@ -25,6 +25,7 @@ import 'package:knowoff_client/presentation/widgets/ready_button.dart';
 import 'package:knowoff_client/presentation/widgets/ready_status.dart';
 import 'package:knowoff_client/presentation/widgets/draw_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/rematch_overlay.dart';
+import 'package:knowoff_client/presentation/widgets/revote_card.dart';
 import 'package:knowoff_client/presentation/widgets/round_log_panel.dart';
 import 'package:knowoff_client/presentation/widgets/shuffle_announcement.dart';
 import 'package:knowoff_client/presentation/widgets/seat_tile.dart';
@@ -967,6 +968,31 @@ void main() {
     expect(find.text('Revote'), findsOneWidget);
   });
 
+  testWidgets('tapping Revote during an open ballot sends use_specialty',
+      (tester) async {
+    final transport = _FakeTransport();
+    final base = _sampleSession(phase: 'knowoff');
+    final session = base.copyWith(
+      dto: base.dto.copyWith(
+        hand: const HandDto(cards: [], drawPile: [], specialty: 'revote'),
+      ),
+    );
+    await tester.pumpWidget(
+      _wrapWithSession(const KnowoffScreen(), session, transport: transport),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byType(RevoteCard));
+    await tester.pump();
+
+    expect(transport.sent, hasLength(1));
+    expect(transport.sent.single['kind'], 'use_specialty');
+    expect(
+      (transport.sent.single['payload'] as Map)['specialty'],
+      'revote',
+    );
+  });
+
   testWidgets(
       'KnowoffScreen announces when nobody is eliminated in the result window',
       (tester) async {
@@ -1101,7 +1127,7 @@ void main() {
     expect(find.byType(RoundScreen), findsOneWidget);
   });
 
-  testWidgets('Revote remains available during the candidate reveal',
+  testWidgets('Revote is unavailable once the result window opens',
       (tester) async {
     final base = _sampleSession(phase: 'result');
     final session = base.copyWith(
@@ -1118,7 +1144,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('result-poster-nower')), findsOneWidget);
-    expect(find.text('Revote'), findsOneWidget);
+    expect(find.text('Revote'), findsNothing);
   });
 
   testWidgets('KnowoffScreen sends Ready to resolve a ballot early',

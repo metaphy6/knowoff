@@ -82,7 +82,7 @@
   "specialtyOneMoreAction": "[Free Card]",
   "specialtyShuffleAction": "[Shuffle]",
   "specialtyRevoteAction": "[Revote]",
-  "revoteRushHint": "[Last seconds — slam it before the result locks!]",
+  "revoteRushHint": "[Last seconds — slam it before the ballot closes!]",
   "specialtyRevoteUsageHint": "[The card is used during voting.]",
   "specialtyRevoteOwnerHint": "[Nowers only.]",
   "specialtyShuffleOwnerHint": "[Donowers only.]",
