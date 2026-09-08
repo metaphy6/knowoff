@@ -28,6 +28,7 @@ enum Doodle {
   eyeCards,
   quietBubble,
   cardStack,
+  incognito,
 }
 
 class DoodleIcon extends StatelessWidget {
@@ -109,6 +110,8 @@ class _DoodlePainter extends CustomPainter {
         _quietBubble(canvas, size, paint);
       case Doodle.cardStack:
         _cardStack(canvas, size, paint);
+      case Doodle.incognito:
+        _incognito(canvas, size, paint);
     }
   }
 
@@ -551,6 +554,54 @@ class _DoodlePainter extends CustomPainter {
       ..lineTo(p3.dx, p3.dy)
       ..close();
     canvas.drawPath(head, Paint()..color = paint.color);
+  }
+
+  void _incognito(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+
+    // Crown of detective hat
+    final crown = Path()
+      ..moveTo(w * 0.28, h * 0.38)
+      ..cubicTo(w * 0.30, h * 0.18, w * 0.40, h * 0.21, w * 0.50, h * 0.22)
+      ..cubicTo(w * 0.60, h * 0.21, w * 0.70, h * 0.18, w * 0.72, h * 0.38);
+    canvas.drawPath(crown, paint);
+
+    // Hat band
+    canvas.drawLine(
+        Offset(w * 0.28, h * 0.34), Offset(w * 0.72, h * 0.34), paint);
+
+    // Hat brim
+    final brim = Path()
+      ..moveTo(w * 0.12, h * 0.40)
+      ..quadraticBezierTo(w * 0.50, h * 0.36, w * 0.88, h * 0.40);
+    canvas.drawPath(brim, paint);
+
+    // Sunglasses
+    final fillPaint = Paint()
+      ..color = paint.color
+      ..style = PaintingStyle.fill;
+
+    final leftLens = RRect.fromRectAndRadius(
+      Rect.fromLTRB(w * 0.20, h * 0.48, w * 0.46, h * 0.68),
+      Radius.circular(w * 0.05),
+    );
+    canvas.drawRRect(leftLens, fillPaint);
+
+    final rightLens = RRect.fromRectAndRadius(
+      Rect.fromLTRB(w * 0.54, h * 0.48, w * 0.80, h * 0.68),
+      Radius.circular(w * 0.05),
+    );
+    canvas.drawRRect(rightLens, fillPaint);
+
+    // Bridge & arms
+    canvas.drawLine(
+        Offset(w * 0.46, h * 0.52), Offset(w * 0.54, h * 0.52), paint);
+    canvas.drawLine(
+        Offset(w * 0.20, h * 0.52), Offset(w * 0.12, h * 0.48), paint);
+    canvas.drawLine(
+        Offset(w * 0.80, h * 0.52), Offset(w * 0.88, h * 0.48), paint);
   }
 
   @override

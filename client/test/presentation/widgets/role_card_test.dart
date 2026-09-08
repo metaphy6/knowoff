@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
+import 'package:knowoff_client/presentation/icons/doodles.dart';
 import 'package:knowoff_client/presentation/widgets/role_card.dart';
 
 void main() {
@@ -46,6 +47,26 @@ void main() {
 
       expect(find.text('Reveal your role'), findsOneWidget);
       expect(find.text('Nower'), findsNothing);
+    });
+
+    testWidgets('pressing the square reveals Donower role and incognito doodle',
+        (tester) async {
+      await tester.pumpWidget(wrap(const RoleCard(role: 'donower')));
+      await tester.pumpAndSettle();
+
+      final gesture =
+          await tester.startGesture(tester.getCenter(find.byType(RoleCard)));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Donower'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+            (w) => w is DoodleIcon && w.doodle == Doodle.incognito),
+        findsOneWidget,
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
     });
   });
 }
