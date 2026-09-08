@@ -370,7 +370,7 @@ String cardTypeLabel(AppLocalizations l10n, String type) {
 Doodle specialtyIcon(String specialty) {
   switch (specialty) {
     case 'pass':
-      return Doodle.cloud;
+      return Doodle.pass;
     case 'reveal':
       return Doodle.eye;
     case 'shuffle':
