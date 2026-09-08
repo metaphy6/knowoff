@@ -562,6 +562,31 @@ void main() {
     await shuffleTransport.close();
   });
 
+  test('shuffle sweeps the table plays and any locked move', () async {
+    final transport = _FakeTransport();
+    final notifier = GameSessionNotifier(
+      transport: transport,
+      initialState: const GameSession(
+        dto: GameStateDto(
+          seat: 0,
+          plays: {'1': CardDto(id: 'c3', type: 'text', content: 'c3')},
+        ),
+        selectedCardId: 'c1',
+        moveLocked: true,
+      ),
+    );
+
+    transport.emit('shuffle_occurred', <String, dynamic>{'round': 2});
+    await _settle();
+
+    expect(notifier.state.dto.plays, isEmpty);
+    expect(notifier.state.selectedCardId, isNull);
+    expect(notifier.state.moveLocked, isFalse);
+
+    notifier.dispose();
+    await transport.close();
+  });
+
   // The server zeroes a spent specialty to "" before the hand re-sync; the
   // DTO must treat that as "no card", or the hand renders a nameless,
   // unusable specialty slot.

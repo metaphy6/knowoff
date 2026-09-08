@@ -220,9 +220,10 @@ func (b *BotActor) act(m *game.Match) {
 	switch {
 	case key == "turn":
 		if !b.playTurn(m) {
-			// Shuffle re-deals this seat's hand but leaves its turn active.
-			// Its original turn delay has already elapsed, so continue on the
-			// next polling tick rather than making the bot think twice.
+			// Shuffle sweeps the table and restarts the round's turn order,
+			// so this seat may or may not still be on turn. Its original
+			// decision delay has already elapsed either way — re-evaluate on
+			// the next polling tick rather than making the bot think twice.
 			b.actAt = time.Now()
 			return
 		}
@@ -251,18 +252,19 @@ func (b *BotActor) useRevote(m *game.Match) {
 }
 
 // playTurn takes this seat's turn action and reports whether the turn ended.
-// Using Shuffle re-deals hands but leaves the turn open (Rules §5), so it
-// reports false to make act re-think with the fresh hand.
+// Using Shuffle sweeps the table, re-deals hands and restarts the round's
+// turn order (Rules §5), so it reports false to make act re-think from the
+// fresh state.
 func (b *BotActor) playTurn(m *game.Match) bool {
 	seat := b.seat
 	hand := m.PlayerHand(seat)
 
-	// A held Shuffle is a one-time, round-start-only Donower specialty that
-	// a bot previously never touched; using it on sight is a simple,
-	// legitimate improvement over always playing the first card.
+	// A held Shuffle is a one-time Donower specialty usable at any point in
+	// the round (Rules §5) that a bot previously never touched; using it on
+	// sight is a simple, legitimate improvement over always playing the
+	// first card.
 	if hand.Specialty == game.SpecialtyShuffle &&
-		m.PlayerRole(seat) == game.RoleDonower &&
-		len(m.TablePlays()) == 0 {
+		m.PlayerRole(seat) == game.RoleDonower {
 		b.logger.Debug("bot using shuffle specialty")
 		err := m.HandleIntent(seat, &transport.Envelope{
 			Kind:    transport.IntentUseSpecialty,

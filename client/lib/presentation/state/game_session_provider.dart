@@ -219,6 +219,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
         state = state.copyWith(
           shuffleAnnouncementId: state.shuffleAnnouncementId + 1,
         );
+        // Shuffle sweeps every played card off the table and restarts the
+        // round's turn order (Rules §5) — clear the round-scoped interaction
+        // exactly like a fresh round would, before the re-dealt hand and the
+        // restarted turn arrive.
+        _resetRoundHandInteraction();
         _mergeState(payload);
         break;
       case 'vote_cast':

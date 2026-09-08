@@ -112,10 +112,10 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
       session.handRevealTargetSeat ?? -1,
     );
     final notifier = ref.read(gameSessionProvider.notifier);
+    // Shuffle is usable at any point in the round, in or out of turn
+    // (Rules §5); other specialties still wait for the owner's turn.
     final canUseSpecialty = session.isMyTurn ||
-        (session.isDonower &&
-            dto.hand.specialty == 'shuffle' &&
-            dto.plays.isEmpty);
+        (session.isDonower && dto.hand.specialty == 'shuffle');
 
     // Reset poke tracking when phase changes
     if (_lastPhase != dto.phase) {
