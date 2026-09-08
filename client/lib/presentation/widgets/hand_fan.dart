@@ -327,14 +327,12 @@ String specialtyLabel(AppLocalizations l10n, String specialty) {
 }
 
 /// Where a specialty card is played — revealed under its label on first tap
-/// and left showing afterwards (Rules §5: Shuffle fires at round start,
-/// Revote during voting/the result window).
+/// and left showing afterwards (Rules §5: Revote during voting/the result
+/// window; Shuffle needs no note, it fires the moment it is tapped).
 String? specialtyUsageHint(AppLocalizations l10n, String specialty) {
   switch (specialty) {
     case 'revote':
       return l10n.specialtyRevoteUsageHint;
-    case 'shuffle':
-      return l10n.specialtyShuffleUsageHint;
     default:
       return null;
   }
@@ -395,7 +393,7 @@ Color specialtyColor(String specialty) {
     case 'reveal':
       return KoColors.pink;
     case 'shuffle':
-      return KoColors.violet;
+      return KoColors.sky;
     case 'revote':
       return KoColors.tangerine;
     case 'one_more_free_card':

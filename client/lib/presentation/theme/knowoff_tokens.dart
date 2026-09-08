@@ -23,6 +23,11 @@ abstract final class KoColors {
   static const Color tangerine = Color(0xFFFFB020);
   static const Color aqua = Color(0xFF7FE7DC);
 
+  /// The Shuffle specialty's identity colour (ADR-010) — a clear sky blue so
+  /// the card stops reading as generic `violet` chrome and stays distinct
+  /// from every other specialty's accent.
+  static const Color sky = Color(0xFF8FCBF5);
+
   /// The one permitted gradient in the whole UI — reserved for the Knowoff
   /// reveal header.
   static const LinearGradient revealGradient = LinearGradient(

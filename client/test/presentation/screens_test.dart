@@ -362,9 +362,8 @@ void main() {
     await tester.pump();
 
     expect(find.byType(ShuffleAnnouncement), findsOneWidget);
-    expect(find.text('The table got shuffled!'), findsOneWidget);
-    expect(find.text('Everybody\'s hands changed. Blame the cards.'),
-        findsOneWidget);
+    expect(find.text('RESHUFFLE!'), findsOneWidget);
+    expect(find.text('New hands, who dis?'), findsOneWidget);
 
     // Anonymity is about the announcement itself: no player name appears
     // inside it, even though names legitimately render in the turn rail.
@@ -516,7 +515,7 @@ void main() {
   });
 
   testWidgets(
-      'RoundScreen lets a Donower Shuffle before the first play while waiting '
+      'RoundScreen lets a Donower Shuffle mid-round while waiting '
       'for another seat', (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);
     tester.view.devicePixelRatio = 1;
@@ -527,7 +526,7 @@ void main() {
       myRole: 'donower',
       dto: base.dto.copyWith(
         turnSeat: 1,
-        plays: const {},
+        plays: const {'3': CardDto(id: 'c9', type: 'text', content: 'c9')},
         hand: const HandDto(
           cards: [CardDto(id: 'c1', type: 'text', content: 'one')],
           drawPile: [],

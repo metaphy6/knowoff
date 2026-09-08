@@ -86,7 +86,6 @@
   "specialtyRevoteUsageHint": "[The card is used during voting.]",
   "specialtyRevoteOwnerHint": "[Nowers only.]",
   "specialtyShuffleOwnerHint": "[Donowers only.]",
-  "specialtyShuffleUsageHint": "[The card is used at the start of the round.]",
   "chooseRevealTargetTitle": "[Choose a player to reveal]",
   "handRevealHeadline": "[HAND HEIST!]",
   "handRevealAnnouncement": "[{name}'s hand is exposed!]",
