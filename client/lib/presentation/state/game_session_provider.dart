@@ -537,13 +537,18 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     // seat, the auto-discarded card never disappears from the hand.
     if (cardId == null && !timedOut) return;
     var current = state.dto;
-    if (timedOut && seat == current.seat) {
-      final lostId =
-          (payload['lost'] as Map<String, dynamic>?)?['id'] as String?;
-      if (lostId != null) {
+    // A played (or auto-discarded) card must leave the local hand right
+    // away — otherwise it stays selectable all round and, once the next
+    // round clears `plays`, becomes tappable again even though the server
+    // already discarded it and would reject replaying it.
+    if (seat == current.seat) {
+      final removedId = timedOut
+          ? ((payload['lost'] as Map<String, dynamic>?)?['id'] as String?)
+          : cardId;
+      if (removedId != null) {
         current = current.copyWith(
           hand: HandDto(
-            cards: current.hand.cards.where((c) => c.id != lostId).toList(),
+            cards: current.hand.cards.where((c) => c.id != removedId).toList(),
             drawPile: current.hand.drawPile,
             specialty: current.hand.specialty,
             freeDraws: current.hand.freeDraws,
