@@ -253,6 +253,79 @@ void main() {
     expect(find.text('A dog on a skateboard'), findsOneWidget);
   });
 
+  testWidgets(
+      'RoundScreen tap-twice-to-play keeps working once a second round starts',
+      (tester) async {
+    // Regression: the hand stopped responding to the select-then-confirm
+    // double tap as soon as the second round's turn began.
+    tester.view.physicalSize = const Size(1200, 1800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final transport = _ControllableTransport();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          gameSessionProvider.overrideWith(
+            (ref) => GameSessionNotifier(
+              transport: transport,
+              initialState: _sampleSession(),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: knowoffTheme(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const RoundScreen(),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey<String>('hand-card-c1')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('hand-card-c1')));
+    await tester.pump();
+
+    expect(transport.sent, hasLength(1));
+    expect(transport.sent.single['kind'], 'play_card');
+    expect(
+      (transport.sent.single['payload'] as Map<String, dynamic>)['card_id'],
+      'c1',
+    );
+
+    // The server resolves round 1 and starts round 2's play phase.
+    transport.emit(<String, dynamic>{
+      'kind': 'phase_started',
+      'payload': <String, dynamic>{'phase': 'play', 'round': 2},
+    });
+    transport.emit(<String, dynamic>{
+      'kind': 'round_started',
+      'payload': <String, dynamic>{
+        'round': 2,
+        'turn_order': <int>[0, 1]
+      },
+    });
+    transport.emit(<String, dynamic>{
+      'kind': 'turn_started',
+      'payload': <String, dynamic>{'turn_seat': 0, 'round': 2, 'timeout': 10},
+    });
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const ValueKey<String>('hand-card-c2')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('hand-card-c2')));
+    await tester.pump();
+
+    expect(transport.sent, hasLength(2));
+    expect(transport.sent.last['kind'], 'play_card');
+    expect(
+      (transport.sent.last['payload'] as Map<String, dynamic>)['card_id'],
+      'c2',
+    );
+  });
+
   testWidgets('RoundScreen allows drawing while another player has the turn',
       (tester) async {
     tester.view.physicalSize = const Size(1200, 1800);

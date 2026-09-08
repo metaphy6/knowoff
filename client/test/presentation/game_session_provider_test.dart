@@ -1261,6 +1261,33 @@ void main() {
     expect(transport.sent, isEmpty);
   });
 
+  test('playing a card removes it from my own hand', () async {
+    // Regression: a normally-played (non-timeout) card only landed in
+    // `plays`, never in `hand.cards` — the card stayed selectable for the
+    // rest of the match and reappeared as playable once the next round
+    // cleared `plays`, even though the server had already discarded it.
+    transport.emit('joined', <String, dynamic>{'seat': 0});
+    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
+    transport.emit('hand_dealt', <String, dynamic>{
+      'cards': <String>['card-1', 'card-2'],
+      'draw_pile': <String>[],
+      'specialty': null,
+    });
+    await _settle();
+
+    transport.emit('play_revealed', <String, dynamic>{
+      'seat': 0,
+      'card_id': 'card-1',
+      'card': <String, dynamic>{'id': 'card-1', 'type': 'text'},
+    });
+    await _settle();
+
+    expect(
+      notifier.state.dto.hand.cards.map((c) => c.id),
+      equals(<String>['card-2']),
+    );
+  });
+
   test('a turn timeout removes the auto-discarded card from my own hand',
       () async {
     // Regression: play_revealed for a timeout carries no card_id (the seat
