@@ -86,7 +86,7 @@ class _RoleCardState extends State<RoleCard> {
                 !visible
                     ? Doodle.mask
                     : isDonower
-                        ? Doodle.cloud
+                        ? Doodle.incognito
                         : Doodle.eye,
                 size: iconSize,
               ),
