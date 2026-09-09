@@ -223,7 +223,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                   subLabel: l10n.mainMenuPlaySub,
                   size: KoButtonSize.large,
                   expand: true,
-                  icon: const DoodleIcon(Doodle.staticBurst, size: 34),
+                  icon: const DoodleIcon(Doodle.play, size: 34),
                   trailing: const Icon(Icons.arrow_forward, size: 28),
                   shadow: KoShadows.lg,
                   onTap: () => _open(const QueueScreen()),
@@ -235,7 +235,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                   size: KoButtonSize.large,
                   expand: true,
                   backgroundColor: KoColors.lime,
-                  icon: const DoodleIcon(Doodle.cards, size: 34),
+                  icon: const DoodleIcon(Doodle.pin, size: 34),
                   trailing: const Icon(Icons.qr_code_2, size: 28),
                   onTap: () => _showLocalRoomChooser(context),
                 ),
@@ -252,7 +252,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                   children: [
                     _MenuTile(
                       label: l10n.mainMenuProfile,
-                      doodle: Doodle.eye,
+                      doodle: Doodle.person,
                       accent: KoColors.aqua,
                       tilt: KoTilt.subtle,
                       onTap: () => _open(const ProfileScreen()),
@@ -266,14 +266,14 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     ),
                     _MenuTile(
                       label: l10n.mainMenuStore,
-                      doodle: Doodle.coin,
+                      doodle: Doodle.market,
                       accent: KoColors.pink,
                       tilt: KoTilt.soft,
                       onTap: () => _open(const StoreScreen()),
                     ),
                     _MenuTile(
                       label: l10n.mainMenuNotices,
-                      doodle: Doodle.cloud,
+                      doodle: Doodle.hailer,
                       accent: KoColors.surface,
                       tilt: KoTilt.subtle,
                       badge: activeNotices.length,
