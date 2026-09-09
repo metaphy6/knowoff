@@ -29,6 +29,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- `make git` never creates empty commits anymore: all pending tracking rows in a staging window now ride one real commit (first pending summary as the subject, the rest under "Also includes:", one `[run_id]` trailer each), and with a clean tree the rows simply wait for the next real commit instead of committing empty markers.
 - Developer-granted specialty cards remain current-hand test overrides; subsequent rounds still deal a fresh role-blind specialty, as specified by the game rules.
 - The main menu now uses clearer doodles for Play, Local Room, Profile, Store, and Notices: a play symbol, map pin, person, market, and hailer.
 - The round action window is now titled "Logs" with a larger bold heading for easier scanning.
