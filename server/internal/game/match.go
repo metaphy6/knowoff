@@ -59,6 +59,7 @@ type Match struct {
 	discussionReady map[int]bool
 
 	ballots             map[int]int
+	ballotVersion       int
 	ballotReady         map[int]bool
 	runoff              bool
 	runoffCandidates    []int
@@ -1208,6 +1209,7 @@ func (m *Match) endDiscussionLocked() {
 
 func (m *Match) beginKnowoff() {
 	m.phase = PhaseKnowoff
+	m.ballotVersion++
 	m.ballots = make(map[int]int)
 	m.ballotReady = make(map[int]bool)
 	for _, s := range m.activeSeats() {
@@ -1342,6 +1344,7 @@ func (m *Match) resolveBallot() {
 
 func (m *Match) beginRunoff(candidates []int) {
 	m.runoff = true
+	m.ballotVersion++
 	m.runoffCandidates = candidates
 	m.phase = PhaseRunoff
 	m.ballots = make(map[int]int)
@@ -1652,6 +1655,14 @@ func (m *Match) KnowoffActive() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.phase == PhaseKnowoff || m.phase == PhaseRunoff
+}
+
+// BallotVersion identifies the current ballot, including a reopened ballot
+// after Revote and a newly started runoff.
+func (m *Match) BallotVersion() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.ballotVersion
 }
 
 // ResultWindowActive reports whether the post-ballot result window is open.
