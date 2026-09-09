@@ -446,7 +446,7 @@
   "@noticeTypeAnnouncement": {
     "description": "Label for announcement notice type."
   },
-  "roundLogTitle": "Round log",
+  "roundLogTitle": "Logs",
   "@roundLogTitle": {
     "description": "Title of the static round log panel next to Nown."
   },
