@@ -13,6 +13,7 @@ All notable changes to Knowoff are documented in this file.
 ### Fixed
 
 - A match no longer freezes for good when the server rejects the stored access token (a restart with a new signing key, or a revoked session): the client now reissues its device credentials and drops the dead room instead of re-sending the same refused token on every rejoin, which used to leave the screen stuck on a stale phase where every tap silently queued.
+- Bots now recast their votes when a Nower uses Revote during an open ballot, so the reopened vote can finish instead of leaving the match stalled.
 - The exposed-hand panel no longer triggers a Flutter web layout assertion that could leave the game stuck on a Knowoff result screen after focus changed.
 - The full “View [player]’s exposed hand” panel is tappable again; previously only its small avatar control received taps, so clicking the visible central button did nothing.
 - Reveal a Hand no longer opens a burn-card picker or silently consumes a hand card; after choosing the player to expose, the owner uses the normal hand interaction to place their card on the table.
@@ -28,6 +29,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Developer-granted specialty cards remain current-hand test overrides; subsequent rounds still deal a fresh role-blind specialty, as specified by the game rules.
 - The main menu now uses clearer doodles for Play, Local Room, Profile, Store, and Notices: a play symbol, map pin, person, market, and hailer.
 - The round action window is now titled "Logs" with a larger bold heading for easier scanning.
 - Round log entries are now bold as well, making the action history easier to scan.

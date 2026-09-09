@@ -204,7 +204,7 @@ func (b *BotActor) act(m *game.Match) {
 	case m.KnowoffActive():
 		// Knowoff is a voting phase, but the bot still takes the Ready path
 		// whenever the table has already started to settle to keep the booth moving.
-		key = "vote:" + m.Phase()
+		key = fmt.Sprintf("vote:%s:%d", m.Phase(), m.BallotVersion())
 	}
 
 	if key == "" {
