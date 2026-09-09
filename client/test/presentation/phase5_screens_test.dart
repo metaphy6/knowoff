@@ -5,6 +5,7 @@ import 'package:knowoff_client/core/config/client_config.dart';
 import 'package:knowoff_client/data/api_client.dart';
 import 'package:knowoff_client/data/auth_service.dart';
 import 'package:knowoff_client/l10n/app_localizations.dart';
+import 'package:knowoff_client/presentation/icons/doodles.dart';
 import 'package:knowoff_client/presentation/screens/main_menu_screen.dart';
 import 'package:knowoff_client/presentation/screens/notice_inbox_screen.dart';
 import 'package:knowoff_client/presentation/screens/store_screen.dart';
@@ -211,6 +212,24 @@ void main() {
     await _pump(tester, const MainMenuScreen());
     expect(find.text('Store'), findsOneWidget);
     expect(find.text('Notices'), findsOneWidget);
+  });
+
+  testWidgets('MainMenuScreen uses a distinct doodle for each menu action',
+      (tester) async {
+    await _pump(tester, const MainMenuScreen());
+
+    bool hasDoodle(Doodle doodle) => find
+        .byWidgetPredicate(
+          (widget) => widget is DoodleIcon && widget.doodle == doodle,
+        )
+        .evaluate()
+        .isNotEmpty;
+
+    expect(hasDoodle(Doodle.play), isTrue);
+    expect(hasDoodle(Doodle.pin), isTrue);
+    expect(hasDoodle(Doodle.person), isTrue);
+    expect(hasDoodle(Doodle.market), isTrue);
+    expect(hasDoodle(Doodle.hailer), isTrue);
   });
 
   testWidgets('MainMenuScreen detaches the first wordmark letter',
