@@ -1150,7 +1150,7 @@ func TestMatch_Specialty_RevealLeavesCardPlayForTheTurn(t *testing.T) {
 	}
 }
 
-func TestMatch_Specialty_ShuffleIsAnonymousAndRequiresCard(t *testing.T) {
+func TestMatch_Specialty_ShuffleHidesUserAndRequiresCard(t *testing.T) {
 	m, bcast := newTestMatch(t, 4, WithSeed(1), WithReplay(true))
 	if err := m.Start(); err != nil {
 		t.Fatalf("start: %v", err)
