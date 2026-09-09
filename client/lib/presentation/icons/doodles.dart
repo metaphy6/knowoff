@@ -9,7 +9,12 @@ import '../theme/knowoff_tokens.dart';
 enum Doodle {
   sparkle,
   staticBurst,
+  play,
   eye,
+  person,
+  market,
+  hailer,
+  pin,
   cloud,
   placeholder,
   crown,
@@ -72,8 +77,18 @@ class _DoodlePainter extends CustomPainter {
         _sparkle(canvas, size, paint);
       case Doodle.staticBurst:
         _staticBurst(canvas, size, paint);
+      case Doodle.play:
+        _play(canvas, size, paint);
       case Doodle.eye:
         _eye(canvas, size, paint);
+      case Doodle.person:
+        _person(canvas, size, paint);
+      case Doodle.market:
+        _market(canvas, size, paint);
+      case Doodle.hailer:
+        _hailer(canvas, size, paint);
+      case Doodle.pin:
+        _pin(canvas, size, paint);
       case Doodle.cloud:
         _cloud(canvas, size, paint);
       case Doodle.placeholder:
@@ -144,6 +159,17 @@ class _DoodlePainter extends CustomPainter {
     }
   }
 
+  void _play(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    final path = Path()
+      ..moveTo(w * 0.30, h * 0.20)
+      ..lineTo(w * 0.78, h * 0.50)
+      ..lineTo(w * 0.30, h * 0.80)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
   void _eye(Canvas canvas, Size size, Paint paint) {
     final c = size.center(Offset.zero);
     final w = size.shortestSide * 0.4;
@@ -152,6 +178,75 @@ class _DoodlePainter extends CustomPainter {
       ..addOval(Rect.fromCenter(center: c, width: w * 2, height: h * 2));
     canvas.drawPath(path, paint..style = PaintingStyle.stroke);
     canvas.drawCircle(c, w * 0.25, paint..style = PaintingStyle.fill);
+  }
+
+  void _person(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    canvas.drawCircle(Offset(w * 0.50, h * 0.28), w * 0.16, paint);
+    final shoulders = Path()
+      ..moveTo(w * 0.20, h * 0.82)
+      ..quadraticBezierTo(w * 0.24, h * 0.54, w * 0.50, h * 0.54)
+      ..quadraticBezierTo(w * 0.76, h * 0.54, w * 0.80, h * 0.82);
+    canvas.drawPath(shoulders, paint);
+  }
+
+  void _market(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    canvas.drawRect(
+        Rect.fromLTRB(w * 0.18, h * 0.42, w * 0.82, h * 0.82), paint);
+    final awning = Path()
+      ..moveTo(w * 0.14, h * 0.42)
+      ..lineTo(w * 0.86, h * 0.42)
+      ..lineTo(w * 0.78, h * 0.24)
+      ..lineTo(w * 0.22, h * 0.24)
+      ..close();
+    canvas.drawPath(awning, paint);
+    canvas.drawLine(
+        Offset(w * 0.50, h * 0.24), Offset(w * 0.50, h * 0.42), paint);
+    canvas.drawRect(
+        Rect.fromLTRB(w * 0.42, h * 0.62, w * 0.58, h * 0.82), paint);
+  }
+
+  void _hailer(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    final horn = Path()
+      ..moveTo(w * 0.18, h * 0.38)
+      ..lineTo(w * 0.72, h * 0.22)
+      ..lineTo(w * 0.72, h * 0.68)
+      ..lineTo(w * 0.18, h * 0.52)
+      ..close();
+    canvas.drawPath(horn, paint);
+    canvas.drawLine(
+        Offset(w * 0.32, h * 0.56), Offset(w * 0.26, h * 0.82), paint);
+    canvas.drawLine(
+        Offset(w * 0.22, h * 0.82), Offset(w * 0.38, h * 0.82), paint);
+    canvas.drawArc(
+        Rect.fromCircle(center: Offset(w * 0.78, h * 0.45), radius: w * 0.13),
+        -0.9,
+        1.8,
+        false,
+        paint);
+  }
+
+  void _pin(Canvas canvas, Size size, Paint paint) {
+    final w = size.width;
+    final h = size.height;
+    paint.style = PaintingStyle.stroke;
+    final pin = Path()
+      ..moveTo(w * 0.50, h * 0.86)
+      ..cubicTo(w * 0.44, h * 0.76, w * 0.20, h * 0.58, w * 0.20, h * 0.38)
+      ..cubicTo(w * 0.20, h * 0.16, w * 0.34, h * 0.10, w * 0.50, h * 0.10)
+      ..cubicTo(w * 0.66, h * 0.10, w * 0.80, h * 0.16, w * 0.80, h * 0.38)
+      ..cubicTo(w * 0.80, h * 0.58, w * 0.56, h * 0.76, w * 0.50, h * 0.86)
+      ..close();
+    canvas.drawPath(pin, paint);
+    canvas.drawCircle(Offset(w * 0.50, h * 0.38), w * 0.10, paint);
   }
 
   void _eyeCards(Canvas canvas, Size size, Paint paint) {
