@@ -28,6 +28,7 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- The main menu now uses clearer doodles for Play, Local Room, Profile, Store, and Notices: a play symbol, map pin, person, market, and hailer.
 - Revote is now a ballot-only card: it can be played while a Knowoff ballot or runoff is open, but no longer during the result window after the eliminated player's role has been exposed. Undoing a result you have already seen was overkill and left Donowers with no odds.
 
 - Shuffle's anonymous table announcement is a proper sky-blue burst now: the deck-swirl doodle spins into a stamped medallion while "RESHUFFLE! — New hands, who dis?" double-pops onto the screen, then the whole thing slides off — replacing the plain lime banner.
