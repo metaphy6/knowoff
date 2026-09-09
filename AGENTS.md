@@ -78,7 +78,7 @@ of work, the agent:
 3. Stops. The human commits and pushes whenever they're ready:
 
 ```bash
-make git       # commit all staged changes (one commit per pending row) then push
+make git       # commit all staged changes (one commit per staging window; all pending run_ids ride its message) then push
 make git.dry   # preview what would be committed (read-only)
 ```
 
