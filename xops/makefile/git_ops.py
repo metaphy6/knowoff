@@ -2,8 +2,13 @@
 
 Reads docs/tracking/tracking.csv, finds rows with action=commit, status=completed,
 commit_sha=pending whose run_id does NOT already appear in any commit
-message, groups them by run_id (one commit per run_id), then either previews
-or commits + pushes.
+message, groups them by run_id, then either previews or commits + pushes.
+
+Git has a single staging window, so one `make git` run produces exactly ONE
+commit carrying the whole staged tree. Every pending run_id contributes its
+summary and `[<run_id>]` trailer to that commit's message. Empty commits are
+never created: with a clean tree the pending rows simply wait and fold into
+the next real commit.
 
 The row's `summary` column is used VERBATIM as the commit subject. A
 `[<run_id>]` trailer is appended so repeat invocations are idempotent.
@@ -114,6 +119,37 @@ def _build_commit_message(group: List[dict]) -> str:
     return subject + "\n" + "\n".join(body_lines)
 
 
+def _build_batch_commit_message(groups: List[List[dict]]) -> str:
+    """One commit message for the whole staging window.
+
+    A single group keeps the classic per-run message. Multiple groups share
+    the batch's one real commit: first group's summary is the subject, the
+    others are listed in the body, and every group's `[<run_id>]` trailer is
+    included so each row stays idempotent on re-run.
+    """
+    if len(groups) == 1:
+        return _build_commit_message(groups[0])
+    subject = groups[0][0]["summary"]
+    body_lines: List[str] = ["", "Also includes:"]
+    for group in groups[1:]:
+        body_lines.append(f"  - {group[0]['summary']}")
+    refs: List[str] = []
+    for group in groups:
+        for ref in group[0]["refs"].split(";"):
+            ref = ref.strip()
+            if ref and ref not in refs:
+                refs.append(ref)
+    if refs:
+        body_lines.append("")
+        body_lines.append("Refs:")
+        for ref in refs:
+            body_lines.append(f"  - {ref}")
+    body_lines.append("")
+    for group in groups:
+        body_lines.append(f"[{group[0]['run_id']}]")
+    return subject + "\n" + "\n".join(body_lines)
+
+
 def _working_tree_dirty() -> bool:
     return bool(out(["git", "status", "--porcelain"], check=False).strip())
 
@@ -162,25 +198,28 @@ def cmd_dry(_args: List[str]) -> None:
         return
     committed = _already_committed_run_ids()
     groups = _group_by_run_id(rows)
+    new_groups = [g for g in groups if g[0]["run_id"] not in committed]
     info(f"found {len(rows)} pending row(s) in {len(groups)} run_id group(s)")
     for group in groups:
         rid = group[0]["run_id"]
         if rid in committed:
             dim(f"  ⏭  skipping {rid} — already in git log")
             continue
-        msg = _build_commit_message(group)
-        print()
-        print(f"{BOLD}── would commit: [{rid}] ──{RESET}", file=sys.stderr)
-        for line in msg.splitlines():
-            print(f"    {line}", file=sys.stderr)
         if not is_conventional_commit(group[0]["summary"]):
             warn(f"  ⚠️  subject is NOT Conventional Commits — `make git` will refuse: {group[0]['summary']!r}")
+    if new_groups:
+        msg = _build_batch_commit_message(new_groups)
+        rids = ", ".join(g[0]["run_id"] for g in new_groups)
+        print()
+        print(f"{BOLD}── would commit (one commit for the batch): [{rids}] ──{RESET}", file=sys.stderr)
+        for line in msg.splitlines():
+            print(f"    {line}", file=sys.stderr)
     print()
     if _working_tree_dirty():
         info("staged + unstaged changes (git status --short):")
         run(["git", "status", "--short"])
     else:
-        warn("working tree clean — `make git` would create empty commit(s)")
+        warn("working tree clean — nothing to commit; pending rows fold into the next real commit")
 
 
 def cmd_push(_args: List[str]) -> None:
@@ -220,20 +259,25 @@ def cmd_push(_args: List[str]) -> None:
         err("  fix the row's summary (append a corrective row) and re-run.")
         sys.exit(65)
 
+    # Empty commits are never created. With a clean tree the pending rows
+    # stay pending and fold into the next real commit's message.
+    if not _working_tree_dirty():
+        warn("working tree clean — nothing to commit; pending rows will fold into the next real commit")
+        if _push_needed():
+            _push()
+            ok("pushed")
+        return
+
     # Stage everything first (humans may have left things unstaged).
     run(["git", "add", "-A"])
 
-    for i, group in enumerate(new_groups):
-        rid = group[0]["run_id"]
-        msg = _build_commit_message(group)
-        info(f"committing [{rid}] ({i + 1}/{len(new_groups)})")
-        # First group consumes the staged tree; subsequent groups become
-        # --allow-empty so multiple run_ids can share one staging window.
-        cmd = ["git", "commit", "-m", msg]
-        if i > 0:
-            cmd.insert(2, "--allow-empty")
-        run(cmd)
-        ok(f"committed [{rid}]")
+    # One staging window ⇒ one commit. Every pending run_id's summary and
+    # [run_id] trailer rides in that commit's message.
+    msg = _build_batch_commit_message(new_groups)
+    rids = ", ".join(g[0]["run_id"] for g in new_groups)
+    info(f"committing [{rids}] (1 commit for {len(new_groups)} run_id group(s))")
+    run(["git", "commit", "-m", msg])
+    ok(f"committed [{rids}]")
 
     _push()
     ok("pushed")
