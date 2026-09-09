@@ -317,3 +317,5 @@ ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha
 2026-09-09T10:47:33Z,run-20260909104733-160993,copilot,game,commit,completed,fix(game): let bots recover after Revote,server/internal/bots/manager.go;server/internal/bots/manager_test.go;server/internal/game/match.go;CHANGELOG.md,pending
 2026-09-09T19:28:48Z,run-20260909192849-143135,copilot,mcp,commit,completed,chore(mcp): re-expose full codegraph MCP tool surface via CODEGRAPH_MCP_TOOLS,".vscode/mcp.json,.mcp.json",pending
 2026-09-09T19:44:07Z,run-20260909194407-165094,copilot,tooling,commit,completed,fix(make): never create empty commits; one real commit per staging window,xops/makefile/git_ops.py;xops/makefile/test_git_ops.py;docs/tracking/tracking.schema.md;AGENTS.md;CHANGELOG.md,pending
+2026-09-09T21:04:25Z,run-20260909210425-1179212,copilot,devops,commit,completed,chore(vscode): drop deprecated chat customization location settings,,pending
+2026-09-09T21:07:29Z,run-20260909210729-1184710,copilot,devops,commit,completed,fix(vscode): replace mcp.json $schema/$comment with JSONC comments,,pending
