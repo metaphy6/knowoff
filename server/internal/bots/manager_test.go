@@ -299,6 +299,68 @@ func TestBotActor_UsesRevoteDuringBallot(t *testing.T) {
 	})
 }
 
+func TestBotActorsRevoteAndRecastOnFreshBallot(t *testing.T) {
+	m := newTestMatch(t, 1)
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
+
+	for range m.ActiveSeats() {
+		seat := m.CurrentTurnSeat()
+		card := m.PlayerHand(seat).Cards[0]
+		if err := m.HandleIntent(seat, transport.NewIntent(
+			transport.IntentPlayCard, map[string]any{"card_id": card},
+		)); err != nil {
+			t.Fatalf("play card: %v", err)
+		}
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseDiscussion })
+	for _, s := range m.ActiveSeats() {
+		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
+	}
+	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhaseKnowoff })
+
+	active := m.ActiveSeats()
+	revoter := -1
+	for _, seat := range active {
+		if m.PlayerRole(seat) == game.RoleNower {
+			revoter = seat
+			break
+		}
+	}
+	if revoter < 0 {
+		t.Fatal("test match has no Nower")
+	}
+	other := active[0]
+	if other == revoter {
+		other = active[1]
+	}
+	m.SetSpecialty(revoter, game.SpecialtyRevote)
+	room := &fakeRoom{id: "room-revote-reset", m: m}
+	revoterActor := NewBotActor(room, revoter, rand.New(rand.NewSource(1)), slog.Default(), 0, 0)
+	otherActor := NewBotActor(room, other, rand.New(rand.NewSource(2)), slog.Default(), 0, 0)
+
+	revoterActor.act(m)
+	revoterActor.act(m)
+	otherActor.act(m)
+	otherActor.act(m)
+	if got := m.BallotVersion(); got != 1 {
+		t.Fatalf("initial ballot version = %d, want 1", got)
+	}
+
+	revoterActor.act(m)
+	revoterActor.act(m)
+	if got := m.BallotVersion(); got != 2 {
+		t.Fatalf("revote ballot version = %d, want 2", got)
+	}
+	otherActor.act(m)
+	if otherActor.acted {
+		t.Fatal("other bot should need a fresh vote after Revote")
+	}
+	otherActor.act(m)
+	if !otherActor.voted {
+		t.Fatal("other bot should recast on the reopened ballot")
+	}
+}
+
 func TestBotActor_VotesInKnowoff(t *testing.T) {
 	m := newTestMatch(t, 1)
 	waitFor(t, 2*time.Second, func() bool { return m.Phase() == game.PhasePlay })
