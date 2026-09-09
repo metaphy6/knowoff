@@ -51,6 +51,8 @@ class _QueuedAnnouncement {
 class RoundScreen extends ConsumerStatefulWidget {
   const RoundScreen({super.key});
 
+  static const Duration announcementGap = Duration(seconds: 2);
+
   @override
   ConsumerState<RoundScreen> createState() => _RoundScreenState();
 }
@@ -75,7 +77,6 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
   /// through this one-at-a-time queue with a fixed gap between them —
   /// otherwise back-to-back server events replace one banner with the next
   /// before anyone can read it.
-  static const Duration _announcementGap = Duration(milliseconds: 500);
   final List<_QueuedAnnouncement> _announcementQueue = <_QueuedAnnouncement>[];
   _QueuedAnnouncement? _activeAnnouncement;
   Timer? _announcementTimer;
@@ -123,7 +124,7 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
     final next = _announcementQueue.removeAt(0);
     _activeAnnouncement = next;
     _announcementTimer?.cancel();
-    _announcementTimer = Timer(next.duration + _announcementGap, () {
+    _announcementTimer = Timer(next.duration + RoundScreen.announcementGap, () {
       if (!mounted) return;
       setState(() => _activeAnnouncement = null);
       _pumpAnnouncementQueue();
@@ -178,6 +179,9 @@ class _RoundScreenState extends ConsumerState<RoundScreen> {
         // A Reveal use is only worth a static log line here — the actual
         // announcement is the dedicated (centered) Hand Reveal banner below.
         _roundLog.add('$name used ${specialtyLabel(l10n, specialty)}');
+      } else if (specialty == 'shuffle') {
+        // Shuffle is intentionally anonymous: naming its user reveals a
+        // Donower. The shuffle event supplies the generic log entry.
       } else {
         _roundLog.add('$name used ${specialtyLabel(l10n, specialty)}');
         _queueAnnouncement(

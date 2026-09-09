@@ -370,6 +370,14 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     expect(find.byType(RoundLogPanel), findsOneWidget);
+    final logTitle = tester.widget<Text>(find.text('Logs'));
+    expect(logTitle.style?.fontWeight, FontWeight.bold);
+    expect(logTitle.style?.fontSize, greaterThan(14));
+    final logEntry = tester.widget<Text>(find.descendant(
+      of: find.byType(RoundLogPanel),
+      matching: find.text('Beta drew 2 cards'),
+    ));
+    expect(logEntry.style?.fontWeight, FontWeight.bold);
     expect(
       find.descendant(
         of: find.byType(RoundLogPanel),
@@ -379,8 +387,31 @@ void main() {
     );
   });
 
+  testWidgets('RoundLogPanel scrolls through all entries', (tester) async {
+    final entries = List<String>.generate(8, (index) => 'Action $index');
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(body: RoundLogPanel(entries: entries)),
+      ),
+    );
+
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.text('Action 0'), findsOneWidget);
+    expect(find.text('Action 7'), findsOneWidget);
+  });
+
+  test('top-down announcements leave a two-second gap', () {
+    expect(RoundScreen.announcementGap, const Duration(seconds: 2));
+  });
+
   testWidgets('RoundScreen announces an anonymous Shuffle', (tester) async {
-    final session = _sampleSession().copyWith(shuffleAnnouncementId: 1);
+    final session = _sampleSession().copyWith(
+      shuffleAnnouncementId: 1,
+      specialtyAnnouncementSeat: 1,
+      specialtyAnnouncement: 'shuffle',
+    );
     await tester.pumpWidget(_wrapWithSession(const RoundScreen(), session));
     await tester.pump();
 
@@ -399,6 +430,13 @@ void main() {
         findsNothing,
       );
     }
+    expect(
+      find.descendant(
+        of: find.byType(RoundLogPanel),
+        matching: find.textContaining('used Shuffle'),
+      ),
+      findsNothing,
+    );
   });
 
   testWidgets(
