@@ -70,6 +70,7 @@ class ApiClient {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('api error ${res.statusCode}: ${res.body}');
     }
+    if (res.statusCode == 204 || res.body.trim().isEmpty) return {};
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -101,17 +102,16 @@ class ApiClient {
 
   Future<Map<String, dynamic>> getWallet() => _get('/api/economy/wallet');
 
-  Future<Map<String, dynamic>> getStoreCatalog() =>
-      _get('/api/economy/catalog');
+  Future<Map<String, dynamic>> getStoreCatalog() => _get('/api/economy/store');
 
   Future<Map<String, dynamic>> convertPoints(int points) =>
       _postJson('/api/economy/convert', {'points': points});
 
   Future<void> purchasePlayPass(String type) =>
-      _post('/api/economy/playpass', {'type': type});
+      _post('/api/economy/purchase/playpass', {'type': type});
 
   Future<void> purchaseUnlock(String type, {String value = ''}) =>
-      _post('/api/economy/unlock', {'type': type, 'value': value});
+      _post('/api/economy/purchase/unlock', {'type': type, 'value': value});
 
   // ---- Notices -----------------------------------------------------------
 

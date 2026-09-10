@@ -7,7 +7,6 @@ import '../../core/logging/app_logger.dart';
 import '../../core/network/game_transport.dart';
 import '../../data/models/game_state_dto.dart';
 import '../../domain/entities/game_session.dart';
-import '../widgets/rematch_overlay.dart' show rematchOverlayVisible;
 
 /// Provides the live [GameSession] state for the current match.
 final gameSessionProvider =
@@ -32,6 +31,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   final GameTransport _transport;
   StreamSubscription<Map<String, dynamic>>? _subscription;
   StreamSubscription<ConnectionState>? _connectionSubscription;
+  Timer? _revealedHandExpiry;
   final List<Map<String, dynamic>> _bufferedMessages = [];
   String? _sessionToken;
   bool _rejoinPending = false;
@@ -79,6 +79,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   void restart() => _restart();
 
   void _restart({int? quickPlaySize}) {
+    _revealedHandExpiry?.cancel();
     _bufferedMessages.clear();
     _pendingRequests.clear();
     _sessionToken = null;
@@ -200,6 +201,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       case 'hand_reveal_viewed':
         final targetSeat = payload['target_seat'] as int?;
         if (targetSeat != null) {
+          _revealedHandExpiry?.cancel();
           state = state.copyWith(
             handRevealViewed: true,
             revealedHand: RevealedHand(
@@ -209,6 +211,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
               viewSeconds: payload['view_seconds'] as int? ?? 0,
               specialty: payload['specialty_held'] as String?,
             ),
+          );
+          // The viewing window belongs to session state, even without a UI.
+          _revealedHandExpiry = Timer(
+            Duration(seconds: payload['view_seconds'] as int? ?? 0),
+            dismissRevealedHand,
           );
         }
         break;
@@ -451,10 +458,8 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
     if (phase != 'prefetch' && phase != 'role_reveal') return;
     if (!state.isOver) return;
 
+    _revealedHandExpiry?.cancel();
     _bufferedMessages.clear();
-    // A fresh match opens its own Play Again window when it finishes; drop
-    // any minimized state left over from the match that just ended.
-    rematchOverlayVisible.value = true;
     final dto = state.dto.copyWith(
       phase: phase,
       // Match-ended markers.
@@ -463,6 +468,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       matchPoints: 0,
       chatEvents: const [],
       liveBallots: const {},
+      runoffCandidates: const [],
       readySeats: const [],
       voteTarget: -1,
       // Round-scoped leftovers the fresh round/phase events will re-fill,
@@ -618,6 +624,8 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       readySeats: const [],
       discussionReady: false,
       clearRematchChoices: true,
+      runoffCandidates:
+          phase == 'runoff' ? intList(payload['candidates']) : const [],
     );
     if (opensBallot) {
       dto = dto.copyWith(
@@ -643,6 +651,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// Clear them after merging the next round event so an omitted or stale
   /// `plays` field cannot leave the new hand permanently disabled.
   void _resetRoundHandInteraction() {
+    _revealedHandExpiry?.cancel();
     state = state.copyWith(
       dto: state.dto.copyWith(plays: const {}),
       moveLocked: false,
@@ -711,6 +720,9 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
       plays: payload.containsKey('plays')
           ? cardMap(payload['plays'])
           : current.plays,
+      runoffCandidates: payload.containsKey('candidates')
+          ? intList(payload['candidates'])
+          : current.runoffCandidates,
       discussionReady:
           payload['discussion_ready'] as bool? ?? current.discussionReady,
       resultReady: payload['result_ready'] as bool? ?? current.resultReady,
@@ -844,6 +856,10 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   Future<void> joinRoom(String code) async => _send('join_room', {
         'code': code,
         'access_token': await _freshAccessToken(),
+        if (state.devForcedRole != null) ...{
+          'dev': true,
+          'dev_role': state.devForcedRole,
+        },
       });
 
   Future<void> playCard(String cardId) {
@@ -872,7 +888,11 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   /// value back to random. Remembered in session state so a pick made before
   /// the socket or room was ready re-fires on join. Rejected in prod.
   Future<void> devForceRole(String role) {
-    state = state.copyWith(devForcedRole: role.isEmpty ? null : role);
+    state =
+        state.copyWith(devForcedRole: role, clearDevForcedRole: role.isEmpty);
+    // The first websocket frame must be a queue/join intent. A menu choice
+    // travels in that handshake, before binding can auto-start the match.
+    if (state.seat < 0) return Future<void>.value();
     return _send('dev_force_role', {'role': role});
   }
 
@@ -885,6 +905,8 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
   }
 
   void dismissRevealedHand() {
+    _revealedHandExpiry?.cancel();
+    _revealedHandExpiry = null;
     state = state.copyWith(clearRevealedHand: true);
   }
 
@@ -930,6 +952,7 @@ class GameSessionNotifier extends StateNotifier<GameSession> {
 
   @override
   void dispose() {
+    _revealedHandExpiry?.cancel();
     _subscription?.cancel();
     _connectionSubscription?.cancel();
     _transport.close();

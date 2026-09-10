@@ -193,6 +193,7 @@ class GameStateDto {
     this.revealLockoutSeconds = 0,
     this.chatEvents = const [],
     this.liveBallots = const {},
+    this.runoffCandidates = const [],
     this.readySeats = const [],
     this.rematchChoices = const {},
   });
@@ -235,6 +236,9 @@ class GameStateDto {
   /// Knowoff/runoff window is open (Rules §4: the open ballot). Cleared the
   /// moment a fresh ballot starts.
   final Map<String, int> liveBallots;
+
+  /// Eligible seats from the server's runoff candidate announcement.
+  final List<int> runoffCandidates;
   final List<int> readySeats;
 
   /// seat -> "same_table" | "new_table" | "vacated", accumulated from
@@ -271,6 +275,7 @@ class GameStateDto {
       matchPoints: json['match_points'] as int? ?? 0,
       roomCode: json['room_code'] as String? ?? '',
       revealLockoutSeconds: json['reveal_lockout_seconds'] as int? ?? 0,
+      runoffCandidates: intList(json['candidates']),
     );
   }
 
@@ -301,6 +306,7 @@ class GameStateDto {
     int? revealLockoutSeconds,
     List<ChatEventDto>? chatEvents,
     Map<String, int>? liveBallots,
+    List<int>? runoffCandidates,
     List<int>? readySeats,
     Map<int, String>? rematchChoices,
     bool clearResult = false,
@@ -340,6 +346,7 @@ class GameStateDto {
       chatEvents: chatEvents ?? this.chatEvents,
       liveBallots:
           clearLiveBallots ? const {} : (liveBallots ?? this.liveBallots),
+      runoffCandidates: runoffCandidates ?? this.runoffCandidates,
       readySeats: readySeats ?? this.readySeats,
       rematchChoices: clearRematchChoices
           ? const {}

@@ -1,72 +1,63 @@
-# 🧪 Client Dev Tools — freeze & restart
+# Client developer tools
 
-Two developer-only controls for inspecting the current screen/UI without
-fighting the game clock: a **freeze** toggle and a **restart** button. Both
-live in [`DevToolsOverlay`](../../client/lib/presentation/widgets/dev_tools_overlay.dart)
-as small floating buttons in the bottom-right corner of every screen.
+Open **Dev tools** in the page header to access the five developer controls.
+Phones use the sliders icon with the same accessible label; tablet and desktop
+headers can show the full label. The controls open a bounded, scrollable sheet,
+so they never cover cards while you play. Close the sheet to inspect the game.
 
-## Turning them on
+The entry point is [`DevToolsButton`](../../client/lib/presentation/widgets/dev_tools_panel.dart),
+shared by the page shell. All labels use the localization catalogs, including
+the expanded `en_XA` pseudo-locale.
 
-Nothing to configure — they are gated by Flutter's `kDebugMode` and appear
-automatically whenever the client runs in a debug build:
+## Availability
 
-- `flutter run` (any device/target, default debug mode)
-- The `client-web` Compose service (dev image runs `flutter run`/debug build)
-- Any `flutter test` widget test that pumps `DevToolsOverlay` directly
+These controls appear only when Flutter's `kDebugMode` is true:
 
-Two small FABs appear stacked in the bottom-right corner:
+- `flutter run` uses debug mode by default, including the web-server target.
+- `flutter run --profile`, `flutter run --release`, and release builds omit
+  the entry point and sheet. A release preview intentionally has no dev tools.
+- Role overrides and specialty grants are also rejected by the Go server
+  when `app.env` is `prod`; a debug client does not bypass that protection.
 
-| Icon | Button | Action |
-|---|---|---|
-| ⏸ / ▶ | Freeze | Toggles game-flow freeze (see below). |
-| ⟲ | Restart | Resets the local session and pops back to the main menu. |
+## Controls
 
-## Turning them off
+| Control | Behavior |
+|---|---|
+| Freeze / Resume client | Buffers incoming WebSocket events and holds the visible game countdown. Resume replays the buffered events in order and catches the clock up to the server deadline. |
+| Restart to menu | Discards the local match, frozen state and queued events, opens a fresh WebSocket connection, and returns to the first route. The next queue/join is a valid first-frame handshake. |
+| Echo pokes to self | Lets the sender preview the same finite nudge used for an incoming poke. The ordinary poke request, eligible targets, and per-phase limit remain in force. |
+| Grant a specialty | Grants Pass, Reveal a Hand, Free Card, Shuffle, or Revote, replacing the specialty currently held. It **does not play it automatically**; use the normal hand controls afterward. Available to an active, non-eliminated seat. |
+| Next-match role | Select Nower, Donower, or Random. Choose before joining to apply it to the first match, or while playing to apply it to the next rematch. The choice survives Restart; Random clears it locally and on the joined room. |
 
-They are **compiled out of release builds automatically** — `kDebugMode` is
-`false` in `flutter build`/`flutter run --release`, so `DevToolsOverlay`
-renders `SizedBox.shrink()` and the FABs never appear. No flag or config
-change is required for production; there is nothing to remember to strip
-before shipping.
+Freeze is **client-only**: the authoritative server and other players keep
+playing. This is a screen inspection tool, not a multiplayer pause. Restart
+also leaves other players' match running; it reconnects this client.
 
-To hide them locally while still running a debug build (e.g. to take a
-clean screenshot), remove `const DevToolsOverlay()` from the `Stack` in
-[`client/lib/main.dart`](../../client/lib/main.dart)'s `MaterialApp.builder`
-— or just don't tap them; an idle overlay button doesn't affect rendering.
+Specialty protocol IDs remain `pass`, `reveal`, `one_more_free_card`, `shuffle`,
+and `revote`. Grants still pass through the server's seat, connection, and
+environment validation. Normal specialty usage retains all role, phase,
+target, and discard rules.
 
-## What "freeze" does
+A pre-join role preference stays local until the queue or room-join handshake,
+which carries `dev: true` and `dev_role`. The server validates these fields
+**before binding the seat**, because the last local-room binding can start the
+first match immediately. It preserves configured team sizes when applying a
+role override. Picking Random prevents the preference being resent after a
+restart or later join.
 
-Tapping ⏸ calls `GameSessionNotifier.setFrozen(true)`
-([`game_session_provider.dart`](../../client/lib/presentation/state/game_session_provider.dart)):
+## Motion and inspection
 
-- Every further WebSocket event from the server is **buffered** instead of
-  applied, so `GameSession`/`GameStateDto` stops changing.
-- The per-second countdown tickers in `RoundScreen`, `DiscussionScreen`, and
-  `KnowoffScreen` stop calling `setState`, so the on-screen timer visually
-  stops too.
+The countdown owns its timer, so its one-second updates never rebuild the
+hand. Freeze cancels that timer until Resume. A poke uses one 240 ms transform
+on a separately painted child and a 900 ms labeled badge; reduced motion keeps
+the badge and skips displacement. Neither feedback path changes layout or
+leaves an animation loop running.
 
-Tapping ▶ (`setFrozen(false)`) replays the buffered events **in order**, so
-the session catches up to wherever the server actually is.
-
-**Scope:** this is a **client-only** freeze. It does not pause the
-authoritative match on the server, and it does not affect other players —
-their game keeps running underneath. It's for a single developer to hold
-still a screen they're already looking at, not for pausing a live match for
-everyone.
-
-## What "restart" does
-
-Tapping ⟲ calls `GameSessionNotifier.restart()`, then pops the navigation
-stack back to the first route (`rootNavigatorKey.currentState!.popUntil((r)
-=> r.isFirst)`, see
-[`root_navigator_key.dart`](../../client/lib/core/navigation/root_navigator_key.dart)):
-
-- Clears any buffered/frozen state.
-- Resets the local `GameSession` back to its pre-match defaults (same shape
-  as before ever joining a match).
-- Navigates back to `MainMenuScreen`.
-
-**Scope:** also **client-only** — it does not tell the server you left the
-match, close the WebSocket, or end the match for other players. It's the
-same "go back to the menu" the real Verdict screen does at the end of a
-match, just available from any phase for a fast reset during UI/UX work.
+Regression coverage lives in
+[`dev_tools_panel_test.dart`](../../client/test/presentation/dev_tools_panel_test.dart),
+[`game_session_provider_test.dart`](../../client/test/presentation/game_session_provider_test.dart),
+and the server's
+[`handler_test.go`](../../server/internal/handler/handler_test.go).
+It covers all five controls, grant-without-autoplay, role clearing and both
+handshakes, the final local-room seat's first-match role, production rejection,
+freeze/resume, small screens with expanded text, and finite/reduced motion.

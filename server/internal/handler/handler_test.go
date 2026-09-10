@@ -340,6 +340,99 @@ func TestQueueIntent_DevRoleIsCapturedBeforeMatchmaking(t *testing.T) {
 	}
 }
 
+func TestJoinIntent_DevRoleValidationBeforeSeatClaim(t *testing.T) {
+	for _, tc := range []struct {
+		name, environment, role, wantError, wantPending string
+	}{
+		{"captures local role", "dev", "donower", "room not found", "donower"},
+		{"rejects production", "prod", "donower", "dev mode unavailable", ""},
+		{"rejects unknown role", "dev", "admin", "unknown role", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.Config{}
+			cfg.App.Env = tc.environment
+			mgr := lobby.NewManager(lobby.Deps{
+				Config: cfg,
+				Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+				Pack:   &media.Pack{},
+			})
+			s := &ConnectionState{Lobby: mgr, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+			err := s.handleJoinIntent(&transport.Envelope{
+				Kind:    transport.IntentJoinRoom,
+				Payload: map[string]any{"code": "ABSENT", "dev": true, "dev_role": tc.role},
+			})
+			if err == nil || !strings.Contains(err.Error(), tc.wantError) {
+				t.Fatalf("want %q, got %v", tc.wantError, err)
+			}
+			if s.pendingRoleOverride != tc.wantPending {
+				t.Fatalf("pending role = %q, want %q", s.pendingRoleOverride, tc.wantPending)
+			}
+		})
+	}
+}
+
+// Binding the last local-room socket can start the match. Its selected role
+// must already belong to the room when that callback runs.
+func TestJoinIntent_DevRoleAppliedBeforeLastSeatStartsMatch(t *testing.T) {
+	mgr := lobby.NewManager(lobby.Deps{
+		Config: &config.Config{},
+		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Pack:   &media.Pack{},
+	})
+	room, err := mgr.CreateRoom(4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan string, 1)
+	room.SetOnStart(func(r *lobby.Room) error {
+		started <- r.DevRoleOverride(3)
+		return nil
+	})
+	for i := 0; i < 3; i++ {
+		seat, _, ok := room.ClaimSeat("", false)
+		if !ok {
+			t.Fatal("claim earlier seat")
+		}
+		room.SetConnection(seat, &websocket.Conn{})
+	}
+	done := make(chan error, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			done <- err
+			return
+		}
+		defer conn.Close()
+		s := &ConnectionState{Lobby: mgr, Conn: conn, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
+		done <- s.handleJoinIntent(&transport.Envelope{
+			Kind:    transport.IntentJoinRoom,
+			Payload: map[string]any{"code": room.Code, "dev": true, "dev_role": "donower"},
+		})
+	}))
+	defer srv.Close()
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("join timed out")
+	}
+	select {
+	case got := <-started:
+		if got != "donower" {
+			t.Fatalf("role at match start = %q, want donower", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("last seat did not start match")
+	}
+}
+
 func TestRoomJoinHandler_JSON(t *testing.T) {
 	mgr := testLobby(t)
 	r, _ := mgr.CreateRoom(4)

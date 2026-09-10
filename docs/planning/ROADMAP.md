@@ -32,6 +32,182 @@ tracking rows, then stage. Emoji references (🏛️ ⚙️ 🎮 💰 🧑‍�
 
 ### 📊 Status snapshot
 
+**Frontend reset (2026-09-10):** the owner requested removal of the existing
+Flutter UI. Historical UI completions below are superseded by this reset:
+screens, widgets, design-system implementation, media rendering and their
+UI-only tests were removed. The subsequent reconstruction below restores the
+player interface around the retained services. Localization,
+state, API/authentication, transport, media services and extracted nonvisual
+action rules remain; backend/admin/portal implementations remain intact.
+The owner subsequently requested a complete Flutter UI recreation using the
+existing blueprint, roadmap and design docs: creative, funny, dramatic and
+vibrant, with particular care to avoid animation jank. The design matrix is
+the reconstruction contract. Prior UI proof gates are not evidence that the
+current client is playable; the replacement checklist below tracks fresh proof.
+
+#### Device experiences and developer tools — 2026-09-10
+
+**Goal.** Restore all five historical debug controls and give phones, tablets
+and desktop windows distinct navigation and match compositions in one Flutter
+codebase. The existing brand and server-authoritative gameplay remain fixed.
+
+**Scope and non-goals.** Presentation widgets/screens, localization, UI tests,
+and narrow developer-role state/join fixes with regressions. No new game rules,
+economy changes, OS installs, or backend feature invention. Historical CLI seed
+administration and the future Media Workbench are separate tools.
+
+**Files.** Shared device policy/page shell; Home/account screens; GameScreen;
+debug tools and countdown widgets; GameSession/notifier dev role handling;
+matching tests; CLIENT_DEV_TOOLS.md, UI_REDESIGN_PLAYBOOK.md and CHANGELOG.md.
+
+**Checklist and proof.**
+- [x] Restore debug-only freeze/resume, restart, poke echo, grant-only specialty
+  picker and persistent next-match role picker. Test countdown pause, finite
+  reduced-motion echo, exact grants, release gate and Random clearing.
+- [x] Carry preselected roles through valid first join messages for Quick Play
+  and local rooms; test no pre-join dev intent and preserved server prod gates.
+- [x] Add one window-size policy and device navigation: compact phone play hub
+  and bottom destinations; tablet rail/two-part hub; desktop persistent menu.
+  Test sizes, navigation, forms and server-backed account actions.
+- [x] Compose phone Hand/Table/People workspaces, tablet split desk and desktop
+  three-pane match. Test card selection/rectangles through bot updates and
+  discussion, retained workspace/draft on resize, table attribution, privacy,
+  phase actions, safe areas, large text and reduced motion.
+- [x] Run full repository gate, release build, independent review and batched
+  browser inspection across small/large phone, tablet and desktop. Record actual
+  runtime/performance evidence and native-device limits, then track and stage.
+
+**Risks.** Shared state must stay outside device compositions; hidden panes must
+not expose private semantics or run animation tickers. Keep stable card IDs and
+reserved hint/action dimensions. Use bounded independent scrolling for dense
+boards and allow readable scrolling at large text sizes. ADR-002's single
+Flutter UI codebase now shares behavior across distinct visual compositions.
+
+**Verification.** All 288 Flutter tests, the Python/Go checks, static analysis
+and the release build passed after review fixes. Logs:
+`/tmp/agent-runs/device-delivery-gate--20260910T110202Z-561609.log`
+and `/tmp/agent-runs/device-delivery-build--20260910T110203Z-561761.log`.
+Independent review findings were fixed with regressions: semantic workspace
+activation, narrow-tablet card bounds, scrollable phone dialogs, timed-phase
+workspace selection and hidden account focus. The device playbook records
+browser smoke evidence and the inconclusive throttled profile trace; physical
+native/low-end performance remains an explicit validation limit.
+
+#### Flutter UI reconstruction — 2026-09-10
+
+**Goal.** Restore the complete player-facing Flutter experience around the
+preserved services, with a theatrical card-table identity and stable controls.
+
+**Scope.** `client/lib/presentation/{theme,icons,widgets,screens}/`,
+`client/lib/main.dart`, thin media rendering widgets, bundled display-font
+registration, localization catalog additions, and matching UI tests. Preserve
+the existing localization infrastructure, state/action rules, transport,
+authentication and media services with their tests. Narrow integration fixes
+carry existing runoff candidates and correct obsolete store client routes; no
+gameplay or economy rules change. Avatar file selection and QR rendering are
+UI dependencies, and join-route registration is client navigation.
+Backend/Admin/Contributor Portal changes, new gameplay/economy rules, paid-provider integrations, and
+generated raster batches are outside this reconstruction.
+
+**Design direction.** An oversized Baloo 2 wordmark, asymmetric cream/lavender
+panels, ink outlines and hard shadows, highlighter phrases, sparse doodles,
+and localized comic suspense. Quick Play is the primary call to action.
+Personality belongs in headings and decorative cards; forms, Nown, timers,
+ballots and their hit targets remain aligned and readable. Use the eleven
+existing palette tokens and their locked semantics (ADRs 007–010).
+
+**Checklist and acceptance tests.** Each item is one independently reviewable
+slice; check it only when its named assertions pass.
+
+- [x] Restore shared tokens, typography, canvas, surfaces, buttons, status chips,
+  doodles and page layout. Tests pin palette/font/shadows, 48 dp touch targets,
+  keyboard focus/activation, press/hover states, and icon-plus-label status.
+- [x] Restore MainMenu, Queue and Lobby: 4/6-player Quick Play, local room
+  creation and 6-character join, shareable room code/deep link, visible bot and
+  connection labels, cancel/leave, and navigation to account/community pages.
+  Tests assert the existing API/notifier calls and server-driven transitions.
+- [x] Restore private role hold/release, role-scoped Nown/identical loading
+  placeholder, hand selection/lock/play, draw pile with the blueprint draw penalty
+  or FREE, and attributed persistent evidence. Tests cover pointer cancellation,
+  stale-media replacement, no Nown for Donower/eliminated seats, and actions
+  staying disabled when prohibited by preserved state rules.
+- [x] Restore Pass, Reveal target/view expiry, One More Free Card, anonymous
+  Shuffle announcement, and open-ballot Revote. Tests prove correct intents,
+  lockout/role/phase restrictions, free draw before normal play, and private
+  revealed-hand closure using the preserved expiry state.
+- [x] Restore Discussion, live Knowoff/runoff and result: server-masked/canned
+  Quick Chat, Ready, Poke, live attributed vote changes, result poster, and
+  eliminated spectator state. Tests prove no self/eliminated vote, mutable
+  targets until resolution, Ready independent of voting, no result-window
+  Revote, and no spectator chat/play/vote/poke controls.
+- [x] Restore Verdict: server team outcome, retained owner match-points field,
+  all Nowns after the match, and same/new-table replay. Tests prove no public
+  per-match Noin or live private balance and verify both replay intents without
+  inventing rewards or winning outcomes. The preserved DTO has no public
+  per-seat/session scoreboard or private Noin settlement fields; those broader
+  roadmap integrations remain explicitly unavailable.
+- [x] Restore Profile/public profiles, Leaderboard, nickname/avatar controls,
+  reports and consented-context Feedback using `ApiClient`. Tests cover
+  owner-only Non-Converted Points, top/own-rank rendering, mutation success,
+  loading/empty/retry states, and safe localized errors.
+- [x] Restore Store and NoticeInbox/menu banners using `StoreActions` and
+  `ApiClient`: server-priced passes/unlocks/conversion, catalog availability,
+  maintenance timing and locale fallback. Tests prove server values
+  drive prices/balances, irreversible conversion is explained before submit,
+  passes never claim ad removal, and unavailable billing never claims success.
+- [x] Restore all new copy through existing localization catalogs and configured
+  locale selection. Sweep every screen at 360×800 and 1440×900, `en`/`en_XA`, and
+  2× text scaling; assert no overflow, clipped actions, zero-height bodies,
+  inaccessible labels, or unreachable primary actions (scrolling is allowed
+  at large text; desktop timed play keeps controls visible); visually inspect
+  release PWA screenshots and exercise launch-locale diacritics.
+- [x] Prove bounded motion: press/hover and decorative entrances settle after
+  one event, repeat rebuilds do not restart effects, disposed/offscreen widgets
+  leave no active tickers, and reduced-motion/disableAnimations produces the
+  static equivalent with identical information. Keep timers in small isolated
+  subtrees, reuse static animation children, and paint expensive media/grid
+  independently. No looping ambient controllers, blur, stacked opacity or
+  full-screen per-frame rebuilds; the single gradient stays on the result
+  reveal. Test these constraints and record profile-mode Round/Knowoff frame
+  timings on the available device, with a 60 Hz target of p95 ≤16.7 ms
+  and all slower samples disclosed;
+  label desktop/emulator evidence honestly if no low-end device is available.
+- [x] Run `python3 xops/test/tests-lints.py`, release Web build, the protocol
+  no-leak tests, and a real local-stack match and restart-recovery smoke. Review the full
+  combined diff and record exact available runtime/performance evidence before
+  the parent appends tracking and stages. New widget tests must first fail
+  against the blank shell; previous removal tests are not replacement proof.
+
+**Fresh verification (2026-09-10).** The final repository gate passed:
+193 Flutter tests, 8 Python tests, all 20 Go test packages, Go formatting/vet,
+Flutter analysis and Dart formatting. It includes retained transport reconnect
+and protocol/privacy tests, plus new interaction, semantics, large-text,
+pseudo-locale and reduced-motion coverage. Local log:
+`/tmp/agent-runs/ui-rebuild-final-gate--20260910T094730Z-274315.log`.
+The release Web build passed and is served by the final preview run:
+`/tmp/agent-runs/ui-delivery-preview--20260910T094044Z-253603.log`.
+
+Live browser proof covered Quick Play, card play, live ballots, both team
+verdicts, replay, a fresh queue after a local server restart, a prefilled app
+join link, and the server-priced store. Phone (360×800) and desktop layouts
+were inspected; final browser error/warning logs were empty. Restart recovery
+was checked from a finished match, not during a live match. Native deep-link
+delivery and native device builds remain unverified. Independent review found
+no remaining P1/P2 issue. The [measured motion report](../guides/UI_REDESIGN_PLAYBOOK.md#2026-09-10-reconstruction-and-measured-motion)
+records desktop p95 totals of 13.2/11.5/2.1 ms for Round/Knowoff/Result,
+with four isolated slower state updates and explicit low-end/mobile limits.
+
+**Interface boundaries and risks.** The existing `GameSessionNotifier`,
+`GameActions`, `GameSession`, `StoreActions`, `ApiClient`, `AuthService`, and
+`MediaEngine` remain authoritative integration points. At planning time,
+`ApiClient` has no Weekly Challenge, OAuth-linking, delete-my-data, or native
+billing methods; `AuthService` supplies anonymous session/refresh only. Those
+blueprint capabilities must not be represented as working client actions
+without an existing verified service. Preserve any established links or
+availability messaging, and record the missing client integrations as follow-up
+gaps rather than inventing endpoints or expanding backend scope. The historical
+playbook's blind-vote advice is superseded by Blueprint Rules §4 and ADR-009.
+
 Update with `python3 xops/makefile/roadmap_ops.py status` (parses the `[ ]` / `[x]` boxes in this
 chapter).
 
@@ -258,7 +434,7 @@ five bots is the daily loop.
 
 **How.** Intents/events per 🌐 (versioned JSON, sequence numbers, ordered
 replay); server-owned phase clock with display-only client timers and
-rejected late intents; blind-simultaneous ballots; per-round randomized
+rejected late intents; open live attributed ballots (ADR-009); per-round randomized
 role-blind turn order with immediate attributed reveals; every rules
 constant read from `tuning.yaml`; failing matches replay exactly from their
 seed; the 🎨 kit (tokens, structure primitives, painters) lands before any
@@ -307,10 +483,10 @@ on Round and Knowoff.
 - [x] Versioned JSON protocol with sequence numbers — the full intent/event set from 🌐 defined once, so the wire format stays stable across phases (later-phase intents like `convert_points` and `report_media` parse and reject cleanly as unavailable until their backends land); version handshake rejecting unknown protocol versions with an explicit error; unknown, malformed, or oversized frames rejected without state change; client-detected sequence gaps trigger a snapshot resync.
 - [x] `tools/gamebot`: N seeded policy bots over the real WebSocket protocol, no server backdoors; a 6-seat dev match crosses every phase in under a minute; external bot connections refused whenever the `bots:` config block is absent — and it never exists in `prod.yaml`; doubles as the Phase 4 load-test engine.
 - [x] Seeded match-replay harness: every match logs its seed + intent script; a replay run reproduces the byte-identical event stream — failing matches replay exactly, and failing seeds are committed as regression fixtures.
-- [x] Phase state machine: role assignment, role-blind constraint dealing, randomized per-round turn order, 15 s turns with immediate attributed reveals (played cards stay on the table all match — the evidence votes are argued over), table-announced penalized pile draws (who, how many), timeout auto-pass + random card loss.
-- [x] Specialties (Rules §5): Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle (Donower-use-only, usable at any point in the round, sweeps the table's plays and restarts the turn order with a time bonus, draw piles untouched) / attributed once-per-match Revote (Nower-use-only, result window) — off-role and duplicate uses rejected (dead cards remain usable as discard fodder); Type A plays cost one extra discard (except Pass); Shuffle re-deals against the current Nown schedule so the dealing guarantee survives.
-- [x] Discussion window (`10 s × players`, Ready fast-forward) with localizable canned Quick Chat plus server-masked free text; English is applied to every message and configured language lists apply from the active client locale. Poke once per target per round (buzz on native, screen shake on the PWA — no vibration API; pokes show who poked whom, no score effect), cap enforced server-side.
-- [x] Knowoff: 20 s blind ballot — one vote each, never for yourself → tie runoff → 15 s result window → elimination + role reveal (these windows always run full time — Ready never shortens them); early-end rule (votes remaining < uncaught Donowers); still-tied runoff = survived voting for Donowers; eliminated-spectator scoping (no Nown, no actions); verdict screen reveals all Nowns to everyone.
+- [x] Phase state machine: role assignment, role-blind constraint dealing, randomized per-round turn order, `timers.play_turn` turns with immediate attributed reveals (played cards stay on the table all match — the evidence votes are argued over), table-announced penalized pile draws (who, how many), timeout auto-pass + random card loss.
+- [x] Specialties (Rules §5): Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle (Donower-use-only, usable at any point in the round, sweeps the table's plays and restarts the turn order with a time bonus, draw piles untouched) / attributed once-per-match Revote (Nower-use-only, open Knowoff ballot or runoff only, never the result window) — off-role and duplicate uses rejected (dead cards remain usable as discard fodder); Reveal and One More Free Card leave the normal hand-card action open, with the free draw spent before that action; Shuffle re-deals against the current Nown schedule so the dealing guarantee survives.
+- [x] Discussion window (`timers.discussion_per_player × players`, Ready fast-forward) with localizable canned Quick Chat plus server-masked free text; English is applied to every message and configured language lists apply from the active client locale. Poke once per target per phase (buzz on native, screen shake on the PWA — no vibration API; pokes show who poked whom, no score effect), cap enforced server-side.
+- [x] Knowoff: open live attributed ballot — never vote for yourself, targets may change until resolution → tied-player runoff → `timers.vote_result_window` result display with elimination + role reveal. Ballot, runoff and result end early only when every connected active seat marks Ready; casting alone does not count as Ready (ADR-009). Early-end rule (votes remaining < uncaught Donowers); still-tied runoff = survived voting for Donowers; eliminated-spectator scoping (no Nown, no actions); verdict screen reveals all Nowns to everyone.
 - [x] Disconnect handling per Rules §7: auto-played seats (turns pass instantly, abstain from votes, count Ready, stay votable), 20 s grace, team forfeits + scored low-population ending; match points per Rules §6 with the zero floor (absent at match end = 0 points; already-earned Noin stays).
 - [x] Design tokens (🎨): the palette as Flutter constants — `canvas #DCC8F7` lavender field with its faint low-contrast grid tile (`CustomPainter`, no raster), `surface #F7F2E9` warm cream for cards and sheets, `#FFFFFF` content wells inside them, `ink #141414` for every border and every glyph (text is never gray-on-gray), `violet #B49AF5` the neutral interactive (buttons, selected tiles, timers, progress fills), `lime #D4F04C` the truth/reward signal (Nower catches, match points, Noin grants), `pink #FF9ED2` the risk/accusation signal (votes, the Knowoff board, Donower reveals); the palette's single permitted gradient `#FFD9EC → #FF9ED2` reserved for the Knowoff reveal header; light theme only at v1 — token values snapshot-tested so silent drift fails CI.
 - [x] Brutalist structure primitives: shared container/button/chip widgets — every container carries `Border.all(width: 3, color: ink)` + the hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`; corner radius 16 for cards and sheets, 12 for buttons, full pill for stat chips; the signature brutalist click — pressing collapses the shadow to zero offset while the control translates onto its own shadow footprint — golden tests per primitive, widget test on the press motion.
@@ -539,4 +715,3 @@ A phase is **done** when:
    where automatable; manual drills (device traces, migration rehearsals,
    store submissions) are recorded as `action=note` tracking rows with
    their evidence.
-

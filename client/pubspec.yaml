@@ -19,6 +19,8 @@ dependencies:
   http: ^1.2.0
   shared_preferences: ^2.2.0
   crypto: ^3.0.3
+  file_selector: 1.0.3
+  qr_flutter: 4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -26,16 +28,11 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 
 flutter:
-  # Utility glyphs (back, close, flag, wifi-off, QR) come from MaterialIcons;
-  # brand glyphs come from presentation/icons/doodles.dart. Release builds
-  # tree-shake the icon font down to the glyphs actually referenced.
   uses-material-design: true
   generate: true
   assets:
     - assets/config.json
   fonts:
-    # Baloo 2 (SIL OFL 1.1) — display face per ADR-008. Variable `wght` axis,
-    # requested via TextStyle.fontVariations in knowoff_typography.dart.
     - family: Baloo2
       fonts:
         - asset: assets/fonts/Baloo2-Variable.ttf

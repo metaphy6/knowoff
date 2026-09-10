@@ -664,21 +664,27 @@
   "@handRevealAnnouncement": {
     "description": "Public Reveal announcement naming the exposed player.",
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "viewRevealedHand": "View {name}'s exposed hand",
   "@viewRevealedHand": {
     "description": "Accessibility label for the one-time Reveal doodle on a seat avatar.",
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "revealedHandTitle": "{name}'s exposed hand",
   "@revealedHandTitle": {
     "description": "Title above a privately opened Reveal hand view.",
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "turnTimeRemaining": "{seconds}s left",
@@ -878,11 +884,11 @@
   "@playCardTapHint": {
     "description": "Banner shown over the hand when a card is selected and it is the player's turn."
   },
-  "playEarlyTapHint": "Tap it again to play early \u2014 it fires the instant your turn starts",
+  "playEarlyTapHint": "Tap it again to play early — it fires the instant your turn starts",
   "@playEarlyTapHint": {
     "description": "Banner shown over the hand when a card is selected before the player's turn."
   },
-  "playEarlyLockedHint": "Locked in \u2014 plays automatically on your turn",
+  "playEarlyLockedHint": "Locked in — plays automatically on your turn",
   "@playEarlyLockedHint": {
     "description": "Banner shown over the hand once an early move is locked in."
   },
@@ -894,7 +900,7 @@
   "@knowoffPrompt": {
     "description": "Ballot heading."
   },
-  "knowoffBlindBallot": "Live ballot. Every vote lands for the whole table to see \u2014 change your mind any time before the window closes.",
+  "knowoffBlindBallot": "Live ballot. Every vote lands for the whole table to see — change your mind any time before the window closes.",
   "@knowoffBlindBallot": {
     "description": "Explains that the ballot is open and revotable."
   },
@@ -906,8 +912,12 @@
   "@voteCastAnnouncement": {
     "description": "Accessibility label for a live vote chip landing on a candidate's row.",
     "placeholders": {
-      "voter": {"type": "String"},
-      "target": {"type": "String"}
+      "voter": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
     }
   },
   "runoffTitle": "Runoff",
@@ -987,11 +997,11 @@
   "@rematchNewTable": {
     "description": "Button: leave for a fresh Quick Play table."
   },
-  "rematchWaitingSameTable": "Waiting for the rest of the table\u2026",
+  "rematchWaitingSameTable": "Waiting for the rest of the table…",
   "@rematchWaitingSameTable": {
     "description": "Status once this seat picked same table, before the rematch resolves."
   },
-  "rematchWaitingNewTable": "Heading to a new table\u2026",
+  "rematchWaitingNewTable": "Heading to a new table…",
   "@rematchWaitingNewTable": {
     "description": "Status once this seat picked a new table."
   },
@@ -999,11 +1009,15 @@
   "@rematchDecidedCount": {
     "description": "How many seats have chosen a rematch option so far.",
     "placeholders": {
-      "decided": {"type": "int"},
-      "total": {"type": "int"}
+      "decided": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
-  "rematchVacantSeatHint": "Waiting for a new player to click Quick Play\u2026",
+  "rematchVacantSeatHint": "Waiting for a new player to click Quick Play…",
   "@rematchVacantSeatHint": {
     "description": "Shown once a seat opened up for Quick Play backfill."
   },
@@ -1030,5 +1044,116 @@
   "loadingLabel": "Loading…",
   "@loadingLabel": {
     "description": "Generic loading label."
-  }
+  },
+  "homeEyebrow": "A VERY SUSPICIOUS PARTY GAME",
+  "homeHeadline": "No clue.\nFull confidence.",
+  "homeIntro": "One shared clue. A table of terrible alibis. Someone is bluffing — beautifully.",
+  "homeStamp": "TRUST ISSUES? GOOD.",
+  "homePlayHeading": "Find your suspects",
+  "homePlayHint": "Pick a table. Bring your best poker face.",
+  "homeLocalHeading": "Same sofa. More suspicion.",
+  "homeLocalHint": "Pass around a room code. Keep your role to yourself.",
+  "homeExhibit": "EXHIBIT A",
+  "homeExampleClue": "A very innocent-looking banana.",
+  "homeExampleAlibi": "“Obviously, my card fits.”",
+  "homeExampleVerdict": "Suspiciously confident.",
+  "homeFooter": "Good friends. Bad explanations. Great evidence.",
+  "homeHowTo": "The short version",
+  "homeRuleOne": "See the clue. Or pretend you do.",
+  "homeRuleTwo": "Play a card. Defend your nonsense.",
+  "homeRuleThree": "Vote out the bluffers. Trust nobody.",
+  "roomCodeHint": "Six characters. Endless accusations.",
+  "roomCodeInvalid": "Enter the six-character room code.",
+  "roomJoinHeading": "You have the code?",
+  "roomHostHeading": "Set the table",
+  "gameCaseFile": "THE CASE OF THE MISSING CLUE",
+  "gameEvidenceHint": "Exhibit A: everyone has an explanation.",
+  "gameHandHint": "Your alibi is in here. Probably.",
+  "gameShuffleHeadline": "PLOT TWIST!",
+  "gameShuffleHint": "The evidence vanished. Act natural.",
+  "gameDrawAnnouncement": "{name} drew {count, plural, =1{1 card} other{{count} cards}}.",
+  "gameChatSend": "Send",
+  "gameConnectionRetrying": "Reconnecting. Your seat is saved.",
+  "gameMatchScored": "Case closed",
+  "gameMatchScoredHint": "The table emptied. Your earned points still count.",
+  "gameMediaUnavailable": "This clue could not load.",
+  "gameDrawFreeHint": "Draw your free card before playing.",
+  "gameRevealExpired": "This hand is hidden again.",
+  "@gameDrawAnnouncement": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceSave": "Save",
+  "serviceSaved": "Saved. Looking suspiciously good.",
+  "serviceRequired": "Give this field something to work with.",
+  "serviceNicknameInvalid": "Choose a shorter nickname; accented characters may take more space.",
+  "serviceBillingUnavailable": "Cash purchases require platform billing, which is not connected in this client. Play Passes and Noin unlocks are available below.",
+  "serviceConvertWarning": "One way only: converted points leave your balance forever. Overall Points stay untouched.",
+  "serviceProfileEyebrow": "THE OFFICIAL ALIBI",
+  "serviceProfileBlurb": "A face. A name. An extremely debatable reputation.",
+  "serviceLeaderboardEyebrow": "THIS WEEK’S BIG TALKERS",
+  "serviceStoreEyebrow": "THE NOIN EXCHANGE",
+  "serviceStoreBlurb": "Spend on more play and more personality. Your bluff stays yours.",
+  "serviceNoticesEyebrow": "HEAR YE. HEAR YE.",
+  "serviceFeedbackEyebrow": "COMPLAINTS & BRILLIANT IDEAS",
+  "serviceFeedbackSent": "Message delivered. The backstage crew is on it.",
+  "serviceReportSent": "Report sent. Thanks for looking out for the table.",
+  "serviceAvatarDefault": "Classic",
+  "serviceAvatarDetective": "Detective",
+  "serviceAvatarParty": "Party",
+  "serviceUnlockValue": "Pack or style ID",
+  "serviceContext": "Included context",
+  "serviceNoContext": "No match context attached.",
+  "serviceCatalogUnavailable": "This collection is not available yet.",
+  "serviceVoteAccuracy": "Vote accuracy",
+  "serviceSurvivalRate": "Donower survival",
+  "serviceWeekWins": "Week Winner titles",
+  "servicePodiums": "Weekly podiums",
+  "servicePokesSent": "Pokes sent",
+  "serviceCredits": "Contributor credits",
+  "gameLeaveTitle": "Leave this match?",
+  "gameLeaveHint": "Leaving before the verdict can reduce your match points.",
+  "gameInspectCard": "Inspect card",
+  "serviceAvatarLimits": "JPEG or PNG, up to 2 MB and 2048 × 2048 pixels.",
+  "serviceAvatarInvalid": "Choose a JPEG or PNG within the size limits.",
+  "serviceAvatarCost": "Custom avatars use the Noin unlock price shown in the Store.",
+  "serviceAvatarSelected": "Image selected. Upload when you are ready.",
+  "serviceAvatarCostPrice": "First custom avatar: {price} Noin. Already unlocked? No extra charge.",
+  "@serviceAvatarCostPrice": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "unreadyLabel": "Not ready",
+  "serviceAvatarSubmitted": "Image uploaded for review.",
+  "serviceAvatarReview": "Uploads are submitted for review; your preset avatar stays active.",
+  "gameWorkspaceHand": "Hand",
+  "gameWorkspaceTable": "Table",
+  "gameWorkspacePeople": "People",
+  "gameWorkspaceAction": "Now",
+  "devTools": "Dev tools",
+  "devToolsHint": "A backstage pass for testing.",
+  "devFreeze": "Freeze client",
+  "devResume": "Resume client",
+  "devFreezeHint": "Holds incoming updates and this screen’s clock. The server keeps playing.",
+  "devRestart": "Restart to menu",
+  "devRestartHint": "Clears the local match and opens a fresh connection.",
+  "devEchoPokes": "Echo pokes to self",
+  "devEchoPokesHint": "Preview your own poke with the same brief nudge.",
+  "devGrantSpecialty": "Grant a specialty",
+  "devGrantSpecialtyHint": "Adds it to your hand. Play it using the normal controls.",
+  "devNextRole": "Next-match role",
+  "devRandomRole": "Random — trust your luck",
+  "devRoleHint": "Choose before joining, or apply to the next rematch.",
+  "devMatchRequired": "Join a match to grant a specialty.",
+  "navigationPlay": "Play",
+  "serviceRefresh": "Refresh"
 }

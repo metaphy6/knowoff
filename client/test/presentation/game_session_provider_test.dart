@@ -105,6 +105,48 @@ void main() {
     transport.close();
   });
 
+  testWidgets('revealed hand expires without a mounted overlay',
+      (tester) async {
+    final transport = _FakeTransport();
+    final notifier = GameSessionNotifier(transport: transport);
+    addTearDown(notifier.dispose);
+    transport.emit('hand_reveal_viewed', {
+      'target_seat': 2,
+      'cards': <dynamic>[],
+      'draw_pile': <dynamic>[],
+      'view_seconds': 3,
+    });
+    await tester.pump();
+    expect(notifier.state.revealedHand?.targetSeat, 2);
+    await tester.pump(const Duration(seconds: 2));
+    expect(notifier.state.revealedHand, isNotNull);
+    await tester.pump(const Duration(seconds: 1));
+    expect(notifier.state.revealedHand, isNull);
+    expect(notifier.state.handRevealViewed, isTrue);
+  });
+
+  testWidgets('a new revealed hand replaces the prior expiry timer',
+      (tester) async {
+    final transport = _FakeTransport();
+    final notifier = GameSessionNotifier(transport: transport);
+    addTearDown(notifier.dispose);
+    transport.emit('hand_reveal_viewed', {
+      'target_seat': 2,
+      'view_seconds': 3,
+    });
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    transport.emit('hand_reveal_viewed', {
+      'target_seat': 3,
+      'view_seconds': 3,
+    });
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(notifier.state.revealedHand?.targetSeat, 3);
+    await tester.pump(const Duration(seconds: 2));
+    expect(notifier.state.revealedHand, isNull);
+  });
+
   test('freezing buffers incoming events instead of applying them', () async {
     notifier.setFrozen(true);
     transport.emit('phase_started', <String, dynamic>{
@@ -1163,6 +1205,56 @@ void main() {
       'dev': true,
       'dev_role': 'donower',
     });
+  });
+
+  test('prejoin dev role stays local until the queue handshake', () async {
+    await AppConfig.initialize(
+        ClientConfig.defaultConfig(), _StubAuthService());
+    await notifier.devForceRole('nower');
+    expect(transport.sent, isEmpty);
+    await notifier.queueQuickPlay(4);
+    expect(transport.sent.single['kind'], 'queue_quickplay');
+    expect(transport.sent.single['payload']['dev_role'], 'nower');
+  });
+
+  test('local-room handshake carries the preselected dev role', () async {
+    await AppConfig.initialize(
+        ClientConfig.defaultConfig(), _StubAuthService());
+    await notifier.devForceRole('donower');
+    transport.sent.clear();
+    await notifier.joinRoom('ABCDEF');
+    expect(transport.sent.single['kind'], 'join_room');
+    expect(transport.sent.single['payload'], {
+      'code': 'ABCDEF',
+      'access_token': 'fresh-token',
+      'dev': true,
+      'dev_role': 'donower',
+    });
+  });
+
+  test('Random clears the dev role across restart and the next join', () async {
+    await AppConfig.initialize(
+        ClientConfig.defaultConfig(), _StubAuthService());
+    await notifier.devForceRole('donower');
+    await notifier.devForceRole('');
+    expect(notifier.state.devForcedRole, isNull);
+    notifier.restart();
+    transport.sent.clear();
+    await notifier.queueQuickPlay(4);
+    expect(transport.sent.single['payload'], {
+      'size': 4,
+      'access_token': 'fresh-token',
+    });
+  });
+
+  test('Random clears the server override when already joined', () async {
+    transport.emit('joined', {'seat': 0, 'code': 'ABCDEF'});
+    await _settle();
+    await notifier.devForceRole('donower');
+    transport.sent.clear();
+    await notifier.devForceRole('');
+    expect(notifier.state.devForcedRole, isNull);
+    expect(transport.sent.single['payload'], {'role': ''});
   });
 
   test('app configuration initializes when the backend is unavailable',

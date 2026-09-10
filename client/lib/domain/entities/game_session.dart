@@ -116,6 +116,7 @@ class GameSession {
     RevealedHand? revealedHand,
     int? freeDrawPopTick,
     String? devForcedRole,
+    bool clearDevForcedRole = false,
     bool clearFinalElimination = false,
     bool clearHandReveal = false,
     bool clearRevealedHand = false,
@@ -168,7 +169,8 @@ class GameSession {
           ? null
           : (revealedHand ?? this.revealedHand),
       freeDrawPopTick: freeDrawPopTick ?? this.freeDrawPopTick,
-      devForcedRole: devForcedRole ?? this.devForcedRole,
+      devForcedRole:
+          clearDevForcedRole ? null : (devForcedRole ?? this.devForcedRole),
     );
   }
 
@@ -204,7 +206,8 @@ class GameSession {
     if (targetSeat == seat) return false;
     final target = playerBySeat(targetSeat);
     if (target == null || target.eliminated) return false;
-    return phase == 'knowoff' || phase == 'runoff';
+    return phase == 'knowoff' ||
+        (phase == 'runoff' && dto.runoffCandidates.contains(targetSeat));
   }
 
   bool get canReady =>

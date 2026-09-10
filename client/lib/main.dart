@@ -6,19 +6,16 @@ import 'package:knowoff_client/l10n/app_localizations.dart';
 import 'core/config/app_config.dart';
 import 'core/config/client_config.dart';
 import 'core/navigation/root_navigator_key.dart';
+import 'core/navigation/room_links.dart';
 import 'core/network/websocket_transport.dart';
-import 'presentation/screens/main_menu_screen.dart';
 import 'presentation/state/game_session_provider.dart';
+import 'presentation/screens/home_screen.dart';
 import 'presentation/theme/knowoff_theme.dart';
-import 'presentation/theme/ko_scroll_behavior.dart';
-import 'presentation/widgets/dev_tools_overlay.dart';
-import 'presentation/widgets/rematch_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = await ClientConfig.load();
-  // Ensure the device session exists before any screen can queue/join,
-  // so the access token is available on the first WebSocket intent.
+  // Initialize services once; authentication stays lazy until it is needed.
   await AppConfig.initialize(config);
   final transport = WebSocketTransport(url: config.websocketUrl);
   runApp(
@@ -34,18 +31,30 @@ void main() async {
 }
 
 class KnowoffApp extends StatelessWidget {
-  const KnowoffApp({required this.config, super.key});
+  const KnowoffApp({required this.config, this.initialRoute, super.key});
 
   final ClientConfig config;
+  final String? initialRoute;
+
+  Route<void> _route(RouteSettings settings) {
+    final code = roomCodeFromRoute(settings.name);
+    return PageRouteBuilder<void>(
+      settings: settings,
+      pageBuilder: (_, __, ___) => code == null
+          ? const HomeScreen()
+          : LocalRoomScreen(host: false, initialCode: code),
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Knowoff',
       navigatorKey: rootNavigatorKey,
-      locale: Locale(config.defaultLocale),
-      supportedLocales:
-          config.supportedLocales.map((code) => Locale(code)).toList(),
+      locale: _locale(config.defaultLocale),
+      supportedLocales: config.supportedLocales.map(_locale).toList(),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -53,28 +62,21 @@ class KnowoffApp extends StatelessWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       theme: knowoffTheme(),
-      scrollBehavior: const KoScrollBehavior(),
-      home: const MainMenuScreen(),
-      // The dev tools overlay needs its own Overlay ancestor (for its FAB
-      // tooltips): builder's `child` is the Navigator, which owns its own
-      // Overlay that this sibling Stack sits outside of.
-      builder: (context, child) => Overlay(
-        initialEntries: [
-          OverlayEntry(
-            builder: (context) => Stack(
-              children: [
-                if (child != null) child,
-                // Play Again sits at the app root, above the Navigator, so its
-                // card and backdrop always own hit-testing on the verdict
-                // screen (a navigator-nested Stack let the navigator swallow
-                // the buttons' pointer events).
-                const RematchOverlay(),
-                const DevToolsOverlay(),
-              ],
-            ),
-          ),
-        ],
-      ),
+      initialRoute: initialRoute,
+      onGenerateRoute: _route,
+      onGenerateInitialRoutes: (name) => [
+        _route(const RouteSettings(name: '/')),
+        if (roomCodeFromRoute(name) != null) _route(RouteSettings(name: name)),
+      ],
     );
   }
+}
+
+Locale _locale(String tag) {
+  final parts = tag.replaceAll('_', '-').split('-');
+  return Locale.fromSubtags(
+    languageCode: parts.first,
+    scriptCode: parts.length > 1 && parts[1].length == 4 ? parts[1] : null,
+    countryCode: parts.length > 1 && parts.last.length != 4 ? parts.last : null,
+  );
 }

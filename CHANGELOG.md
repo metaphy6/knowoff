@@ -4,13 +4,73 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Removed
+
+- Removed the Flutter frontend for a redesign: screens, widgets, theme,
+  doodles, display font, and media-rendering widgets before the reconstruction
+  below. Localization and service initialization were preserved.
+- Retired tests and snapshots that exclusively covered the removed UI, with
+  owner approval. Nonvisual action rules and their tests remain alongside
+  game state, authentication, API/transport, localization, and media services.
+
 ### Added
+
+- Added distinct device experiences: phones open on Hand/Table/People workspaces
+  with a pinned turn/Ready bar and bottom navigation; large phones use a wider
+  hand grid; tablets pair evidence with the active task; desktop shows evidence,
+  hand/ballot, and people/chat together. Home and account pages use phone bottom
+  navigation, a tablet rail and a persistent desktop menu with split task views.
+- Restored all five historical debug controls in a scrollable Dev tools panel:
+  Freeze/Resume, Restart, Echo pokes, Grant specialty, and Next-match role.
+  Debug controls remain absent from release/profile builds. Specialty grants
+  never autoplay, and poke feedback settles with a static reduced-motion option.
+
+- Recreated the entire Flutter UI around the retained state/API/localization:
+  a theatrical main menu, local rooms, private roles and cards, specialty flows,
+  discussion/live runoff ballots, result posters, rematches and account pages.
+  Locked brand tokens and the bundled Baloo 2 font now drive a consistent set
+  of sharp, colorful surfaces and accessible controls.
+- Added fresh interaction, privacy, responsive/pseudo-locale, reduced-motion and
+  semantics tests. Effects settle after one event, timers update locally, and
+  media is isolated from animation repainting.
+- Restored real profile statistics, reporting, notices and avatar upload with a
+  native file selector; file selection is validated before an explicit upload.
+
 
 - Using the Free Card specialty now fires a loud "FREE CARD!" announcement for the whole table while the draw pile celebrates: the card count swells big for a beat and the price chip flips from −5 to a bouncing FREE until the free draw is spent.
 - Debug builds now have a dev-only specialty picker in the bottom-right dev tools: pick any of the five specialty cards and the server drops it into your hand as if it had been dealt (disabled entirely in prod), then the normal use flow runs unchanged — handy for testing specialty behavior without waiting for the deal.
 - Verdict screen now opens a Play Again window once a match finishes: every seat picks "same table" (rematch with this exact table once everyone agrees) or "new table" (leaves for a fresh Quick Play match); a seat that left or never reconnected in time opens up for backfill, so a new player who simply clicks Quick Play can land straight into the reopened table instead of a brand new one.
 
 ### Fixed
+
+- Developer Random now clears the previous role across restart and queueing.
+  Pre-join choices remain local until a valid join envelope; local rooms apply
+  the selected role before the final seat can start the first match. Production
+  server guards remain enforced.
+- Keep profile drafts when changing destinations, resizing, refreshing or
+  retrying a failed refresh. Hidden destinations relinquish keyboard focus;
+  account pages expose Refresh for cached balances and statistics.
+- Preserve hand positions through bot activity and discussion; make workspace
+  tabs screen-reader actionable, bring timed ballots/results into view, and
+  allow small-phone task dialogs and narrow tablet evidence to fit.
+
+- Render complete hand cards in a responsive grid and keep their positions
+  stable across bot plays, turn changes, selection and discussion. Reserve
+  table/status/hint space, retain card identity and keep selection controls
+  below the cards instead of inserting them above the hand.
+- Place the attributed played-card table directly below Nown. A bounded,
+  scrollable table keeps full rooms and earlier evidence from burying hand
+  controls; desktop hand and draw actions remain beside the clue. Live tables
+  show the latest round first and reset their scroll when the round changes.
+- Aligned retained store client routes with the server and accept successful
+  empty responses; refreshed wallet balances after conversion-dialog dismissal.
+- Carry server-provided runoff candidates into the replacement ballot UI.
+- Present server round zero as Round 1 and retain its attributed card evidence.
+- Local-room QR codes and clipboard links open the app join form, with
+  validated room codes and matching native scheme registrations.
+- Avoid duplicate screen-reader button labels, keep keyboard focus visible,
+  isolate private overlays, and keep desktop turn actions beside the clue.
+
 
 - A match no longer freezes for good when the server rejects the stored access token (a restart with a new signing key, or a revoked session): the client now reissues its device credentials and drops the dead room instead of re-sending the same refused token on every rejoin, which used to leave the screen stuck on a stale phase where every tap silently queued.
 - Bots now recast their votes when a Nower uses Revote during an open ballot, so the reopened vote can finish instead of leaving the match stalled.

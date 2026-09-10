@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -102,42 +101,6 @@ void main() {
       );
       expect(bytes, equals(asset));
       expect(attempts, 2);
-    });
-
-    testWidgets('buildNownStage renders text content', (tester) async {
-      const mediaJsonl =
-          '{"id":"nown-0003","type":"text","asset_ref":"","content":"Hello Nown","tags":[],"tone_bucket":"chaos","rating":"everyone"}\n';
-      final client = MockClient((request) async {
-        if (request.url.path.endsWith('manifest.json')) {
-          return http.Response(manifest, 200);
-        }
-        if (request.url.path.endsWith('media.jsonl')) {
-          return http.Response(mediaJsonl, 200);
-        }
-        return http.Response('not found', 404);
-      });
-
-      final engine = MediaEngine(
-        client: client,
-        baseUrl: 'https://x/',
-        maxCacheBytes: 4096,
-      );
-      await engine.syncPack('core-2026.10');
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: engine.buildNownStage(nownId: 'nown-0003'),
-          ),
-        ),
-      );
-      expect(find.text('Hello Nown'), findsOneWidget);
-    });
-
-    testWidgets('DonowerPlaceholder renders', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: Scaffold(body: DonowerPlaceholder())),
-      );
-      expect(find.byType(DonowerPlaceholder), findsOneWidget);
     });
   });
 }

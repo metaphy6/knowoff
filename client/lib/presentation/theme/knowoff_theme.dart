@@ -1,140 +1,82 @@
 import 'package:flutter/material.dart';
-
 import 'knowoff_tokens.dart';
-import 'knowoff_typography.dart';
 
-/// The single house `ThemeData` — every screen, including the stock Material
-/// widgets a screen hasn't yet migrated to `Ko*` primitives, renders through
-/// this theme so the app never reverts to the default Material look.
+TextStyle koDisplayStyle(
+        {double size = 32,
+        FontWeight weight = FontWeight.w800,
+        double height = 1.05,
+        Color color = KoColors.ink}) =>
+    TextStyle(
+      fontFamily: 'Baloo2',
+      fontVariations: [FontVariation('wght', weight.value.toDouble())],
+      fontWeight: weight,
+      fontSize: size,
+      height: height,
+      color: color,
+      letterSpacing: -0.5,
+    );
+
 ThemeData knowoffTheme() {
-  final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
-  final colorScheme = ColorScheme.fromSeed(
-    seedColor: KoColors.violet,
-    brightness: Brightness.light,
-  ).copyWith(
-    primary: KoColors.violet,
-    onPrimary: KoColors.ink,
-    secondary: KoColors.lime,
-    onSecondary: KoColors.ink,
-    tertiary: KoColors.tangerine,
-    onTertiary: KoColors.ink,
-    error: KoColors.pink,
-    onError: KoColors.ink,
-    surface: KoColors.surface,
-    onSurface: KoColors.ink,
-  );
-
-  const inkBorder = BorderSide(width: KoBorders.regular, color: KoColors.ink);
-  final sheetShape = RoundedRectangleBorder(
-    side: inkBorder,
-    borderRadius: BorderRadius.circular(KoRadii.sheet),
-  );
-  final textTheme = knowoffTextTheme(base.textTheme);
-
-  OutlineInputBorder field(Color color, double width) => OutlineInputBorder(
-        borderRadius: BorderRadius.circular(KoRadii.button),
-        borderSide: BorderSide(width: width, color: color),
-      );
-
+  final base = ThemeData.light(useMaterial3: true);
+  final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: const BorderSide(color: KoColors.ink, width: 3));
   return base.copyWith(
-    colorScheme: colorScheme,
     scaffoldBackgroundColor: KoColors.canvas,
-    textTheme: textTheme,
-    primaryTextTheme: textTheme,
-    appBarTheme: AppBarTheme(
-      backgroundColor: KoColors.canvasDeep,
-      foregroundColor: KoColors.ink,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      centerTitle: false,
-      titleTextStyle: textTheme.headlineSmall,
-    ),
-    dialogTheme: DialogThemeData(
-      backgroundColor: KoColors.surface,
-      elevation: 0,
-      shape: sheetShape,
-      titleTextStyle: textTheme.headlineSmall,
-      contentTextStyle: textTheme.bodyLarge,
-    ),
-    bottomSheetTheme: BottomSheetThemeData(
-      backgroundColor: KoColors.surface,
-      elevation: 0,
-      shape: sheetShape,
-    ),
-    cardTheme: CardThemeData(
-      color: KoColors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        side: inkBorder,
-        borderRadius: BorderRadius.circular(KoRadii.card),
-      ),
-    ),
-    chipTheme: base.chipTheme.copyWith(
-      backgroundColor: KoColors.surface,
-      selectedColor: KoColors.violet,
-      labelStyle: textTheme.labelLarge,
-      showCheckmark: false,
-      shape: RoundedRectangleBorder(
-        side: inkBorder,
-        borderRadius: BorderRadius.circular(KoRadii.chip),
-      ),
-    ),
-    progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: KoColors.violet,
-      linearTrackColor: KoColors.whiteWell,
-      linearMinHeight: 10,
-    ),
-    dividerTheme: const DividerThemeData(
-      color: KoColors.ink,
-      thickness: KoBorders.thin,
-      space: KoSpace.lg,
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: KoColors.ink,
-      contentTextStyle: textTheme.titleMedium?.copyWith(
-        color: KoColors.surface,
-      ),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(KoRadii.button),
-      ),
-    ),
+    colorScheme: const ColorScheme.light(
+        primary: KoColors.ink,
+        onPrimary: KoColors.surface,
+        secondary: KoColors.violet,
+        onSecondary: KoColors.ink,
+        surface: KoColors.surface,
+        onSurface: KoColors.ink,
+        error: KoColors.ink,
+        onError: KoColors.pink),
+    textTheme: base.textTheme
+        .apply(bodyColor: KoColors.ink, displayColor: KoColors.ink)
+        .copyWith(
+          displayLarge: koDisplayStyle(size: 80),
+          displayMedium: koDisplayStyle(size: 56),
+          displaySmall: koDisplayStyle(size: 40),
+          headlineLarge: koDisplayStyle(size: 36),
+          headlineMedium: koDisplayStyle(size: 28),
+          headlineSmall: koDisplayStyle(size: 24),
+          titleLarge: koDisplayStyle(size: 22),
+          bodyLarge:
+              const TextStyle(fontSize: 17, height: 1.45, color: KoColors.ink),
+          bodyMedium:
+              const TextStyle(fontSize: 15, height: 1.45, color: KoColors.ink),
+          bodySmall:
+              const TextStyle(fontSize: 13, height: 1.35, color: KoColors.ink),
+          labelLarge: koDisplayStyle(size: 18),
+        ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: KoColors.whiteWell,
-      enabledBorder: field(KoColors.ink, KoBorders.regular),
-      border: field(KoColors.ink, KoBorders.regular),
-      focusedBorder: field(KoColors.violet, KoBorders.thick),
-      errorBorder: field(KoColors.pink, KoBorders.thick),
-      focusedErrorBorder: field(KoColors.pink, KoBorders.thick),
-      labelStyle: textTheme.titleMedium,
-      hintStyle: textTheme.bodyMedium,
+      contentPadding: const EdgeInsets.all(16),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(width: 2)),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(width: 2)),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(width: 4)),
     ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: KoColors.violet,
-        foregroundColor: KoColors.ink,
-        textStyle: textTheme.labelLarge,
+    dialogTheme: DialogThemeData(
+        backgroundColor: KoColors.surface, elevation: 0, shape: shape),
+    snackBarTheme: SnackBarThemeData(
+        backgroundColor: KoColors.ink,
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          side: inkBorder,
-          borderRadius: BorderRadius.circular(KoRadii.button),
-        ),
-      ),
-    ),
+        shape: shape,
+        behavior: SnackBarBehavior.floating,
+        contentTextStyle: const TextStyle(color: KoColors.surface)),
+    progressIndicatorTheme:
+        const ProgressIndicatorThemeData(color: KoColors.ink),
+    dividerTheme: const DividerThemeData(color: KoColors.ink, thickness: 2),
     textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: KoColors.ink,
-        textStyle: textTheme.labelLarge,
-      ),
-    ),
-    iconButtonTheme: IconButtonThemeData(
-      style: IconButton.styleFrom(foregroundColor: KoColors.ink),
-    ),
-    iconTheme: const IconThemeData(color: KoColors.ink),
-    listTileTheme: const ListTileThemeData(
-      textColor: KoColors.ink,
-      iconColor: KoColors.ink,
-    ),
+        style: TextButton.styleFrom(
+            foregroundColor: KoColors.ink, minimumSize: const Size(48, 48))),
   );
 }

@@ -274,6 +274,20 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 			s.accessToken = at
 		}
 	}
+	// Capture the debug role before either path binds its seat: binding the
+	// final local-room seat can auto-start the first match immediately.
+	if dev, _ := env.Payload["dev"].(bool); dev {
+		if cfg := s.Config(); cfg != nil && cfg.App.Env == "prod" {
+			return fmt.Errorf("dev mode unavailable")
+		}
+		role, _ := env.Payload["dev_role"].(string)
+		switch role {
+		case "", "nower", "donower":
+			s.pendingRoleOverride = role
+		default:
+			return fmt.Errorf("unknown role %q", role)
+		}
+	}
 	switch env.Kind {
 	case transport.IntentJoinRoom:
 		code, _ := env.Payload["code"].(string)
@@ -310,18 +324,6 @@ func (s *ConnectionState) handleJoinIntent(env *transport.Envelope) error {
 		return s.sendOK("joined", map[string]any{"room_id": room.ID, "seat": seat, "code": room.Code, "size": room.Size, "session_token": token})
 
 	case transport.IntentQueueQuickPlay:
-		if dev, _ := env.Payload["dev"].(bool); dev {
-			if cfg := s.Config(); cfg != nil && cfg.App.Env == "prod" {
-				return fmt.Errorf("dev mode unavailable")
-			}
-			role, _ := env.Payload["dev_role"].(string)
-			switch role {
-			case "", "nower", "donower":
-				s.pendingRoleOverride = role
-			default:
-				return fmt.Errorf("unknown role %q", role)
-			}
-		}
 		sizeF, _ := env.Payload["size"].(float64)
 		size := int(sizeF)
 		queueID, assigned, err := s.Lobby.QueueQuickPlay(size, s.AccountID)

@@ -27,12 +27,14 @@ build plan — phases, checkboxes, proof tests — lives in
 
 ## Status
 
-All 6 roadmap phases are built and passing their proof tests —
-foundation, media engine, realtime game loop, accounts & Quick Play, the
-Noin economy & Admin Console, and the Contributor Portal. `make
-up` gets you a full 6-player match with zero cloud dependencies.
-See the phase-by-phase snapshot in
-[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md).
+The Flutter client has a complete new card-table interface: Quick Play/local
+rooms, private roles, hands and specialties, live voting, results, profiles,
+leaderboard, store, notices and feedback. Bold cream/lavender panels, doodles
+and comic copy follow the blueprint's design matrix. Motion is finite and
+respects reduced-motion preferences; gameplay and rewards remain server-owned.
+See [`client/README.md`](client/README.md) for the client structure and current
+integration limits, and [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md)
+for verification evidence and remaining product roadmap work.
 
 ## Quickstart
 

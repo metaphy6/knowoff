@@ -492,3 +492,107 @@ await page.mouse.click(1064, 356);   // vote
   second regardless of phase. Noisy, harmless, out of scope.
 - **Golden-image tests** — the suite asserts structure and tokens, not pixels.
   Worth adding once the layout settles.
+
+
+## 2026-09-10 reconstruction and measured motion
+
+The new implementation consolidates shared surfaces in `ko_ui.dart`, match
+rendering in `game_screen.dart` / `game_surfaces.dart`, and account flows in
+`account_screens.dart` with service widgets. The former layouts and their
+UI-only tests were retired with owner approval, then replaced with fresh
+behavior/privacy/layout tests. Tokens, localization, API/state rules and media
+services were retained. Theatrical copy and tilted posters surround aligned
+forms, cards, clocks and ballots. Timed desktop play puts the hand beside Nown;
+large text moves header actions below the title. Avatar uploads explicitly
+acknowledge pending review, while the active preset remains visible.
+
+Motion uses static animation children and isolated repaint boundaries. Buttons
+settle in 60 ms, decorative entrances in 150 ms, and the result has one finite
+four-second reveal. Reduced motion renders equivalent static information. The
+one-second clock lives in its own widget; it does not tick the whole game page.
+No ambient repeating animation, blur or stacked opacity was introduced.
+
+A foreground Flutter 3.38.5 / Dart 3.10.4 profile CanvasKit run measured the real
+GameScreen at 806×1270 logical pixels, with six seats and text-only fixtures.
+After warm-up, Round and Knowoff received state changes every 250 ms for 12 s
+each; the result sample included the four-second animation. Flutter's
+`SchedulerBinding.addTimingsCallback` recorded build/raster/total durations.
+
+| Phase | Frames | Build p95 | Raster p95 | Total p95 | Total maximum | Frames >16.7 ms |
+|---|---:|---:|---:|---:|---:|---:|
+| Round | 61 | 11.7 ms | 0.9 ms | 13.2 ms | 40.8 ms | 3 |
+| Knowoff | 92 | 10.4 ms | 0.5 ms | 11.5 ms | 33.2 ms | 1 |
+| Result reveal | 606 | 0.8 ms | 0.3 ms | 2.1 ms | 15.7 ms | 0 |
+
+The 16.7 ms **p95** target passed in this desktop sample. Four isolated state
+updates exceeded that budget; this is not an every-frame or zero-jank claim.
+Native mobile, low-end hardware, cold image decoding, GIFs and network loading
+remain unprofiled. A hidden-tab sample was discarded because browser throttling
+invalidated frame-delivery measurements. Narrower state subscriptions are a
+possible follow-up for the build spikes, but the measurements do not establish
+their cause.
+
+Local evidence: `/tmp/agent-runs/ui_perf_report.md`, raw
+`/tmp/agent-runs/ui_perf_metrics.json`, and build log
+`/tmp/agent-runs/ui-perf-profile-stable--20260910T092248Z-196322.log`.
+The ignored harness remains at `client/.dart_tool/ui_perf/main.dart` and builds
+with `flutter build web --profile --target=.dart_tool/ui_perf/main.dart
+--output=.dart_tool/ui_perf_web`; run in a **foreground** browser. These are
+local artifacts, not a committed benchmark fixture or low-end certification.
+
+## 2026-09-10 device experiences and restored developer controls
+
+One Flutter state owner now feeds three deliberately different compositions.
+The shared window policy uses available logical dimensions (including browser
+windows and tablet split-screen), never a browser or device-model guess:
+
+| Window | Navigation and match composition |
+| --- | --- |
+| Phone below 600 dp, or a short landscape window below 1000 dp | Bottom service destinations and Hand/Table/People workspaces; pinned turn, votes and Ready; compact Nown/latest-play summary; full Nown and attributed evidence together in Table. |
+| Small phone below 380 dp or 700 dp tall | Immediate Quick Play, collapsed help, one readable hand column. |
+| Large phone | More context on Home and room for two complete hand cards per row at 430 dp. |
+| Tablet 600–1199 dp | Navigation rail, two-part service tasks and a two-pane match; evidence stays beside Hand/Now or People. |
+| Desktop from 1200 dp | Persistent labeled service menu; three independently scrolling match panes for evidence, active task and people/chat. |
+
+Card selection, scroll controllers, draft text, evidence history and all server
+intents remain outside these compositions. Ordinary bot/turn updates never
+switch phone workspaces; entering Knowoff, runoff or result opens Now so a timed
+action cannot remain hidden. Play-to-discussion keeps hand geometry stable.
+Hidden phone match panes are unmounted; cached service destinations suppress
+focus and animation tickers. No ambient animation was added.
+
+The historical dev controls were verified against CHANGELOG, tracking rows and
+Go handlers, plus the deleted overlay in Git history. See
+[CLIENT_DEV_TOOLS.md](CLIENT_DEV_TOOLS.md) for the restored controls and gates.
+The client-only freeze also pauses the displayed clock. The server continues;
+resuming processes buffered events in order. Random clears the stored override,
+and both Quick Play and local-room handshakes carry preselected roles before
+seat binding. Production rejects debug overrides.
+
+Fresh proof includes small/large phone, landscape phone, 600 dp split window,
+portrait/landscape tablet and desktop widget coverage; normal/expanded pseudo
+copy; 2x text; reduced motion; complete card bounds; bot/selection/discussion
+stability; semantic tab activation; scrollable Reveal/Leave dialogs; nickname
+and store actions on each device class; draft persistence and failed-refresh
+recovery. All 288 Flutter tests and the Python/Go checks passed; the full gate
+and release build logs are linked in ROADMAP.md.
+The Impeccable mechanical detector returned no findings for the changed Flutter
+presentation targets; widget/render tests remain the stronger Flutter evidence.
+
+A real local-stack debug match was inspected in the in-app browser at 360x800,
+430x932, 834x1194 and 1440x900. It exercised pre-join Nower selection, bot play,
+discussion/ballot, phone Table navigation and client freeze; its displayed clock
+held while the server continued. The browser console had no errors/warnings.
+These are browser-window checks, not physical Android/iOS/tablet certification.
+
+**Motion measurement limit.** The attempted 1440x900 profile-mode trace of a
+six-seat text fixture was visibility/throttling affected: only 13 samples each
+for 12-second play/ballot periods despite 4 Hz stimulation. Browser visibility
+could not be held (`visibility.get()` returned false after set(true)). Raw
+samples are retained at `/tmp/agent-runs/device_perf_metrics.json`: play p95 total
+21.401 ms, ballot 16.201 ms, and result 3001.5 ms (queue delay dominates that
+result; build/raster maxima were 12.3/5.4 ms). This is diagnostic evidence only,
+not a passing foreground frame-budget trace. The new device compositions still
+need a reliable foreground/physical low-end profile before claiming p95<=16.7ms.
+Automated tests do prove finite motion, reduced-motion equivalence and no idle
+tickers; prior reconstruction timings do not certify these new layouts.
