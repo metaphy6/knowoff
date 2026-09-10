@@ -1,8 +1,8 @@
 package admin
 
 import (
-	"fmt"
-	"html/template"
+	"encoding/hex"
+	"errors"
 	"net/http"
 	"time"
 
@@ -12,6 +12,13 @@ import (
 // PortalHandler returns admin routes for the contributor portal mounted at /admin/portal/.
 func (m *Manager) PortalHandler(portalMgr *portal.Manager) http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("POST /admin/portal/roles/{account_id}/revoke", m.requireRole("admin", true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := portalMgr.RevokeRole(r.Context(), adminIDFromContext(r.Context()), r.PathValue("account_id"), portal.Role(r.FormValue("role"))); err != nil {
+			adminError(w, r, err, "/admin/portal/applications")
+			return
+		}
+		http.Redirect(w, r, "/admin/portal/applications", http.StatusSeeOther)
+	})))
 	mux.Handle("GET /admin/portal/", m.requireRole("admin", false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { m.portalIndex(w, r, portalMgr) })))
 	mux.Handle("GET /admin/portal/terms", m.requireRole("admin", false)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { m.portalTerms(w, r, portalMgr) })))
 	mux.Handle("POST /admin/portal/terms", m.requireRole("admin", true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { m.portalTermsCreate(w, r, portalMgr) })))
@@ -34,47 +41,16 @@ func (m *Manager) PortalHandler(portalMgr *portal.Manager) http.Handler {
 }
 
 func (m *Manager) portalIndex(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Portal Admin</title></head><body>
-<h1>Portal Administration</h1>
-<nav>
-<a href="/admin/portal/terms">Terms</a> |
-<a href="/admin/portal/applications">Applications</a> |
-<a href="/admin/portal/submissions">Submissions</a> |
-<a href="/admin/portal/freezes">Guard Freezes</a> |
-<a href="/admin/portal/challenge">Challenge</a>
-</nav>
-</body></html>`)
+	http.Redirect(w, r, "/admin/portal/applications", http.StatusSeeOther)
 }
 
 func (m *Manager) portalTerms(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
 	terms, err := pm.ListTermsVersions(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Terms unavailable.", 500)
 		return
 	}
-	csrf := csrfFromContext(r.Context())
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Contribution Terms</title></head><body>
-<h1>Contribution Terms Versions</h1>
-<table border="1"><tr><th>Version</th><th>Title</th><th>Active From</th></tr>`)
-	for _, t := range terms {
-		fmt.Fprintf(w, `<tr><td>%s</td><td>%s</td><td>%s</td></tr>`,
-			template.HTMLEscapeString(t.Version),
-			template.HTMLEscapeString(t.Title),
-			t.ActiveFrom.Format(time.RFC3339))
-	}
-	fmt.Fprintf(w, `</table>
-<h2>New version</h2>
-<form method="post" action="/admin/portal/terms">
-<input type="hidden" name="csrf_token" value="%s">
-<label>Version <input name="version" required></label><br>
-<label>Title <input name="title" required></label><br>
-<label>Body <textarea name="body" required></textarea></label><br>
-<label>Active from (YYYY-MM-DD) <input name="active_from" required></label><br>
-<button>Create</button>
-</form>
-</body></html>`, template.HTMLEscapeString(csrf))
+	adminPage(w, r, "Contribution terms", "The agreement contributors actually see and accept.", termsBody, map[string]any{"Terms": terms})
 }
 
 func (m *Manager) portalTermsCreate(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
@@ -84,38 +60,29 @@ func (m *Manager) portalTermsCreate(w http.ResponseWriter, r *http.Request, pm *
 	}
 	activeFrom, err := time.Parse("2006-01-02", r.FormValue("active_from"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	adminID := adminIDFromContext(r.Context())
 	if err := pm.CreateTermsVersion(r.Context(), adminID, r.FormValue("version"), r.FormValue("title"), r.FormValue("body"), activeFrom); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/terms", http.StatusSeeOther)
 }
 
 func (m *Manager) portalApplications(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	apps, err := pm.ListApplications(r.Context(), "pending")
+	apps, err := pm.ListApplications(r.Context(), "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Applications unavailable.", 500)
 		return
 	}
-	csrf := csrfFromContext(r.Context())
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Role Applications</title></head><body>
-<h1>Pending Role Applications</h1>
-<table border="1"><tr><th>Account</th><th>Role</th><th>Applied</th><th>Actions</th></tr>`)
-	for _, a := range apps {
-		fmt.Fprintf(w, `<tr><td>%s</td><td>%s</td><td>%s</td><td>
-<form method="post" action="/admin/portal/applications/%s/approve" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Approve</button></form>
-<form method="post" action="/admin/portal/applications/%s/reject" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><input name="reason" placeholder="reason" required><button>Reject</button></form>
-</td></tr>`,
-			template.HTMLEscapeString(a.AccountID), template.HTMLEscapeString(string(a.Role)),
-			a.AppliedAt.Format(time.RFC3339), template.HTMLEscapeString(a.ID),
-			template.HTMLEscapeString(csrf), template.HTMLEscapeString(a.ID), template.HTMLEscapeString(csrf))
+	grants, err := pm.ListRoleGrants(r.Context())
+	if err != nil {
+		http.Error(w, "Roles unavailable.", 500)
+		return
 	}
-	fmt.Fprint(w, `</table></body></html>`)
+	adminPage(w, r, "Roles & applications", "Review the people who want to help build Knowoff.", applicationsBody, map[string]any{"Applications": apps, "Grants": grants})
 }
 
 func (m *Manager) portalApplicationApprove(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
@@ -125,8 +92,8 @@ func (m *Manager) portalApplicationApprove(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	adminID := adminIDFromContext(r.Context())
-	if err := pm.GrantRole(r.Context(), adminID, app.AccountID, app.Role); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := pm.ApproveApplication(r.Context(), adminID, app.ID); err != nil {
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/applications", http.StatusSeeOther)
@@ -139,40 +106,44 @@ func (m *Manager) portalApplicationReject(w http.ResponseWriter, r *http.Request
 	}
 	adminID := adminIDFromContext(r.Context())
 	if err := pm.RejectApplication(r.Context(), adminID, r.PathValue("id"), r.FormValue("reason")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/applications", http.StatusSeeOther)
 }
 
 func (m *Manager) portalSubmissions(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	subs, err := pm.ListSubmissions(r.Context(), "", "submitted")
+	subs, err := pm.ListSubmissions(r.Context(), "", "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Submissions unavailable.", 500)
 		return
 	}
-	csrf := csrfFromContext(r.Context())
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Submissions</title></head><body>
-<h1>Submitted Media</h1>
-<table border="1"><tr><th>ID</th><th>Account</th><th>Type</th><th>Content</th><th>Actions</th></tr>`)
-	for _, s := range subs {
-		fmt.Fprintf(w, `<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>
-<form method="post" action="/admin/portal/submissions/%s/approve" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Approve</button></form>
-<form method="post" action="/admin/portal/submissions/%s/reject" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Reject</button></form>
-</td></tr>`,
-			template.HTMLEscapeString(s.ID), template.HTMLEscapeString(s.AccountID),
-			template.HTMLEscapeString(string(s.MediaType)), template.HTMLEscapeString(s.Content),
-			template.HTMLEscapeString(s.ID), template.HTMLEscapeString(csrf),
-			template.HTMLEscapeString(s.ID), template.HTMLEscapeString(csrf))
+	type reviewedSubmission struct {
+		portal.Submission
+		Revision string
 	}
-	fmt.Fprint(w, `</table></body></html>`)
+	reviewed := []reviewedSubmission{}
+	for _, s := range subs {
+		if s.Status != portal.StatusDraft {
+			reviewed = append(reviewed, reviewedSubmission{s, portal.ContentRevision(s.Content)})
+		}
+	}
+	adminPage(w, r, "Submission review", "Give a good idea a careful second look.", submissionsReviewBody, map[string]any{"Submissions": reviewed})
 }
 
 func (m *Manager) portalSubmissionApprove(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
+	revision := r.FormValue("revision")
+	if raw, err := hex.DecodeString(revision); err != nil || len(raw) != 32 {
+		adminError(w, r, errors.New("reviewed content revision required"), "/admin/portal/submissions")
+		return
+	}
+	if r.FormValue("human_reviewed") != "yes" {
+		adminError(w, r, errors.New("human review confirmation required"), "/admin/portal/submissions")
+		return
+	}
 	adminID := adminIDFromContext(r.Context())
-	if err := pm.DecideSubmission(r.Context(), adminID, r.PathValue("id"), true, ""); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := pm.DecideSubmission(r.Context(), adminID, r.PathValue("id"), true, "", revision); err != nil {
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/submissions", http.StatusSeeOther)
@@ -180,106 +151,55 @@ func (m *Manager) portalSubmissionApprove(w http.ResponseWriter, r *http.Request
 
 func (m *Manager) portalSubmissionReject(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
 	adminID := adminIDFromContext(r.Context())
-	if err := pm.DecideSubmission(r.Context(), adminID, r.PathValue("id"), false, "rejected in admin console"); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := pm.DecideSubmission(r.Context(), adminID, r.PathValue("id"), false, r.FormValue("reason")); err != nil {
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/submissions", http.StatusSeeOther)
 }
 
 func (m *Manager) portalSubmissionPublish(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	adminID := adminIDFromContext(r.Context())
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	if err := pm.PublishSubmission(r.Context(), adminID, r.PathValue("id"), r.FormValue("pack_tag")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	http.Redirect(w, r, "/admin/portal/submissions", http.StatusSeeOther)
+	http.Error(w, "This operation is not available until its product enforcement or pack-deployment workflow is implemented.", http.StatusNotImplemented)
 }
 
 func (m *Manager) portalFreezes(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	freezes, err := pm.ListActiveFreezes(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	csrf := csrfFromContext(r.Context())
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Guard Freezes</title></head><body>
-<h1>Active Guard Freezes</h1>
-<table border="1"><tr><th>Account</th><th>Guard</th><th>Reason</th><th>Expires</th><th>Actions</th></tr>`)
-	for _, f := range freezes {
-		id := fmt.Sprintf("%v", f["id"])
-		fmt.Fprintf(w, `<tr><td>%s</td><td>%s</td><td>%s</td><td>%v</td><td>
-<form method="post" action="/admin/portal/freezes/%s/dismiss" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Dismiss</button></form>
-<form method="post" action="/admin/portal/freezes/%s/ban" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Ban</button></form>
-</td></tr>`,
-			template.HTMLEscapeString(fmt.Sprintf("%v", f["account_id"])),
-			template.HTMLEscapeString(fmt.Sprintf("%v", f["frozen_by"])),
-			template.HTMLEscapeString(fmt.Sprintf("%v", f["reason"])),
-			f["expires_at"],
-			template.HTMLEscapeString(id), template.HTMLEscapeString(csrf),
-			template.HTMLEscapeString(id), template.HTMLEscapeString(csrf))
-	}
-	fmt.Fprint(w, `</table></body></html>`)
+	adminPage(w, r, "Guard enforcement", "This workspace is not enabled yet.", `<p class="notice">Guard identity, timeboxed suspension enforcement and safe expiry must be completed before these controls can be enabled.</p><a href="/admin/reports">Review report cases</a>`, nil)
 }
 
 func (m *Manager) portalFreezeDismiss(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	adminID := adminIDFromContext(r.Context())
-	if err := pm.DismissFreeze(r.Context(), adminID, r.PathValue("id")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	http.Redirect(w, r, "/admin/portal/freezes", http.StatusSeeOther)
+	http.Error(w, "This operation is not available until its product enforcement or pack-deployment workflow is implemented.", http.StatusNotImplemented)
 }
 
 func (m *Manager) portalFreezeBan(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	adminID := adminIDFromContext(r.Context())
-	if err := pm.ConvertFreezeToBan(r.Context(), adminID, r.PathValue("id"), "converted to ban by admin"); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	http.Redirect(w, r, "/admin/portal/freezes", http.StatusSeeOther)
+	http.Error(w, "This operation is not available until its product enforcement or pack-deployment workflow is implemented.", http.StatusNotImplemented)
 }
 
 func (m *Manager) portalChallenge(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	topic, err := pm.ActiveChallengeTopic(r.Context())
+	topic, err := pm.CurrentChallengeTopic(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Challenge unavailable.", 500)
 		return
 	}
-	csrf := csrfFromContext(r.Context())
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Challenge Admin</title></head><body>
-<h1>Weekly Nown Challenge</h1>`)
+	var entries []portal.ChallengeEntry
 	if topic != nil {
-		fmt.Fprintf(w, `<p>Active topic: %s (%s - %s)</p>`, topic.ID, topic.WeekStart.Format("2006-01-02"), topic.WeekEnd.Format("2006-01-02"))
-		entries, _ := pm.ListChallengeEntries(r.Context(), topic.ID)
-		fmt.Fprint(w, `<table border="1"><tr><th>Entry</th><th>Account</th><th>Votes</th><th>Actions</th></tr>`)
-		for _, e := range entries {
-			fmt.Fprintf(w, `<tr><td>%s</td><td>%s</td><td>%d</td><td>
-<form method="post" action="/admin/portal/challenge/entries/%s/approve" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Approve</button></form>
-<form method="post" action="/admin/portal/challenge/entries/%s/reject" style="display:inline"><input type="hidden" name="csrf_token" value="%s"><button>Reject</button></form>
-</td></tr>`,
-				template.HTMLEscapeString(e.Content), template.HTMLEscapeString(e.AccountID), e.VoteCount,
-				template.HTMLEscapeString(e.ID), template.HTMLEscapeString(csrf),
-				template.HTMLEscapeString(e.ID), template.HTMLEscapeString(csrf))
+		entries, err = pm.ListChallengeReviewEntries(r.Context(), topic.ID)
+		if err != nil {
+			http.Error(w, "Entries unavailable.", 500)
+			return
 		}
-		fmt.Fprintf(w, `</table>
-<form method="post" action="/admin/portal/challenge/%s/close"><input type="hidden" name="csrf_token" value="%s"><button>Close week</button></form>`,
-			topic.ID, template.HTMLEscapeString(csrf))
 	}
-	fmt.Fprintf(w, `<h2>New topic</h2>
-<form method="post" action="/admin/portal/challenge/topic">
-<input type="hidden" name="csrf_token" value="%s">
-<label>Week start (YYYY-MM-DD) <input name="week_start" required></label><br>
-<label>Nown media ID <input name="nown_media_id" required></label><br>
-<button>Create</button>
-</form>
-</body></html>`, template.HTMLEscapeString(csrf))
+	subs, err := pm.ListSubmissions(r.Context(), "", "approved")
+	if err != nil {
+		http.Error(w, "Topic media unavailable.", 500)
+		return
+	}
+	var topics []portal.Submission
+	for _, s := range subs {
+		if s.MediaType == portal.MediaText {
+			topics = append(topics, s)
+		}
+	}
+	adminPage(w, r, "Weekly Nown Challenge", "Schedule the topic, screen responses, and close the week.", challengeAdminBody, map[string]any{"Topic": topic, "Entries": entries, "Topics": topics})
 }
 
 func (m *Manager) portalChallengeTopicCreate(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
@@ -289,30 +209,38 @@ func (m *Manager) portalChallengeTopicCreate(w http.ResponseWriter, r *http.Requ
 	}
 	weekStart, err := time.Parse("2006-01-02", r.FormValue("week_start"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	adminID := adminIDFromContext(r.Context())
 	if _, err := pm.CreateChallengeTopic(r.Context(), adminID, weekStart, r.FormValue("nown_media_id")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/challenge", http.StatusSeeOther)
 }
 
 func (m *Manager) portalChallengeClose(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
+	if r.FormValue("confirm_close") != "yes" {
+		adminError(w, r, errors.New("week closure confirmation required"), "/admin/portal/challenge")
+		return
+	}
 	adminID := adminIDFromContext(r.Context())
 	if _, err := pm.CloseChallengeWeek(r.Context(), adminID, r.PathValue("id")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/challenge", http.StatusSeeOther)
 }
 
 func (m *Manager) portalChallengeEntryApprove(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
+	if r.FormValue("human_reviewed") != "yes" {
+		adminError(w, r, errors.New("human review confirmation required"), "/admin/portal/challenge")
+		return
+	}
 	adminID := adminIDFromContext(r.Context())
 	if err := pm.ApproveChallengeEntry(r.Context(), adminID, r.PathValue("id")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/challenge", http.StatusSeeOther)
@@ -320,8 +248,8 @@ func (m *Manager) portalChallengeEntryApprove(w http.ResponseWriter, r *http.Req
 
 func (m *Manager) portalChallengeEntryReject(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
 	adminID := adminIDFromContext(r.Context())
-	if err := pm.RejectChallengeEntry(r.Context(), adminID, r.PathValue("id"), "rejected in admin console"); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := pm.RejectChallengeEntry(r.Context(), adminID, r.PathValue("id"), r.FormValue("reason")); err != nil {
+		adminError(w, r, err, "/admin/portal/")
 		return
 	}
 	http.Redirect(w, r, "/admin/portal/challenge", http.StatusSeeOther)

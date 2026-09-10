@@ -82,8 +82,19 @@ type LocalizationConfig struct {
 // ModerationConfig holds per-language free-chat word lists. English is always
 // applied as the fallback list in addition to a player's selected language.
 type ModerationConfig struct {
-	DefaultLanguage string              `yaml:"default_language"`
-	WordLists       map[string][]string `yaml:"word_lists"`
+	DefaultLanguage  string                 `yaml:"default_language"`
+	WordLists        map[string][]string    `yaml:"word_lists"`
+	ContentScreening ContentScreeningConfig `yaml:"content_screening"`
+}
+
+// ContentScreeningConfig controls the optional server-only automated text reviewer.
+// Enable it with an environment overlay; APIKey accepts the existing ${VAR}
+// secret interpolation. Disabled or unavailable screening blocks approval.
+type ContentScreeningConfig struct {
+	Provider string `yaml:"provider"`
+	Model    string `yaml:"model"`
+	APIKey   string `yaml:"api_key" json:"-"`
+	TimeoutS int    `yaml:"timeout_s"`
 }
 
 // DatabaseConfig is the PostgreSQL connection pool.

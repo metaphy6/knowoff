@@ -189,3 +189,40 @@ func TestInterpolateEnvVars(t *testing.T) {
 		t.Errorf("expected missing [TEST_VAR_MISSING], got %v", missing)
 	}
 }
+
+func TestContentScreeningConfigLoadsOptionalServerKey(t *testing.T) {
+	setRequiredSecrets(t)
+	for _, name := range []string{"KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID", "KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET", "KNOWOFF_OAUTH_GOOGLE_CLIENT_ID", "KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET", "KNOWOFF_SSV_CALLBACK_KEY"} {
+		t.Setenv(name, "test-only")
+	}
+	cfg, err := Load("../../../configs/base.yaml", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Moderation.ContentScreening.Provider != "disabled" || cfg.Moderation.ContentScreening.APIKey != "" {
+		t.Fatal("screening must be disabled without credentials")
+	}
+	t.Setenv("KNOWOFF_TEST_SCREENING_KEY", "test-only-key")
+	overlay := writeTemp(t, "screening.yaml", `moderation:
+  content_screening:
+    provider: openai
+    api_key: ${KNOWOFF_TEST_SCREENING_KEY}
+`)
+	cfg, err = Load("../../../configs/base.yaml", overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Moderation.ContentScreening.APIKey != "test-only-key" || cfg.Moderation.ContentScreening.Model != "omni-moderation-latest" || cfg.Moderation.ContentScreening.TimeoutS != 10 {
+		t.Fatal("screening config did not merge correctly")
+	}
+}
+
+func TestContentScreeningConfigRejectsInvalidSettings(t *testing.T) {
+	for _, cfg := range []ContentScreeningConfig{{Provider: "unknown"}, {Provider: "openai"}, {TimeoutS: 31}, {TimeoutS: -1}} {
+		c := &Config{}
+		c.Moderation.ContentScreening = cfg
+		if !strings.Contains(strings.Join(validate(c), ";"), "moderation.content_screening") {
+			t.Errorf("invalid screening config accepted: %+v", cfg)
+		}
+	}
+}

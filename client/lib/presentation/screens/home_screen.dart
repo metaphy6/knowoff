@@ -10,6 +10,7 @@ import '../widgets/device_layout.dart';
 import '../widgets/service_navigation.dart';
 import 'game_screen.dart';
 import 'account_screens.dart';
+import 'community_screens.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({this.api, super.key});
@@ -195,6 +196,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             KoHeading(title: l.homeHowTo),
             _rules(context),
           ],
+          const SizedBox(height: 28),
+          KoPanel(
+            color: KoColors.tangerine,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(l.challengeHomeHint, style: koDisplayStyle(size: 25)),
+                  const SizedBox(height: 16),
+                  KoButton(
+                      key: const Key('home-challenge'),
+                      label: l.challengeTitle,
+                      color: KoColors.surface,
+                      onPressed: () => koPush<void>(
+                          context, WeeklyChallengeScreen(api: widget.api))),
+                ]),
+          ),
           const SizedBox(height: 28),
           Text(l.homeFooter,
               textAlign: TextAlign.center,

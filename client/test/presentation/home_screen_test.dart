@@ -39,6 +39,8 @@ class _Api extends ApiClient {
   @override
   Future<List<dynamic>> getNotices() async => [];
   @override
+  Future<Map<String, dynamic>> getActiveChallenge() async => {};
+  @override
   Future<Map<String, dynamic>> createRoom(int size) async {
     createdSize = size;
     return {'code': 'ABC123'};
@@ -86,6 +88,24 @@ Future<_Transport> _pump(WidgetTester tester, Widget page,
 }
 
 void main() {
+  testWidgets('community routes are discoverable from Play and own Profile',
+      (tester) async {
+    await _pump(tester, HomeScreen(api: _Api()), size: const Size(430, 932));
+    await tester.ensureVisible(find.byKey(const Key('home-challenge')));
+    await tester.tap(find.byKey(const Key('home-challenge')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('challenge-empty')), findsOneWidget);
+    Navigator.of(tester.element(find.byKey(const Key('challenge-empty'))))
+        .pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('service-nav-profile')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('profile-contributor')));
+    await tester.tap(find.byKey(const Key('profile-contributor')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('portal-code')), findsOneWidget);
+  });
+
   for (final device in [
     ('phone', const Size(320, 640)),
     ('phone', const Size(430, 932)),

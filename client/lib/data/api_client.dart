@@ -4,8 +4,15 @@ import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
 
-/// HTTP API client for Phase 4–5 endpoints: profile, leaderboard, economy,
-/// notices, reports, feedback, and avatar upload.
+class ApiException implements Exception {
+  const ApiException(this.statusCode, {this.code});
+  final int statusCode;
+  final String? code;
+  @override
+  String toString() => 'API request failed ($statusCode)';
+}
+
+/// Authenticated HTTP client for player services and community participation.
 class ApiClient {
   ApiClient(
       {required String baseUrl, required AuthService auth, http.Client? client})
@@ -17,19 +24,19 @@ class ApiClient {
   final AuthService _auth;
   final http.Client _client;
 
-  Future<Map<String, dynamic>> _get(String path) async {
+  Future<Map<String, dynamic>> _get(String path,
+      {bool retryAuth = true}) async {
     await _auth.ensureSession();
     final res = await _client.get(
       Uri.parse('$_baseUrl$path'),
       headers: {'Authorization': 'Bearer ${_auth.accessToken}'},
     );
-    if (res.statusCode == 401) {
+    if (res.statusCode == 401 && retryAuth) {
       await _auth.refresh();
-      return _get(path);
+      return _get(path, retryAuth: false);
     }
-    if (res.statusCode != 200) {
-      throw Exception('api error ${res.statusCode}: ${res.body}');
-    }
+    if (res.statusCode == 204) return {};
+    if (res.statusCode != 200) throw _error(res);
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
@@ -48,12 +55,12 @@ class ApiClient {
       return _patch(path, body);
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('api error ${res.statusCode}: ${res.body}');
+      throw _error(res);
     }
   }
 
-  Future<Map<String, dynamic>> _postJson(
-      String path, Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> _postJson(String path, Map<String, dynamic> body,
+      {bool retryAuth = true}) async {
     await _auth.ensureSession();
     final res = await _client.post(
       Uri.parse('$_baseUrl$path'),
@@ -63,12 +70,12 @@ class ApiClient {
       },
       body: jsonEncode(body),
     );
-    if (res.statusCode == 401) {
+    if (res.statusCode == 401 && retryAuth) {
       await _auth.refresh();
-      return _postJson(path, body);
+      return _postJson(path, body, retryAuth: false);
     }
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('api error ${res.statusCode}: ${res.body}');
+      throw _error(res);
     }
     if (res.statusCode == 204 || res.body.trim().isEmpty) return {};
     return jsonDecode(res.body) as Map<String, dynamic>;
@@ -77,6 +84,44 @@ class ApiClient {
   Future<void> _post(String path, Map<String, dynamic> body) async {
     await _postJson(path, body);
   }
+
+  ApiException _error(http.Response response) {
+    String? code;
+    try {
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic> && data['code'] is String) {
+        code = data['code'] as String;
+      }
+    } on FormatException {
+      // Non-JSON gateway errors still provide an actionable HTTP status.
+    }
+    return ApiException(response.statusCode, code: code);
+  }
+
+  Uri get portalLoginUri =>
+      Uri.parse('${Uri.parse(_baseUrl).origin}/portal/login');
+
+  Future<void> connectPortal(String code) =>
+      _post('/api/portal/connect', {'code': code});
+
+  Future<Map<String, dynamic>> getActiveChallenge() =>
+      _get('/api/challenge/active');
+
+  Future<Map<String, dynamic>> submitChallengeEntry({
+    required String topicId,
+    required String content,
+    required String termsVersion,
+  }) =>
+      _postJson('/api/challenge/entry', {
+        'topic_id': topicId,
+        'content': content,
+        'terms_version': termsVersion,
+        'terms_accepted': true,
+      });
+
+  Future<void> voteChallenge(
+          {required String topicId, required String entryId}) =>
+      _post('/api/challenge/vote', {'topic_id': topicId, 'entry_id': entryId});
 
   Future<Map<String, dynamic>> getProfile() => _get('/api/profile');
 

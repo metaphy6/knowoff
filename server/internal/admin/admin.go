@@ -172,29 +172,29 @@ func (m *Manager) CreateSession(ctx context.Context, adminID string) (sessionID,
 	return sessionID, csrfToken, sessionID, nil
 }
 
-// ValidateSession checks a session id + CSRF token and returns admin id/role.
-func (m *Manager) ValidateSession(ctx context.Context, sessionID, csrfToken string) (adminID, role string, err error) {
-	if sessionID == "" || csrfToken == "" {
-		return "", "", fmt.Errorf("missing session")
+// sessionDetails authenticates a cookie independently of request method. The
+// server's CSRF token is returned for rendering forms, never taken from a GET.
+func (m *Manager) sessionDetails(ctx context.Context, sessionID string) (adminID, role, csrf string, err error) {
+	if sessionID == "" {
+		return "", "", "", fmt.Errorf("missing session")
 	}
-	// Clean expired sessions opportunistically.
-	_, _ = m.db.ExecContext(ctx, `DELETE FROM admin_sessions WHERE expires_at < now()`)
-
-	var storedCSRF string
 	err = m.db.QueryRowContext(ctx,
-		`SELECT a.id, a.role, s.csrf_token
-		 FROM admin_sessions s
-		 JOIN admin_accounts a ON a.id = s.admin_id
-		 WHERE s.id = $1 AND s.expires_at > now()`,
-		sessionID,
-	).Scan(&adminID, &role, &storedCSRF)
+		`SELECT a.id, a.role, s.csrf_token FROM admin_sessions s
+   JOIN admin_accounts a ON a.id = s.admin_id
+   WHERE s.id = $1 AND s.expires_at > now()`, sessionID).Scan(&adminID, &role, &csrf)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", "", fmt.Errorf("invalid session")
-		}
-		return "", "", fmt.Errorf("validate session: %w", err)
+		return "", "", "", fmt.Errorf("invalid session: %w", err)
 	}
-	if subtle.ConstantTimeCompare([]byte(storedCSRF), []byte(csrfToken)) != 1 {
+	return adminID, role, csrf, nil
+}
+
+// ValidateSession authenticates a session and verifies an unsafe request's CSRF.
+func (m *Manager) ValidateSession(ctx context.Context, sessionID, csrfToken string) (adminID, role string, err error) {
+	adminID, role, storedCSRF, err := m.sessionDetails(ctx, sessionID)
+	if err != nil {
+		return "", "", err
+	}
+	if csrfToken == "" || subtle.ConstantTimeCompare([]byte(storedCSRF), []byte(csrfToken)) != 1 {
 		return "", "", fmt.Errorf("invalid csrf token")
 	}
 	return adminID, role, nil
@@ -270,15 +270,16 @@ func SessionFromRequest(r *http.Request) (sessionID, csrfToken string) {
 	}
 	csrfToken = r.Header.Get("X-CSRF-Token")
 	if csrfToken == "" {
-		csrfToken = r.FormValue("csrf_token")
+		csrfToken = r.PostFormValue("csrf_token")
 	}
 	return sessionID, csrfToken
 }
 
 // SetSessionCookie writes the admin session cookie.
-func SetSessionCookie(w http.ResponseWriter, value string, expires time.Time) {
+func SetSessionCookie(w http.ResponseWriter, value string, expires time.Time, secure ...bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
+		Secure:   len(secure) > 0 && secure[0],
 		Value:    value,
 		Path:     "/admin/",
 		HttpOnly: true,
@@ -288,9 +289,10 @@ func SetSessionCookie(w http.ResponseWriter, value string, expires time.Time) {
 }
 
 // ClearSessionCookie removes the admin session cookie.
-func ClearSessionCookie(w http.ResponseWriter) {
+func ClearSessionCookie(w http.ResponseWriter, secure ...bool) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     sessionCookieName,
+		Secure:   len(secure) > 0 && secure[0],
 		Value:    "",
 		Path:     "/admin/",
 		HttpOnly: true,

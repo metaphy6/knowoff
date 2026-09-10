@@ -3,7 +3,6 @@ package portal
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -15,6 +14,10 @@ import (
 // Handler returns the public contributor portal HTTP handler mounted at /portal/.
 func (m *Manager) Handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /portal/submissions/{id}/edit", m.requireAuth(m.submissionEdit))
+	mux.HandleFunc("GET /portal/login", m.loginForm)
+	mux.HandleFunc("POST /portal/session", m.loginContinue)
+	mux.HandleFunc("POST /portal/logout", m.requireAuth(m.logoutPost))
 	mux.HandleFunc("GET /portal/", m.requireAuth(m.index))
 	mux.HandleFunc("GET /portal/apply", m.requireAuth(m.applyForm))
 	mux.HandleFunc("POST /portal/apply", m.requireAuth(m.applyPost))
@@ -30,18 +33,6 @@ func (m *Manager) Handler() http.Handler {
 	return mux
 }
 
-func (m *Manager) requireAuth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		accountID := m.accountFromRequest(r)
-		if accountID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		ctx := context.WithValue(r.Context(), ctxAccountIDKey{}, accountID)
-		next(w, r.WithContext(ctx))
-	}
-}
-
 func (m *Manager) requireRole(role Role, next http.HandlerFunc) http.HandlerFunc {
 	return m.requireAuth(func(w http.ResponseWriter, r *http.Request) {
 		accountID := accountIDFromContext(r.Context())
@@ -54,17 +45,6 @@ func (m *Manager) requireRole(role Role, next http.HandlerFunc) http.HandlerFunc
 	})
 }
 
-func (m *Manager) accountFromRequest(r *http.Request) string {
-	// Prefer Authorization: Bearer <JWT>.
-	if h := r.Header.Get("Authorization"); len(h) > 7 && h[:7] == "Bearer " {
-		accountID, err := m.auth.ValidateAccessToken(r.Context(), h[7:])
-		if err == nil {
-			return accountID
-		}
-	}
-	return ""
-}
-
 type ctxAccountIDKey struct{}
 
 func accountIDFromContext(ctx context.Context) string {
@@ -75,33 +55,43 @@ func accountIDFromContext(ctx context.Context) string {
 }
 
 func (m *Manager) index(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/portal/" {
-		http.NotFound(w, r)
+	id := accountIDFromContext(r.Context())
+	role, err := m.ActiveRole(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Studio unavailable. Please try again.", 500)
 		return
 	}
-	accountID := accountIDFromContext(r.Context())
-	role, _ := m.ActiveRole(r.Context(), accountID)
-	fmt.Fprintf(w, `<!doctype html>
-<html><head><title>Knowoff Contributor Portal</title></head><body>
-<h1>Contributor Portal</h1>
-<p>Active role: %s</p>
-<ul>
-<li><a href="/portal/apply">Apply for role</a></li>
-<li><a href="/portal/submissions">My submissions</a></li>
-<li><a href="/portal/challenge">Weekly Nown Challenge</a></li>
-</ul>
-</body></html>`, template.HTMLEscapeString(string(role)))
+	subs, err := m.ListSubmissions(r.Context(), id, "")
+	if err != nil {
+		http.Error(w, "Studio unavailable. Please try again.", 500)
+		return
+	}
+	canSimulate, err := m.HasRole(r.Context(), id, RoleCurator)
+	if err != nil {
+		http.Error(w, "Roles unavailable.", 500)
+		return
+	}
+	portalPage(w, r, "Contributor studio", "Your ideas, a little editorial discipline, and a suspicious amount of personality.", overviewBody, map[string]any{"Role": role, "Submissions": len(subs), "CanSimulate": canSimulate})
 }
 
 func (m *Manager) applyForm(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Apply for role</title></head><body>
-<h1>Apply for Contributor / Curator / Guard role</h1>
-<form method="post">
-<label>Role <select name="role"><option>contributor</option><option>curator</option><option>guard</option></select></label><br>
-<button>Apply</button>
-</form>
-</body></html>`)
+	id := accountIDFromContext(r.Context())
+	p, err := m.profile.Get(r.Context(), id, true)
+	if err != nil {
+		http.Error(w, "Profile unavailable. Please try again.", 500)
+		return
+	}
+	role, err := m.ActiveRole(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Roles unavailable.", 500)
+		return
+	}
+	apps, err := m.ListOwnApplications(r.Context(), id)
+	if err != nil {
+		http.Error(w, "Applications unavailable.", 500)
+		return
+	}
+	portalPage(w, r, "Roles & applications", "Find your place at the table behind the table.", applicationBody, map[string]any{"Role": role, "Level": p.Level, "MinLevel": m.cfg.Tuning.Portal.MinAccountLevelToApply, "Eligible": p.Level >= m.cfg.Tuning.Portal.MinAccountLevelToApply, "Applications": apps})
 }
 
 func (m *Manager) applyPost(w http.ResponseWriter, r *http.Request) {
@@ -111,33 +101,30 @@ func (m *Manager) applyPost(w http.ResponseWriter, r *http.Request) {
 	}
 	accountID := accountIDFromContext(r.Context())
 	if err := m.ApplyForRole(r.Context(), accountID, Role(r.FormValue("role"))); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		portalError(w, r, err, "/portal/apply")
 		return
 	}
-	http.Redirect(w, r, "/portal/", http.StatusSeeOther)
+	http.Redirect(w, r, "/portal/apply", http.StatusSeeOther)
 }
 
 func (m *Manager) submissionsList(w http.ResponseWriter, r *http.Request) {
-	accountID := accountIDFromContext(r.Context())
-	subs, err := m.ListSubmissions(r.Context(), accountID, "")
+	id := accountIDFromContext(r.Context())
+	subs, err := m.ListSubmissions(r.Context(), id, "")
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Submissions unavailable.", 500)
 		return
 	}
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>My submissions</title></head><body>
-<h1>My submissions</h1>
-<ul>`)
-	for _, s := range subs {
-		fmt.Fprintf(w, `<li>%s [%s] %s</li>`, template.HTMLEscapeString(s.ID), template.HTMLEscapeString(string(s.Status)), template.HTMLEscapeString(s.Content))
+	terms, err := m.CurrentTerms(r.Context())
+	if err != nil {
+		http.Error(w, "Contribution terms are not available yet.", 503)
+		return
 	}
-	fmt.Fprint(w, `</ul>
-<h2>New text submission</h2>
-<form method="post" action="/portal/submissions">
-<label>Content <input name="content" required></label><br>
-<button>Create draft</button>
-</form>
-</body></html>`)
+	can, err := m.HasRole(r.Context(), id, RoleContributor)
+	if err != nil {
+		http.Error(w, "Roles unavailable.", 500)
+		return
+	}
+	portalPage(w, r, "My submissions", "Good ideas can stay drafts. Great ones make it into review.", submissionsBody, map[string]any{"Submissions": subs, "Terms": terms, "CanContribute": can, "MaxLength": m.MaxTextBytes()})
 }
 
 func (m *Manager) submissionCreate(w http.ResponseWriter, r *http.Request) {
@@ -146,8 +133,8 @@ func (m *Manager) submissionCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	accountID := accountIDFromContext(r.Context())
-	if _, err := m.CreateDraft(r.Context(), accountID, MediaText, r.FormValue("content")); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if _, err := m.CreateDraft(r.Context(), accountID, MediaText, r.FormValue("content"), ContributionConsent{Version: r.FormValue("terms_version"), Accepted: r.FormValue("terms_accepted") == "yes"}); err != nil {
+		portalError(w, r, err, "/portal/submissions")
 		return
 	}
 	http.Redirect(w, r, "/portal/submissions", http.StatusSeeOther)
@@ -157,7 +144,7 @@ func (m *Manager) submissionSubmit(w http.ResponseWriter, r *http.Request) {
 	accountID := accountIDFromContext(r.Context())
 	id := r.PathValue("id")
 	if err := m.SubmitDraft(r.Context(), accountID, id); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		portalError(w, r, err, "/portal/submissions")
 		return
 	}
 	http.Redirect(w, r, "/portal/submissions", http.StatusSeeOther)
@@ -167,23 +154,14 @@ func (m *Manager) submissionWithdraw(w http.ResponseWriter, r *http.Request) {
 	accountID := accountIDFromContext(r.Context())
 	id := r.PathValue("id")
 	if err := m.WithdrawSubmission(r.Context(), accountID, id); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		portalError(w, r, err, "/portal/submissions")
 		return
 	}
 	http.Redirect(w, r, "/portal/submissions", http.StatusSeeOther)
 }
 
 func (m *Manager) simulateForm(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Deal Simulator</title></head><body>
-<h1>Deal Simulator</h1>
-<form method="post">
-<label>Table size <select name="table_size"><option value="4">4</option><option value="6" selected>6</option></select></label><br>
-<label>Nown ID <input name="nown_id"></label><br>
-<label>Seed <input name="seed" value="42"></label><br>
-<button>Simulate</button>
-</form>
-</body></html>`)
+	portalPage(w, r, "Deal simulator", "Test a Nown with the same dealer the game uses.", simulatorBody, nil)
 }
 
 func (m *Manager) simulateRun(w http.ResponseWriter, r *http.Request) {
@@ -206,6 +184,10 @@ func (m *Manager) simulateRun(w http.ResponseWriter, r *http.Request) {
 		seed = 42
 	}
 
+	if m.media == nil {
+		http.Error(w, "The media pack is not available yet.", http.StatusServiceUnavailable)
+		return
+	}
 	pack := m.media.Active()
 	if pack == nil {
 		http.Error(w, "no media pack loaded", http.StatusServiceUnavailable)
@@ -231,19 +213,16 @@ func (m *Manager) simulateRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, `<!doctype html>
-<html><head><title>Deal Simulator Result</title></head><body>
-<h1>Deal Simulator Result</h1>
-<p>Pack: `+template.HTMLEscapeString(pack.Manifest.PackTag)+` | Nown: `+template.HTMLEscapeString(nownID)+` | Table: `+strconv.Itoa(tableSize)+` | Seed: `+strconv.FormatInt(seed, 10)+`</p>
-<table border="1"><tr><th>Seat</th><th>Hand (5)</th><th>Draw pile (3)</th></tr>`)
-	for i, hand := range result.Hands {
-		fmt.Fprintf(w, `<tr><td>%d</td><td>%s</td><td>%s</td></tr>`,
-			i+1,
-			template.HTMLEscapeString(joinIDs(hand.Cards)),
-			template.HTMLEscapeString(joinIDs(hand.DrawPile)),
-		)
+	type seatHand struct {
+		Seat        int
+		Cards, Draw string
 	}
-	fmt.Fprint(w, `</table><p><a href="/portal/simulate">Again</a></p></body></html>`)
+	var hands []seatHand
+	for i, hand := range result.Hands {
+		hands = append(hands, seatHand{i + 1, joinIDs(hand.Cards), joinIDs(hand.DrawPile)})
+	}
+	portalPage(w, r, "Deal simulator result", "A deterministic deal from the active pack.", `<p>Pack <code>{{.Data.Pack}}</code> · Nown <code>{{.Data.Nown}}</code> · Seed {{.Data.Seed}}</p><div class="table-scroll"><table><thead><tr><th>Seat</th><th>Hand card IDs</th><th>Draw pile IDs</th></tr></thead><tbody>{{range .Data.Hands}}<tr><td>{{.Seat}}</td><td><code>{{.Cards}}</code></td><td><code>{{.Draw}}</code></td></tr>{{end}}</tbody></table></div><a class="button secondary" href="/portal/simulate">Deal another hand</a>`, map[string]any{"Pack": pack.Manifest.PackTag, "Nown": nownID, "Seed": seed, "Hands": hands})
+
 }
 
 func joinIDs(ids []string) string {
@@ -258,43 +237,24 @@ func joinIDs(ids []string) string {
 }
 
 func (m *Manager) challengeView(w http.ResponseWriter, r *http.Request) {
-	accountID := accountIDFromContext(r.Context())
-	topic, err := m.ActiveChallengeTopic(r.Context())
+	snapshot, err := m.ChallengeSnapshot(r.Context(), accountIDFromContext(r.Context()))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "Challenge unavailable. Please try again.", 500)
 		return
 	}
-	if topic == nil {
-		fmt.Fprint(w, `<p>No active Weekly Nown Challenge.</p>`)
-		return
-	}
-	entries, err := m.ListChallengeEntries(r.Context(), topic.ID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Fprintf(w, `<!doctype html>
-<html><head><title>Weekly Nown Challenge</title></head><body>
-<h1>Weekly Nown Challenge</h1>
-<p>Week: %s - %s</p>
-<ul>`, topic.WeekStart.Format("2006-01-02"), topic.WeekEnd.Format("2006-01-02"))
-	for _, e := range entries {
-		if e.AccountID == accountID {
-			fmt.Fprintf(w, `<li>%s (yours) — %d votes</li>`, template.HTMLEscapeString(e.Content), e.VoteCount)
-		} else {
-			fmt.Fprintf(w, `<li>%s — %d votes <form method="post" action="/portal/challenge/vote" style="display:inline"><input type="hidden" name="entry_id" value="%s"><button>Vote</button></form></li>`, template.HTMLEscapeString(e.Content), e.VoteCount, template.HTMLEscapeString(e.ID))
+	if snapshot != nil {
+		if entries, ok := snapshot["entries"].([]map[string]any); ok {
+			for _, e := range entries {
+				e["is_own"] = e["account_id"] == accountIDFromContext(r.Context())
+			}
 		}
 	}
-	fmt.Fprint(w, `</ul>
-<h2>Submit entry</h2>
-<form method="post" action="/portal/challenge/entry">
-<input type="hidden" name="topic_id" value="`)
-	fmt.Fprint(w, template.HTMLEscapeString(topic.ID))
-	fmt.Fprint(w, `">
-<label>Content <input name="content" required></label><br>
-<button>Submit</button>
-</form>
-</body></html>`)
+	terms, err := m.CurrentTerms(r.Context())
+	if err != nil {
+		http.Error(w, "Contribution terms unavailable.", 503)
+		return
+	}
+	portalPage(w, r, "Weekly Nown Challenge", "One topic. One response each. A whole week to argue.", challengeBody, map[string]any{"Snapshot": snapshot, "Terms": terms, "MaxLength": m.MaxTextBytes()})
 }
 
 func (m *Manager) challengeEntryPost(w http.ResponseWriter, r *http.Request) {
@@ -305,8 +265,8 @@ func (m *Manager) challengeEntryPost(w http.ResponseWriter, r *http.Request) {
 	accountID := accountIDFromContext(r.Context())
 	topicID := r.FormValue("topic_id")
 	content := r.FormValue("content")
-	if _, err := m.SubmitChallengeEntry(r.Context(), accountID, topicID, MediaText, content); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if _, err := m.SubmitChallengeEntry(r.Context(), accountID, topicID, MediaText, content, ContributionConsent{Version: r.FormValue("terms_version"), Accepted: r.FormValue("terms_accepted") == "yes"}); err != nil {
+		portalError(w, r, err, "/portal/challenge")
 		return
 	}
 	http.Redirect(w, r, "/portal/challenge", http.StatusSeeOther)
@@ -325,7 +285,7 @@ func (m *Manager) challengeVotePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := m.VoteChallengeEntry(r.Context(), accountID, topicID, entryID); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		portalError(w, r, err, "/portal/challenge")
 		return
 	}
 	http.Redirect(w, r, "/portal/challenge", http.StatusSeeOther)
@@ -333,4 +293,12 @@ func (m *Manager) challengeVotePost(w http.ResponseWriter, r *http.Request) {
 
 func parseUUID(s string) (uuid.UUID, error) {
 	return uuid.Parse(s)
+}
+
+func (m *Manager) submissionEdit(w http.ResponseWriter, r *http.Request) {
+	if err := m.EditDraft(r.Context(), accountIDFromContext(r.Context()), r.PathValue("id"), r.FormValue("content")); err != nil {
+		portalError(w, r, err, "/portal/submissions")
+		return
+	}
+	http.Redirect(w, r, "/portal/submissions", http.StatusSeeOther)
 }

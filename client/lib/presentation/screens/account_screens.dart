@@ -10,6 +10,7 @@ import '../widgets/device_layout.dart';
 import '../widgets/service_components.dart';
 import '../widgets/service_notices.dart';
 import '../widgets/service_avatar_upload.dart';
+import 'community_screens.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({this.api, this.accountId, super.key});
@@ -145,6 +146,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ])),
                     const SizedBox(height: 28),
                     if (own) ...[
+                      KoButton(
+                          key: const Key('profile-contributor'),
+                          label: l10n.portalTitle,
+                          color: KoColors.aqua,
+                          icon: const Icon(Icons.open_in_browser),
+                          onPressed: () => koPush<void>(
+                              context, ContributorConnectScreen(api: _api))),
+                      const SizedBox(height: 28),
                       KoPanel(
                           child: Form(
                               key: _form,

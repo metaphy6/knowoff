@@ -141,12 +141,13 @@ func newTestManager(t *testing.T, db *sql.DB) *Manager {
 	pm := profile.NewManager(db, cfg.Tuning.Progression)
 	em := economy.NewManager(db, cfg)
 	return NewManager(Deps{
-		DB:      db,
-		Config:  cfg,
-		Auth:    fakeAuth{},
-		Profile: pm,
-		Economy: em,
-		Admin:   fakeAudit{},
+		Screener: acceptingTextScreener{},
+		DB:       db,
+		Config:   cfg,
+		Auth:     fakeAuth{},
+		Profile:  pm,
+		Economy:  em,
+		Admin:    fakeAudit{},
 	})
 }
 
@@ -258,7 +259,7 @@ func TestSubmissionLifecycle(t *testing.T) {
 		t.Fatalf("grant role: %v", err)
 	}
 
-	draft, err := mgr.CreateDraft(ctx, account, MediaText, "a funny caption")
+	draft, err := mgr.CreateDraft(ctx, account, MediaText, "a funny caption", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("create draft: %v", err)
 	}
@@ -328,7 +329,7 @@ func TestSubmission_DailyCap(t *testing.T) {
 		t.Fatalf("grant role: %v", err)
 	}
 
-	d1, err := mgr.CreateDraft(ctx, account, MediaText, "one")
+	d1, err := mgr.CreateDraft(ctx, account, MediaText, "one", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("draft: %v", err)
 	}
@@ -336,7 +337,7 @@ func TestSubmission_DailyCap(t *testing.T) {
 		t.Fatalf("submit first: %v", err)
 	}
 
-	d2, err := mgr.CreateDraft(ctx, account, MediaText, "two")
+	d2, err := mgr.CreateDraft(ctx, account, MediaText, "two", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("draft second: %v", err)
 	}
@@ -412,7 +413,7 @@ func approvedTopicMedia(t *testing.T, mgr *Manager, db *sql.DB, adminID string) 
 	if err := mgr.GrantRole(ctx, adminID, account, RoleContributor); err != nil {
 		t.Fatalf("grant contributor: %v", err)
 	}
-	draft, err := mgr.CreateDraft(ctx, account, MediaText, "topic nown")
+	draft, err := mgr.CreateDraft(ctx, account, MediaText, "topic nown", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("draft topic: %v", err)
 	}
@@ -429,60 +430,49 @@ func TestChallenge_RaceToSlot100(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	mgr := newTestManager(t, db)
-	adminID := newAdmin(t, db)
+	admin := newAdmin(t, db)
 	ctx := context.Background()
-
-	nownID := approvedTopicMedia(t, mgr, db, adminID)
-	weekStart := time.Now().UTC().Truncate(24 * time.Hour)
-	topic, err := mgr.CreateChallengeTopic(ctx, adminID, weekStart, nownID)
+	topic, err := mgr.CreateChallengeTopic(ctx, admin, weekMonday(time.Now().UTC()), approvedTopicMedia(t, mgr, db, admin))
 	if err != nil {
-		t.Fatalf("create topic: %v", err)
+		t.Fatal(err)
 	}
-
-	mgr.cfg.Tuning.LiveOps.ChallengeMaxEntries = 100
-
-	// Pre-create accounts and submit entries to avoid exhausting the pool.
-	entries := make([]*ChallengeEntry, 150)
-	for i := range entries {
-		acct := newAccount(t, db)
-		e, err := mgr.SubmitChallengeEntry(ctx, acct, topic.ID, MediaText, "entry")
-		if err != nil {
-			t.Fatalf("submit entry %d: %v", i, err)
-		}
-		entries[i] = e
+	accounts := make([]string, 150)
+	for i := range accounts {
+		accounts[i] = newAccount(t, db)
 	}
-
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 10)
 	var mu sync.Mutex
-	var approved int
-	var full int
+	sem := make(chan struct{}, 10)
+	accepted, full := 0, 0
 	var firstErr error
-	for _, e := range entries {
+	for _, account := range accounts {
 		wg.Add(1)
-		go func(e *ChallengeEntry) {
+		go func(account string) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			err := mgr.ApproveChallengeEntry(ctx, adminID, e.ID)
+			_, err := mgr.SubmitChallengeEntry(ctx, account, topic.ID, MediaText, "entry", ContributionConsent{Version: "v1", Accepted: true})
 			mu.Lock()
 			defer mu.Unlock()
 			if err == nil {
-				approved++
-			} else if err.Error() == "challenge full" {
+				accepted++
+			} else if err.Error() == "challenge_full" {
 				full++
 			} else if firstErr == nil {
 				firstErr = err
 			}
-		}(e)
+		}(account)
 	}
 	wg.Wait()
-
-	if approved != 100 {
-		t.Fatalf("expected exactly 100 approved, got %d (full=%d firstErr=%v)", approved, full, firstErr)
+	if accepted != 100 || full != 50 || firstErr != nil {
+		t.Fatalf("first-100 intake: accepted=%d full=%d other=%v", accepted, full, firstErr)
 	}
-	if full != 50 {
-		t.Fatalf("expected 50 'challenge full' rejections, got %d", full)
+	var visible int
+	if err = db.QueryRow(`SELECT count(*) FROM challenge_entries WHERE topic_id=$1 AND status='approved'`, topic.ID).Scan(&visible); err != nil {
+		t.Fatal(err)
+	}
+	if visible != 0 {
+		t.Fatal("intake bypassed review")
 	}
 }
 
@@ -495,7 +485,7 @@ func TestChallenge_VoteImmutable(t *testing.T) {
 	ctx := context.Background()
 
 	nownID := approvedTopicMedia(t, mgr, db, adminID)
-	weekStart := time.Now().UTC().Truncate(24 * time.Hour)
+	weekStart := weekMonday(time.Now().UTC())
 	topic, err := mgr.CreateChallengeTopic(ctx, adminID, weekStart, nownID)
 	if err != nil {
 		t.Fatalf("create topic: %v", err)
@@ -503,11 +493,11 @@ func TestChallenge_VoteImmutable(t *testing.T) {
 
 	e1acct := newAccount(t, db)
 	e2acct := newAccount(t, db)
-	e1, err := mgr.SubmitChallengeEntry(ctx, e1acct, topic.ID, MediaText, "e1")
+	e1, err := mgr.SubmitChallengeEntry(ctx, e1acct, topic.ID, MediaText, "e1", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry1: %v", err)
 	}
-	e2, err := mgr.SubmitChallengeEntry(ctx, e2acct, topic.ID, MediaText, "e2")
+	e2, err := mgr.SubmitChallengeEntry(ctx, e2acct, topic.ID, MediaText, "e2", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry2: %v", err)
 	}
@@ -554,13 +544,13 @@ func TestChallenge_CloseIdempotent(t *testing.T) {
 	ctx := context.Background()
 
 	nownID := approvedTopicMedia(t, mgr, db, adminID)
-	weekStart := time.Now().UTC().Truncate(24 * time.Hour)
+	weekStart := weekMonday(time.Now().UTC())
 	topic, err := mgr.CreateChallengeTopic(ctx, adminID, weekStart, nownID)
 	if err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
 
-	entry, err := mgr.SubmitChallengeEntry(ctx, winnerAcct, topic.ID, MediaText, "winner")
+	entry, err := mgr.SubmitChallengeEntry(ctx, winnerAcct, topic.ID, MediaText, "winner", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry: %v", err)
 	}
@@ -640,7 +630,7 @@ func TestDealSimulatorHandler(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, "Deal Simulator Result") {
+	if !strings.Contains(body, "<h1>Deal simulator result</h1>") {
 		t.Fatalf("expected result heading, got %s", body)
 	}
 	if !strings.Contains(body, "card-h-") {
@@ -769,17 +759,17 @@ func TestChallenge_SlotReopensAfterRejection(t *testing.T) {
 	ctx := context.Background()
 
 	nownID := approvedTopicMedia(t, mgr, db, adminID)
-	weekStart := time.Now().UTC().Truncate(24 * time.Hour)
+	weekStart := weekMonday(time.Now().UTC())
 	topic, err := mgr.CreateChallengeTopic(ctx, adminID, weekStart, nownID)
 	if err != nil {
 		t.Fatalf("create topic: %v", err)
 	}
 
-	e1, err := mgr.SubmitChallengeEntry(ctx, acct1, topic.ID, MediaText, "one")
+	e1, err := mgr.SubmitChallengeEntry(ctx, acct1, topic.ID, MediaText, "one", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry1: %v", err)
 	}
-	e2, err := mgr.SubmitChallengeEntry(ctx, acct2, topic.ID, MediaText, "two")
+	e2, err := mgr.SubmitChallengeEntry(ctx, acct2, topic.ID, MediaText, "two", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry2: %v", err)
 	}
@@ -794,7 +784,7 @@ func TestChallenge_SlotReopensAfterRejection(t *testing.T) {
 		t.Fatalf("reject1: %v", err)
 	}
 
-	e3, err := mgr.SubmitChallengeEntry(ctx, acct3, topic.ID, MediaText, "three")
+	e3, err := mgr.SubmitChallengeEntry(ctx, acct3, topic.ID, MediaText, "three", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry3: %v", err)
 	}
@@ -821,16 +811,16 @@ func TestVoteChallengeEntry_WrongTopic(t *testing.T) {
 	ctx := context.Background()
 
 	nownID := approvedTopicMedia(t, mgr, db, adminID)
-	topic1, err := mgr.CreateChallengeTopic(ctx, adminID, time.Now().UTC().Truncate(24*time.Hour), nownID)
+	topic1, err := mgr.CreateChallengeTopic(ctx, adminID, weekMonday(time.Now().UTC()), nownID)
 	if err != nil {
 		t.Fatalf("topic1: %v", err)
 	}
-	topic2, err := mgr.CreateChallengeTopic(ctx, adminID, time.Now().UTC().Add(7*24*time.Hour).Truncate(24*time.Hour), nownID)
+	topic2, err := mgr.CreateChallengeTopic(ctx, adminID, weekMonday(time.Now().UTC()).AddDate(0, 0, 7), nownID)
 	if err != nil {
 		t.Fatalf("topic2: %v", err)
 	}
 
-	entry, err := mgr.SubmitChallengeEntry(ctx, owner, topic1.ID, MediaText, "entry")
+	entry, err := mgr.SubmitChallengeEntry(ctx, owner, topic1.ID, MediaText, "entry", ContributionConsent{Version: "v1", Accepted: true})
 	if err != nil {
 		t.Fatalf("entry: %v", err)
 	}
@@ -842,3 +832,7 @@ func TestVoteChallengeEntry_WrongTopic(t *testing.T) {
 		t.Fatal("expected error voting for entry under wrong topic")
 	}
 }
+
+type acceptingTextScreener struct{}
+
+func (acceptingTextScreener) ScreenText(context.Context, string) error { return nil }

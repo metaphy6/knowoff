@@ -31,7 +31,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	_, _ = db.Exec("TRUNCATE TABLE admin_sessions, admin_accounts, accounts, profiles RESTART IDENTITY CASCADE")
+	if _, err := db.Exec("TRUNCATE TABLE admin_sessions, admin_accounts, accounts, profiles, portal_terms, challenge_topics RESTART IDENTITY CASCADE"); err != nil {
+		t.Fatalf("reset admin fixtures: %v", err)
+	}
 	return db
 }
 

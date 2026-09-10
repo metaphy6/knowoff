@@ -9,6 +9,7 @@ import (
 
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/store"
+	"github.com/knowoff/knowoff/server/internal/transport"
 	_ "github.com/lib/pq"
 )
 
@@ -166,5 +167,92 @@ func TestLocalizedFallback(t *testing.T) {
 	}
 	if len(localized) != 1 || localized[0].Title != "Hola" {
 		t.Fatalf("expected fallback title, got %+v", localized)
+	}
+}
+
+type auditBroadcastProbe struct {
+	db    *sql.DB
+	t     *testing.T
+	calls int
+}
+
+func (p *auditBroadcastProbe) SetReady(bool) {}
+func (p *auditBroadcastProbe) BroadcastAll(e *transport.Envelope) {
+	p.calls++
+	var count int
+	if err := p.db.QueryRow(`SELECT count(*) FROM admin_audit_log WHERE action='notice_create' AND target_id=$1`, e.Payload["id"]).Scan(&count); err != nil || count == 0 {
+		p.t.Errorf("broadcast before committed audit: count=%d err=%v", count, err)
+	}
+}
+
+func TestNoticeAuditAtomicityAndScheduledBroadcast(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	probe := &auditBroadcastProbe{db: db, t: t}
+	m := NewManager(db, testConfig(), probe)
+	future := time.Now().UTC().Add(time.Hour)
+	scheduled, err := m.CreateNotice(t.Context(), Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Later"}, Body: map[string]string{"en": "Scheduled"}, PublishedAt: &future})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if probe.calls != 0 {
+		t.Fatal("future publication broadcast immediately")
+	}
+	var count int
+	if err = db.QueryRow(`SELECT count(*) FROM admin_audit_log WHERE action='notice_create' AND target_id=$1`, scheduled).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("missing create audit=%d %v", count, err)
+	}
+	if _, err = m.CreateNotice(t.Context(), Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Now"}, Body: map[string]string{"en": "Visible"}}); err != nil {
+		t.Fatal(err)
+	}
+	if probe.calls != 1 {
+		t.Fatalf("immediate broadcasts=%d", probe.calls)
+	}
+	if err = m.WithdrawNotice(t.Context(), scheduled); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.WithdrawNotice(t.Context(), scheduled); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.QueryRow(`SELECT count(*) FROM admin_audit_log WHERE action='notice_withdraw' AND target_id=$1`, scheduled).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("withdraw audit count=%d %v", count, err)
+	}
+}
+
+func TestNoticeAuditFailureRollsBackMutation(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	probe := &auditBroadcastProbe{db: db, t: t}
+	m := NewManager(db, testConfig(), probe)
+	notice := Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Audit me"}, Body: map[string]string{"en": "Atomic change"}}
+	existing, err := m.CreateNotice(t.Context(), notice)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(`CREATE FUNCTION test_reject_notice_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit unavailable'; END; $$; CREATE TRIGGER test_reject_notice_audit BEFORE INSERT ON admin_audit_log FOR EACH ROW WHEN (NEW.action IN ('notice_create','notice_withdraw')) EXECUTE FUNCTION test_reject_notice_audit()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if _, err := db.Exec(`DROP TRIGGER test_reject_notice_audit ON admin_audit_log; DROP FUNCTION test_reject_notice_audit()`); err != nil {
+			t.Error(err)
+		}
+	}()
+	if _, err = m.CreateNotice(t.Context(), notice); err == nil {
+		t.Fatal("create succeeded without audit")
+	}
+	if err = m.WithdrawNotice(t.Context(), existing); err == nil {
+		t.Fatal("withdraw succeeded without audit")
+	}
+	var count int
+	var withdrawn sql.NullTime
+	if err = db.QueryRow(`SELECT count(*) FROM system_notices`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.QueryRow(`SELECT withdrawn_at FROM system_notices WHERE id=$1`, existing).Scan(&withdrawn); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 || withdrawn.Valid || probe.calls != 1 {
+		t.Fatalf("audit failure leaked mutation/broadcast: count%d withdrawn%v calls%d", count, withdrawn, probe.calls)
 	}
 }

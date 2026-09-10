@@ -53,7 +53,8 @@ func (w *Wallet) Balance(ctx context.Context, accountID string) (int64, error) {
 	return balance, nil
 }
 
-// DailyEarned returns the total Noin earned by the account on the given server day.
+// DailyEarned returns Noin counted toward the account's play/conversion cap.
+// Community contribution rewards do not consume that allowance.
 func (w *Wallet) DailyEarned(ctx context.Context, accountID string, day time.Time) (int64, error) {
 	d := serverDay(day)
 	var earned int64
@@ -70,10 +71,10 @@ func (w *Wallet) DailyEarned(ctx context.Context, accountID string, day time.Tim
 	return earned, nil
 }
 
-// Grant atomically credits Noin, inserts an append-only ledger row, and updates
-// the daily earned total. It rejects grants that would push the account's daily
-// earned total above dailyCap. The returned amount is the credited amount (zero
-// when capped). Reasons appear in the ledger and should be human-readable.
+// Grant atomically credits Noin and inserts an append-only ledger row. Ordinary
+// grants count toward dailyCap; contributor and challenge-winner rewards are
+// independent of the play/conversion allowance. It returns the amount credited
+// (zero when capped). Reasons appear in the ledger and should be human-readable.
 func (w *Wallet) Grant(ctx context.Context, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64) (int, error) {
 	if amount <= 0 {
 		return 0, nil
@@ -110,23 +111,24 @@ func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, even
 	}
 
 	day := serverDay(time.Now().UTC())
-	var dailyEarned int64
-	if err := tx.QueryRowContext(ctx,
-		"SELECT COALESCE(earned,0) FROM daily_noin_earned WHERE account_id = $1 AND server_day = $2 FOR UPDATE",
-		accountID, day,
-	).Scan(&dailyEarned); err != nil && err != sql.ErrNoRows {
-		return 0, fmt.Errorf("lock daily earned: %w", err)
-	}
-
-	if dailyCap > 0 && dailyEarned >= dailyCap {
-		return 0, nil
-	}
-
+	countsTowardPlayCap := eventType != LedgerContributorReward && eventType != LedgerChallengeWinner
 	cappedAmount := amount
-	if dailyCap > 0 {
-		remaining := int(dailyCap - dailyEarned)
-		if remaining < cappedAmount {
-			cappedAmount = remaining
+	if countsTowardPlayCap {
+		var dailyEarned int64
+		if err := tx.QueryRowContext(ctx,
+			"SELECT COALESCE(earned,0) FROM daily_noin_earned WHERE account_id = $1 AND server_day = $2 FOR UPDATE",
+			accountID, day,
+		).Scan(&dailyEarned); err != nil && err != sql.ErrNoRows {
+			return 0, fmt.Errorf("lock daily earned: %w", err)
+		}
+		if dailyCap > 0 && dailyEarned >= dailyCap {
+			return 0, nil
+		}
+		if dailyCap > 0 {
+			remaining := int(dailyCap - dailyEarned)
+			if remaining < cappedAmount {
+				cappedAmount = remaining
+			}
 		}
 	}
 	if cappedAmount <= 0 {
@@ -152,15 +154,17 @@ func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, even
 		return 0, fmt.Errorf("insert ledger: %w", err)
 	}
 
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO daily_noin_earned (account_id, server_day, earned, updated_at)
+	if countsTowardPlayCap {
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO daily_noin_earned (account_id, server_day, earned, updated_at)
 		 VALUES ($1, $2, $3, now())
 		 ON CONFLICT (account_id, server_day) DO UPDATE SET
 		   earned = daily_noin_earned.earned + EXCLUDED.earned,
 		   updated_at = now()`,
-		accountID, day, cappedAmount,
-	); err != nil {
-		return 0, fmt.Errorf("update daily earned: %w", err)
+			accountID, day, cappedAmount,
+		); err != nil {
+			return 0, fmt.Errorf("update daily earned: %w", err)
+		}
 	}
 
 	return cappedAmount, nil

@@ -45,6 +45,178 @@ vibrant, with particular care to avoid animation jank. The design matrix is
 the reconstruction contract. Prior UI proof gates are not evidence that the
 current client is playable; the replacement checklist below tracks fresh proof.
 
+#### Community and operations: source audit and first working slice — 2026-09-10
+
+**Goal.** Make the existing Go-rendered Contributor Portal and internal Admin
+Console usable in an ordinary browser, connect a working Weekly Nown Challenge
+to Flutter, and correct completion claims that currently exceed the source.
+This is the owner's request to start these interfaces and their missing backend,
+not a claim that every Phase 5/6 launch deliverable can be completed in this slice.
+Read the Blueprint's 🎮, 👤, 🧑‍🎨 and 🛡️ chapters as the behavior contract.
+
+**Evidence standard.** The audit below describes the source before this slice.
+Existing service methods and database tests are reusable work, but do not prove
+a reachable browser or in-app journey. The broad Phase 4–6 checkboxes reopened
+below retain their original acceptance wording. Historical tracking rows remain
+append-only; the earlier "Phase 6 complete" row is not current completion proof.
+The root coordinator updates this checklist with actual tests and runtime evidence.
+
+| Surface | Present and reusable | Concrete gap at audit time |
+|---|---|---|
+| Quick Play, local rooms, profiles, leaderboard, reports, feedback | Flutter pages, API methods and matching Go services exist. Current device layouts and developer controls have separate proof above/below. | OAuth linking and account deletion have no Flutter integration; server OAuth helpers alone do not prove second-device restoration. Public profile statistics exist, but this audit does not certify every historical nightly-job claim. |
+| Portal browser access | `/portal/` Go pages and role/application/submission manager methods. | `portal/handler.go` accepts only a Bearer header; normal page navigation and form posts cannot carry it. No usable browser session or form CSRF flow. |
+| Admin browser access | PostgreSQL accounts/sessions, password and TOTP validation, login throttling, separate internal listener, RBAC middleware. | `admin.ValidateSession` requires a CSRF token even for GET; login sends it only in a response header, so an ordinary cookie-only redirect back to `/admin/` fails. Cookies also need an explicit secure-transport policy. |
+| Contributor/Curator workflow | Role application/grant/reject/revoke, text drafts, submit/withdraw, decide/publish methods, real deal simulator, `content/curator-guide.md`, acceptance reward/profile-credit transaction. | Draft HTML has no submit/withdraw controls or explicit terms consent; consent is currently stamped automatically. No draft editing, open pack calls, Nown/deck authoring, image/GIF upload processing or automatic screening integration. `PublishSubmission` only changes a database status/pack tag; it does not build or activate a pack. Several audits are ignored after mutations commit. |
+| Admin operations | Existing `/admin/portal/` routes for terms, applications, submissions, freeze review and challenge; notice create/withdraw and avatar takedown routes. `reports.ListReports`/`ListFeedback`, wallet balance and entitlement readers are reusable. | Main dashboard links only Notices. Conduct/media case triage, feedback transitions, economy lookup UI, pack operations and leaderboard operations are absent. Terms creation does not change the config-selected active terms. Existing challenge admin lists approved entries, hiding the pending screening queue. |
+| Weekly Nown Challenge | Public active/entry/vote endpoints; approved-only public listing; unique entry/vote rows; approval slot locking; rejection; winner/title/payout transaction. Topic IDs point to approved portal submissions. | No Flutter API or screen. Active response hardcodes `voted: false` and lacks renderable topic content. The first-100 limit is enforced on approval instead of intake; no explicit consent; votes do not check whether the topic is still open. Week-end date handling excludes most of Sunday. No automatic publish/close scheduler or current-title transfer proof. |
+| Guard enforcement | Freeze/dismiss/permanent-ban/expiry service methods and admin review routes. | No public Guard action UI/route. `frozen_by` references admin accounts although Guards are player accounts. Dismissal can clear another active suspension/ban; expiry is not continuously scheduled in the server loop. Do not enable these unsafe actions merely to fill a navigation item. |
+| Notices and avatars | Notice storage/localization/broadcast-on-create, maintenance helper, Flutter banners/inbox; avatar size/crop/WebP storage and preset picker. | Notice administration is English-only; scheduled broadcast/reminder/drain behavior is not proven by the helper alone. Avatar upload stores `moderated=false`, ignores unlock failure and has no review-to-activation delivery. The full avatar pipeline remains incomplete. |
+| Launch evidence | Clip storyboard and migration runbook exist. | A storyboard is not a captured clip; a runbook is not an executed parity rehearsal. The clip storyboard also still describes a blind ballot, superseded by ADR-009. Physical low-end/native proof, consent/account deletion and localized launch assets are not established by the current UI gates. |
+
+Source references: `server/internal/{portal,admin}/`,
+`server/internal/handler/challenge.go`, `server/internal/reports/reports.go`,
+`server/internal/notices/notices.go`, `server/internal/avatar/avatar.go`,
+`server/cmd/knowoffd/main.go`, migrations `000003`–`000005`,
+`client/lib/data/{api_client,auth_service}.dart`, and the Flutter screens.
+Portal database tests currently call `t.Skipf` when PostgreSQL is unavailable;
+the new proof run must use an isolated migrated test database and report skips.
+`TestChallenge_RaceToSlot100` currently submits 150 entries before racing
+approval, so it proves the wrong boundary for the Blueprint's intake limit.
+
+**Delivery checklist, in order.** These tasks reuse product services; they do
+not replace the Go server with a SPA or duplicate game state in portal pages.
+
+- [x] Repair internal admin browser authentication: cookie-only GET after
+  password+TOTP login, server-loaded form token, CSRF on mutations, logout,
+  expiry, rate limiting and separate public/admin route tests. A cookie-jar
+  test must follow redirects without injecting an `X-CSRF-Token` header.
+- [x] Add a bounded player-session handoff into the public portal using the
+  existing authenticated account, followed by HttpOnly browser sessions and
+  CSRF-protected forms. Prove expiry/revocation, invalid/replayed handoff denial,
+  no token in URLs/logs, and no admin access through a portal session.
+- [x] Render a shared on-brand Go page shell with truthful navigation to
+  available portal/admin workspaces, accessible labels, clear errors and
+  keyboard focus. Inspect ordinary browser navigation at phone, tablet and
+  desktop widths; this portal remains web-only as the Blueprint requires.
+- [x] Complete application and role management pages: show eligibility and
+  own status; admin can review, grant, reject and revoke supported roles.
+  Test server-side level/role checks and audit persistence. Curator includes
+  Contributor access; Guard permissions remain independent as the Blueprint requires.
+- [x] Complete the text contribution journey: draft creation/editing,
+  displayed versioned terms plus explicit acceptance, submit, immutable
+  submitted content, withdraw/resubmit and own history. Test missing/stale
+  consent, another owner's draft, parallel daily-cap submissions and replay.
+- [x] Complete internal submission review: pending queue, safe content preview,
+  reject reason and approval using the existing reward/credit transaction.
+  Prove one decision/reward under concurrency and durable audit behavior;
+  do not present a status-only publish operation as a deployed media pack.
+- [x] Connect real internal operations: existing terms, application,
+  submission, challenge and notice pages; report/feedback lists and safe
+  supported triage transitions; account wallet/entitlement lookup. Prove
+  role/CSRF boundaries and persistent mutations. Unimplemented enforcement,
+  grants/refunds, pack deployment and leaderboard tools stay explicitly pending.
+- [x] Repair challenge backend admission and view state: approved topic media,
+  actual own-entry/own-vote status, explicit versioned consent, bounded text,
+  first-100 intake under a topic lock, rejection-reopened capacity, complete
+  Monday–Sunday activity window and stable error codes. Parallel entry #100/#101
+  and absence of pending content from public responses are required tests.
+- [x] Repair challenge screening/voting/close: pending entries are available
+  only to authorized reviewers; vote requires an approved non-self entry in an
+  open topic; repeat/change/concurrent votes fail; close serializes with voting
+  and admission and credits the winner once. Use controlled clocks and a real
+  database for boundary/concurrency proof, not only manually seeded rows.
+- [x] Add the in-app Weekly Nown Challenge and its API methods: topic, approved
+  entries/tallies, own submission status, consented text submission, immutable
+  vote confirmation, empty/loading/error/full/closed states and refresh.
+  Follow phone/tablet/web navigation and localization conventions; hidden
+  screens must not keep polling. Test API payloads, anonymous-account access,
+  own-entry privacy, 204/no-topic behavior, text expansion and reduced motion.
+- [x] Repair missing ARB metadata for the source and pseudo locale, require
+  descriptions during localization generation and add metadata regressions.
+- [x] Run the complete repository gate; prove the applicant, contribution,
+  review and challenge contracts through real HTTP/database integration tests
+  and Flutter interaction tests. Inspect portal/admin browser flows and player
+  navigation; obtain independent review before root staging.
+- [x] Build the release Web client after final changes.
+- [ ] Execute the complete live-provider journey from applicant through Flutter
+  entry to screened publication and payout, plus native-device checks. Local
+  tests use a controlled screening provider; production credentials and real
+  contribution terms are operator setup, not claimed live proof.
+
+**Explicit follow-on scope.** Full image/GIF processing, dedupe/embeddings,
+image moderation/generation, pack calls and Nown/deck authoring, real pack
+publication/attribution, scheduled challenge rollover/current-title transfer,
+Guard identity and suspension isolation/runtime expiry, avatar moderation and
+activation, complete moderation/economy/leaderboard/pack admin actions, launch
+OAuth/deletion/billing/consent integration, capture assets and external drills
+remain the original Phase 4–6 deliverables. A working text/community slice does
+not close these broader checkboxes. External providers need verified credentials;
+local service and UI work should continue independently.
+
+**Fresh proof (2026-09-10).** The required `python3 xops/test/tests-lints.py`
+passes against the isolated, migrated `knowoff_community_gate` PostgreSQL database:
+8 Python tests, all Go packages and lint, 317 Flutter tests, Flutter analysis,
+and Dart formatting. Evidence:
+`/tmp/agent-runs/community-full-gate-fixed--20260910T125756Z-999661.log`.
+Explicit execution evidence for the five changed database packages records
+130 passed test/subtest events with zero skips or failures:
+`/tmp/agent-runs/community-db-execution--20260910T125858Z-1004553.log`.
+The final release Web build passes (21.2 seconds):
+`/tmp/agent-runs/community-release-web--20260910T125858Z-1004509.log`;
+it emits a CupertinoIcons font warning, with MaterialIcons included.
+The first run found an obsolete simulator heading assertion; it now requires
+the exact new heading and still verifies dealt cards. Review found and fixed
+stale human approval, independent Guard permissions, draft privacy, notice
+audit transactions, live account eligibility and authoritative winner display.
+
+Browser checks used a separate synthetic `knowoff_browser_qa` database and the
+actual Go handlers at widths 360, 820 and 1366: editor/history, operations review,
+blocked approval without a screener, rejection reaching contributor history,
+immutable voting, admin closure and visible authoritative winner. The rebuilt
+Flutter app at port 7357 opens the new challenge and correctly renders no topic.
+Widget tests additionally cover all four device sizes, enlarged pseudo-localized
+text, reduced motion, hidden-route polling and stale refresh races. The local
+Docker server rebuild and migrations passed. No live provider request, real
+content publication or physical native-device test was performed.
+
+**Challenge API handoff for this slice.** Keep the three existing route paths.
+`GET /api/challenge/active` returns 204 when there is no current-week topic,
+otherwise an object with `topic`, approved `entries`, nullable `own_entry`,
+nullable `voted_entry_id`, `terms`, `intake_remaining`, `can_submit` and
+`can_vote`, plus `max_text_bytes` from the configured portal text limit.
+Both server and client validate trimmed UTF-8 byte length against that value.
+`topic` contains `id`, ISO dates `week_start`/`week_end`, nullable
+`closed_at` and `nown: {type, content}`. `week_end` denotes Sunday; server
+activity checks include the whole day. A closed current-week topic remains
+viewable with both capabilities false. Topic content comes from the approved
+portal submission UUID stored in `nown_media_id`, not an active-pack media ID.
+Entries contain `id`, `account_id`, public `nickname`, `entry_type`, `content`, `vote_count`;
+the owner's additional private entry record contains `status` and
+`rejection_reason`. Terms contain `version`, `title`, `body`.
+
+`POST /api/challenge/entry` accepts `topic_id`, `content`, `terms_version`,
+`terms_accepted: true` and returns 201 with `{entry: {id, entry_type, content,
+status}}`. `POST /api/challenge/vote` accepts `topic_id`, `entry_id` and returns
+204. Both use the existing bearer-authenticated player account. The first
+working submission type is text; image/GIF upload controls require their real
+processing pipeline before appearing. Return stable `{code: ...}` errors:
+`unauthorized`, `invalid_request`, `terms_required`, `terms_outdated`,
+`challenge_not_open`, `challenge_full`, `challenge_already_submitted`,
+`challenge_already_voted`, `challenge_self_vote`, `challenge_entry_unavailable`,
+`challenge_forbidden` (403 for deleted or actively frozen accounts).
+The Flutter client localizes these and treats unknown codes as a generic error.
+
+**Ownership and risks.** Root owns Go HTML/admin operations, integration in
+`main.go`, roadmap completion evidence and final tracking/staging. The auth
+worker owns session/CSRF changes in the admin and portal packages. The challenge
+worker owns challenge manager methods, `handler/challenge.go`, its migration and
+database tests; agree on shared `portal/manager.go` boundaries before editing.
+Migration `000006` is reserved for portal sessions; challenge changes use `000007`.
+The Flutter worker owns challenge API/UI/tests and ARBs. Shared migrations and
+manager interfaces require explicit coordination. Preserve the current game's
+secrecy and private reward boundaries; portal/admin access is not a game-role
+override. No live Guard ban control ships on the currently unsafe identity model.
+
 #### Device experiences and developer tools — 2026-09-10
 
 **Goal.** Restore all five historical debug controls and give phones, tablets
@@ -217,9 +389,9 @@ chapter).
 | 1 — Foundation | 12 | 12 | ✅ done |
 | 2 — Media Engine & Pipeline | 9 | 6 | 🚧 in progress — content generation moved to GPT-6 Astra |
 | 3 — Realtime Game Loop | 18 | 18 | ✅ done |
-| 4 — Accounts, Quick Play & Hardening | 12 | 10 | 🚧 in progress — content generation moved to GPT-6 Astra |
-| 5 — Noin Economy, Admin & Launch Polish | 13 | 11 | 🚧 in progress — content generation moved to GPT-6 Astra |
-| 6 — Contributor Portal & Community | 5 | 5 | ✅ done |
+| 4 — Accounts, Quick Play & Hardening | 12 | 9 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
+| 5 — Noin Economy, Admin & Launch Polish | 13 | 6 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
+| 6 — Contributor Portal & Community | 5 | 0 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
 
 Phase 0 — the agent operating framework and this document — carries no
 checkboxes; it landed before phase work began.
@@ -545,7 +717,7 @@ nightly job reproduces identical stats and standings (idempotency); killing
 and restoring Redis mid-queue leaves a healthy, leak-free process; an idle
 match survives 10+ minutes through the tunnel on heartbeats.
 
-- [x] Auth: anonymous device accounts → JWT sessions with expiry + refresh and server-side revocation (a ban invalidates tokens and drops live connections within seconds); Google Sign-In / Facebook Login one-tap registration + account linking via OAuth 2.0 / OIDC with PKCE and state validation (provider subject id + email stored privately, never shown; a subject already linked elsewhere fails with a clear, safe error).
+- [ ] Auth: anonymous device accounts → JWT sessions with expiry + refresh and server-side revocation (a ban invalidates tokens and drops live connections within seconds); Google Sign-In / Facebook Login one-tap registration + account linking via OAuth 2.0 / OIDC with PKCE and state validation (provider subject id + email stored privately, never shown; a subject already linked elsewhere fails with a clear, safe error).
 - [x] Profiles + public stats (👤 §1) derived nightly from the audit stream — pseudonymous, no PII on any public surface; Non-Converted Points visible to the owner only; locale-aware nickname profanity filter.
 - [ ] Free preset avatar gallery (👤 §2) — the first curated **GPT-6 Astra raster batch** per the 🎨 asset strategy: prompts derived from the design matrix, candidates → human curation → consistency pass → committed like any asset; API keys under the 📦 §3 config discipline.
 - [x] XP progression (Product Baseline): one server-side track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks — values in `tuning.yaml`.
@@ -621,12 +793,12 @@ migration rehearsal restores onto a fresh host with verified parity.
 - [x] Play Passes (1/3/7-day, priced in Noin — `economy.play_pass_prices`): **unlimited Quick Play while active**, lifting the free daily cap (`economy.free_daily_quickplay_matches`, 3 at launch — a daily taster; Local Rooms never capped) — **Play Passes never remove ads**; **Premium** — the one cash subscription, monthly / yearly (yearly −20%, `premium_yearly_discount_pct`) via platform billing — is the **sole ad-removal path and includes unlimited Quick Play**, so a subscriber never needs passes and **never hits the daily cap**.
 - [x] Noin bulks (`economy.noin_bundles`) via platform billing — **the only place money buys Noin: everything money can get, play can also get, slower** — with server-side receipt verification and idempotent grants keyed by platform transaction id (a replayed receipt grants exactly once; refunds/chargebacks revoke via an explicit audited admin action); SSV rewarded post-match doubler — callbacks signature-verified and replay-proof, the client callback grants nothing; Premium subscribers get the doubling automatically, ad-free; theme packs (`economy.unlock_prices.theme_pack`) with Host Pass enforcement — only the room creator needs the pack in private/local rooms, Quick Play runs core + free rotating featured pack; Poke Styles + Custom Avatar unlocks priced in Noin (`economy.unlock_prices`).
 - [x] Economy balance pass (⚙️ Tuning): every price and earn value read from `tuning.yaml` only — economy tuning never needs a client release (proof: a config price change reflects in the Store with no rebuild); numbers tuned against the balance-protocol table, targets first — expected per-match Noin from `mediapack simulate` vs the real numbers from the nightly KPI jobs, one lever at a time.
-- [x] Custom Avatar upload pipeline (👤 §2): server-side crop to 256×256 WebP, EXIF strip, size cap, automated moderation screen before display, admin takedown reverting to presets without refund.
+- [ ] Custom Avatar upload pipeline (👤 §2): server-side crop to 256×256 WebP, EXIF strip, size cap, automated moderation screen before display, admin takedown reverting to presets without refund.
 - [x] Player reports (👤 §3) + feedback (👤 §4): one-tap conduct/media reports, rate-limited, repeat reports collapsing into one case, feeding the case queues; in-app feedback form with consented context snapshot into Postgres triage.
-- [x] Client surfaces on native + PWA: Store (`NoinBadge`, bulks, passes, packs, cosmetics), NoticeInbox + dismissible notice banners (`system_notice` live + HTTPS fetch on start, hard-maintenance countdown), post-match SSV doubler flow.
-- [x] Admin Console (🛡️) on the internal port — 2FA-gated, RBAC-scoped, CSRF-protected, unreachable through the public ingress, every action writing an append-only audit row: conduct + media case queues (bans hit live connections immediately), Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, feedback triage, system-notice composer — compose, schedule, localize, withdraw — with automatic matchmaking drain (🎮 §4).
-- [x] How-to-play clip (≤45 s, 7 beats, captions on the lime highlighter sweep per 🎨) captured on final production UI — ship gate; player-facing help text + store copy derived from the 🕹️ Game Rules chapter (deliberately the only rulebook).
-- [x] Launch passes: low-end client paint budget, server allocation/GC under queue load, edge-cache hit rates on pack release, **backup/restore + VPS migration runbook executed with verified data parity** (row counts + checksums across Postgres/Redis/MinIO — 📦 §2; Cloudflare R2 free tier as the asset-offload option), store review prep (age gate, per-pack age ratings, UMP consent, privacy notice at first launch, in-app delete-my-data, **store listings + clip captions localized for every launch locale**).
+- [ ] Client surfaces on native + PWA: Store (`NoinBadge`, bulks, passes, packs, cosmetics), NoticeInbox + dismissible notice banners (`system_notice` live + HTTPS fetch on start, hard-maintenance countdown), post-match SSV doubler flow.
+- [ ] Admin Console (🛡️) on the internal port — 2FA-gated, RBAC-scoped, CSRF-protected, unreachable through the public ingress, every action writing an append-only audit row: conduct + media case queues (bans hit live connections immediately), Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, feedback triage, system-notice composer — compose, schedule, localize, withdraw — with automatic matchmaking drain (🎮 §4).
+- [ ] How-to-play clip (≤45 s, 7 beats, captions on the lime highlighter sweep per 🎨) captured on final production UI — ship gate; player-facing help text + store copy derived from the 🕹️ Game Rules chapter (deliberately the only rulebook).
+- [ ] Launch passes: low-end client paint budget, server allocation/GC under queue load, edge-cache hit rates on pack release, **backup/restore + VPS migration runbook executed with verified data parity** (row counts + checksums across Postgres/Redis/MinIO — 📦 §2; Cloudflare R2 free tier as the asset-offload option), store review prep (age gate, per-pack age ratings, UMP consent, privacy notice at first launch, in-app delete-my-data, **store listings + clip captions localized for every launch locale**).
 - [ ] App icon + store art via the curated **GPT-6 Astra** raster-batch pipeline (🎨 asset strategy: matrix-derived prompts → human curation → consistency pass).
 - [ ] Gate: full Phase 5 proof tests pass on a clean tree.
 
@@ -678,11 +850,11 @@ crashed mid-run and re-run, it still yields exactly one Week Winner title,
 one payout, and one transfer at next close; admin routes are unreachable
 from the portal ingress.
 
-- [x] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
-- [x] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), Nown + deck authoring with the deal simulator; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
-- [x] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
-- [x] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
-- [x] Gate: full Phase 6 proof tests pass on a clean tree.
+- [ ] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
+- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), Nown + deck authoring with the deal simulator; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
+- [ ] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
+- [ ] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
+- [ ] Gate: full Phase 6 proof tests pass on a clean tree.
 
 ---
 

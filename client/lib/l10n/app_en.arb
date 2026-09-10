@@ -1046,40 +1046,112 @@
     "description": "Generic loading label."
   },
   "homeEyebrow": "A VERY SUSPICIOUS PARTY GAME",
+  "@homeEyebrow": {
+    "description": "Uppercase introductory label on the home screen; describes the social deduction party game."
+  },
   "homeHeadline": "No clue.\nFull confidence.",
+  "@homeHeadline": {
+    "description": "Playful two-line home headline about bluffing with confidence. Preserve the line break."
+  },
   "homeIntro": "One shared clue. A table of terrible alibis. Someone is bluffing — beautifully.",
+  "@homeIntro": {
+    "description": "Home introduction explaining the shared clue and the bluffers around the table."
+  },
   "homeStamp": "TRUST ISSUES? GOOD.",
+  "@homeStamp": {
+    "description": "Decorative home stamp joking that distrust is useful in this game."
+  },
   "homePlayHeading": "Find your suspects",
+  "@homePlayHeading": {
+    "description": "Heading above the Quick Play room-size choices; suspects means other players."
+  },
   "homePlayHint": "Pick a table. Bring your best poker face.",
+  "@homePlayHint": {
+    "description": "Help below the Quick Play heading, using poker face as a metaphor for hiding a role."
+  },
   "homeLocalHeading": "Same sofa. More suspicion.",
+  "@homeLocalHeading": {
+    "description": "Heading for hosting or joining a local room with friends."
+  },
   "homeLocalHint": "Pass around a room code. Keep your role to yourself.",
+  "@homeLocalHint": {
+    "description": "Local-room instructions to share the code while keeping each player role private."
+  },
   "homeExhibit": "EXHIBIT A",
+  "@homeExhibit": {
+    "description": "Decorative label above the sample clue; uses a detective evidence metaphor."
+  },
   "homeExampleClue": "A very innocent-looking banana.",
+  "@homeExampleClue": {
+    "description": "Illustrative home-screen clue, a banana described as innocent."
+  },
   "homeExampleAlibi": "“Obviously, my card fits.”",
+  "@homeExampleAlibi": {
+    "description": "Illustrative player excuse in quotation marks on the home-screen sample card."
+  },
   "homeExampleVerdict": "Suspiciously confident.",
+  "@homeExampleVerdict": {
+    "description": "Caption on the sample card joking about the player sounding too confident."
+  },
   "homeFooter": "Good friends. Bad explanations. Great evidence.",
+  "@homeFooter": {
+    "description": "Playful home footer about friends defending their card choices."
+  },
   "homeHowTo": "The short version",
+  "@homeHowTo": {
+    "description": "Heading for the expandable introduction to the game rules."
+  },
   "homeRuleOne": "See the clue. Or pretend you do.",
+  "@homeRuleOne": {
+    "description": "First short rule: Nowers see the clue and Donowers must bluff."
+  },
   "homeRuleTwo": "Play a card. Defend your nonsense.",
+  "@homeRuleTwo": {
+    "description": "Second short rule: play a card and explain how it relates to the clue."
+  },
   "homeRuleThree": "Vote out the bluffers. Trust nobody.",
+  "@homeRuleThree": {
+    "description": "Third short rule: vote to identify and eliminate bluffers."
+  },
   "roomCodeHint": "Six characters. Endless accusations.",
+  "@roomCodeHint": {
+    "description": "Playful helper text below the six-character room-code field."
+  },
   "roomCodeInvalid": "Enter the six-character room code.",
+  "@roomCodeInvalid": {
+    "description": "Validation error for a room code that is not six characters long."
+  },
   "roomJoinHeading": "You have the code?",
+  "@roomJoinHeading": {
+    "description": "Heading above the form used to join an existing local room."
+  },
   "roomHostHeading": "Set the table",
+  "@roomHostHeading": {
+    "description": "Heading above the room-size choice when hosting a local room."
+  },
   "gameCaseFile": "THE CASE OF THE MISSING CLUE",
+  "@gameCaseFile": {
+    "description": "Decorative uppercase game heading using a detective case-file metaphor."
+  },
   "gameEvidenceHint": "Exhibit A: everyone has an explanation.",
+  "@gameEvidenceHint": {
+    "description": "Subtitle for the public table of played cards; uses a courtroom evidence metaphor."
+  },
   "gameHandHint": "Your alibi is in here. Probably.",
+  "@gameHandHint": {
+    "description": "Subtitle for the local player hand; a card is jokingly described as an alibi."
+  },
   "gameShuffleHeadline": "PLOT TWIST!",
+  "@gameShuffleHeadline": {
+    "description": "Brief announcement when the Shuffle specialty changes the clue and cards."
+  },
   "gameShuffleHint": "The evidence vanished. Act natural.",
+  "@gameShuffleHint": {
+    "description": "Explanation accompanying Shuffle: the previous evidence is no longer available."
+  },
   "gameDrawAnnouncement": "{name} drew {count, plural, =1{1 card} other{{count} cards}}.",
-  "gameChatSend": "Send",
-  "gameConnectionRetrying": "Reconnecting. Your seat is saved.",
-  "gameMatchScored": "Case closed",
-  "gameMatchScoredHint": "The table emptied. Your earned points still count.",
-  "gameMediaUnavailable": "This clue could not load.",
-  "gameDrawFreeHint": "Draw your free card before playing.",
-  "gameRevealExpired": "This hand is hidden again.",
   "@gameDrawAnnouncement": {
+    "description": "Public game announcement naming who drew and how many cards they took.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -1089,43 +1161,177 @@
       }
     }
   },
+  "gameChatSend": "Send",
+  "@gameChatSend": {
+    "description": "Action that sends the selected or composed quick-chat message."
+  },
+  "gameConnectionRetrying": "Reconnecting. Your seat is saved.",
+  "@gameConnectionRetrying": {
+    "description": "Connection notice while reconnecting; reassures the player their seat is retained."
+  },
+  "gameMatchScored": "Case closed",
+  "@gameMatchScored": {
+    "description": "Heading for a match that has ended and had its score recorded."
+  },
+  "gameMatchScoredHint": "The table emptied. Your earned points still count.",
+  "@gameMatchScoredHint": {
+    "description": "Explains that an ended match still keeps points already earned."
+  },
+  "gameMediaUnavailable": "This clue could not load.",
+  "@gameMediaUnavailable": {
+    "description": "Fallback label when a clue media asset fails to load."
+  },
+  "gameDrawFreeHint": "Draw your free card before playing.",
+  "@gameDrawFreeHint": {
+    "description": "Instruction to take the granted free draw before playing a card."
+  },
+  "gameRevealExpired": "This hand is hidden again.",
+  "@gameRevealExpired": {
+    "description": "Shown after the temporary Reveal view of another player hand expires."
+  },
   "serviceSave": "Save",
+  "@serviceSave": {
+    "description": "Action that saves edits to an account or profile."
+  },
   "serviceSaved": "Saved. Looking suspiciously good.",
+  "@serviceSaved": {
+    "description": "Confirmation after saving the profile, with a lighthearted suspicion joke."
+  },
   "serviceRequired": "Give this field something to work with.",
+  "@serviceRequired": {
+    "description": "Validation message for an empty required field."
+  },
   "serviceNicknameInvalid": "Choose a shorter nickname; accented characters may take more space.",
+  "@serviceNicknameInvalid": {
+    "description": "Nickname validation error for exceeding the allowed encoded length."
+  },
   "serviceBillingUnavailable": "Cash purchases require platform billing, which is not connected in this client. Play Passes and Noin unlocks are available below.",
+  "@serviceBillingUnavailable": {
+    "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
+  },
   "serviceConvertWarning": "One way only: converted points leave your balance forever. Overall Points stay untouched.",
+  "@serviceConvertWarning": {
+    "description": "Warning before permanently converting spendable points to Noin; lifetime Overall Points are unchanged."
+  },
   "serviceProfileEyebrow": "THE OFFICIAL ALIBI",
+  "@serviceProfileEyebrow": {
+    "description": "Decorative profile heading using an alibi metaphor."
+  },
   "serviceProfileBlurb": "A face. A name. An extremely debatable reputation.",
+  "@serviceProfileBlurb": {
+    "description": "Playful description beneath the profile heading."
+  },
   "serviceLeaderboardEyebrow": "THIS WEEK’S BIG TALKERS",
+  "@serviceLeaderboardEyebrow": {
+    "description": "Decorative heading for this week’s leaderboard."
+  },
   "serviceStoreEyebrow": "THE NOIN EXCHANGE",
+  "@serviceStoreEyebrow": {
+    "description": "Decorative store heading; Noin is the game currency name."
+  },
   "serviceStoreBlurb": "Spend on more play and more personality. Your bluff stays yours.",
+  "@serviceStoreBlurb": {
+    "description": "Store description explaining that purchases provide play access or customization."
+  },
   "serviceNoticesEyebrow": "HEAR YE. HEAR YE.",
+  "@serviceNoticesEyebrow": {
+    "description": "Decorative notices heading styled as a public announcement."
+  },
   "serviceFeedbackEyebrow": "COMPLAINTS & BRILLIANT IDEAS",
+  "@serviceFeedbackEyebrow": {
+    "description": "Decorative heading for the feedback form."
+  },
   "serviceFeedbackSent": "Message delivered. The backstage crew is on it.",
+  "@serviceFeedbackSent": {
+    "description": "Confirmation that feedback was submitted to the team."
+  },
   "serviceReportSent": "Report sent. Thanks for looking out for the table.",
+  "@serviceReportSent": {
+    "description": "Confirmation that a conduct or media report was submitted for review."
+  },
   "serviceAvatarDefault": "Classic",
+  "@serviceAvatarDefault": {
+    "description": "Display name of the standard preset avatar."
+  },
   "serviceAvatarDetective": "Detective",
+  "@serviceAvatarDetective": {
+    "description": "Display name of the detective preset avatar."
+  },
   "serviceAvatarParty": "Party",
+  "@serviceAvatarParty": {
+    "description": "Display name of the party preset avatar."
+  },
   "serviceUnlockValue": "Pack or style ID",
+  "@serviceUnlockValue": {
+    "description": "Field label for a theme-pack or poke-style identifier used for an unlock."
+  },
   "serviceContext": "Included context",
+  "@serviceContext": {
+    "description": "Heading for the match or media context attached to a report."
+  },
   "serviceNoContext": "No match context attached.",
+  "@serviceNoContext": {
+    "description": "Shown when a report has no attached match context."
+  },
   "serviceCatalogUnavailable": "This collection is not available yet.",
+  "@serviceCatalogUnavailable": {
+    "description": "Empty state when a requested store collection is not available."
+  },
   "serviceVoteAccuracy": "Vote accuracy",
+  "@serviceVoteAccuracy": {
+    "description": "Profile statistic showing the accuracy of the player’s votes."
+  },
   "serviceSurvivalRate": "Donower survival",
+  "@serviceSurvivalRate": {
+    "description": "Profile statistic showing how often the player survives as a Donower."
+  },
   "serviceWeekWins": "Week Winner titles",
+  "@serviceWeekWins": {
+    "description": "Profile statistic counting weekly first-place titles."
+  },
   "servicePodiums": "Weekly podiums",
+  "@servicePodiums": {
+    "description": "Profile statistic counting weekly top-three finishes."
+  },
   "servicePokesSent": "Pokes sent",
+  "@servicePokesSent": {
+    "description": "Profile statistic counting pokes sent to other players."
+  },
   "serviceCredits": "Contributor credits",
+  "@serviceCredits": {
+    "description": "Profile statistic showing credits earned through content contributions."
+  },
   "gameLeaveTitle": "Leave this match?",
+  "@gameLeaveTitle": {
+    "description": "Title of the confirmation dialog before leaving an active match."
+  },
   "gameLeaveHint": "Leaving before the verdict can reduce your match points.",
+  "@gameLeaveHint": {
+    "description": "Explains that leaving before the match verdict can reduce the player’s points."
+  },
   "gameInspectCard": "Inspect card",
+  "@gameInspectCard": {
+    "description": "Accessibility label for opening the full-size card preview."
+  },
   "serviceAvatarLimits": "JPEG or PNG, up to 2 MB and 2048 × 2048 pixels.",
+  "@serviceAvatarLimits": {
+    "description": "Avatar upload requirements: accepted image formats, file size, and pixel dimensions."
+  },
   "serviceAvatarInvalid": "Choose a JPEG or PNG within the size limits.",
+  "@serviceAvatarInvalid": {
+    "description": "Validation error when an avatar file violates the format or size limits."
+  },
   "serviceAvatarCost": "Custom avatars use the Noin unlock price shown in the Store.",
+  "@serviceAvatarCost": {
+    "description": "Explains where to find the Noin price for unlocking custom avatars."
+  },
   "serviceAvatarSelected": "Image selected. Upload when you are ready.",
+  "@serviceAvatarSelected": {
+    "description": "Confirmation that an avatar image has been selected but has not yet been uploaded."
+  },
   "serviceAvatarCostPrice": "First custom avatar: {price} Noin. Already unlocked? No extra charge.",
   "@serviceAvatarCostPrice": {
+    "description": "Explains the first custom-avatar unlock cost and that existing unlock owners are not charged again.",
     "placeholders": {
       "price": {
         "type": "int"
@@ -1133,27 +1339,338 @@
     }
   },
   "unreadyLabel": "Not ready",
+  "@unreadyLabel": {
+    "description": "Accessibility label and tooltip for marking the local player as not ready."
+  },
   "serviceAvatarSubmitted": "Image uploaded for review.",
+  "@serviceAvatarSubmitted": {
+    "description": "Confirmation that the uploaded avatar was submitted for moderation."
+  },
   "serviceAvatarReview": "Uploads are submitted for review; your preset avatar stays active.",
+  "@serviceAvatarReview": {
+    "description": "Explains that the current preset avatar remains visible while a custom upload is reviewed."
+  },
   "gameWorkspaceHand": "Hand",
+  "@gameWorkspaceHand": {
+    "description": "Phone game navigation label for the player’s private hand."
+  },
   "gameWorkspaceTable": "Table",
+  "@gameWorkspaceTable": {
+    "description": "Phone game navigation label for the clue and public played-card evidence."
+  },
   "gameWorkspacePeople": "People",
+  "@gameWorkspacePeople": {
+    "description": "Game navigation label for chat, player seats, and player information."
+  },
   "gameWorkspaceAction": "Now",
+  "@gameWorkspaceAction": {
+    "description": "Game navigation label for the current phase action, such as voting or results."
+  },
   "devTools": "Dev tools",
+  "@devTools": {
+    "description": "Debug-only development tools title and entry-point label."
+  },
   "devToolsHint": "A backstage pass for testing.",
+  "@devToolsHint": {
+    "description": "Playful subtitle for the debug-only development controls."
+  },
   "devFreeze": "Freeze client",
+  "@devFreeze": {
+    "description": "Debug action that pauses processing incoming client updates and the displayed countdown."
+  },
   "devResume": "Resume client",
+  "@devResume": {
+    "description": "Debug action that resumes processing client updates after a freeze."
+  },
   "devFreezeHint": "Holds incoming updates and this screen’s clock. The server keeps playing.",
+  "@devFreezeHint": {
+    "description": "Explains that freezing affects only this client; the authoritative server continues."
+  },
   "devRestart": "Restart to menu",
+  "@devRestart": {
+    "description": "Debug action that clears the local match and returns to the main menu."
+  },
   "devRestartHint": "Clears the local match and opens a fresh connection.",
+  "@devRestartHint": {
+    "description": "Explains that restarting creates a fresh connection after clearing local match state."
+  },
   "devEchoPokes": "Echo pokes to self",
+  "@devEchoPokes": {
+    "description": "Debug switch label for previewing outgoing poke feedback on the local screen."
+  },
   "devEchoPokesHint": "Preview your own poke with the same brief nudge.",
+  "@devEchoPokesHint": {
+    "description": "Explains the brief local motion used to preview an outgoing poke."
+  },
   "devGrantSpecialty": "Grant a specialty",
+  "@devGrantSpecialty": {
+    "description": "Heading for debug controls that grant a specialty card."
+  },
   "devGrantSpecialtyHint": "Adds it to your hand. Play it using the normal controls.",
+  "@devGrantSpecialtyHint": {
+    "description": "Explains that a granted specialty must still be played using normal game controls."
+  },
   "devNextRole": "Next-match role",
+  "@devNextRole": {
+    "description": "Debug selection label for the player’s role in the next match."
+  },
   "devRandomRole": "Random — trust your luck",
+  "@devRandomRole": {
+    "description": "Debug role-selection option that restores normal random role assignment."
+  },
   "devRoleHint": "Choose before joining, or apply to the next rematch.",
+  "@devRoleHint": {
+    "description": "Explains when a debug role override takes effect."
+  },
   "devMatchRequired": "Join a match to grant a specialty.",
+  "@devMatchRequired": {
+    "description": "Debug helper text when specialty grants are unavailable outside an active match."
+  },
   "navigationPlay": "Play",
-  "serviceRefresh": "Refresh"
+  "@navigationPlay": {
+    "description": "Main navigation destination for Quick Play and local rooms."
+  },
+  "serviceRefresh": "Refresh",
+  "@serviceRefresh": {
+    "description": "Action and accessibility label for reloading account or service data."
+  },
+  "portalTitle": "Contributor Portal",
+  "@portalTitle": {
+    "description": "Title and profile entry point for connecting to the browser-based contributor portal."
+  },
+  "portalIntro": "Make the next great alibi.",
+  "@portalIntro": {
+    "description": "Playful introduction to contributing game content."
+  },
+  "portalBrowserHint": "Apply for a role, create content, and review submissions in your browser. Open the portal, then enter the code shown there.",
+  "@portalBrowserHint": {
+    "description": "Explains the web-only contributor workflow and pairing steps."
+  },
+  "portalOpen": "Open portal in browser",
+  "@portalOpen": {
+    "description": "Action that opens the trusted contributor login page in an external browser."
+  },
+  "portalCode": "Browser code",
+  "@portalCode": {
+    "description": "Label for the short code displayed on the contributor login page."
+  },
+  "portalCodeInvalid": "Enter the 8-character code from your portal page (letters A–Z and digits 2–7).",
+  "@portalCodeInvalid": {
+    "description": "Validation message for a malformed Base32 pairing code."
+  },
+  "portalConfirmBrowser": "I opened this sign-in page myself and want to connect it to my player account.",
+  "@portalConfirmBrowser": {
+    "description": "Explicit confirmation that the player initiated the browser pairing request."
+  },
+  "portalConnect": "Connect my browser",
+  "@portalConnect": {
+    "description": "Action authorizing the browser code to use the current player account."
+  },
+  "portalConnected": "Browser approved. Return to the portal and select Continue.",
+  "@portalConnected": {
+    "description": "Success message after approval; the user must finish login in the browser."
+  },
+  "portalExpired": "That code has expired or was already used. Open a fresh portal sign-in page and try its new code.",
+  "@portalExpired": {
+    "description": "Recovery message for an invalid, expired, or consumed pairing code."
+  },
+  "portalForbidden": "This account cannot access the portal right now.",
+  "@portalForbidden": {
+    "description": "Error for an account banned or frozen from portal access."
+  },
+  "portalRateLimited": "Too many attempts. Wait a moment before trying again.",
+  "@portalRateLimited": {
+    "description": "Recovery message after the portal pairing attempt limit is reached."
+  },
+  "portalOpenFailed": "The browser could not open. Copy the address above into your browser.",
+  "@portalOpenFailed": {
+    "description": "Fallback when the operating system cannot open the contributor portal URL."
+  },
+  "challengeTitle": "Weekly Nown Challenge",
+  "@challengeTitle": {
+    "description": "Community challenge title and home-screen entry point; Nown is the game clue name."
+  },
+  "challengeIntro": "One topic. One shot. Make it count.",
+  "@challengeIntro": {
+    "description": "Playful challenge introduction reflecting the one-entry-only rule."
+  },
+  "challengeHomeHint": "Turn this week’s topic into the community’s best excuse.",
+  "@challengeHomeHint": {
+    "description": "Home-screen introduction to the weekly community challenge."
+  },
+  "challengeEmpty": "The next topic is still backstage. Check back when a new challenge opens.",
+  "@challengeEmpty": {
+    "description": "Empty state when no challenge topic is scheduled for the current week."
+  },
+  "challengeTopic": "This week’s Nown",
+  "@challengeTopic": {
+    "description": "Heading above the weekly challenge topic."
+  },
+  "challengeRules": "One entry and one vote per player. Both are final. Entries appear only after screening; you cannot vote for your own.",
+  "@challengeRules": {
+    "description": "Plain-language explanation of participation and moderation rules."
+  },
+  "challengeTextOnly": "Text entries are open. Image and GIF uploads are not available yet.",
+  "@challengeTextOnly": {
+    "description": "Honest scope label for the current text-only challenge submission interface."
+  },
+  "challengeEntryHeading": "Your one shot",
+  "@challengeEntryHeading": {
+    "description": "Heading above the one-time challenge entry form."
+  },
+  "challengeContent": "Your entry",
+  "@challengeContent": {
+    "description": "Field label for the player’s text response to the weekly Nown."
+  },
+  "challengeContentInvalid": "Add an entry within the text limit. Accented characters may use more space.",
+  "@challengeContentInvalid": {
+    "description": "Validation error for an empty or over-limit UTF-8 text challenge entry."
+  },
+  "challengeTerms": "Read contribution terms",
+  "@challengeTerms": {
+    "description": "Expandable heading revealing the current server-provided contribution terms."
+  },
+  "challengeAcceptTerms": "I accept these contribution terms, including commercial use and modification of my entry.",
+  "@challengeAcceptTerms": {
+    "description": "Required unchecked consent before a player submits an entry."
+  },
+  "challengeConsentRequired": "Read and accept the contribution terms before submitting.",
+  "@challengeConsentRequired": {
+    "description": "Validation error when required contribution consent has not been given."
+  },
+  "challengeSubmit": "Submit my entry",
+  "@challengeSubmit": {
+    "description": "Action that opens final confirmation for the immutable challenge entry."
+  },
+  "challengeSubmitConfirm": "Submit this entry for good?",
+  "@challengeSubmitConfirm": {
+    "description": "Title of the final immutable-entry confirmation dialog."
+  },
+  "challengeSubmitWarning": "You cannot edit or replace it after submitting. It will appear publicly only after automated and human screening.",
+  "@challengeSubmitWarning": {
+    "description": "Explains permanence and screening before the final submit action."
+  },
+  "challengeFinalSubmit": "Submit final entry",
+  "@challengeFinalSubmit": {
+    "description": "Final action committing the immutable challenge entry."
+  },
+  "challengeOwnEntry": "Your submitted entry",
+  "@challengeOwnEntry": {
+    "description": "Heading for the player’s immutable submitted entry and its moderation status."
+  },
+  "challengePending": "Awaiting screening",
+  "@challengePending": {
+    "description": "Status for an entry that has not completed automated and human moderation."
+  },
+  "challengeApproved": "Approved · visible to everyone",
+  "@challengeApproved": {
+    "description": "Status for an approved publicly visible entry."
+  },
+  "challengeRejected": "Not accepted",
+  "@challengeRejected": {
+    "description": "Status for a rejected entry; the player may see their own rejection reason."
+  },
+  "challengeClosed": "Entries are closed for this challenge.",
+  "@challengeClosed": {
+    "description": "Shown when the server says new submissions are unavailable."
+  },
+  "challengeGallery": "The community’s case",
+  "@challengeGallery": {
+    "description": "Heading above the public gallery of approved challenge entries."
+  },
+  "challengeNoEntries": "The evidence is being checked. Approved entries will appear here.",
+  "@challengeNoEntries": {
+    "description": "Empty gallery state before any challenge entry has been approved."
+  },
+  "challengeAnonymous": "Community player",
+  "@challengeAnonymous": {
+    "description": "Fallback attribution when an approved entry has no public nickname."
+  },
+  "challengeVote": "Vote for this entry",
+  "@challengeVote": {
+    "description": "Action that opens confirmation to vote for a particular challenge entry."
+  },
+  "challengeVoteConfirm": "Make this your one vote?",
+  "@challengeVoteConfirm": {
+    "description": "Title of the immutable-vote confirmation dialog."
+  },
+  "challengeVoteWarning": "Your vote is final. Pick the entry that best matches the Nown.",
+  "@challengeVoteWarning": {
+    "description": "Explains that a weekly challenge vote cannot be changed."
+  },
+  "challengeFinalVote": "Cast final vote",
+  "@challengeFinalVote": {
+    "description": "Final action committing the player’s immutable challenge vote."
+  },
+  "challengeVoted": "Your vote",
+  "@challengeVoted": {
+    "description": "Label marking the entry that received the player’s one vote."
+  },
+  "challengeVotesClosed": "Voting is closed.",
+  "@challengeVotesClosed": {
+    "description": "Shown when a challenge has closed for voting."
+  },
+  "challengeUpdatedTerms": "The contribution terms changed. Read the updated terms and accept them before trying again.",
+  "@challengeUpdatedTerms": {
+    "description": "Recovery when submission used a stale contribution-terms version."
+  },
+  "challengeAlreadySubmitted": "Your entry is already on record. Refresh to see its status.",
+  "@challengeAlreadySubmitted": {
+    "description": "Recovery when the server has already recorded this player’s immutable entry."
+  },
+  "challengeAlreadyVoted": "Your vote is already on record. Refresh to see it.",
+  "@challengeAlreadyVoted": {
+    "description": "Recovery when the server has already recorded this player’s immutable vote."
+  },
+  "challengeUnavailable": "This challenge or entry is no longer available for that action. Refresh and try again.",
+  "@challengeUnavailable": {
+    "description": "Recovery when challenge state changes between display and submission or vote."
+  },
+  "challengeRefreshFailed": "Updates could not load. Your draft is safe; try Refresh.",
+  "@challengeRefreshFailed": {
+    "description": "Non-destructive refresh failure message when existing challenge data and draft remain visible."
+  },
+  "challengeSlots": "{count} entry slots remaining",
+  "@challengeSlots": {
+    "description": "Number of remaining accepted intake slots, supplied by the server.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "challengeVoteCount": "{count} votes",
+  "@challengeVoteCount": {
+    "description": "Public current vote count for an approved challenge entry.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "challengeByteLimit": "Up to {count} UTF-8 bytes",
+  "@challengeByteLimit": {
+    "description": "Maximum encoded text size accepted by the challenge server.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "challengeWinner": "Week Winner",
+  "@challengeWinner": {
+    "description": "Badge on the authoritative winning entry after the server closes a weekly challenge."
+  },
+  "challengeWinnerAnnounced": "The week is closed. Meet your Week Winner.",
+  "@challengeWinnerAnnounced": {
+    "description": "Closed-week banner when the server records a winning entry; never inferred from vote tallies."
+  },
+  "challengeNoWinner": "This week is closed with no winner.",
+  "@challengeNoWinner": {
+    "description": "Final outcome when a closed weekly challenge has no winning entry."
+  },
+  "challengeForbidden": "This account cannot participate in the challenge right now.",
+  "@challengeForbidden": {
+    "description": "Shown when the server denies challenge access or participation for a deleted or restricted account."
+  }
 }

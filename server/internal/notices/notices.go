@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -80,6 +81,13 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 		return uuid.Nil, fmt.Errorf("title and body required")
 	}
 
+	for _, localized := range []map[string]string{n.Title, n.Body} {
+		for locale, text := range localized {
+			if strings.TrimSpace(locale) == "" || strings.TrimSpace(text) == "" {
+				return uuid.Nil, fmt.Errorf("title and body required in every provided locale")
+			}
+		}
+	}
 	now := time.Now().UTC()
 	if n.PublishedAt == nil || n.PublishedAt.IsZero() {
 		n.PublishedAt = &now
@@ -100,7 +108,12 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 		createdBy = *n.CreatedBy
 	}
 
-	_, err = m.db.ExecContext(ctx,
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("begin notice transaction: %w", err)
+	}
+	defer tx.Rollback()
+	_, err = tx.ExecContext(ctx,
 		`INSERT INTO system_notices (id, type, title, body, published_at, maintenance_start, maintenance_duration_min, created_by, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())`,
 		id, string(n.Type), titleJSON, bodyJSON, n.PublishedAt, n.MaintenanceStart, n.MaintenanceDurationMin, createdBy,
@@ -109,6 +122,12 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 		return uuid.Nil, fmt.Errorf("insert notice: %w", err)
 	}
 
+	if err = auditNotice(ctx, tx, createdBy, "notice_create", id, map[string]any{}, map[string]any{"type": n.Type, "title": n.Title, "body": n.Body, "published_at": n.PublishedAt, "maintenance_start": n.MaintenanceStart, "maintenance_duration_min": n.MaintenanceDurationMin}); err != nil {
+		return uuid.Nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return uuid.Nil, fmt.Errorf("commit notice: %w", err)
+	}
 	n.ID = id
 	if !n.PublishedAt.After(now) {
 		m.broadcastNotice(n)
@@ -191,12 +210,52 @@ func (m *Manager) ActiveNoticesForLocale(ctx context.Context, locale string) ([]
 }
 
 // WithdrawNotice marks a notice as withdrawn.
-func (m *Manager) WithdrawNotice(ctx context.Context, id uuid.UUID) error {
-	_, err := m.db.ExecContext(ctx,
-		`UPDATE system_notices SET withdrawn_at = now(), updated_at = now() WHERE id = $1`,
-		id)
+func (m *Manager) WithdrawNotice(ctx context.Context, id uuid.UUID, adminID ...string) error {
+	var actor any
+	if len(adminID) > 1 {
+		return fmt.Errorf("invalid notice actor")
+	}
+	if len(adminID) == 1 {
+		parsed, err := uuid.Parse(adminID[0])
+		if err != nil {
+			return fmt.Errorf("invalid notice actor")
+		}
+		actor = parsed
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var previous sql.NullTime
+	if err = tx.QueryRowContext(ctx, `SELECT withdrawn_at FROM system_notices WHERE id=$1 FOR UPDATE`, id).Scan(&previous); err != nil {
+		return fmt.Errorf("notice unavailable: %w", err)
+	}
+	if previous.Valid {
+		return nil
+	}
+	now := time.Now().UTC()
+	if _, err = tx.ExecContext(ctx, `UPDATE system_notices SET withdrawn_at=$2,updated_at=$2 WHERE id=$1`, id, now); err != nil {
 		return fmt.Errorf("withdraw notice: %w", err)
+	}
+	if err = auditNotice(ctx, tx, actor, "notice_withdraw", id, map[string]any{"withdrawn_at": nil}, map[string]any{"withdrawn_at": now}); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func auditNotice(ctx context.Context, tx *sql.Tx, actor any, action string, id uuid.UUID, before, after map[string]any) error {
+	b, err := json.Marshal(before)
+	if err != nil {
+		return err
+	}
+	a, err := json.Marshal(after)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO admin_audit_log(admin_id,action,target_type,target_id,before_state,after_state) VALUES($1,$2,'system_notice',$3,$4,$5)`, actor, action, id, b, a)
+	if err != nil {
+		return fmt.Errorf("audit notice: %w", err)
 	}
 	return nil
 }

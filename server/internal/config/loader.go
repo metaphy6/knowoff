@@ -199,5 +199,15 @@ func validate(cfg *Config) []string {
 			break
 		}
 	}
+	screening := cfg.Moderation.ContentScreening
+	if screening.Provider != "" && screening.Provider != "disabled" && screening.Provider != "openai" {
+		errs = append(errs, "moderation.content_screening.provider must be disabled or openai")
+	}
+	if screening.Provider == "openai" && strings.TrimSpace(screening.Model) == "" {
+		errs = append(errs, "moderation.content_screening.model is required for openai")
+	}
+	if screening.TimeoutS < 0 || screening.TimeoutS > 30 {
+		errs = append(errs, "moderation.content_screening.timeout_s must be between 0 and 30")
+	}
 	return errs
 }

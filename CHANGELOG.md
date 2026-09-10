@@ -15,6 +15,15 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Added a usable Contributor Studio: account pairing from Profile, browser
+  sessions, role applications, private text drafts, explicit contribution terms,
+  editing, submission, withdrawal and review history.
+- Added internal operations pages for applications, submission review, weekly
+  challenges, terms, notices, report/feedback triage and account/economy lookup.
+  Text approval requires configured automatic screening and human review.
+- Added an in-app Weekly Nown Challenge with approved entries, own review status,
+  consented text submissions, immutable voting and current-week results.
+
 - Added distinct device experiences: phones open on Hand/Table/People workspaces
   with a pinned turn/Ready bar and bottom navigation; large phones use a wider
   hand grid; tablets pair evidence with the active task; desktop shows evidence,
@@ -42,6 +51,20 @@ All notable changes to Knowoff are documented in this file.
 - Verdict screen now opens a Play Again window once a match finishes: every seat picks "same table" (rematch with this exact table once everyone agrees) or "new table" (leaves for a fresh Quick Play match); a seat that left or never reconnected in time opens up for backfill, so a new player who simply clicks Quick Play can land straight into the reopened table instead of a brand new one.
 
 ### Fixed
+
+- Completed localization resource descriptions and required them during code
+  generation, resolving `arb(missing_metadata_for_key)` diagnostics.
+- Fixed ordinary browser admin navigation after login; mutations retain CSRF
+  protection. Contributor sessions use a short-lived, browser-bound pairing code.
+- Enforce the challenge limit at intake, hide pending entries from other players,
+  include all of Sunday, reject votes after closure and serialize winner payouts.
+- Keep contributor and challenge rewards separate from the daily gameplay cap,
+  so winning or contributing neither loses rewards nor consumes play earnings.
+- Bind approval to the exact text shown to the reviewer, keep private drafts
+  out of staff queues, and audit notice creation/withdrawal atomically. Invalid
+  scheduling dates are rejected instead of accidentally publishing immediately.
+- Show the server-selected challenge winner, including tied vote counts, and
+  reject challenge access from deleted or actively frozen accounts.
 
 - Developer Random now clears the previous role across restart and queueing.
   Pre-join choices remain local until a valid join envelope; local rooms apply

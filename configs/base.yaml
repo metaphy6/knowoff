@@ -63,6 +63,14 @@ localization:
 # Free-chat moderation always applies English plus the sender's selected
 # language. Add localized terms here; code never embeds a word list.
 moderation:
+  # Automated screening precedes human approval of contributor/challenge text.
+  # To enable, overlay provider: openai and api_key from KNOWOFF_MODERATION_API_KEY.
+  # Disabled or unreachable screening leaves entries pending; it never allows all.
+  content_screening:
+    provider: disabled
+    model: omni-moderation-latest
+    api_key: ""
+    timeout_s: 10
   default_language: en
   word_lists:
     en: [arse, arsehole, ass, asshole, bastard, bitch, bollocks, bullshit, crap, cunt, damn, dick, douchebag, fuck, fucker, fucking, fucks, goddamn, jackass, motherfucker, motherfucking, motherfucks, piss, pissed, pissing, prick, scumbag, shit, shits, shitting, shitty, slut, twat, wanker, whore]

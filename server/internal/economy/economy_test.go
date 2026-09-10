@@ -215,6 +215,73 @@ func TestWallet_DebitInsufficient(t *testing.T) {
 	}
 }
 
+func TestWallet_ContributionRewardsDoNotUsePlayCap(t *testing.T) {
+	for _, reward := range []LedgerEventType{LedgerContributorReward, LedgerChallengeWinner} {
+		for _, playFirst := range []bool{false, true} {
+			name := string(reward) + "/reward_first"
+			if playFirst {
+				name = string(reward) + "/play_first"
+			}
+			t.Run(name, func(t *testing.T) {
+				db := setupTestDB(t)
+				defer db.Close()
+				w := NewWallet(db)
+				ctx := context.Background()
+				accountID := newAccount(t, db)
+				grantPlay := func() {
+					t.Helper()
+					credited, err := w.Grant(ctx, accountID, LedgerMatchCompleted, 300, "play reward", 300)
+					if err != nil || credited != 300 {
+						t.Fatalf("full play allowance: credited=%d err=%v", credited, err)
+					}
+				}
+				if playFirst {
+					grantPlay()
+				}
+				// Exercise the transaction-scoped entry point used by portal close and publish.
+				tx, err := db.BeginTx(ctx, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback()
+				credited, err := w.GrantTx(ctx, tx, accountID, reward, 1000, "accepted community contribution", 300)
+				if err != nil || credited != 1000 {
+					t.Fatalf("full community reward: credited=%d err=%v", credited, err)
+				}
+				if err = tx.Commit(); err != nil {
+					t.Fatal(err)
+				}
+				expectedEarned := int64(0)
+				if playFirst {
+					expectedEarned = 300
+				}
+				if earned, err := w.DailyEarned(ctx, accountID, time.Now().UTC()); err != nil || earned != expectedEarned {
+					t.Fatalf("community reward changed play earnings: got=%d want=%d err=%v", earned, expectedEarned, err)
+				}
+				if !playFirst {
+					grantPlay()
+				}
+				if credited, err := w.Grant(ctx, accountID, LedgerCorrectVote, 5, "capped play reward", 300); err != nil || credited != 0 {
+					t.Fatalf("play cap no longer enforced: credited=%d err=%v", credited, err)
+				}
+				var count, amount int
+				if err := db.QueryRow(`SELECT count(*),COALESCE(sum(amount),0) FROM noin_ledger WHERE account_id=$1 AND event_type=$2`, accountID, reward).Scan(&count, &amount); err != nil {
+					t.Fatal(err)
+				}
+				if count != 1 || amount != 1000 {
+					t.Fatalf("community ledger count=%d amount=%d", count, amount)
+				}
+				if balance, err := w.Balance(ctx, accountID); err != nil || balance != 1300 {
+					t.Fatalf("combined wallet: balance=%d err=%v", balance, err)
+				}
+				if sum, err := w.LedgerSum(ctx, accountID); err != nil || sum != 1300 {
+					t.Fatalf("combined ledger: sum=%d err=%v", sum, err)
+				}
+			})
+		}
+	}
+}
+
 func TestManager_ConvertPoints(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

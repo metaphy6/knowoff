@@ -33,3 +33,41 @@ Add a language by adding its list to `moderation.word_lists` and a regression
 case in `server/internal/game/match_test.go`. Do not remove English fallback or
 move filtering to the client. Masking reduces accidental exposure but does not
 replace player reports, account enforcement, or human moderation for harassment.
+
+## Contributor and challenge text screening
+
+Contributor approvals and public Weekly Nown Challenge entries use a separate
+server-only `portal.TextScreener` before the human review decision. The default
+`moderation.content_screening.provider: disabled` pauses approval. Missing
+credentials, provider errors, timeouts, flagged text and malformed responses
+never count as a successful screen. Rejecting an entry still works without a
+provider. This does not replace the free-chat word lists or add image screening.
+
+To enable the OpenAI adapter, supply an operator-owned configuration overlay:
+
+```yaml
+moderation:
+  content_screening:
+    provider: openai
+    model: omni-moderation-latest
+    api_key: ${KNOWOFF_MODERATION_API_KEY}
+    timeout_s: 10
+```
+
+Set that environment variable only for the server process; keep the value out
+of YAML files, the client, logs and source control. The existing configuration
+loader interpolates the reference. No new secret is required while the adapter
+is disabled. Timeout values may be 1–30 seconds; zero uses 10 seconds.
+
+On approval, the adapter sends only the submitted text and configured model to
+[OpenAI's moderation endpoint](https://developers.openai.com/api/reference/resources/moderations/methods/create).
+It does not send player identity, account tokens or the full submission record.
+It rejects redirects and bounds both input and response sizes. Provider response
+bodies and credentials are never included in returned errors. Tests inject a
+local HTTP service; ordinary test runs do not contact the provider.
+
+A different provider can implement `TextScreener.ScreenText(context.Context,
+string) error` and be supplied through `portal.Deps.Screener`. All implementations
+must return an error when a decision cannot be obtained. The reviewed content
+is checked again after acquiring the database row lock so a changed draft
+cannot inherit an earlier screen.

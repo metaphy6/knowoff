@@ -4,8 +4,10 @@ package portal
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -203,36 +205,39 @@ type AuthClient interface {
 
 // Deps bundles the dependencies needed by the portal manager.
 type Deps struct {
-	DB      *sql.DB
-	Config  *config.Config
-	Auth    AuthClient
-	Profile *profile.Manager
-	Economy *economy.Manager
-	Admin   AuditLogger
-	Media   *media.Manager
+	DB       *sql.DB
+	Config   *config.Config
+	Auth     AuthClient
+	Profile  *profile.Manager
+	Economy  *economy.Manager
+	Admin    AuditLogger
+	Media    *media.Manager
+	Screener TextScreener
 }
 
 // Manager is the portal service.
 type Manager struct {
-	db      *sql.DB
-	cfg     *config.Config
-	auth    AuthClient
-	profile *profile.Manager
-	economy *economy.Manager
-	admin   AuditLogger
-	media   *media.Manager
+	db       *sql.DB
+	cfg      *config.Config
+	auth     AuthClient
+	profile  *profile.Manager
+	economy  *economy.Manager
+	admin    AuditLogger
+	media    *media.Manager
+	screener TextScreener
 }
 
 // NewManager returns a portal manager.
 func NewManager(deps Deps) *Manager {
 	return &Manager{
-		db:      deps.DB,
-		cfg:     deps.Config,
-		auth:    deps.Auth,
-		profile: deps.Profile,
-		economy: deps.Economy,
-		admin:   deps.Admin,
-		media:   deps.Media,
+		db:       deps.DB,
+		cfg:      deps.Config,
+		auth:     deps.Auth,
+		profile:  deps.Profile,
+		economy:  deps.Economy,
+		admin:    deps.Admin,
+		media:    deps.Media,
+		screener: deps.Screener,
 	}
 }
 
@@ -264,9 +269,7 @@ func (m *Manager) ApplyForRole(ctx context.Context, accountID string, role Role)
 	_, err = m.db.ExecContext(ctx,
 		`INSERT INTO portal_role_applications (account_id, role, status, applied_at)
 		 VALUES ($1, $2, 'pending', now())
-		 ON CONFLICT (account_id, role, status) DO UPDATE SET
-		   updated_at = now(),
-		   applied_at = EXCLUDED.applied_at`,
+		 ON CONFLICT (account_id, role) WHERE status = 'pending' DO NOTHING`,
 		accountID, string(role),
 	)
 	if err != nil {
@@ -332,7 +335,7 @@ func (m *Manager) GrantRole(ctx context.Context, adminID, accountID string, role
 	if !ValidRole(string(role)) {
 		return fmt.Errorf("invalid role")
 	}
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -367,16 +370,14 @@ func (m *Manager) GrantRole(ctx context.Context, adminID, accountID string, role
 		return fmt.Errorf("approve application: %w", err)
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit grant role: %w", err)
-	}
-
 	before := map[string]any{}
 	if oldRole.Valid {
 		before["role"] = oldRole.String
 	}
-	_ = m.admin.LogAction(ctx, adminID, "portal_role_grant", "portal_role", accountID, before, map[string]any{"role": string(role)})
-	return nil
+	if err := auditTx(ctx, tx, adminID, "portal_role_grant", "portal_role", accountID, before, map[string]any{"role": string(role)}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // TermsVersion is a versioned contribution terms record.
@@ -410,70 +411,77 @@ func (m *Manager) ListTermsVersions(ctx context.Context) ([]TermsVersion, error)
 // CreateTermsVersion inserts a new contribution terms version. The version
 // string is taken from config/admin input and must be unique.
 func (m *Manager) CreateTermsVersion(ctx context.Context, adminID, version, title, body string, activeFrom time.Time) error {
-	if version == "" || title == "" || body == "" {
-		return fmt.Errorf("version, title and body required")
+	version = strings.TrimSpace(version)
+	title = strings.TrimSpace(title)
+	body = strings.TrimSpace(body)
+	if version == "" || title == "" || body == "" || len(version) > 100 || len(title) > 200 || len(body) > 50000 {
+		return fmt.Errorf("version, title and body required within their limits")
 	}
-	_, err := m.db.ExecContext(ctx,
-		`INSERT INTO portal_terms (version, title, body, active_from, created_at)
-		 VALUES ($1, $2, $3, $4, now())`,
-		version, title, body, activeFrom,
-	)
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("insert terms: %w", err)
+		return err
 	}
-	_ = m.admin.LogAction(ctx, adminID, "portal_terms_create", "portal_terms", version,
-		map[string]any{},
-		map[string]any{"title": title, "active_from": activeFrom},
-	)
-	return nil
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `INSERT INTO portal_terms(version,title,body,active_from) VALUES($1,$2,$3,$4)`, version, title, body, activeFrom); err != nil {
+		return err
+	}
+	if err = auditTx(ctx, tx, adminID, "portal_terms_create", "portal_terms", version, map[string]any{}, map[string]any{"title": title, "body": body, "active_from": activeFrom}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // RejectApplication marks a role application as rejected.
 func (m *Manager) RejectApplication(ctx context.Context, adminID, applicationID, reason string) error {
-	res, err := m.db.ExecContext(ctx,
-		`UPDATE portal_role_applications
-		 SET status = 'rejected', decided_at = now(), decided_by = $2, reason = $3, updated_at = now()
-		 WHERE id = $1 AND status = 'pending'`,
-		applicationID, adminID, reason,
-	)
+	reason = strings.TrimSpace(reason)
+	if reason == "" || len(reason) > 2000 {
+		return fmt.Errorf("rejection reason required, up to 2000 bytes")
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("reject application: %w", err)
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `UPDATE portal_role_applications SET status='rejected',decided_at=now(),decided_by=$2,reason=$3,updated_at=now() WHERE id=$1 AND status='pending'`, applicationID, adminID, reason)
+	if err != nil {
+		return err
 	}
 	n, _ := res.RowsAffected()
-	if n == 0 {
+	if n != 1 {
 		return fmt.Errorf("application not found or already decided")
 	}
-	_ = m.admin.LogAction(ctx, adminID, "portal_application_reject", "portal_role_application", applicationID,
-		map[string]any{"status": "pending"},
-		map[string]any{"status": "rejected", "reason": reason},
-	)
-	return nil
+	if err = auditTx(ctx, tx, adminID, "portal_application_reject", "portal_role_application", applicationID, map[string]any{"status": "pending"}, map[string]any{"status": "rejected", "reason": reason}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // RevokeRole revokes a specific portal role.
 func (m *Manager) RevokeRole(ctx context.Context, adminID, accountID string, role Role) error {
-	res, err := m.db.ExecContext(ctx,
-		`UPDATE portal_roles
-		 SET revoked_at = now(), revoked_by = $3, updated_at = now()
-		 WHERE account_id = $1 AND role = $2 AND revoked_at IS NULL`,
-		accountID, string(role), adminID,
-	)
+	if !ValidRole(string(role)) {
+		return fmt.Errorf("invalid role")
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("revoke role: %w", err)
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.ExecContext(ctx, `UPDATE portal_roles SET revoked_at=now(),revoked_by=$3,updated_at=now() WHERE account_id=$1 AND role=$2 AND revoked_at IS NULL`, accountID, string(role), adminID)
+	if err != nil {
+		return err
 	}
 	n, _ := res.RowsAffected()
-	if n == 0 {
+	if n != 1 {
 		return fmt.Errorf("no active role")
 	}
-	_ = m.admin.LogAction(ctx, adminID, "portal_role_revoke", "portal_role", accountID,
-		map[string]any{"status": "active"},
-		map[string]any{"status": "revoked", "role": string(role)},
-	)
-	return nil
+	if err = auditTx(ctx, tx, adminID, "portal_role_revoke", "portal_role", accountID, map[string]any{"status": "active", "role": string(role)}, map[string]any{"status": "revoked", "role": string(role)}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // HasRole reports whether an account holds the requested role or a higher one
-// in the portal hierarchy (Guard > Curator > Contributor).
+// for content work (Curator includes Contributor). Guard is independent.
 func (m *Manager) HasRole(ctx context.Context, accountID string, role Role) (bool, error) {
 	if !ValidRole(string(role)) {
 		return false, fmt.Errorf("invalid role")
@@ -486,13 +494,12 @@ func (m *Manager) HasRole(ctx context.Context, accountID string, role Role) (boo
 		return false, fmt.Errorf("check role: %w", err)
 	}
 	defer rows.Close()
-	requiredRank := roleRank(role)
 	for rows.Next() {
 		var r string
 		if err := rows.Scan(&r); err != nil {
 			return false, fmt.Errorf("scan role: %w", err)
 		}
-		if roleRank(Role(r)) >= requiredRank {
+		if Role(r) == role || (role == RoleContributor && Role(r) == RoleCurator) {
 			return true, nil
 		}
 	}
@@ -526,104 +533,168 @@ func (m *Manager) ActiveRole(ctx context.Context, accountID string) (Role, error
 // ── Submission pipeline ────────────────────────────────────────────────────
 
 // CreateDraft creates a draft submission.
-func (m *Manager) CreateDraft(ctx context.Context, accountID string, mediaType MediaType, content string) (*Submission, error) {
-	if !ValidMediaType(string(mediaType)) {
-		return nil, fmt.Errorf("invalid media type")
+func (m *Manager) CreateDraft(ctx context.Context, accountID string, mediaType MediaType, content string, consent ...ContributionConsent) (*Submission, error) {
+	content = strings.TrimSpace(content)
+	if mediaType != MediaText || content == "" || len(content) > m.MaxTextBytes() {
+		return nil, fmt.Errorf("text content must contain 1 to %d bytes", m.MaxTextBytes())
 	}
-	if mediaType == MediaText {
-		if len(content) == 0 {
-			return nil, fmt.Errorf("text content required")
-		}
-		maxLen := m.cfg.Tuning.Portal.MaxTextSubmissionLength
-		if maxLen <= 0 {
-			maxLen = 2000
-		}
-		if len(content) > maxLen {
-			return nil, fmt.Errorf("text content exceeds %d characters", maxLen)
-		}
+	if len(consent) != 1 || !consent[0].Accepted {
+		return nil, fmt.Errorf("explicit contribution terms acceptance required")
 	}
-	id := uuid.New().String()
-	termsVersion := m.activeTermsVersion()
-	_, err := m.db.ExecContext(ctx,
-		`INSERT INTO portal_submissions (id, account_id, media_type, content, status, tags, terms_version, terms_accepted_at, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, 'draft', '{}', $5, now(), now(), now())`,
-		id, accountID, string(mediaType), content, termsVersion,
-	)
+	has, err := m.HasRole(ctx, accountID, RoleContributor)
 	if err != nil {
-		return nil, fmt.Errorf("insert draft: %w", err)
+		return nil, err
+	}
+	if !has {
+		return nil, fmt.Errorf("contributor role required")
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	var version string
+	if err = tx.QueryRowContext(ctx, `SELECT version FROM portal_terms WHERE active_from<=now() ORDER BY active_from DESC,version DESC LIMIT 1 FOR SHARE`).Scan(&version); err != nil {
+		return nil, err
+	}
+	if consent[0].Version != version {
+		return nil, fmt.Errorf("contribution terms changed; reload and accept the current version")
+	}
+	id := uuid.NewString()
+	_, err = tx.ExecContext(ctx, `INSERT INTO portal_submissions(id,account_id,media_type,content,status,tags,terms_version,terms_accepted_at) VALUES($1,$2,'text',$3,'draft','{}',$4,now())`, id, accountID, content, version)
+	if err != nil {
+		return nil, err
+	}
+	if err = auditTx(ctx, tx, "", "submission_draft_create", "submission", id, map[string]any{}, map[string]any{"actor_account_id": accountID, "status": "draft", "terms_version": version}); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
 	}
 	return m.GetSubmission(ctx, id)
+}
+
+// EditDraft can change only the owner's unsubmitted text. Submitted revisions
+// require a withdrawal and another counted submission.
+func (m *Manager) EditDraft(ctx context.Context, accountID, id, content string) error {
+	content = strings.TrimSpace(content)
+	if content == "" || len(content) > m.MaxTextBytes() {
+		return fmt.Errorf("text content must contain 1 to %d bytes", m.MaxTextBytes())
+	}
+	has, err := m.HasRole(ctx, accountID, RoleContributor)
+	if err != nil {
+		return err
+	}
+	if !has {
+		return fmt.Errorf("contributor role required")
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var old string
+	if err = tx.QueryRowContext(ctx, `SELECT content FROM portal_submissions WHERE id=$1 AND account_id=$2 AND status='draft' AND media_type='text' FOR UPDATE`, id, accountID).Scan(&old); err != nil {
+		return fmt.Errorf("only your own draft can be edited")
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE portal_submissions SET content=$2,updated_at=now() WHERE id=$1`, id, content); err != nil {
+		return err
+	}
+	if err = auditTx(ctx, tx, "", "submission_draft_edit", "submission", id, map[string]any{"content": old}, map[string]any{"actor_account_id": accountID, "content": content}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // SubmitDraft moves a draft to the submitted queue. The account must hold the
 // contributor role and must not have exceeded the daily cap.
 func (m *Manager) SubmitDraft(ctx context.Context, accountID, submissionID string) error {
-	ok, err := m.HasRole(ctx, accountID, RoleContributor)
+	has, err := m.HasRole(ctx, accountID, RoleContributor)
 	if err != nil {
-		return fmt.Errorf("check role: %w", err)
+		return err
 	}
-	if !ok {
+	if !has {
 		return fmt.Errorf("contributor role required")
 	}
-	day := serverDay(time.Now().UTC())
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return err
 	}
 	defer tx.Rollback()
-
-	var owner string
-	var status string
-	if err := tx.QueryRowContext(ctx,
-		"SELECT account_id, status FROM portal_submissions WHERE id = $1",
-		submissionID,
-	).Scan(&owner, &status); err != nil {
-		return fmt.Errorf("load submission: %w", err)
+	// A stable account row exists before the first counter row. Lock it first so
+	// two first submissions cannot both observe an absent daily counter.
+	var locked string
+	if err = tx.QueryRowContext(ctx, `SELECT id FROM accounts WHERE id=$1 AND banned_at IS NULL FOR UPDATE`, accountID).Scan(&locked); err != nil {
+		return fmt.Errorf("account unavailable")
+	}
+	var owner, status, terms string
+	if err = tx.QueryRowContext(ctx, `SELECT account_id,status,terms_version FROM portal_submissions WHERE id=$1 FOR UPDATE`, submissionID).Scan(&owner, &status, &terms); err != nil {
+		return fmt.Errorf("submission unavailable")
 	}
 	if owner != accountID {
 		return fmt.Errorf("not owner")
 	}
-	if status != string(StatusDraft) {
+	if status != "draft" {
 		return fmt.Errorf("submission not draft")
 	}
-
-	var count int
-	if err := tx.QueryRowContext(ctx,
-		"SELECT COALESCE(count,0) FROM portal_submission_counts WHERE account_id = $1 AND server_day = $2 FOR UPDATE",
-		accountID, day,
-	).Scan(&count); err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("lock submission count: %w", err)
+	var current string
+	if err = tx.QueryRowContext(ctx, `SELECT version FROM portal_terms WHERE active_from<=now() ORDER BY active_from DESC,version DESC LIMIT 1`).Scan(&current); err != nil {
+		return err
 	}
-	if count >= m.cfg.Tuning.Portal.SubmissionsPerContributorPerDay {
+	if terms != current {
+		return fmt.Errorf("contribution terms changed; create a new draft with current consent")
+	}
+	day := serverDay(time.Now().UTC())
+	var count int
+	if err = tx.QueryRowContext(ctx, `SELECT count FROM portal_submission_counts WHERE account_id=$1 AND server_day=$2`, accountID, day).Scan(&count); err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	cap := m.cfg.Tuning.Portal.SubmissionsPerContributorPerDay
+	if cap <= 0 {
+		cap = 10
+	}
+	if count >= cap {
 		return fmt.Errorf("daily submission cap reached")
 	}
-
-	if _, err := tx.ExecContext(ctx,
-		`UPDATE portal_submissions
-		 SET status = 'submitted', submitted_at = now(), updated_at = now()
-		 WHERE id = $1`,
-		submissionID,
-	); err != nil {
-		return fmt.Errorf("update submission: %w", err)
+	if _, err = tx.ExecContext(ctx, `UPDATE portal_submissions SET status='submitted',submitted_at=now(),updated_at=now() WHERE id=$1`, submissionID); err != nil {
+		return err
 	}
-
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO portal_submission_counts (account_id, server_day, count)
-		 VALUES ($1, $2, 1)
-		 ON CONFLICT (account_id, server_day) DO UPDATE SET
-		   count = portal_submission_counts.count + 1,
-		   updated_at = now()`,
-		accountID, day,
-	); err != nil {
-		return fmt.Errorf("increment count: %w", err)
+	if _, err = tx.ExecContext(ctx, `INSERT INTO portal_submission_counts(account_id,server_day,count) VALUES($1,$2,1) ON CONFLICT(account_id,server_day) DO UPDATE SET count=portal_submission_counts.count+1,updated_at=now()`, accountID, day); err != nil {
+		return err
 	}
-
+	if err = auditTx(ctx, tx, "", "submission_submit", "submission", submissionID, map[string]any{"status": "draft"}, map[string]any{"status": "submitted", "actor_account_id": accountID}); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
 // DecideSubmission approves or rejects a submission. Only curators/admins may decide.
-func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID string, approve bool, reason string) error {
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID string, approve bool, reason string, revision ...string) error {
+	var screenedContent string
+	if approve {
+		pending, err := m.GetSubmission(ctx, submissionID)
+		if err != nil {
+			return err
+		}
+		if pending.Status != StatusSubmitted && pending.Status != StatusInReview {
+			return fmt.Errorf("submission not in reviewable state")
+		}
+		if pending.MediaType != MediaText {
+			return fmt.Errorf("only text screening is available")
+		}
+		if len(revision) > 0 && revision[0] != ContentRevision(pending.Content) {
+			return fmt.Errorf("submission changed since review; reload and review again")
+		}
+		screenedContent = pending.Content
+		if err = m.screenText(ctx, screenedContent); err != nil {
+			return err
+		}
+	}
+
+	if !approve && strings.TrimSpace(reason) == "" {
+		return fmt.Errorf("rejection reason required")
+	}
+	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
 	}
@@ -634,13 +705,16 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 	var toneBucket sql.NullString
 	if err := tx.QueryRowContext(ctx,
 		`SELECT id, account_id, status, media_type, content, asset_ref, tags, tone_bucket
-		 FROM portal_submissions WHERE id = $1`,
+		 FROM portal_submissions WHERE id = $1 FOR UPDATE`,
 		submissionID,
 	).Scan(&s.ID, &s.AccountID, &s.Status, &s.MediaType, &s.Content, &assetRef, pq.Array(&s.Tags), &toneBucket); err != nil {
 		return fmt.Errorf("load submission: %w", err)
 	}
 	s.AssetRef = assetRef.String
 	s.ToneBucket = toneBucket.String
+	if approve && s.Content != screenedContent {
+		return fmt.Errorf("submission changed during screening; review again")
+	}
 	if s.Status != StatusSubmitted && s.Status != StatusInReview {
 		return fmt.Errorf("submission not in reviewable state")
 	}
@@ -662,7 +736,7 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 		_, err := m.economy.Wallet.GrantTx(ctx, tx, s.AccountID, economy.LedgerContributorReward,
 			m.cfg.Tuning.Noin.ContributorAcceptedAsset,
 			fmt.Sprintf("accepted submission %s", submissionID),
-			int64(m.cfg.Tuning.Noin.DailyEarnCap),
+			0, // The play-earn cap does not cap accepted community work.
 		)
 		if err != nil {
 			return fmt.Errorf("grant contributor reward: %w", err)
@@ -672,14 +746,12 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 		}
 	}
 
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit decide: %w", err)
-	}
-
 	before := map[string]any{"status": string(s.Status)}
 	after := map[string]any{"status": string(newStatus), "reason": reason}
-	_ = m.admin.LogAction(ctx, adminID, "submission_decide", "submission", submissionID, before, after)
-	return nil
+	if err := auditTx(ctx, tx, adminID, "submission_decide", "submission", submissionID, before, after); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // PublishSubmission marks an approved submission as published in a pack version.
@@ -707,20 +779,22 @@ func (m *Manager) PublishSubmission(ctx context.Context, adminID, submissionID, 
 // WithdrawSubmission allows a contributor to withdraw their submitted draft.
 // The queue slot is consumed (per spec: withdraw + resubmit costs the slot).
 func (m *Manager) WithdrawSubmission(ctx context.Context, accountID, submissionID string) error {
-	res, err := m.db.ExecContext(ctx,
-		`UPDATE portal_submissions
-		 SET status = 'draft', submitted_at = NULL, updated_at = now()
-		 WHERE id = $1 AND account_id = $2 AND status IN ('draft','submitted','in_review')`,
-		submissionID, accountID,
-	)
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("withdraw submission: %w", err)
+		return err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	defer tx.Rollback()
+	var old string
+	if err = tx.QueryRowContext(ctx, `SELECT status FROM portal_submissions WHERE id=$1 AND account_id=$2 AND status IN ('submitted','in_review') FOR UPDATE`, submissionID, accountID).Scan(&old); err != nil {
 		return fmt.Errorf("submission not withdrawable")
 	}
-	return nil
+	if _, err = tx.ExecContext(ctx, `UPDATE portal_submissions SET status='draft',submitted_at=NULL,updated_at=now() WHERE id=$1`, submissionID); err != nil {
+		return err
+	}
+	if err = auditTx(ctx, tx, "", "submission_withdraw", "submission", submissionID, map[string]any{"status": old}, map[string]any{"status": "draft", "actor_account_id": accountID}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // GetSubmission loads a submission by id.
@@ -992,405 +1066,6 @@ func (m *Manager) ExpireFreezes(ctx context.Context) error {
 // ── Weekly Nown Challenge ──────────────────────────────────────────────────
 
 // CreateChallengeTopic publishes a new weekly topic.
-func (m *Manager) CreateChallengeTopic(ctx context.Context, adminID string, weekStart time.Time, nownMediaID string) (*ChallengeTopic, error) {
-	weekEnd := weekStart.AddDate(0, 0, 6)
-	id := uuid.New().String()
-	if _, err := m.db.ExecContext(ctx,
-		`INSERT INTO challenge_topics (id, week_start, week_end, nown_media_id, published_at, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, now(), now(), now())`,
-		id, weekStart, weekEnd, nownMediaID,
-	); err != nil {
-		return nil, fmt.Errorf("insert topic: %w", err)
-	}
-	_ = m.admin.LogAction(ctx, adminID, "challenge_topic_create", "challenge_topic", id,
-		map[string]any{},
-		map[string]any{"week_start": weekStart, "nown_media_id": nownMediaID},
-	)
-	return m.GetChallengeTopic(ctx, id)
-}
-
-// GetChallengeTopic loads a topic by id.
-func (m *Manager) GetChallengeTopic(ctx context.Context, id string) (*ChallengeTopic, error) {
-	var t ChallengeTopic
-	var closedAt sql.NullTime
-	var winnerID sql.NullString
-	err := m.db.QueryRowContext(ctx,
-		`SELECT id, week_start, week_end, nown_media_id, published_at, closed_at, winner_entry_id
-		 FROM challenge_topics WHERE id = $1`,
-		id,
-	).Scan(&t.ID, &t.WeekStart, &t.WeekEnd, &t.NownMediaID, &t.PublishedAt, &closedAt, &winnerID)
-	if err != nil {
-		return nil, fmt.Errorf("load topic: %w", err)
-	}
-	t.ClosedAt = nullableTime(closedAt)
-	t.WinnerEntryID = nullableString(winnerID)
-	return &t, nil
-}
-
-// ActiveChallengeTopic returns the currently open challenge, if any.
-func (m *Manager) ActiveChallengeTopic(ctx context.Context) (*ChallengeTopic, error) {
-	var t ChallengeTopic
-	var id string
-	var closedAt sql.NullTime
-	var winnerID sql.NullString
-	err := m.db.QueryRowContext(ctx,
-		`SELECT id, week_start, week_end, nown_media_id, published_at, closed_at, winner_entry_id
-		 FROM challenge_topics
-		 WHERE closed_at IS NULL AND week_start <= $1 AND week_end >= $1
-		 ORDER BY week_start DESC LIMIT 1`,
-		time.Now().UTC(),
-	).Scan(&id, &t.WeekStart, &t.WeekEnd, &t.NownMediaID, &t.PublishedAt, &closedAt, &winnerID)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("load active topic: %w", err)
-	}
-	t.ID = id
-	t.ClosedAt = nullableTime(closedAt)
-	t.WinnerEntryID = nullableString(winnerID)
-	return &t, nil
-}
-
-// SubmitChallengeEntry records a player's entry. The first 100 approved entries
-// get slot numbers; rejections reopen slots.
-func (m *Manager) SubmitChallengeEntry(ctx context.Context, accountID, topicID string, entryType MediaType, content string) (*ChallengeEntry, error) {
-	if !ValidMediaType(string(entryType)) {
-		return nil, fmt.Errorf("invalid entry type")
-	}
-	if entryType == MediaText && len(content) == 0 {
-		return nil, fmt.Errorf("text content required")
-	}
-
-	topic, err := m.GetChallengeTopic(ctx, topicID)
-	if err != nil {
-		return nil, err
-	}
-	if topic == nil || topic.ClosedAt != nil {
-		return nil, fmt.Errorf("challenge not open")
-	}
-	if topic.WeekStart.After(time.Now().UTC()) || topic.WeekEnd.Before(time.Now().UTC()) {
-		return nil, fmt.Errorf("challenge not active")
-	}
-
-	termsVersion := m.activeTermsVersion()
-	id := uuid.New().String()
-	_, err = m.db.ExecContext(ctx,
-		`INSERT INTO challenge_entries (id, account_id, topic_id, entry_type, content, terms_version, terms_accepted_at, status, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, now(), 'submitted', now(), now())`,
-		id, accountID, topicID, string(entryType), content, termsVersion,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("insert entry: %w", err)
-	}
-	return m.GetChallengeEntry(ctx, id)
-}
-
-// GetChallengeEntry loads an entry.
-func (m *Manager) GetChallengeEntry(ctx context.Context, id string) (*ChallengeEntry, error) {
-	var e ChallengeEntry
-	var assetRef sql.NullString
-	var slotNumber sql.NullInt32
-	var rejection sql.NullString
-	err := m.db.QueryRowContext(ctx,
-		`SELECT id, account_id, topic_id, entry_type, content, asset_ref, status, vote_count, slot_number, rejection_reason
-		 FROM challenge_entries WHERE id = $1`,
-		id,
-	).Scan(&e.ID, &e.AccountID, &e.TopicID, &e.EntryType, &e.Content, &assetRef, &e.Status, &e.VoteCount, &slotNumber, &rejection)
-	if err != nil {
-		return nil, fmt.Errorf("load entry: %w", err)
-	}
-	e.AssetRef = assetRef.String
-	e.SlotNumber = int(slotNumber.Int32)
-	e.RejectionReason = rejection.String
-	return &e, nil
-}
-
-// ListChallengeEntries returns visible (approved) entries for a topic.
-func (m *Manager) ListChallengeEntries(ctx context.Context, topicID string) ([]ChallengeEntry, error) {
-	rows, err := m.db.QueryContext(ctx,
-		`SELECT id, account_id, topic_id, entry_type, content, asset_ref, status, vote_count, slot_number, rejection_reason
-		 FROM challenge_entries
-		 WHERE topic_id = $1 AND status = 'approved'
-		 ORDER BY slot_number ASC, created_at ASC`,
-		topicID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("query entries: %w", err)
-	}
-	defer rows.Close()
-	return scanChallengeEntries(rows)
-}
-
-// VoteChallengeEntry records one immutable vote per player per topic.
-func (m *Manager) VoteChallengeEntry(ctx context.Context, accountID, topicID, entryID string) error {
-	if accountID == "" {
-		return fmt.Errorf("account required")
-	}
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	var entryOwner string
-	var entryStatus string
-	var entryTopicID string
-	if err := tx.QueryRowContext(ctx,
-		"SELECT account_id, status, topic_id FROM challenge_entries WHERE id = $1",
-		entryID,
-	).Scan(&entryOwner, &entryStatus, &entryTopicID); err != nil {
-		return fmt.Errorf("load entry: %w", err)
-	}
-	if entryTopicID != topicID {
-		return fmt.Errorf("entry does not belong to topic")
-	}
-	if entryOwner == accountID {
-		return fmt.Errorf("cannot vote for own entry")
-	}
-	if entryStatus != string(EntryApproved) {
-		return fmt.Errorf("entry not visible")
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		"INSERT INTO challenge_votes (account_id, topic_id, entry_id) VALUES ($1, $2, $3)",
-		accountID, topicID, entryID,
-	); err != nil {
-		return fmt.Errorf("insert vote: %w", err)
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		"UPDATE challenge_entries SET vote_count = vote_count + 1, updated_at = now() WHERE id = $1",
-		entryID,
-	); err != nil {
-		return fmt.Errorf("increment vote count: %w", err)
-	}
-
-	return tx.Commit()
-}
-
-// ApproveChallengeEntry assigns a slot number atomically (first-100 race-proof).
-func (m *Manager) ApproveChallengeEntry(ctx context.Context, adminID, entryID string) error {
-	max := m.cfg.Tuning.LiveOps.ChallengeMaxEntries
-	if max <= 0 {
-		max = 100
-	}
-	// ReadCommitted + row lock on the topic so concurrent approvals serialize
-	// and see each other's committed slot assignments.
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	var topicID string
-	var status string
-	if err := tx.QueryRowContext(ctx,
-		"SELECT topic_id, status FROM challenge_entries WHERE id = $1",
-		entryID,
-	).Scan(&topicID, &status); err != nil {
-		return fmt.Errorf("load entry: %w", err)
-	}
-	if status != string(EntrySubmitted) && status != string(EntryScreening) {
-		return fmt.Errorf("entry not screenable")
-	}
-
-	// Serialize concurrent approvals on the topic row.
-	if _, err := tx.ExecContext(ctx,
-		"SELECT 1 FROM challenge_topics WHERE id = $1 FOR UPDATE",
-		topicID,
-	); err != nil {
-		return fmt.Errorf("lock topic: %w", err)
-	}
-
-	rows, err := tx.QueryContext(ctx,
-		"SELECT slot_number FROM challenge_entries WHERE topic_id = $1 AND status = 'approved' AND slot_number IS NOT NULL ORDER BY slot_number",
-		topicID,
-	)
-	if err != nil {
-		return fmt.Errorf("list slots: %w", err)
-	}
-	var used []int
-	for rows.Next() {
-		var s int
-		if err := rows.Scan(&s); err != nil {
-			rows.Close()
-			return fmt.Errorf("scan slot: %w", err)
-		}
-		used = append(used, s)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("slot rows: %w", err)
-	}
-	if len(used) >= max {
-		return fmt.Errorf("challenge full")
-	}
-	nextSlot := 1
-	for _, s := range used {
-		if s == nextSlot {
-			nextSlot++
-		}
-	}
-
-	res, err := tx.ExecContext(ctx,
-		`UPDATE challenge_entries
-		 SET status = 'approved', slot_number = $2, screen_decided_at = now(), screen_decided_by = $3, updated_at = now()
-		 WHERE id = $1 AND status IN ('submitted','screening')`,
-		entryID, nextSlot, adminID,
-	)
-	if err != nil {
-		return fmt.Errorf("approve entry: %w", err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return fmt.Errorf("entry no longer screenable")
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit approve: %w", err)
-	}
-	_ = m.admin.LogAction(ctx, adminID, "challenge_entry_approve", "challenge_entry", entryID,
-		map[string]any{"status": status},
-		map[string]any{"status": "approved", "slot_number": nextSlot},
-	)
-	return nil
-}
-
-// RejectChallengeEntry removes the entry from the challenge.
-func (m *Manager) RejectChallengeEntry(ctx context.Context, adminID, entryID, reason string) error {
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	var topicID string
-	var status string
-	if err := tx.QueryRowContext(ctx,
-		"SELECT topic_id, status FROM challenge_entries WHERE id = $1",
-		entryID,
-	).Scan(&topicID, &status); err != nil {
-		return fmt.Errorf("load entry: %w", err)
-	}
-	if status != string(EntrySubmitted) && status != string(EntryScreening) && status != string(EntryApproved) {
-		return fmt.Errorf("entry not rejectable")
-	}
-
-	// Serialize with concurrent approvals so slot accounting stays consistent.
-	if _, err := tx.ExecContext(ctx,
-		"SELECT 1 FROM challenge_topics WHERE id = $1 FOR UPDATE",
-		topicID,
-	); err != nil {
-		return fmt.Errorf("lock topic: %w", err)
-	}
-
-	res, err := tx.ExecContext(ctx,
-		`UPDATE challenge_entries
-		 SET status = 'rejected', screen_decided_at = now(), screen_decided_by = $2, rejection_reason = $3, slot_number = NULL, updated_at = now()
-		 WHERE id = $1 AND status IN ('submitted','screening','approved')`,
-		entryID, adminID, reason,
-	)
-	if err != nil {
-		return fmt.Errorf("reject entry: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("entry not rejectable")
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit reject: %w", err)
-	}
-	_ = m.admin.LogAction(ctx, adminID, "challenge_entry_reject", "challenge_entry", entryID,
-		map[string]any{},
-		map[string]any{"status": "rejected", "reason": reason},
-	)
-	return nil
-}
-
-// CloseChallengeWeek finalizes the active challenge: determines the winner,
-// grants the title + Noin payout, and records the result. Idempotent.
-func (m *Manager) CloseChallengeWeek(ctx context.Context, adminID string, topicID string) (*ChallengeEntry, error) {
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return nil, fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	var topic ChallengeTopic
-	var closedAt sql.NullTime
-	var winnerID sql.NullString
-	err = tx.QueryRowContext(ctx,
-		`SELECT id, week_start, week_end, nown_media_id, published_at, closed_at, winner_entry_id
-		 FROM challenge_topics WHERE id = $1`,
-		topicID,
-	).Scan(&topic.ID, &topic.WeekStart, &topic.WeekEnd, &topic.NownMediaID, &topic.PublishedAt, &closedAt, &winnerID)
-	if err != nil {
-		return nil, fmt.Errorf("load topic: %w", err)
-	}
-	if closedAt.Valid {
-		// Already closed: return recorded winner if any.
-		if !winnerID.Valid {
-			return nil, nil
-		}
-		return m.GetChallengeEntry(ctx, winnerID.String)
-	}
-
-	var winner *ChallengeEntry
-	row := tx.QueryRowContext(ctx,
-		`SELECT id, account_id, topic_id, entry_type, content, asset_ref, status, vote_count, slot_number, rejection_reason
-		 FROM challenge_entries
-		 WHERE topic_id = $1 AND status = 'approved'
-		 ORDER BY vote_count DESC, slot_number ASC LIMIT 1`,
-		topicID,
-	)
-	winner, err = scanChallengeEntry(row)
-	if err != nil && err != sql.ErrNoRows {
-		return nil, fmt.Errorf("find winner: %w", err)
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		"UPDATE challenge_topics SET closed_at = now(), winner_entry_id = $2, updated_at = now() WHERE id = $1",
-		topicID, nullableWinnerID(winner),
-	); err != nil {
-		return nil, fmt.Errorf("close topic: %w", err)
-	}
-
-	if winner != nil {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO challenge_winners (topic_id, entry_id, account_id, title_granted_at, created_at)
-			 VALUES ($1, $2, $3, now(), now())
-			 ON CONFLICT (topic_id) DO UPDATE SET
-			   entry_id = EXCLUDED.entry_id,
-			   account_id = EXCLUDED.account_id,
-			   title_granted_at = EXCLUDED.title_granted_at`,
-			topicID, winner.ID, winner.AccountID,
-		); err != nil {
-			return nil, fmt.Errorf("record winner: %w", err)
-		}
-		_, err = m.economy.Wallet.GrantTx(ctx, tx, winner.AccountID, economy.LedgerChallengeWinner,
-			m.cfg.Tuning.Noin.ChallengeWinner,
-			"weekly nown challenge winner",
-			int64(m.cfg.Tuning.Noin.DailyEarnCap),
-		)
-		if err != nil {
-			return nil, fmt.Errorf("grant winner noin: %w", err)
-		}
-		if err := m.profile.AddWeekWinnerTitleTx(ctx, tx, winner.AccountID); err != nil {
-			return nil, fmt.Errorf("grant winner title: %w", err)
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit close: %w", err)
-	}
-
-	_ = m.admin.LogAction(ctx, adminID, "challenge_week_close", "challenge_topic", topicID,
-		map[string]any{"closed_at": nil},
-		map[string]any{"closed_at": time.Now().UTC(), "winner_entry_id": nullableWinnerID(winner)},
-	)
-	return winner, nil
-}
-
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 // EnsureActiveTermsVersion creates a portal_terms row for the configured active
@@ -1500,3 +1175,73 @@ func scanChallengeEntry(row *sql.Row) (*ChallengeEntry, error) {
 	e.RejectionReason = rejection.String
 	return &e, nil
 }
+
+// ListOwnApplications never exposes another account's application history.
+func (m *Manager) ListOwnApplications(ctx context.Context, accountID string) ([]RoleApplication, error) {
+	rows, err := m.db.QueryContext(ctx, `SELECT id,role,status,applied_at,COALESCE(reason,'') FROM portal_role_applications WHERE account_id=$1 ORDER BY applied_at DESC`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RoleApplication{}
+	for rows.Next() {
+		var a RoleApplication
+		a.AccountID = accountID
+		if err = rows.Scan(&a.ID, &a.Role, &a.Status, &a.AppliedAt, &a.Reason); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// ListRoleGrants includes revoked roles so an administrator can inspect history.
+func (m *Manager) ListRoleGrants(ctx context.Context) ([]RoleGrant, error) {
+	rows, err := m.db.QueryContext(ctx, `SELECT account_id,role,granted_at,COALESCE(granted_by::text,''),revoked_at FROM portal_roles ORDER BY granted_at DESC LIMIT 200`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RoleGrant{}
+	for rows.Next() {
+		var a RoleGrant
+		if err = rows.Scan(&a.AccountID, &a.Role, &a.GrantedAt, &a.GrantedBy, &a.RevokedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// ApproveApplication serializes the application decision with rejection and
+// binds the granted role to the exact pending request shown to the reviewer.
+func (m *Manager) ApproveApplication(ctx context.Context, adminID, applicationID string) error {
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var account, role, status string
+	if err = tx.QueryRowContext(ctx, `SELECT account_id,role,status FROM portal_role_applications WHERE id=$1 FOR UPDATE`, applicationID).Scan(&account, &role, &status); err != nil {
+		return fmt.Errorf("application unavailable")
+	}
+	if status != "pending" {
+		return fmt.Errorf("application already decided")
+	}
+	if !ValidRole(role) {
+		return fmt.Errorf("invalid role")
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO portal_roles(account_id,role,granted_by) VALUES($1,$2,$3) ON CONFLICT(account_id,role) DO UPDATE SET granted_by=$3,granted_at=now(),revoked_at=NULL,revoked_by=NULL,updated_at=now()`, account, role, adminID); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE portal_role_applications SET status='approved',decided_by=$2,decided_at=now(),updated_at=now() WHERE id=$1`, applicationID, adminID); err != nil {
+		return err
+	}
+	if err = auditTx(ctx, tx, adminID, "portal_application_approve", "portal_role_application", applicationID, map[string]any{"status": "pending"}, map[string]any{"status": "approved", "role": role, "account_id": account}); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ContentRevision binds a human approval form to the exact text shown.
+func ContentRevision(content string) string { return fmt.Sprintf("%x", sha256.Sum256([]byte(content))) }

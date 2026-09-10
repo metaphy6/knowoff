@@ -7,7 +7,7 @@ this doc because they only ever unlock a throwaway local Docker stack.
 
 ## Postgres / Adminer
 
-Open `https://adminer.knowoff.local` (or `http://localhost:8081` without the
+Open `https://adminer.knowoff.local`https://adminer.knowoff.local` (or `http://localhost:8081` without the
 proxy) after `make localhostfile.add` + `docker compose --profile core up`.
 
 | Field | Value |

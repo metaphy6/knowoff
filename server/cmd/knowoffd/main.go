@@ -175,13 +175,14 @@ func run() error {
 	reportsManager := reports.NewManager(db)
 	avatarManager := avatar.NewManager(db, cfg, economyManager)
 	portalManager := portal.NewManager(portal.Deps{
-		DB:      db,
-		Config:  cfg,
-		Auth:    authManager,
-		Profile: profileManager,
-		Economy: economyManager,
-		Admin:   adminManager,
-		Media:   mediaManager,
+		DB:       db,
+		Config:   cfg,
+		Auth:     authManager,
+		Profile:  profileManager,
+		Economy:  economyManager,
+		Admin:    adminManager,
+		Media:    mediaManager,
+		Screener: portal.NewTextScreener(cfg.Moderation.ContentScreening),
 	})
 	if err := portalManager.EnsureActiveTermsVersion(context.Background()); err != nil {
 		logger.Error("failed to ensure active portal terms", "error", err)
@@ -210,6 +211,7 @@ func run() error {
 		Economy: economyManager,
 	})
 	publicMux.Handle("/portal/", portalManager.Handler())
+	publicMux.Handle("POST /api/portal/connect", portalManager.ConnectHandler())
 	handler.RegisterChallengeRoutes(publicMux, handler.ChallengeDeps{
 		Auth:   authManager,
 		Portal: portalManager,
