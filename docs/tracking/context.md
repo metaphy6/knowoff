@@ -68,7 +68,7 @@ WebSocket echo on Android + Web.
 |---|---|---|
 | Cloudflare Tunnel | `TUNNEL_TOKEN` | dev/beta ingress; injected via env, never committed |
 | Google Sign-In / Facebook Login | (client ids/secrets via config `${VAR}` interpolation) | Phase 4 — OAuth registration/linking |
-| Gemini image API ("nano banana") | (API key via `${VAR}`) | offline raster batches + API generation lane |
+| GPT-6 Astra | (API key via `${VAR}`) | sole engine for Nown/card image, GIF, and text generation; also produces offline raster batches (avatars, app icon, store art) |
 | Gemini Embedding 2 | (API key via `${VAR}`) | optional API lane; local SigLIP/CLIP is default |
 | Platform billing (Play Billing / StoreKit) | — | Noin bulks + Premium subscription, Phase 5 |
 | Ad network with SSV | (keys via `${VAR}`) | rewarded post-match doubler; server-side verification only |

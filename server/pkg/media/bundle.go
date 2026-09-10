@@ -22,7 +22,7 @@ type Manifest struct {
 	Checksums        map[string]string `json:"checksums"`
 }
 
-// Attribution records the source and license for copyleft-sourced assets.
+// Attribution records the source and license for an asset.
 type Attribution struct {
 	AssetID         string `json:"asset_id"`
 	Source          string `json:"source"`

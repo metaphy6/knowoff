@@ -39,10 +39,10 @@ chapter).
 |---|---|---|---|
 | 0 — Agent framework & project docs | — | — | ✅ landed (pre-roadmap) |
 | 1 — Foundation | 12 | 12 | ✅ done |
-| 2 — Media Engine & Pipeline | 9 | 9 | ✅ done |
+| 2 — Media Engine & Pipeline | 9 | 6 | 🚧 in progress — content generation moved to GPT-6 Astra |
 | 3 — Realtime Game Loop | 18 | 18 | ✅ done |
-| 4 — Accounts, Quick Play & Hardening | 11 | 11 | ✅ done |
-| 5 — Noin Economy, Admin & Launch Polish | 12 | 12 | ✅ done |
+| 4 — Accounts, Quick Play & Hardening | 12 | 10 | 🚧 in progress — content generation moved to GPT-6 Astra |
+| 5 — Noin Economy, Admin & Launch Polish | 13 | 11 | 🚧 in progress — content generation moved to GPT-6 Astra |
 | 6 — Contributor Portal & Community | 5 | 5 | ✅ done |
 
 Phase 0 — the agent operating framework and this document — carries no
@@ -199,20 +199,21 @@ that keeps unplayable media out of packs forever.
 build time; Gemini Embedding 2 as the API lane); relevance bands over
 cosine similarity with thresholds from `tuning.yaml → dealing:`; per-media
 band candidate lists precomputed at pack build so runtime dealing is array
-sampling (⚙️ §2); quality targets deliberately lo-fi (⚙️ §3); copyleft-first
-sourcing with license + attribution stored in the pack manifest.
+sampling (⚙️ §2); quality targets deliberately lo-fi (⚙️ §3); license +
+attribution stored in the pack manifest for every generated asset.
 
 **Skills.** `test-driven-development` (write the certification gate against
 a deliberately band-starved fixture pack first), `ai-output-stability`
 (seeded, reproducible generation and dealing), `cost-aware-tool-use`
-(local GPU first; API lane only for style-critical or overflow work).
+(batch and cache GPT-6 Astra generations; avoid redundant API calls —
+local generation is out of scope for v1).
 
 **Spec (required reading).** ⚙️ §1–4 in full — bundle format,
 relevance mesh, pipeline & content production (quality targets; the
 **content standard: the humor line** — suggestive/erotic allowed as
 cartoon/drawn/abstract, never pornographic, erotic-leaning media only in
-age-gated packs; copyleft sourcing wells; the four-bucket tone rubric and
-keep-rate expectations), secrecy & sync; 🧑‍🎨 §3 (Workbench); ⚙️ Tuning →
+age-gated packs; the four-bucket tone rubric and keep-rate expectations),
+secrecy & sync; 🧑‍🎨 §3 (Workbench); ⚙️ Tuning →
 `dealing:`; 🎨 asset strategy (design system and pack content never mix).
 
 **Proof tests.** `mediapack simulate` proves deal feasibility at both table
@@ -231,10 +232,10 @@ pack from its logged inputs reproduces identical bundle hashes.
 - [x] `server/internal/media`: in-memory pack loader with checksum verification (a tampered bundle is refused and the current pack keeps serving), between-matches hot-swap that never blocks a live room, precomputed per-media band candidate lists (zero embedding math in the hot path), and the signed-URL issuer — short-lived, single-round, expiry enforced server-side.
 - [x] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
 - [x] Versioned fixture packs committed for CI (a tiny golden pack + the band-starved pack): the test fuel every later phase reuses — gamebot matches, load tests, client cache tests, compose dev seeding.
-- [x] Media Workbench (server-rendered, dev-only): ingest-folder watch (ComfyUI / Ollama output), bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
-- [x] Seed pack on the local GPU: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded for copyleft-sourced media; tone rubric landed in `content/tone-matrix.md`.
+- [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra** for images, GIF loops, and text cards, bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
+- [ ] Seed pack generated via **GPT-6 Astra**: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded per asset; tone rubric landed in `content/tone-matrix.md`.
 - [x] `client/lib/media`: pack metadata OTA sync (app start + unrecognized tag), signed-URL prefetch with retry/backoff on flaky networks (URLs short-lived, single-round), hash-verified LRU asset cache under an explicit size budget (corrupt entries evicted, never rendered), Donower placeholder renderer — also shown while a Nower's asset is still loading, so loading state leaks nothing (⚙️ §4).
-- [x] Gate: Phase 2 proof tests pass on a clean tree.
+- [ ] Gate: Phase 2 proof tests pass on a clean tree.
 
 ---
 
@@ -316,7 +317,7 @@ on Round and Knowoff.
 - [x] Typography + highlighter emphasis: chunky rounded display face for headings, timers, and Noin numbers — Baloo 2 vs Fredoka (both OFL), locked by a diacritics render check across launch locales and recorded as an ADR; plain geometric sans for body; **the lime marker sweep is the house emphasis** (`CustomPainter`) for the revealed role, Noin deltas, and the clip caption — never bold-only.
 - [x] Fixed color semantics, enforced at the API level: violet = interact, lime = truth/reward, pink = accuse/risk, ink = information; no verdict leans on hue alone — verdict-bearing widgets require icon + label parameters so a color-only state cannot compile (colorblind-safe by construction).
 - [x] Illustration policy — deliberately sparse: no mascot, no scene art in the match flow; the ~12-glyph single-weight doodle set (sparkle, static-burst, eye, cloud, the Donower placeholder glyphs) shipped as hand-authored SVG paths, reserved for empty states, win moments, and the Donower-side placeholder.
-- [x] Performance guardrails + asset discipline: flat fills (the reveal-header gradient is the one exception), zero blur radii, no stacked translucency — enforced by a widget-tree guardrail audit test that fails on any blur, second gradient, or translucency stack, plus a frame-budget trace on a low-end device profile for the busiest screens (Round, Knowoff); UI chrome 100 % widgets/`CustomPainter` — code first, raster last (true raster arrives only via the curated nano banana batches in Phases 4–5); the design system and media-pack content never mix.
+- [x] Performance guardrails + asset discipline: flat fills (the reveal-header gradient is the one exception), zero blur radii, no stacked translucency — enforced by a widget-tree guardrail audit test that fails on any blur, second gradient, or translucency stack, plus a frame-budget trace on a low-end device profile for the busiest screens (Round, Knowoff); UI chrome 100 % widgets/`CustomPainter` — code first, raster last (true raster arrives only via the curated GPT-6 Astra batches in Phases 4–5); the design system and media-pack content never mix.
 - [x] Flutter match flow on native + PWA against the live protocol: MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict — `RoleCard` (press-and-hold role check), `NownStage`, `HandFan`, `PlayTable`, `VoteBoard`, `QuickChatBar`, `ReadyButton`, `PokeNudge`; every string through the localization catalogs (the wire stays ids/codes only), with a pseudo-locale sweep + text-expansion check across the match flow.
 - [x] Gate: full Phase 3 proof tests pass, including the no-leak protocol assertion, plus the 📦 §4 criterion: a full 6-player match — four `gamebot` seats + one native client + one PWA client — playable against the local stack with zero cloud dependencies.
 
@@ -369,7 +370,8 @@ and restoring Redis mid-queue leaves a healthy, leak-free process; an idle
 match survives 10+ minutes through the tunnel on heartbeats.
 
 - [x] Auth: anonymous device accounts → JWT sessions with expiry + refresh and server-side revocation (a ban invalidates tokens and drops live connections within seconds); Google Sign-In / Facebook Login one-tap registration + account linking via OAuth 2.0 / OIDC with PKCE and state validation (provider subject id + email stored privately, never shown; a subject already linked elsewhere fails with a clear, safe error).
-- [x] Profiles + public stats (👤 §1) derived nightly from the audit stream — pseudonymous, no PII on any public surface; Non-Converted Points visible to the owner only; locale-aware nickname profanity filter; free preset avatar gallery (👤 §2) — the first curated **nano banana (Gemini image) raster batch** per the 🎨 asset strategy: prompts derived from the design matrix, candidates → human curation → consistency pass → committed like any asset; API keys under the 📦 §3 config discipline.
+- [x] Profiles + public stats (👤 §1) derived nightly from the audit stream — pseudonymous, no PII on any public surface; Non-Converted Points visible to the owner only; locale-aware nickname profanity filter.
+- [ ] Free preset avatar gallery (👤 §2) — the first curated **GPT-6 Astra raster batch** per the 🎨 asset strategy: prompts derived from the design matrix, candidates → human curation → consistency pass → committed like any asset; API keys under the 📦 §3 config discipline.
 - [x] XP progression (Product Baseline): one server-side track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks — values in `tuning.yaml`.
 - [x] Quick Play FIFO queues per room size (core pack + rotating featured pack) with reconnect-safe seat reservation and escalating abandon cooldowns.
 - [x] Backfill bots (`server/internal/bots`): 🤖 badge + reserved nicknames, human seat priority, `min_humans` floor, per-match randomized personality parameters (no farmable tell), per-queue sunset by fill-time measurement, economy + leaderboard guardrails (🎮 §1 — bot seats earn nothing).
@@ -378,7 +380,7 @@ match survives 10+ minutes through the tunnel on heartbeats.
 - [x] Weekly Leaderboard (🎮 §5): Quick Play only, Monday–Sunday on the server clock, `leaderboard_min_humans` + daily counted cap, top-100 + own rank (ties share a rank), immutable weekly history; nightly stats/KPI jobs idempotent and re-runnable — a crashed or repeated job never double-counts.
 - [x] Dependency-degradation drills: losing Redis or Postgres flips `/readyz` and pauses matchmaking with a clear client message while the process stays healthy; service resumes without restart when the store returns; no goroutine or connection leak across the outage (metrics-proven).
 - [x] Client surfaces on native + PWA: Profile (public stats, owner-only Non-Converted Points) and Leaderboard screens, themed per the design system.
-- [x] Gate: full Phase 4 proof tests pass (forged-client suite, backfill behavior, quantified load test, OAuth second-device restore, leaderboard guards).
+- [ ] Gate: full Phase 4 proof tests pass (forged-client suite, backfill behavior, quantified load test, OAuth second-device restore, leaderboard guards).
 
 ---
 
@@ -448,8 +450,9 @@ migration rehearsal restores onto a fresh host with verified parity.
 - [x] Client surfaces on native + PWA: Store (`NoinBadge`, bulks, passes, packs, cosmetics), NoticeInbox + dismissible notice banners (`system_notice` live + HTTPS fetch on start, hard-maintenance countdown), post-match SSV doubler flow.
 - [x] Admin Console (🛡️) on the internal port — 2FA-gated, RBAC-scoped, CSRF-protected, unreachable through the public ingress, every action writing an append-only audit row: conduct + media case queues (bans hit live connections immediately), Guard-freeze reviews, pack dashboard, leaderboard ops, economy ledger, feedback triage, system-notice composer — compose, schedule, localize, withdraw — with automatic matchmaking drain (🎮 §4).
 - [x] How-to-play clip (≤45 s, 7 beats, captions on the lime highlighter sweep per 🎨) captured on final production UI — ship gate; player-facing help text + store copy derived from the 🕹️ Game Rules chapter (deliberately the only rulebook).
-- [x] Launch passes: low-end client paint budget, server allocation/GC under queue load, edge-cache hit rates on pack release, **backup/restore + VPS migration runbook executed with verified data parity** (row counts + checksums across Postgres/Redis/MinIO — 📦 §2; Cloudflare R2 free tier as the asset-offload option), store review prep (age gate, per-pack age ratings, UMP consent, privacy notice at first launch, in-app delete-my-data, **store listings + clip captions localized for every launch locale**); app icon + store art via the curated nano banana raster-batch pipeline (🎨 asset strategy: matrix-derived prompts → human curation → consistency pass).
-- [x] Gate: full Phase 5 proof tests pass on a clean tree.
+- [x] Launch passes: low-end client paint budget, server allocation/GC under queue load, edge-cache hit rates on pack release, **backup/restore + VPS migration runbook executed with verified data parity** (row counts + checksums across Postgres/Redis/MinIO — 📦 §2; Cloudflare R2 free tier as the asset-offload option), store review prep (age gate, per-pack age ratings, UMP consent, privacy notice at first launch, in-app delete-my-data, **store listings + clip captions localized for every launch locale**).
+- [ ] App icon + store art via the curated **GPT-6 Astra** raster-batch pipeline (🎨 asset strategy: matrix-derived prompts → human curation → consistency pass).
+- [ ] Gate: full Phase 5 proof tests pass on a clean tree.
 
 ---
 

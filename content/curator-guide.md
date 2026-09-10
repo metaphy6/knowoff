@@ -35,7 +35,7 @@ Before submitting a Nown for certification:
 - Humor may be suggestive/erotic within app-store rules — cartoon, drawn, abstract.
 - Never pornographic or explicit.
 - Erotic-leaning media ships only in adult-rated, age-gated packs.
-- Prefer copyleft-first sources; record license and attribution for every asset.
+- Record license and attribution for every asset.
 
 ## Submission rules
 
