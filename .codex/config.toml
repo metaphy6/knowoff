@@ -1,0 +1,12 @@
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+developer_instructions = "Read AGENTS.md, CONVENTIONS.md, docs/tracking/context.md and docs/guides/CODEX_SETUP.md before work. The Codex guide translates client-specific mechanics, not project policy. Read the instruction files listed below and apply each when its applyTo scope matches the work. Use the native tools available in this session, never invent VS Code tools. Do not commit or push. Use --agent=codex for tracking rows. Preserve existing human changes.\n.github/instructions/codegraph.instructions.md\n.github/instructions/tests.instructions.md\n.github/instructions/tracking.instructions.md"
+
+[mcp_servers.codegraph]
+command = "npx"
+args = ["-y", "@colbymchenry/codegraph", "serve", "--mcp", "--path", "/home/serhatakbak/code/projects/knowoff"]
+cwd = "/home/serhatakbak/code/projects/knowoff"
+startup_timeout_sec = 60
+
+[mcp_servers.codegraph.env]
+"CODEGRAPH_MCP_TOOLS" = "explore,node,search,callers,callees,impact"
