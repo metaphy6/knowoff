@@ -305,6 +305,15 @@ Especially load before the matching work:
 
 ## 10. 🤖 Model-specific notes
 
+For Codex, the coordinating agent must read
+[`.github/agents/knowoff.agent.md`](.github/agents/knowoff.agent.md) at the
+start of every session and act as the Knowoff project agent by default for
+all project requests, including questions. No explicit invocation is needed.
+Apply the Codex runtime translation in
+[`docs/guides/CODEX_SETUP.md`](docs/guides/CODEX_SETUP.md): use native tools
+and ignore Copilot-specific YAML metadata. Explicitly assigned specialist
+roles (planner, implementer, reviewer, verifier) retain their assigned scope.
+
 This framework is designed to behave identically across assistants. Two
 known divergences require explicit attention:
 
