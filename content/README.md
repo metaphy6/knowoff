@@ -9,11 +9,11 @@ how to write, review and test content against it.
 - [Curator guide](curator-guide.md) — contribution, human review, humor playtests
   and deal-certification rules.
 - [Humor development](humor-development.md) — restored lo-fi visual direction,
-  GIF-led pilots, themes, freshness and cultural adaptation, with historical evidence.
+  image/text pilots, themes, freshness and cultural adaptation, with historical evidence.
 
-Start by planning three themes for two target cultures/languages, prioritizing
-rough, low-resolution reaction/action GIFs, followed by stills and supporting
-text. Follow the [playable media direction](../BLUEPRINT.md#playable-media-direction);
+Start by planning three themes for two target cultures/languages, using rough,
+low-resolution static images and plain text. Choose format for the joke; there
+is no mandatory format ratio. Follow the [playable media direction](../BLUEPRINT.md#playable-media-direction);
 the UI design matrix does not style game media. Draft and review candidates
 before pack certification. Planning records hold editorial
 dimensions and topical review dates; the current Contributor Studio does not
@@ -27,6 +27,10 @@ Agents use the shared [creation](../.agents/skills/knowoff-content-create/SKILL.
 [integration](../.agents/skills/knowoff-content-integrate/SKILL.md) skills.
 Their source links and editorial record keep handoffs grounded in these guides;
 the skills do not replace the Blueprint or record approval on a human's behalf.
+All content work automatically follows the [High/Distant/Chaos dealing path](curator-guide.md#read-the-dealing-path-before-authoring)
+through current tuning, server band construction/dealing and client delivery.
+The image/text-only decision is recorded in
+[ADR-011](../docs/design/ADR-011-static-image-and-text-content.md).
 
 ## Media tools across workspaces
 
@@ -64,7 +68,8 @@ A system installation is available to other workspaces through `PATH`; no
 project-local binary path or per-project installation is needed. Check again
 on each workstation: copying these instructions does not install software.
 
-Use FFmpeg for trimming, cropping, frame-rate adjustment, audio removal and
-animated WebP encoding; inspect metadata with FFprobe and watch the actual
-loop. Follow the Blueprint's media limits and preserve the intended roughness.
+For game content, use these tools only where needed to inspect or convert
+static images. GIFs, animated WebP and video are unsupported; do not generate
+animation source sheets or motion assets. Follow the Blueprint's image limits,
+verify single-frame output and preserve the intended roughness.
 Conversion is preparation, not editorial approval or pack certification.

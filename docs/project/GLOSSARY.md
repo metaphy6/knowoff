@@ -11,7 +11,7 @@ Deprecated names must not reappear in new code, docs, or identifiers.
 |---|---|
 | **Nower(s)** | Players who see Nown. |
 | **Donower(s)** | Players who can't see Nown; nobody knows who they are. |
-| **Nown** | The media item of a round — image, GIF, or text. Identifiers: `NownRef`, `NownStage`. |
+| **Nown** | The media item of a round — a static image or text. Identifiers: `NownRef`, `NownStage`. See [ADR-011](../design/ADR-011-static-image-and-text-content.md). |
 | **Knowoff** | The vote at the end of every round. Most-voted player is eliminated, role revealed. |
 | **Noin** | The game currency — earned by playing, sold in bulks. Identifiers: `NoinBadge`; event `noin_granted`. |
 | **Round** | Card play (turn-based) + discussion + one Knowoff. |

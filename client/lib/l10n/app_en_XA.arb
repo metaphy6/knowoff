@@ -976,7 +976,7 @@
   "@challengeRules": {
     "description": "Plain-language explanation of participation and moderation rules."
   },
-  "challengeTextOnly": "[Text entries are open. Image and GIF uploads are not available yet.]",
+  "challengeTextOnly": "[Text entries are open. Image uploads are not available yet.]",
   "@challengeTextOnly": {
     "description": "Honest scope label for the current text-only challenge submission interface."
   },

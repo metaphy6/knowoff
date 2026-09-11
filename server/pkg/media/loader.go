@@ -93,6 +93,9 @@ func LoadPack(root string, dealing DealingTuning) (*Pack, error) {
 		Assets:     assets,
 		Candidates: BuildCandidates(media, cards, dealing),
 	}
+	if err := ValidatePackContent(pack); err != nil {
+		return nil, err
+	}
 	return pack, nil
 }
 
@@ -178,8 +181,8 @@ func validateMediaItem(it *MediaItem, lineNo int) error {
 	if it.ID == "" {
 		return fmt.Errorf("media line %d: id is required", lineNo)
 	}
-	if it.Type == "" {
-		return fmt.Errorf("media line %d: type is required", lineNo)
+	if it.Type != MediaTypeImage && it.Type != MediaTypeText {
+		return fmt.Errorf("media line %d: type must be image or text", lineNo)
 	}
 	if len(it.Embedding) == 0 {
 		return fmt.Errorf("media line %d: embedding is required", lineNo)
@@ -197,8 +200,8 @@ func validateCardItem(it *CardItem, lineNo int) error {
 	if it.ID == "" {
 		return fmt.Errorf("card line %d: id is required", lineNo)
 	}
-	if it.Type == "" {
-		return fmt.Errorf("card line %d: type is required", lineNo)
+	if it.Type != MediaTypeImage && it.Type != MediaTypeText {
+		return fmt.Errorf("card line %d: type must be image or text", lineNo)
 	}
 	if len(it.Embedding) == 0 {
 		return fmt.Errorf("card line %d: embedding is required", lineNo)

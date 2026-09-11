@@ -25,6 +25,10 @@ For content work, start with the Blueprint's Media Engine chapter, the
 [humor development guide](../content/humor-development.md),
 [Curator Guide](../content/curator-guide.md) and
 [current server content mechanics](code/MODULE-media-engine.md).
+Nowns and cards use static images and text only; see
+[ADR-011](design/ADR-011-static-image-and-text-content.md). The content skills
+remain the entry points for authoring, review and integration, including the
+source-backed High/Distant/Chaos dealing guidance.
 The [readiness audit](planning/ROADMAP.md#content-readiness-audit--2026-09-11)
 separates editorial preparation from pending production integration.
 

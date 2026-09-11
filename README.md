@@ -11,6 +11,11 @@ Rooms** with the people around your table. Role secrecy is enforced
 server-side: a Donower's device is never sent Nown at all, so there's
 nothing to leak even if you inspect the traffic yourself.
 
+Nowns and cards use **static images and plain text only**; see
+[ADR-011](docs/design/ADR-011-static-image-and-text-content.md). Content work
+automatically follows the [High/Distant/Chaos server and client source map](content/curator-guide.md#read-the-dealing-path-before-authoring)
+alongside the existing humor, tone and cultural-adaptation guides.
+
 📖 The normative spec lives in [`BLUEPRINT.md`](BLUEPRINT.md) — game rules,
 tech stack, architecture, economy, and the product baseline. The sequenced
 build plan — phases, checkboxes, proof tests — lives in

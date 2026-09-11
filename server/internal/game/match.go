@@ -1704,7 +1704,7 @@ func (m *Match) cardPayloads(ids []string) []map[string]any {
 // {id, type[, content][, signed_url]} wire shape play_revealed already uses.
 // Without this, the round_resolved resync sent raw {seat: cardID} pairs,
 // which downgraded an auto-passed turn (cardID == "") to a blank card
-// instead of the timed-out seat's lost card, and dropped image/GIF signed
+// instead of the timed-out seat's lost card, and dropped image signed
 // URLs for every other play once discussion started.
 func (m *Match) playsPayload() map[int]map[string]any {
 	out := make(map[int]map[string]any, len(m.plays))

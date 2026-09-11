@@ -15,7 +15,7 @@ Bluff, guess, vote.
 ## Full description
 
 Knowoff is a social deduction party game for exactly 4 or 6 players. Every
-round one media item — a meme, GIF, or text — appears on every phone except
+round one media item — a static image or text — appears on every phone except
 the Donowers'. Donowers must fake it. Nowers must spot the lie. After
 accusations, pokes, and Quick Chat jabs, everyone votes. Catch every Donower
 before the votes run out.

@@ -32,7 +32,7 @@ class PackManifest {
   final Map<String, String> checksums;
 }
 
-enum MediaType { image, gif, text }
+enum MediaType { image, text }
 
 class MediaItem {
   MediaItem({
@@ -48,7 +48,7 @@ class MediaItem {
   factory MediaItem.fromJson(Map<String, dynamic> json) {
     return MediaItem(
       id: json['id'] as String? ?? '',
-      type: _parseType(json['type'] as String? ?? 'text'),
+      type: _parseType(json['type']),
       assetRef: json['asset_ref'] as String? ?? '',
       content: json['content'] as String? ?? '',
       tags: (json['tags'] as List<dynamic>? ?? []).cast<String>(),
@@ -65,14 +65,14 @@ class MediaItem {
   final String toneBucket;
   final String rating;
 
-  static MediaType _parseType(String raw) {
+  static MediaType _parseType(Object? raw) {
     switch (raw) {
       case 'image':
         return MediaType.image;
-      case 'gif':
-        return MediaType.gif;
-      default:
+      case 'text':
         return MediaType.text;
+      default:
+        throw FormatException('Unsupported playable media type', raw);
     }
   }
 }

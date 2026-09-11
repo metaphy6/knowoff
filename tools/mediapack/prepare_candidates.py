@@ -61,13 +61,42 @@ def _generation(provenance: dict) -> dict:
     return {key: provenance.get(key) for key in ("tool", "prompt", "model", "parameters", "seed")}
 
 
+def _animation_container(data: bytes, format_name: str) -> bool:
+    """Inspect actual container chunks, including single-frame animations."""
+    if format_name not in {"PNG", "WEBP"}:
+        return False
+    offset = 8 if format_name == "PNG" else 12
+    while offset < len(data):
+        if offset + 8 > len(data):
+            raise ValueError("invalid image container")
+        if format_name == "PNG":
+            size = int.from_bytes(data[offset:offset + 4], "big")
+            kind = data[offset + 4:offset + 8]
+            end = offset + 12 + size  # length, type, payload and CRC
+            animated = kind in {b"acTL", b"fcTL", b"fdAT"}
+        else:
+            size = int.from_bytes(data[offset + 4:offset + 8], "little")
+            kind = data[offset:offset + 4]
+            end = offset + 8 + size + size % 2
+            animated = kind in {b"ANIM", b"ANMF"}
+        if end > len(data):
+            raise ValueError("invalid image container")
+        if animated or (format_name == "WEBP" and kind == b"VP8X" and size > 0
+                        and data[offset + 8] & 0x02):
+            return True
+        offset = end
+    return False
+
+
 def _image_info(data: bytes) -> dict:
     with warnings.catch_warnings():
         warnings.simplefilter("error", Image.DecompressionBombWarning)
         with Image.open(io.BytesIO(data)) as picture:
             picture.load()
-            if getattr(picture, "n_frames", 1) != 1:
-                raise ValueError("animated images require the separate GIF pipeline")
+            if getattr(picture, "n_frames", 1) != 1 or _animation_container(data, picture.format):
+                raise ValueError("animated images are unsupported; use a static PNG, JPEG or WebP")
+            if picture.format not in {"PNG", "JPEG", "WEBP"}:
+                raise ValueError("input must be a static PNG, JPEG or WebP")
             return {"format": picture.format, "width": picture.width, "height": picture.height}
 
 
@@ -128,9 +157,9 @@ def prepare(batch_dir: Path, image: Path, candidate_id: str, provenance: dict) -
         return receipt
 
     source_info = _image_info(source_data)
-    extension = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp", "GIF": "gif"}.get(source_info["format"])
+    extension = {"JPEG": "jpg", "PNG": "png", "WEBP": "webp"}.get(source_info["format"])
     if extension is None:
-        raise ValueError("input must be a static PNG, JPEG, WebP or GIF")
+        raise ValueError("input must be a static PNG, JPEG or WebP")
     with Image.open(io.BytesIO(source_data)) as original:
         picture = ImageOps.exif_transpose(original)
         picture = picture.convert("RGBA" if "A" in picture.getbands() or "transparency" in picture.info else "RGB")

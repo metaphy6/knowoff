@@ -770,10 +770,6 @@
   "@cardTypeImage": {
     "description": "Card media type: image."
   },
-  "cardTypeGif": "GIF",
-  "@cardTypeGif": {
-    "description": "Card media type: animated GIF."
-  },
   "cardTypeSpecialty": "Specialty",
   "@cardTypeSpecialty": {
     "description": "Footer label on the specialty card in hand, in place of a media type."
@@ -1510,7 +1506,7 @@
   "@challengeRules": {
     "description": "Plain-language explanation of participation and moderation rules."
   },
-  "challengeTextOnly": "Text entries are open. Image and GIF uploads are not available yet.",
+  "challengeTextOnly": "Text entries are open. Image uploads are not available yet.",
   "@challengeTextOnly": {
     "description": "Honest scope label for the current text-only challenge submission interface."
   },

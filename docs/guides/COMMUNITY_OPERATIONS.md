@@ -107,8 +107,11 @@ entitlement lookup. Triage records supported status changes with an audit; it
 does not claim that closing a report removes media or bans an account.
 
 Guard enforcement, arbitrary grants/refunds, complete leaderboard controls,
-image/GIF processing, pack calls and Nown/deck authoring, avatar approval and
+static-image processing, pack calls and Nown/deck authoring, avatar approval and
 activation are still open deliverables in the [roadmap](../planning/ROADMAP.md).
+Playable content is limited to static images and text by
+[ADR-011](../design/ADR-011-static-image-and-text-content.md); animated formats
+are not a future upload option in this scope.
 The legacy non-production workbench is a separate development surface; this
 slice does not certify its authentication or production readiness.
 

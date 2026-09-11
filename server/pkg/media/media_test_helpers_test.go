@@ -193,7 +193,7 @@ func writeGoldenBundle(t *testing.T, dir string) {
 
 	// Include a dummy asset file so loader hash-mismatch tests have something
 	// to tamper with. It is not referenced by any media item.
-	dummy := []byte("dummy-asset")
+	dummy := imageBytes(t, staticWebP)
 	dummyRef := ContentHash(dummy)
 	if err := os.WriteFile(filepath.Join(assetsDir, dummyRef), dummy, 0o644); err != nil {
 		t.Fatalf("write dummy asset: %v", err)
@@ -246,7 +246,7 @@ func writeBundleWithAssetRef(t *testing.T, dir string) {
 	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
 		t.Fatalf("mkdir assets: %v", err)
 	}
-	assetData := []byte("a tiny image")
+	assetData := imageBytes(t, staticWebP)
 	pack.Media[0].AssetRef = ContentHash(assetData)
 	if err := os.WriteFile(filepath.Join(assetsDir, pack.Media[0].AssetRef), assetData, 0o644); err != nil {
 		t.Fatalf("write asset: %v", err)

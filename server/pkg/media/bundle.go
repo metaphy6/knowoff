@@ -35,7 +35,6 @@ type MediaType string
 
 const (
 	MediaTypeImage MediaType = "image"
-	MediaTypeGIF   MediaType = "gif"
 	MediaTypeText  MediaType = "text"
 )
 

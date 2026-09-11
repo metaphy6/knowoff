@@ -273,12 +273,6 @@ class GameMediaWell extends StatefulWidget {
 
 class _GameMediaWellState extends State<GameMediaWell> {
   int _retry = 0;
-  bool _animateGif = false;
-  @override
-  void didUpdateWidget(GameMediaWell oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) _animateGif = false;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +297,7 @@ class _GameMediaWellState extends State<GameMediaWell> {
             textAlign: TextAlign.center,
             style: koDisplayStyle(size: widget.height > 190 ? 32 : 22)),
       ));
-    } else if (widget.url?.isNotEmpty == true) {
+    } else if (widget.type == 'image' && widget.url?.isNotEmpty == true) {
       final uri = Uri.tryParse(widget.url!);
       final resolved = uri != null && !uri.hasScheme
           ? Uri.parse(AppConfig.instance.serverUrl).resolveUri(uri).toString()
@@ -332,20 +326,6 @@ class _GameMediaWellState extends State<GameMediaWell> {
           ]),
         )),
       );
-      // Animated media belongs to the content. It is suspended when reduced
-      // motion is requested, and can be played explicitly by that viewer.
-      if (widget.type == 'gif' &&
-          MediaQuery.disableAnimationsOf(context) &&
-          !_animateGif) {
-        body = Stack(fit: StackFit.expand, children: [
-          TickerMode(enabled: false, child: body),
-          Center(
-              child: KoButton(
-                  label: l.cardTypeGif,
-                  icon: const Icon(Icons.play_arrow),
-                  onPressed: () => setState(() => _animateGif = true))),
-        ]);
-      }
     } else {
       body = placeholder();
     }
@@ -473,8 +453,8 @@ class _GameCardTileState extends State<GameCardTile> {
     final l = AppLocalizations.of(context);
     final typeLabel = switch (card.type) {
       'image' => l.cardTypeImage,
-      'gif' => l.cardTypeGif,
-      _ => l.cardTypeText,
+      'text' => l.cardTypeText,
+      _ => l.gameMediaUnavailable,
     };
     return Semantics(
       selected: selected,

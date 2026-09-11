@@ -10,8 +10,8 @@ the existing Riverpod state, action rules, authentication, APIs and media servic
 
 Animation is limited to short transform responses and the finite result reveal.
 Reduced motion shows the same information statically. Countdown labels repaint
-independently of hands/ballots, and reduced-motion GIF playback requires
-explicit Play. The display
+independently of hands/ballots. Nowns and playable cards contain only static
+images or text; unsupported media types stay behind the placeholder. The display
 font is bundled locally; startup does not require a network font or authentication.
 
 The store uses server prices. Native billing and collections without a verified

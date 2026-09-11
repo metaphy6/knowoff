@@ -130,18 +130,21 @@ class _ContributorConnectScreenState extends State<ContributorConnectScreen> {
                           onFieldSubmitted: (_) => _connect(),
                         ),
                         const SizedBox(height: 18),
-                        CheckboxListTile(
-                          key: const Key('portal-confirm-browser'),
-                          value: _confirmed,
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          title: Text(l.portalConfirmBrowser),
-                          onChanged: _busy
-                              ? null
-                              : (value) => setState(() {
-                                    _confirmed = value ?? false;
-                                    _showConfirmationError = false;
-                                  }),
+                        Material(
+                          type: MaterialType.transparency,
+                          child: CheckboxListTile(
+                            key: const Key('portal-confirm-browser'),
+                            value: _confirmed,
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text(l.portalConfirmBrowser),
+                            onChanged: _busy
+                                ? null
+                                : (value) => setState(() {
+                                      _confirmed = value ?? false;
+                                      _showConfirmationError = false;
+                                    }),
+                          ),
                         ),
                         if (_showConfirmationError)
                           Text(l.portalConfirmBrowser,
@@ -197,6 +200,8 @@ class _WeeklyChallengeScreenState extends State<WeeklyChallengeScreen>
           _active &&
           !_busy &&
           ModalRoute.of(context)?.isCurrent == true &&
+          // The replacement valuesOf API is absent from supported Flutter 3.24.
+          // ignore: deprecated_member_use
           TickerMode.of(context)) {
         _load();
       }
@@ -526,27 +531,33 @@ class _WeeklyChallengeScreenState extends State<WeeklyChallengeScreen>
                             : null,
                       ),
                       const SizedBox(height: 16),
-                      ExpansionTile(
-                          tilePadding: EdgeInsets.zero,
-                          title: Text(l.challengeTerms),
-                          children: [
-                            Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: SelectableText(
-                                    '${terms['title']}\n${terms['version']}\n\n${terms['body']}')),
-                          ]),
-                      CheckboxListTile(
-                          key: const Key('challenge-terms'),
-                          contentPadding: EdgeInsets.zero,
-                          controlAffinity: ListTileControlAffinity.leading,
-                          value: _accepted,
-                          title: Text(l.challengeAcceptTerms),
-                          onChanged: _busy
-                              ? null
-                              : (value) => setState(() {
-                                    _accepted = value ?? false;
-                                    _consentError = false;
-                                  })),
+                      Material(
+                        type: MaterialType.transparency,
+                        child: ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: Text(l.challengeTerms),
+                            children: [
+                              Align(
+                                  alignment: AlignmentDirectional.centerStart,
+                                  child: SelectableText(
+                                      '${terms['title']}\n${terms['version']}\n\n${terms['body']}')),
+                            ]),
+                      ),
+                      Material(
+                        type: MaterialType.transparency,
+                        child: CheckboxListTile(
+                            key: const Key('challenge-terms'),
+                            contentPadding: EdgeInsets.zero,
+                            controlAffinity: ListTileControlAffinity.leading,
+                            value: _accepted,
+                            title: Text(l.challengeAcceptTerms),
+                            onChanged: _busy
+                                ? null
+                                : (value) => setState(() {
+                                      _accepted = value ?? false;
+                                      _consentError = false;
+                                    })),
+                      ),
                       if (_consentError)
                         Text(l.challengeConsentRequired,
                             style:

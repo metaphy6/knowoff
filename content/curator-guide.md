@@ -12,8 +12,8 @@ available operations.
 ## What a Curator does
 
 - Create media submissions that become **Nowns** (the round's secret item).
-- Author **cards** — prioritize GIF loops, then still images and supporting
-  text — against candidate Nowns in the shared pool.
+- Author **cards** — static images and plain text — against candidate Nowns
+  in the shared pool.
 - Use the **deal simulator** to verify that every Nown has full band coverage at both 4- and 6-player table sizes.
 - Screen Weekly Nown Challenge entries before they become publicly visible and votable.
 
@@ -38,6 +38,50 @@ scheduled Nown: at least `dealing.min_high_per_nown` high cards and
 `dealing.min_distant_per_nown` distant cards per player across the initial
 5-card hand and 3-card personal draw pile. Certification must establish
 feasibility at 6 players as well as test the 4-player deal.
+
+## Read the dealing path before authoring
+
+For every Nown/card creation, review or integration task, automatically read
+the following sources before labeling **High, Distant or Chaos** relationships.
+Do not wait for the user to ask about game logic. Reuse a reading within a task
+only while the sources remain unchanged; record consulted revisions and open
+checks in the editorial record. Use CodeGraph first for indexed source files.
+
+| Source | What to inspect |
+|---|---|
+| [Blueprint Game Rules §§2–5 and Media Engine §2](../BLUEPRINT.md) | Target 5-card hand plus 3-card reserve, all-scheduled-Nown coverage, draws, Shuffle and role secrecy. |
+| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current `dealing.band_high`, `band_low`, `min_high_per_nown`, `min_distant_per_nown`, `hand` and relevant game/point settings. Read values here rather than copying remembered constants. |
+| [Server mesh and dealer](../server/pkg/media/dealing.go) | `Cosine`, `BandFor`, `BuildCandidates`, `Dealer.Deal` and `DealFeasible`: vector comparison, band lists, sampling, retained hands/reserves and what simulation actually proves. |
+| [Pack loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack` and `Certify`: valid image/text data, compatible embedding declarations, candidate construction and certification coverage. |
+| [Server match](../server/internal/game/match.go) | `buildNownSchedule`, `dealHands`, `handleDrawCards`, `useShuffle`, `sendHandDealt`, `viewFor` and `playedNowns`: secret schedule, actual mutations, recipient scopes and final reveals. |
+| [Server payload renderer](../server/internal/game/payload.go) | `NownPayload`, `CardPayload` and `mediaItemPayload`: decoy versus Nown payloads, inline text, signed image URLs and absence of relevance scores from player payloads. |
+| [Client DTOs](../client/lib/data/models/game_state_dto.dart) and [session state](../client/lib/presentation/state/game_session_provider.dart) | `CardDto`, `NownRefDto`, `HandDto` and `GameSessionNotifier._onMessage`/`_mergeState`: consume the server's hand/round events; no client band assignment or local dealing. |
+| [Client role view](../client/lib/domain/entities/game_session.dart), [game screen](../client/lib/presentation/screens/game_screen.dart) and [media surfaces](../client/lib/presentation/widgets/game_surfaces.dart) | `showNown`/`showDecoy`, `GameScreen`, `GameMediaWell` and `GameCardTile`: image/text rendering and placeholders. Display guards supplement server secrecy; they cannot establish it alone. |
+| [Client media engine](../client/lib/media/media_engine.dart) | `MediaEngine.syncPack` and `prefetchNown`: metadata sync, server-issued asset URLs and cache behavior, not a second relevance engine. Check live call sites before claiming the separate prefetch service is wired into a screen. |
+| [Current mechanics and gaps](../docs/code/MODULE-media-engine.md) and [roadmap](../docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11) | Reconcile the target with the verified implementation, including retained-hand coverage, Shuffle, draw privacy and pack isolation. Confirm source/tests before calling an audited gap closed. |
+
+The server constructs many-to-many Nown/card bands using cosine similarity;
+the client receives display data and sends player intents. Neither player
+payloads nor card faces should disclose a High/Distant/Chaos answer label.
+One card may be High for one Nown and Chaos for another. Tone, shared tags,
+format, callbacks and editorial counts do not set the band's value, and an
+editor's proposed band remains a hypothesis until compatible real embeddings
+measure it. Do not manufacture vectors or tune thresholds to make a batch fit.
+
+The 2026-09-11 audit found that the dealer retains its first Nown's selected
+hand, then fills the reserve from later selections; its filler draws from all
+bands, and it does not verify the final eight cards against every scheduled
+Nown. Its per-player uniqueness check does not prevent the same card appearing
+in different players' hands. Successful sampling alone therefore does not prove
+the Blueprint's complete guarantee. Recheck this behavior for a new task rather
+than treating this dated description as permanent implementation truth.
+
+During rounds, the server sends the real Nown only to active Nowers; Donowers
+and eliminated players receive a decoy. The final reveal includes only Nowns
+from rounds actually begun. Initial hands/reserves go to their owner. Inspect
+the existing draw-privacy gap separately instead of claiming all current card
+delivery is private. Preserve these rules and report gaps while creating content;
+content work does not implicitly authorize changing the algorithm.
 
 ## Coverage checklist
 
@@ -64,28 +108,29 @@ the [roadmap](../docs/planning/ROADMAP.md).
 
 Apply the Blueprint's [playable media direction](../BLUEPRINT.md#playable-media-direction)
 and the [historical context and briefs](humor-development.md#visual-direction-and-history).
-For a full mixed release, aim for a GIF majority in both the Nown pool and
-playable-card pool, with stills next and text a smaller supporting share.
-Record counts and deliberate format-scoped exceptions; this is editorial
-planning, not a draw weight or hand quota.
+Use static images and plain text only, choosing the format that carries the
+joke. Record completed image/text counts for Nown and playable-card pools
+separately from concepts. There is no required format ratio or hand quota;
+format counts do not change draw weights.
 
-Review the **actual compressed asset at card size**, and watch each full loop:
-does the everyday situation read, does the awkward action/crop/reset supply
-natural abruptness, and does it leave room to argue? Preserve rough framing,
+Review the **actual compressed static image at card size**: does the everyday
+situation read, does the awkward gesture or crop supply an abrupt visual joke,
+and does it leave room to argue? Preserve rough framing,
 modest detail and compression while keeping the premise recognizable. Rework
 polished studio/cinematic/illustrated output even when it fits the pixel cap;
 do not prescribe upscaling, smoothing or beautification as the default fix.
 The UI palette, doodles and chrome effects are not a pack-media template.
 
-Record source/output dimensions, encoding, bytes and motion review against
-the Blueprint limits. A concept, single frame or panning still does not count
-as a finished reaction/action GIF. Missing media or an unviewed loop remains
-an unresolved check; metadata and an AI description do not prove visual fit.
+Record source/output dimensions, encoding, bytes, single-frame validation and
+visual review against the Blueprint limits. GIFs, animated WebP and video are
+unsupported game formats. Missing or unviewed media remains an unresolved
+check; metadata and an AI description do not prove visual fit. Captions and
+planning prose are not extra text cards.
 
 ## Editorial planning and freshness
 
 Use [Humor development](humor-development.md) for the writing loop. Begin the
-pilot with three themes and two target cultures/languages, then draft GIF-led
+pilot with three themes and two target cultures/languages, then draft image/text
 mechanisms per theme for a human editor to select, trim or rewrite. The pilot
 is planned; the guide's example lines are not created or published assets.
 

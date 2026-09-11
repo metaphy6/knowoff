@@ -1,9 +1,13 @@
 """Behavior checks for the local, non-loadable image candidate preparation tool."""
 
+import base64
 import hashlib
+import io
 import json
+import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 
 from PIL import Image
@@ -78,6 +82,68 @@ class PreparationTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "animated"):
             self.prepare(image=gif)
+
+    def test_static_gif_and_animated_webp_or_png_cannot_enter_image_pipeline(self):
+        for format_name, animated in [("GIF", False), ("WEBP", True), ("PNG", True)]:
+            with self.subTest(format=format_name):
+                # A misleading extension must not bypass inspection of the bytes.
+                source = self.root / "disguised.png"
+                Image.new("RGB", (20, 20), "red").save(
+                    source, format=format_name, save_all=animated,
+                    append_images=[Image.new("RGB", (20, 20), "blue")] if animated else [],
+                    duration=100, loop=0,
+                )
+                with self.assertRaisesRegex(ValueError, "static|animated"):
+                    self.prepare(image=source)
+                self.assertFalse((self.batch / "generated").exists())
+
+    def test_single_frame_animation_containers_are_rejected(self):
+        # One-frame APNGs and animated WebPs report n_frames=1 and
+        # is_animated=False in Pillow, but their containers still carry animation.
+        def png_chunk(kind, payload):
+            return (struct.pack(">I", len(payload)) + kind + payload
+                    + struct.pack(">I", zlib.crc32(kind + payload)))
+
+        png = io.BytesIO()
+        Image.new("RGB", (2, 2), "red").save(png, format="PNG")
+        original = png.getvalue()
+        apng = (original[:33]
+                + png_chunk(b"acTL", struct.pack(">II", 1, 0))
+                + png_chunk(b"fcTL", struct.pack(">IIIIIHHBB", 0, 2, 2, 0, 0, 100, 1000, 0, 0))
+                + original[33:])
+        two_frames = base64.b64decode(
+            "UklGRoQAAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAAJWUDhMDwAAAC8BQAAABxD9j/4HIqL/AQBBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAABWUDhMDwAAAC8BQAAABxDR//4HIqL/AQA=")
+        chunks, offset = [], 12
+        while offset < len(two_frames):
+            size = int.from_bytes(two_frames[offset + 4:offset + 8], "little")
+            end = offset + 8 + size + size % 2
+            chunks.append(two_frames[offset:end])
+            if two_frames[offset:offset + 4] == b"ANMF":
+                break
+            offset = end
+        payload = b"WEBP" + b"".join(chunks)
+        animated_webp = b"RIFF" + struct.pack("<I", len(payload)) + payload
+
+        for name, data in [("APNG", apng), ("WEBP", animated_webp)]:
+            with self.subTest(format=name):
+                with Image.open(io.BytesIO(data)) as picture:
+                    picture.load()
+                    self.assertEqual(picture.n_frames, 1)
+                    self.assertFalse(picture.is_animated)
+                source = self.root / f"{name}.png"
+                source.write_bytes(data)
+                with self.assertRaisesRegex(ValueError, "animated"):
+                    self.prepare(image=source, candidate_id=name)
+                self.assertFalse((self.batch / f"generated/receipts/{name}.json").exists())
+
+    def test_static_png_jpeg_webp_remain_supported(self):
+        for format_name in ["PNG", "JPEG", "WEBP"]:
+            with self.subTest(format=format_name):
+                source = self.root / f"static-{format_name}"
+                Image.new("RGB", (2, 2), "red").save(source, format=format_name)
+                receipt = self.prepare(image=source, candidate_id=format_name)
+                self.assertEqual(receipt["source"]["format"], format_name)
+                self.assertEqual(receipt["asset"]["format"], "WEBP")
 
     def test_report_exposes_missing_images_and_detects_corruption(self):
         receipt = self.prepare()

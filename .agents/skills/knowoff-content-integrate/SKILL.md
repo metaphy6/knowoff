@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-integrate
-description: Prepare, certify and integrate reviewed lo-fi, GIF-first Knowoff content into media packs and the app, or audit pack release readiness. Use when adding, publishing, activating, replacing or retiring game content; ordinary drafting belongs to the creation skill.
+description: Prepare, certify and integrate reviewed lo-fi Knowoff image/text content into media packs and the app, automatically checking High/Distant/Chaos server/client logic. Use for release readiness, adding, activating, replacing or retiring content; drafting belongs to the creation skill.
 ---
 
 # Integrate Knowoff content
@@ -27,6 +27,12 @@ authorized scope, the app. Report the last evidenced state accurately.
 - [ADR-004](../../../docs/design/ADR-004-media-package-in-server-pkg.md) and
   [ADR-005](../../../docs/design/ADR-005-synthetic-seed-pack.md) explain the shared
   media package and synthetic fixture; neither certifies production content.
+- [Read the dealing path before authoring](../../../content/curator-guide.md#read-the-dealing-path-before-authoring):
+  follow this source map automatically for every content integration or audit.
+  Inspect current tuning, server High/Distant/Chaos construction and retained-hand
+  dealing, role-scoped payloads, and client consumption/rendering without needing
+  a separate user reminder. Preserve the distinction between intended guarantees
+  and verified implementation.
 - Read actual pack schema, tools and
   [tuning](../../../configs/gameplay/tuning.yaml) through CodeGraph/config reads
   before constructing data or quoting numeric limits. Do not infer CLI
@@ -74,19 +80,17 @@ change game rules to accommodate a pack.
    those checks. Keep missing checks visible; do not label a pack certified
    or ready for release on partial evidence.
 
-Preserve the reviewed lo-fi texture, crop and abrupt action through transcoding;
+Preserve the reviewed lo-fi texture, crop and visual joke through transcoding;
 do not upscale, denoise or sharpen into a premium finish. Verify actual compressed
-outputs: stills usually below the 720 px longest-side maximum, loops ≤480p and
-≤2 MB as animated WebP. Inspect card-size readability and complete loop playback
-after conversion; a first-frame preview, filename or successful transcode does
-not prove delivered action. Record output dimensions, bytes, checksums and motion
-evidence; a concept, static frame or pan/zoom still cannot become GIF proof.
+outputs: compressed static WebP images, usually below the 720 px longest-side
+maximum, and plain text. Verify single-frame encoding and card-size readability;
+reject GIFs, animated WebP and video rather than relabeling them as images.
+Record output dimensions, bytes, checksums and visual inspection evidence.
 
-Check the full release's Nown and playable-card media mixes separately against
-the GIF-majority direction, followed by stills and a smaller text-only share.
-Honor explicit format scope and document departures. Keep concepts distinct from
-completed assets and exclude captions/planning prose from asset counts. This is
-an editorial check, not a new pack field, dealer weight or per-hand quota.
+Count completed image/text assets in the Nown and playable-card pools separately.
+Keep concepts distinct from completed assets and exclude captions/planning prose
+from asset counts. Format follows the joke; there is no mandatory format ratio,
+new pack field, dealer weight or per-hand quota.
 
 ## Activate and verify when authorized
 
@@ -97,10 +101,10 @@ Do not install services, buy tools, schedule monitors or message contributors
 as a side effect of preparing content.
 
 Use the supported activation path and verify the active tag/checksums, new-match
-rendering, actual animated playback and role-scoped delivery in the target app.
-If the renderer shows only a still or cannot be exercised, record that gap;
-do not claim GIF delivery from a valid animated file alone. Prove in-flight matches
-retain their original media and record the previous working version for rollback.
+image/text rendering and role-scoped delivery in the target app. If the renderer
+cannot be exercised, record that gap; a valid file alone does not prove app
+delivery. Prove in-flight matches retain their original media and record the
+previous working version for rollback.
 For retirement, verify the new version excludes the retired items; editing an
 editorial date does not change the deployed pack.
 

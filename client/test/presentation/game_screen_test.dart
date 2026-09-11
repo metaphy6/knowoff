@@ -173,6 +173,30 @@ void _revealBotCard(_Transport transport) => transport.events.add({
     });
 
 void main() {
+  testWidgets(
+      'unsupported media types never mount an image or playback control',
+      (tester) async {
+    for (final reduced in [false, true]) {
+      for (final type in ['gif', 'video', '']) {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: reduced),
+              child: child!),
+          home: Scaffold(
+              body: GameMediaWell(
+                  type: type,
+                  content: 'Unsupported content',
+                  url: 'https://invalid.example/unsupported.webp')),
+        ));
+        expect(find.byType(Image), findsNothing, reason: type);
+        expect(find.byIcon(Icons.play_arrow), findsNothing);
+        expect(find.text('Unsupported content'), findsNothing);
+      }
+    }
+  });
+
   testWidgets('workspace tabs expose working screen-reader activation',
       (tester) async {
     final semantics = tester.ensureSemantics();

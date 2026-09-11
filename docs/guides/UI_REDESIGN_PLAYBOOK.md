@@ -20,11 +20,12 @@ in this repo.
 This file is the third leg: the **method and the scar tissue**.
 
 Its rules apply to interface chrome. For the Nown/card media inside those
-surfaces, use the Blueprint's [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction)
+surfaces, use the Blueprint's [lo-fi static-image and text direction](../../BLUEPRINT.md#playable-media-direction)
 and [content creation skill](../../.agents/skills/knowoff-content-create/SKILL.md).
-Keep rough crops, compression and abrupt reaction loops; do not render pack
-content as polished illustrations matching the UI palette. Calm Nown-stage
-layout means a stable frame, not freezing the GIF it contains.
+Keep rough crops, compression and candid reactions; do not render pack
+content as polished illustrations matching the UI palette. Nown and card media
+remain static under [ADR-011](../design/ADR-011-static-image-and-text-content.md).
+Interface transitions and reduced-motion rules are unchanged.
 
 ---
 
@@ -533,7 +534,7 @@ each; the result sample included the four-second animation. Flutter's
 
 The 16.7 ms **p95** target passed in this desktop sample. Four isolated state
 updates exceeded that budget; this is not an every-frame or zero-jank claim.
-Native mobile, low-end hardware, cold image decoding, GIFs and network loading
+Native mobile, low-end hardware, cold image decoding and network loading
 remain unprofiled. A hidden-tab sample was discarded because browser throttling
 invalidated frame-delivery measurements. Narrower state subscriptions are a
 possible follow-up for the build spikes, but the measurements do not establish

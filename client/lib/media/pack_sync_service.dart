@@ -31,8 +31,15 @@ class PackSyncService {
     final storedMedia = prefs.getString(_mediaKey);
 
     if (storedTag == tag && storedManifest != null && storedMedia != null) {
-      _loadFromLocal(storedManifest, storedMedia);
-      return true;
+      try {
+        _loadFromLocal(storedManifest, storedMedia);
+        return true;
+      } on FormatException {
+        // Retired or malformed metadata must be refreshed, never rendered.
+        await prefs.remove(_tagKey);
+        await prefs.remove(_manifestKey);
+        await prefs.remove(_mediaKey);
+      }
     }
 
     final manifest = await _fetchManifest(tag);
@@ -42,7 +49,12 @@ class PackSyncService {
     final mediaJsonl = await _fetchJsonl(tag, 'media.jsonl');
     if (mediaJsonl == null) return false;
 
-    final mediaItems = _parseMediaJsonl(mediaJsonl);
+    final List<MediaItem> mediaItems;
+    try {
+      mediaItems = _parseMediaJsonl(mediaJsonl);
+    } on FormatException {
+      return false;
+    }
     final manifestRaw = jsonEncode({
       'pack_tag': manifest.packTag,
       'format_version': manifest.formatVersion,
@@ -63,10 +75,15 @@ class PackSyncService {
   }
 
   void _loadFromLocal(String manifestRaw, String mediaJsonl) {
-    _manifest = PackManifest.fromJson(
+    final manifest = PackManifest.fromJson(
       jsonDecode(manifestRaw) as Map<String, dynamic>,
     );
-    _mediaById = {for (final m in _parseMediaJsonl(mediaJsonl)) m.id: m};
+    if (manifest.formatVersion != 1) {
+      throw const FormatException('Unsupported pack format version');
+    }
+    final mediaById = {for (final m in _parseMediaJsonl(mediaJsonl)) m.id: m};
+    _manifest = manifest;
+    _mediaById = mediaById;
   }
 
   Future<PackManifest?> _fetchManifest(String tag) async {

@@ -6,6 +6,12 @@ All notable changes to Knowoff are documented in this file.
 
 ### Removed
 
+- Removed GIF and animated-image game content. Nowns, cards and challenge media
+  use static images or plain text; unsupported formats are rejected rather than
+  relabeled. Existing UI effects remain.
+- Removed the experimental image, GIF and text batches created during content
+  trials, including their source assets, prompts and preview galleries.
+
 - Removed the Flutter frontend for a redesign: screens, widgets, theme,
   doodles, display font, and media-rendering widgets before the reconstruction
   below. Localization and service initialization were preserved.
@@ -14,6 +20,10 @@ All notable changes to Knowoff are documented in this file.
   game state, authentication, API/transport, localization, and media services.
 
 ### Added
+
+- Recorded the static-image-and-text decision in ADR-011 and made the content
+  skills automatically consult High/Distant/Chaos tuning, server dealing and
+  client state/rendering logic before drafting or evaluating a batch.
 
 - Documented system FFmpeg/FFprobe discovery, installation when missing, and
   verification from another directory for reuse across workspaces.
@@ -58,12 +68,15 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
-- Restored the original deliberately low-quality meme aesthetic in content
-  briefs and review: rough everyday framing, compression and abrupt action,
-  usually below the 720 px still-image ceiling. Mixed Nown/card batches now
-  prioritize GIF loops over stills and text. Creation, review and integration
-  skills distinguish this from UI styling and verify actual loop output;
-  this changes editorial guidance, not runtime dealing or existing packs.
+- Image packs now persist their validated, content-hashed assets when bundled,
+  so supported static-image Nowns and cards survive a write/load round trip.
+- Community consent controls now have the Material ancestor required by Flutter,
+  preserving their existing behavior and the supported Flutter 3.24 baseline.
+
+- Retained the deliberately low-quality meme aesthetic in content briefs and
+  review: rough everyday framing, compression and recognizable situations,
+  usually below the 720 px image ceiling. The former GIF-first guidance is
+  replaced by static images and text; tone, humor and cultural-fit rules remain.
 - Made the content skills' tracking handoff explicit: completed repository
   changes require a pending commit row, staging and a verified `make git.dry`
   preview. Corrected the Codex tracking-agent enum in the setup guide.

@@ -131,6 +131,15 @@ func TestPayloadRenderer_MissingNownErrors(t *testing.T) {
 	}
 }
 
+func TestPayloadRenderer_RejectsRemovedGIFType(t *testing.T) {
+	pack := newTestPack()
+	pack.Media[0].Type = media.MediaType("gif")
+	r := newRenderer(pack)
+	if payload, err := r.NownPayload("round-1", "nown-image", ViewNower); err == nil || payload != nil {
+		t.Fatalf("removed media type must not produce a signed URL: %v, %v", payload, err)
+	}
+}
+
 func TestPayloadRenderer_MissingMediaManager(t *testing.T) {
 	r := NewPayloadRenderer(nil, media.NewSignedURLIssuer([]byte("k"), time.Second), "")
 	if _, err := r.NownPayload("round-1", "x", ViewNower); err == nil {

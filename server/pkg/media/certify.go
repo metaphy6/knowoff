@@ -47,6 +47,10 @@ func Certify(pack *Pack, dealing DealingTuning, hand HandTuning) Certification {
 	} else {
 		c.Details.ManifestOK = true
 	}
+	if err := ValidatePackContent(pack); err != nil {
+		c.Errors = append(c.Errors, err.Error())
+		c.Passed = false
+	}
 
 	// Ensure every Nown has enough high/distant candidates for a 6-player table.
 	for _, n := range pack.Media {

@@ -3,6 +3,7 @@ package portal
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -20,7 +21,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/profile"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/pkg/media"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -51,6 +52,42 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("seed terms: %v", err)
 	}
 	return db
+}
+
+func TestValidMediaType_ImageAndTextOnly(t *testing.T) {
+	for typ, valid := range map[string]bool{"text": true, "image": true, "gif": false, "video": false, "": false} {
+		if got := ValidMediaType(typ); got != valid {
+			t.Errorf("ValidMediaType(%q)=%v, want %v", typ, got, valid)
+		}
+	}
+}
+
+func TestDatabaseMediaTypes_ImageAndTextOnly(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	topicID := uuid.NewString()
+	if _, err := db.Exec(`INSERT INTO challenge_topics(id,week_start,week_end,nown_media_id) VALUES($1,'2026-09-07','2026-09-13',$2)`, topicID, uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
+	for _, typ := range []string{"text", "image", "gif", "video"} {
+		accountID := newAccount(t, db)
+		for _, query := range []string{
+			`INSERT INTO portal_submissions(account_id,media_type,content,terms_version,terms_accepted_at) VALUES($1,$2,'format test','v1',now())`,
+			`INSERT INTO challenge_entries(account_id,entry_type,content,terms_version,terms_accepted_at,topic_id) VALUES($1,$2,'format test','v1',now(),'` + topicID + `')`,
+		} {
+			_, err := db.Exec(query, accountID, typ)
+			if typ == "text" || typ == "image" {
+				if err != nil {
+					t.Fatalf("supported media type %s: %v", typ, err)
+				}
+			} else {
+				var pgErr *pq.Error
+				if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+					t.Fatalf("type %s needs a check violation, got %v", typ, err)
+				}
+			}
+		}
+	}
 }
 
 func newAccount(t *testing.T, db *sql.DB) string {

@@ -56,11 +56,19 @@ quality. Existing passing tests do not close these gaps. The checked-in pack
 is the development fixture described by ADR-005; its synthetic embedding
 geometry must not be reused as semantic proof for rewritten jokes.
 
+**Media format decision (2026-09-11).** Nowns and playable cards support only
+static images and text, per [ADR-011](../design/ADR-011-static-image-and-text-content.md).
+GIF and other animated media are excluded from generation, submission, packs
+and rendering. This changes format scope only: the lo-fi style, topics, tone
+buckets, editorial method and High/Distant/Chaos relevance logic remain.
+Existing development fixtures remain test infrastructure; the session's
+generated content samples are retired rather than production candidates.
+
 **Next content sequence.** Select three themes and two target cultures/languages;
-apply the restored [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction),
+apply the [lo-fi static-image and text direction](../../BLUEPRINT.md#playable-media-direction),
 record the media mix separately for Nowns and cards, the editorial dimensions
-and experimental 70/20/10 freshness mix; draft and human-edit GIF-led candidates,
-watch actual loops and inspect compressed assets at card size; check sources,
+and experimental 70/20/10 freshness mix; draft and human-edit image/text candidates,
+inspect compressed still images and text at card size; check sources,
 rights, originality, local meaning and age suitability; apply automated screening and human review;
 playtest actual 4- and 6-player schedules; certify and activate a small pack
 per language after the engineering gaps above are closed. Record recognition,
@@ -103,7 +111,7 @@ The root coordinator updates this checklist with actual tests and runtime eviden
 | Quick Play, local rooms, profiles, leaderboard, reports, feedback | Flutter pages, API methods and matching Go services exist. Current device layouts and developer controls have separate proof above/below. | OAuth linking and account deletion have no Flutter integration; server OAuth helpers alone do not prove second-device restoration. Public profile statistics exist, but this audit does not certify every historical nightly-job claim. |
 | Portal browser access | `/portal/` Go pages and role/application/submission manager methods. | `portal/handler.go` accepts only a Bearer header; normal page navigation and form posts cannot carry it. No usable browser session or form CSRF flow. |
 | Admin browser access | PostgreSQL accounts/sessions, password and TOTP validation, login throttling, separate internal listener, RBAC middleware. | `admin.ValidateSession` requires a CSRF token even for GET; login sends it only in a response header, so an ordinary cookie-only redirect back to `/admin/` fails. Cookies also need an explicit secure-transport policy. |
-| Contributor/Curator workflow | Role application/grant/reject/revoke, text drafts, submit/withdraw, decide/publish methods, real deal simulator, `content/curator-guide.md`, acceptance reward/profile-credit transaction. | Draft HTML has no submit/withdraw controls or explicit terms consent; consent is currently stamped automatically. No draft editing, open pack calls, Nown/deck authoring, image/GIF upload processing or automatic screening integration. `PublishSubmission` only changes a database status/pack tag; it does not build or activate a pack. Several audits are ignored after mutations commit. |
+| Contributor/Curator workflow | Role application/grant/reject/revoke, text drafts, submit/withdraw, decide/publish methods, real deal simulator, `content/curator-guide.md`, acceptance reward/profile-credit transaction. | Draft HTML has no submit/withdraw controls or explicit terms consent; consent is currently stamped automatically. No draft editing, open pack calls, Nown/deck authoring, static-image upload processing or automatic screening integration. `PublishSubmission` only changes a database status/pack tag; it does not build or activate a pack. Several audits are ignored after mutations commit. |
 | Admin operations | Existing `/admin/portal/` routes for terms, applications, submissions, freeze review and challenge; notice create/withdraw and avatar takedown routes. `reports.ListReports`/`ListFeedback`, wallet balance and entitlement readers are reusable. | Main dashboard links only Notices. Conduct/media case triage, feedback transitions, economy lookup UI, pack operations and leaderboard operations are absent. Terms creation does not change the config-selected active terms. Existing challenge admin lists approved entries, hiding the pending screening queue. |
 | Weekly Nown Challenge | Public active/entry/vote endpoints; approved-only public listing; unique entry/vote rows; approval slot locking; rejection; winner/title/payout transaction. Topic IDs point to approved portal submissions. | No Flutter API or screen. Active response hardcodes `voted: false` and lacks renderable topic content. The first-100 limit is enforced on approval instead of intake; no explicit consent; votes do not check whether the topic is still open. Week-end date handling excludes most of Sunday. No automatic publish/close scheduler or current-title transfer proof. |
 | Guard enforcement | Freeze/dismiss/permanent-ban/expiry service methods and admin review routes. | No public Guard action UI/route. `frozen_by` references admin accounts although Guards are player accounts. Dismissal can clear another active suspension/ban; expiry is not continuously scheduled in the server loop. Do not enable these unsafe actions merely to fill a navigation item. |
@@ -180,7 +188,7 @@ not replace the Go server with a SPA or duplicate game state in portal pages.
   tests use a controlled screening provider; production credentials and real
   contribution terms are operator setup, not claimed live proof.
 
-**Explicit follow-on scope.** Full image/GIF processing, dedupe/embeddings,
+**Explicit follow-on scope.** Full static-image processing, dedupe/embeddings,
 image moderation/generation, pack calls and Nown/deck authoring, real pack
 publication/attribution, scheduled challenge rollover/current-title transfer,
 Guard identity and suspension isolation/runtime expiry, avatar moderation and
@@ -235,7 +243,7 @@ the owner's additional private entry record contains `status` and
 `terms_accepted: true` and returns 201 with `{entry: {id, entry_type, content,
 status}}`. `POST /api/challenge/vote` accepts `topic_id`, `entry_id` and returns
 204. Both use the existing bearer-authenticated player account. The first
-working submission type is text; image/GIF upload controls require their real
+working submission type is text; static-image upload controls require their real
 processing pipeline before appearing. Return stable `{code: ...}` errors:
 `unauthorized`, `invalid_request`, `terms_required`, `terms_outdated`,
 `challenge_not_open`, `challenge_full`, `challenge_already_submitted`,
@@ -465,8 +473,9 @@ checkboxes; it landed before phase work began.
 
 Deliberate exclusions. Do not build these, and do not "improve" toward them:
 
-- **No audio or video Nowns** — image, GIF, text only (sound leaks to
-  Donowers in local rooms; assets stay tiny; v2 may revisit).
+- **Static images and text only for Nowns and cards** — no GIF, animated
+  WebP/APNG, audio or video media ([ADR-011](../design/ADR-011-static-image-and-text-content.md)).
+  Interface transitions remain separate from playable media.
 - **No voice or video chat** — free text is limited to server-masked messages
   under the configured multilingual moderation policy.
 - **No public room browser, no skill rating.**
@@ -618,18 +627,18 @@ laughter and plausible alternatives. A technical pass or AI score alone
 cannot complete the production-content deliverable. For topical material,
 retain source/observation/context/region/language/review/expiry records and
 the human weekly review decision; the freshness mix is an experiment.
-Review actual compressed media for the lo-fi direction and loop timing, with
-GIFs leading each full Nown/card pool per ⚙️ §3. Record dimensions, encoding,
-bytes, actual motion and editorial mix; a downsized polished image or a static
-frame labeled as a GIF does not meet that proof. Format priority does not
+Review actual compressed static images and text for the lo-fi direction and
+card-size readability per ⚙️ §3. Record dimensions, encoding, bytes and
+editorial mix; verify that image files contain no animation. Downsizing a
+polished image does not establish the intended style. Format choice does not
 alter runtime dealing weights or certify the existing synthetic text fixture.
 
 - [x] Pack bundle format (⚙️ §1): `manifest.json` (pack tag, **format version**, checksums, license + attribution per asset, age rating, **BCP 47 language tag**, **pinned embedding model + version**), `media.jsonl`, `cards.jsonl`, content-hash-addressed assets in object storage — packs are language-scoped, so new languages ship as new packs, never format changes.
-- [ ] `tools/mediapack` stages: `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (provider-swappable automated moderation) → `tag` + `embed` → `certify` → `bundle` → `publish` → `simulate` (deal feasibility **and** offline balance questions: band-threshold sweeps, Donower-survival proxies, Shuffle/Revote impact, expected per-match Noin); every stage seeded and deterministic — same inputs + seed reproduce byte-identical bundles — with meaningful non-zero exits for CI use.
+- [ ] `tools/mediapack` stages: `ingest` (static-image validation, reject animated formats, transcode, EXIF strip, perceptual-hash dedupe) → `screen` (provider-swappable automated moderation) → `tag` + `embed` → `certify` → `bundle` → `publish` → `simulate` (deal feasibility **and** offline balance questions: band-threshold sweeps, Donower-survival proxies, Shuffle/Revote impact, expected per-match Noin); every stage seeded and deterministic — same inputs + seed reproduce byte-identical bundles — with meaningful non-zero exits for CI use.
 - [ ] `server/pkg/media`: in-memory pack loader with checksum verification (a tampered bundle is refused and the current pack keeps serving), between-matches hot-swap that never blocks a live room, precomputed per-media band candidate lists (zero embedding math in the hot path), and the signed-URL issuer — short-lived, single-round, expiry enforced server-side.
 - [ ] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
 - [x] Versioned fixture packs committed for CI (a tiny golden pack + the band-starved pack): the test fuel every later phase reuses — gamebot matches, load tests, client cache tests, compose dev seeding.
-- [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra**, prioritizing lo-fi GIF loops, then still images and supporting text per ⚙️ §3; actual motion capability and delivered media must be verified. Bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
+- [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra**, producing only lo-fi static images and text per ⚙️ §3; verify the compressed image or exact text delivered. Bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
 - [ ] Seed pack generated via **GPT-6 Astra**: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded per asset; tone rubric landed in `content/tone-matrix.md`; adopt the humor-development editorial record, experimental freshness mix and actual 4/6-player pilot evidence from ⚙️ §3 before release.
 - [x] `client/lib/media`: pack metadata OTA sync (app start + unrecognized tag), signed-URL prefetch with retry/backoff on flaky networks (URLs short-lived, single-round), hash-verified LRU asset cache under an explicit size budget (corrupt entries evicted, never rendered), Donower placeholder renderer — also shown while a Nower's asset is still loading, so loading state leaks nothing (⚙️ §4).
 - [ ] Gate: Phase 2 proof tests pass on a clean tree.
@@ -900,7 +909,7 @@ one payout, and one transfer at next close; admin routes are unreachable
 from the portal ingress.
 
 - [ ] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
-- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), shared Nown/card-pool authoring with the deal simulator and human ambiguity playtests; retain editorial dimensions, topical source/review/expiry records and cultural rewrites separately from the tone bucket; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
+- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), shared Nown/card-pool authoring with the deal simulator and human ambiguity playtests; retain editorial dimensions, topical source/review/expiry records and cultural rewrites separately from the tone bucket; submission pipeline for static images and text with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, reject animation, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
 - [ ] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
 - [ ] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
 - [ ] Gate: full Phase 6 proof tests pass on a clean tree.

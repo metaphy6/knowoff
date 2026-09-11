@@ -1,13 +1,13 @@
 ---
 name: knowoff-content-create
-description: Draft, rewrite or culturally adapt Knowoff Nowns and cards with lo-fi, GIF-first media direction. Use for humor pilots and content batches; use the separate review or integration skill for evaluation or adding approved content to the app.
+description: Draft, rewrite or culturally adapt lo-fi Knowoff image and text Nowns/cards, automatically consulting High/Distant/Chaos dealing rules and server/client logic. Use for humor pilots and content batches; use the separate review or integration skill for evaluation or adding approved content to the app.
 ---
 
 # Create Knowoff content
 
 Produce original candidates that give players something plausible to defend.
-Favor lo-fi reaction/action GIFs; the interpretation should be speakable even
-when the asset is silent. Keep drafts useful while production tooling is incomplete.
+Use static images and plain text only; the interpretation should be speakable.
+Keep drafts useful while production tooling is incomplete.
 
 ## Read the current contract
 
@@ -24,6 +24,11 @@ current scope and choices, then the repository's source-of-truth order:
   [tone matrix](../../../content/tone-matrix.md) and
   [Curator Guide](../../../content/curator-guide.md) supply the editorial method.
 - [Glossary](../../../docs/project/GLOSSARY.md) supplies game terminology.
+- [Read the dealing path before authoring](../../../content/curator-guide.md#read-the-dealing-path-before-authoring)
+  is mandatory for every content task, without waiting for the user to mention
+  High, Distant, Chaos or the algorithm. Follow its source map through current
+  tuning, server band construction/dealing, role-scoped payloads and client
+  consumption/rendering before assigning relationship hypotheses.
 - [Roadmap](../../../docs/planning/ROADMAP.md): content readiness audit and
   relevant Phase 2/6 work; [server mechanics](../../../docs/code/MODULE-media-engine.md)
   distinguishes current behavior from intended guarantees;
@@ -72,31 +77,23 @@ questions to any delegated writer; a paraphrased brief alone is insufficient.
 ## Make the media feel caught, not polished
 
 Follow the [playable media direction](../../../BLUEPRINT.md#playable-media-direction):
-for a full mixed batch, make GIF loops the majority in the Nown and playable-card
-pools separately, stills next and text-only assets a smaller share. Respect an
-explicit format brief or small request; record departures without inventing
-per-hand quotas, runtime weights or new schema fields. Captions, translations
-and planning descriptions do not count as extra text cards.
+choose a static image when a visual moment carries the joke and plain text when
+wording carries it. Count completed image/text assets separately from concepts;
+captions, translations and planning descriptions are not extra text cards.
+There is no required media ratio, per-hand format quota or type-based draw weight.
+Do not generate GIFs, animated WebP, video or animation source sheets for game content.
 
-Brief the ordinary situation, recognizable gesture, awkward framing, source
-texture and abrupt timing. For example: “compressed phone clip; someone starts
-a confident nod, hesitates and looks away; rough crop, flat room light, blunt
-loop reset.” Preserve candid roughness and readable action. Avoid cinematic
+Brief the ordinary situation, recognizable gesture, awkward framing and source
+texture. Preserve candid roughness and a readable frozen moment. Avoid cinematic
 lighting, studio photography, glossy 3D, immaculate illustration and high-detail
 defaults; downsizing a polished render alone does not create this atmosphere.
 
-Start stills around 360–640 px on the longest side where readable, never above
-the Blueprint's 720 px maximum. Keep loops ≤480p and ≤2 MB, delivered as animated
-WebP. Preserve aspect ratio; do not upscale or enhance for a premium finish.
-Inspect the compressed result at card size and watch the actual loop. Record
-actual dimensions, bytes and motion evidence, not requested output settings.
-
-Check whether the available tool can produce the intended motion. A storyboard,
-single generated frame or pan/zoom over a still remains a labeled concept or
-source candidate, not a completed reaction/action GIF. Record that dependency
-and continue useful preparation; do not quietly replace a GIF-led brief with
-high-resolution stills or text. Never describe generated “found” texture as
-proof of a real capture or cleared rights.
+Start images around 360–640 px on the longest side where readable, never above
+the Blueprint's 720 px maximum, and deliver compressed static WebP. Preserve
+aspect ratio; do not upscale or enhance for a premium finish. Inspect the actual
+compressed result at card size. Record measured dimensions, bytes, encoding and
+single-frame evidence, not requested output settings. Never describe generated
+“found” texture as proof of a real capture or cleared rights.
 
 ## Deliver and hand off
 

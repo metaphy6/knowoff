@@ -17,12 +17,22 @@ import (
 // Write persists pack to dir, creating manifest.json, media.jsonl,
 // cards.jsonl, and assets/ when needed.
 func Write(pack *media.Pack, dir string) error {
+	if err := media.ValidatePackContent(pack); err != nil {
+		return fmt.Errorf("invalid pack content: %w", err)
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("create bundle dir: %w", err)
 	}
 	assetsDir := filepath.Join(dir, "assets")
 	if err := os.MkdirAll(assetsDir, 0o755); err != nil {
 		return fmt.Errorf("create assets dir: %w", err)
+	}
+	// ValidatePackContent has already verified each reference is exactly the
+	// SHA-256 of these bytes, so it is safe to use as a single filename.
+	for ref, data := range pack.Assets {
+		if err := os.WriteFile(filepath.Join(assetsDir, ref), data, 0o644); err != nil {
+			return fmt.Errorf("write asset %s: %w", ref, err)
+		}
 	}
 
 	mediaPath := filepath.Join(dir, "media.jsonl")

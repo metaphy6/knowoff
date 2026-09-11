@@ -27,7 +27,7 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 |---|---|
 | **Nower(s)** | Players who see Nown |
 | **Donower(s)** | Players who can't see Nown; nobody knows who they are |
-| **Nown** | The media item of a round — image, GIF, or text (no audio or video at v1) |
+| **Nown** | The media item of a round — static image or text (no animated media, audio or video) |
 | **Knowoff** | The vote at the end of every round |
 | **Round** | Card play + discussion + one Knowoff |
 | **Match** | Up to 2 votings at 4 players, up to 3 at 6 — until a team wins |
@@ -72,10 +72,10 @@ Architecture decision records:
 ### 2. Roles, Nown & Hands
 
 * The server assigns roles randomly and secretly at match start. Players check their role privately: **press and hold to show it, release to hide it** — everyone performs the same check, so nothing about it stands out.
-* **Nown**: one item per round from the room's media pack — **image, GIF, or text**. No audio and no video at v1 (assets stay tiny, rounds are silent-autoplay-safe, and in local rooms sound would leak to Donowers; v2 may revisit).
+* **Nown**: one item per round from the room's media pack — **static image or text**. GIFs, animated images, audio and video are excluded. Assets stay small and rounds remain silent, preserving local-room secrecy.
 * Donowers simply can't see Nown — their screen shows a basic placeholder prompt instead (designed and implemented during development), and that's all.
 * Secrecy is enforced server-side: a Donower's device is never sent Nown at all (⚙️ §4). Nobody knows who is Donower or Nower until votes reveal roles.
-* **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text, image, or GIF** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Nown in the match. That guaranteed ambiguity is what lets Donowers blend in and makes Nowers doubt each other.
+* **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text or static image** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Nown in the match. That guaranteed ambiguity is what lets Donowers blend in and makes Nowers doubt each other.
 * A match can never use more than those 8 cards, so a player always has a card to play.
 
 ### 3. The Round: Turn-Based Play
@@ -173,7 +173,7 @@ Private rooms for people in the same physical place: the host shares a QR code (
 
 The game itself, stretched into a week-long social event for the whole community:
 
-* **The topic is a Nown:** every Monday the server publishes the week's topic — an image, GIF, or text, exactly like a round's Nown. Players respond the way they play cards in a match: upload the one entry (image, GIF, or text) that best matches the topic.
+* **The topic is a Nown:** every Monday the server publishes the week's topic — a static image or text, exactly like a round's Nown. Players respond the way they play cards in a match: upload the one entry (static image or text) that best matches the topic.
 * **Open to all players, in-app** — no portal role needed. One entry per player, **immutable once submitted** — no edits, no replacements. **The system accepts the first 100 entries**, then intake auto-closes; a slot reopens each time screening rejects an earlier entry.
 * **Screening before visibility:** every entry passes the automated screen plus a human check (curators or admin) before it becomes publicly visible and votable. Rejected entries never appear.
 * **Voting:** open to all players — one vote each, never for your own entry, **immutable once cast**. Tallies are public and live.
@@ -243,7 +243,7 @@ Any player may **apply for a role** from their portal profile; applications are 
 
 ### 2. Submission Pipeline
 
-* Flow: upload or write media (**image, GIF, or text** only) → automated processing (transcode to quality targets ⚙️ §3, perceptual-hash dedupe, auto-tag, embedding, automated content screen) → **submit** → screening/curation → accepted media enters the next pack version.
+* Flow: upload or write media (**static image or text** only) → automated processing (transcode to quality targets ⚙️ §3, perceptual-hash dedupe, auto-tag, embedding, automated content screen) → **submit** → screening/curation → accepted media enters the next pack version.
 * Workflow states: `draft → submitted → in_review → approved | rejected → published(pack-tag)` — every transition audited. **Submissions are immutable once submitted** — no edits; withdraw and resubmit is the only correction path, and it costs the queue slot.
 * Moderation: everything passes the automated screen *and* human review before any player sees it; published media stays reportable (👤 §3) and takedown-able, with removals shipping in the next pack version.
 * **Acceptance and release are separate:** approval accepts a contribution for curation. Playable release requires a versioned pack, technical certification, editorial playtests and activation through the media pipeline. Editorial source/expiry records supplement the approval history; they do not replace it. Current text-only capabilities and remaining integration work are described in [Community operations](docs/guides/COMMUNITY_OPERATIONS.md).
@@ -252,7 +252,7 @@ Any player may **apply for a role** from their portal profile; applications are 
 
 The same application pointed at dev/staging, where the owner curates the AI generation pipeline before the community exists:
 
-* **Batch ingestion:** issues generation batches to **GPT-6 Astra** for images, GIF loops, and text cards; every returned asset auto-processed on arrival.
+* **Batch ingestion:** issues generation batches to **GPT-6 Astra** for static images and text cards; every returned asset auto-processed on arrival.
 * **Bulk curation grid:** keep/kill at keyboard speed with tone-bucket and rating assignment; keep-rate measured per batch (the pipeline's core KPI — expect 10–30% at this humor bar).
 * **Embedding sanity view:** nearest-neighbor browser for any asset — catches mis-embedded media before it corrupts dealing.
 * **Deal simulator:** for any candidate Nown, render the hands the mesh would actually deal at both table sizes — the same tool Curators later use, per the Curator Guide.
@@ -301,8 +301,8 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
 
 This matrix styles the **interface around media**. Playable Nowns and cards follow
-the [lo-fi, GIF-first media direction](#playable-media-direction) in ⚙️ §3:
-rough everyday captures, compressed memes and abrupt loops. Do not turn them
+the [lo-fi, static-image-and-text media direction](#playable-media-direction) in ⚙️ §3:
+rough everyday captures, compressed memes and concise text. Do not turn them
 into matching pastel illustrations, brand doodles or polished scene art.
 
 > **Implementing or redesigning any client UI against this chapter?** Load
@@ -385,7 +385,7 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 
 ### 1. Media-Pack Bundle Format
 
-* A pack is a versioned bundle: `manifest.json` (pack tag e.g. `core-2026.10`, checksums, license & credits, age rating, BCP 47 language tag — packs are language-scoped, so new languages ship as new packs, never format changes), `media.jsonl` (per Nown: id, type `image|gif|text`, asset ref, embedding vector, tags, tone bucket, rating), `cards.jsonl` (per hand card: id, type `text|image|gif`, asset ref, embedding, tags), plus assets in object storage addressed by content hash.
+* A pack is a versioned bundle: `manifest.json` (pack tag e.g. `core-2026.10`, checksums, license & credits, age rating, BCP 47 language tag — packs are language-scoped, so new languages ship as new packs, never format changes), `media.jsonl` (per Nown: id, type `image|text`, asset ref, embedding vector, tags, tone bucket, rating), `cards.jsonl` (per hand card: id, type `text|image`, asset ref, embedding, tags), plus assets in object storage addressed by content hash.
 * Version discipline: the server embeds the active pack tag in `phase_started`; clients sync **metadata** OTA on app start and on unrecognized tags, verify checksums, and hot-swap between matches — never mid-match. Assets stream on demand via the prefetch protocol (§4) with an LRU cache.
 * Theme packs are additional bundles in the same format; pack updates and takedowns ship as version bumps the server hot-swaps without redeploying.
 
@@ -403,36 +403,37 @@ These are the target dealing guarantees. The [current server mechanics](docs/cod
 ### 3. Media Pipeline (`tools/mediapack`) & Content Production
 
 * Pipeline stages (CLI + Workbench/Portal UI over the same code): `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (automated moderation) → `tag` + `embed` → human curation (🧑‍🎨) → `certify` → `bundle` → `publish`.
-* **Quality targets — deliberately medium/low:** images ≤ 720 px longest side, compressed WebP; GIF loops ≤ 480p, ≤ 2 MB, re-encoded as animated WebP; text plain. Two reasons: small assets keep prefetch instant and the edge-cache path cheap, and lo-fi *is* the meme aesthetic.
+* **Quality targets — deliberately medium/low:** static images ≤ 720 px longest side, compressed single-frame WebP; text plain. GIF, animated WebP, APNG, video and audio are not supported game-content formats. Image preparation accepts non-animated PNG, JPEG or WebP sources and rejects animation rather than silently selecting a frame. Two reasons: small assets keep prefetch instant and the edge-cache path cheap, and lo-fi *is* the meme aesthetic.
 * **Content standard:** humor may include sexuality within the bounds of eroticism — suggestive, cartoon, drawn, abstract — but **never pornographic or explicit content**, and always within app-store content rules. Erotic-leaning media carries an adult rating and ships only in age-gated packs (Product Baseline); the automated screen and human curation both enforce the line.
 * Certification (the anti-dead-content gate): a pack version is publishable only if it declares its language tag (§1), every Nown has full band coverage for a 6-player deal, every card is reachable in some band, and Monte Carlo `simulate` confirms deal feasibility at both table sizes. Uncertifiable media stays in draft. The same checks back the Curator Guide's testing workflow (🧑‍🎨 §1).
 * `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Donower-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
-* Production stack: **GPT-6 Astra** is the planned AI generation lane for image, GIF-loop and text candidates; human-authored contributions and human rewrites enter the same curation process. Images/loops use (animated) WebP per the quality targets above; text remains plain text. Local on-device generation (diffusion models, local LLMs) is out of scope for v1. Generation produces candidates, not approved material; human judgment is the binding constraint. The synthetic development builder is not evidence that this production lane is implemented.
+* Production stack: **GPT-6 Astra** is the planned AI generation lane for static-image and text candidates; human-authored contributions and human rewrites enter the same curation process. Images use single-frame WebP per the quality targets above; text remains plain text. Local on-device generation (diffusion models, local LLMs) is out of scope for v1. Generation produces candidates, not approved material; human judgment is the binding constraint. The synthetic development builder is not evidence that this production lane is implemented.
 * Tone rubric: the [four-bucket humor matrix](content/tone-matrix.md) retains exactly one bucket per asset: `millennial-cope`, `gen-z-absurdism`, `social-awkwardness`, or `chaos`. Aim for a roughly even release mix, keeping chaos under roughly 30%. These editorial targets are separate from similarity bands and runtime draw probabilities.
 
 #### Playable media direction
 
-* **Natural abruptness:** favor candid, ordinary, awkward moments that feel caught or shared: imperfect framing, rough crops, visible compression, modest detail, an unexpected gesture, a sudden cut or a blunt loop reset. Preserve enough clarity to recognize the action and argue about it. Low fidelity is an aesthetic choice from the start; merely shrinking a polished illustration does not satisfy it.
-* **Usually below the ceiling:** 720 px is the still-image maximum longest side, not a target or a minimum, and not 1280×720. Start stills around 360–640 px on the longest side when the premise remains readable. Keep GIFs within the existing ≤480p / ≤2 MB targets; preserve the source aspect ratio and never upscale or enhance a candidate just to make it look premium. Review the delivered compressed asset at card size and watch the actual loop.
-* **GIFs lead:** unless the owner requests a particular format, make silent reaction/action GIF loops the majority of a full mixed batch and release, with still images next and text-only media a smaller supporting share. Check the Nown pool and playable-card pool separately; text captions, planning descriptions and translations are not extra text cards. This is an editorial sourcing/production priority, independent of freshness and tone mixes. It introduces no per-hand quotas, type-based dealing weights or tuning changes. Small or explicitly format-scoped requests need no forced quota; record deliberate departures in the batch brief.
-* **Brief for the moment:** describe the everyday situation, reaction/action, awkward crop, source texture and abrupt timing before tools or rendering polish. For generated candidates, explicitly request the same lo-fi result; avoid default prompts for cinematic lighting, studio photography, glossy 3D, high detail, immaculate vector art or consistent branded illustration. Real or contributed meme/GIF sources still require provenance and rights checks; a found appearance is not proof of a real source.
-* **Motion must exist:** a loop idea, storyboard, single generated frame or panning/zooming still is not a completed reaction/action GIF. If the available tool cannot produce the intended motion, keep a clearly labeled concept or source candidate with that dependency recorded. Do not quietly fill a GIF-led brief with high-resolution stills or text because those are easier to generate. Text-only cards remain useful where wording carries the joke.
+* **Caught moments:** favor candid, ordinary, awkward images that feel caught or shared: imperfect framing, rough crops, visible compression, modest detail and an unexpected frozen gesture. Preserve enough clarity to recognize the situation and argue about it. Low fidelity is an aesthetic choice from the start; merely shrinking a polished illustration does not satisfy it.
+* **Usually below the ceiling:** 720 px is the still-image maximum longest side, not a target or a minimum, and not 1280×720. Start images around 360–640 px on the longest side when the premise remains readable. Preserve source aspect ratio; never upscale or enhance a candidate just to make it look premium. Review the delivered compressed image at card size.
+* **Two supported formats:** Nowns and cards use static images or plain text. Choose the format that carries the premise; no image/text quota or format-based dealing weight is introduced. Captions, planning descriptions and translations do not count as extra text cards. GIF, animated WebP and other animation are excluded, including animations relabeled as `image`.
+* **Brief for the moment:** describe the everyday situation, frozen reaction, awkward crop and source texture before tools or rendering polish. For generated candidates, explicitly request the same lo-fi result; avoid default prompts for cinematic lighting, studio photography, glossy 3D, high detail, immaculate vector art or consistent branded illustration. Real or contributed image sources still require provenance and rights checks; a found appearance is not proof of a real source.
+* **Wording can carry the joke:** text-only cards remain first-class content. Keep the line concise and open to multiple interpretations; a visual asset's alt text or production description is not itself a playable text card.
 
-The original low-quality contract is restored here with concrete authoring and
-review criteria. GIF priority and the explanation of natural abruptness reflect
-the owner's 2026-09-11 direction. [Humor development](content/humor-development.md#visual-direction-and-history)
+The owner's 2026-09-11 decision in [ADR-011](docs/design/ADR-011-static-image-and-text-content.md)
+removes GIF and animated game content while retaining the lo-fi aesthetic,
+humor context, tone matrix, cultural adaptation and relevance mesh.
+[Humor development](content/humor-development.md#visual-direction-and-history)
 records the historical source and practical examples.
 
 #### Humor development and editorial release
 
 The owner-adopted [humor development guide](content/humor-development.md) supplies the working method for this standard; the [Curator Guide](content/curator-guide.md) applies it to pack review.
 
-* **Make the table funny:** combine a recognizable human situation with an unexpected reaction, action, image or short line. A silent GIF can carry the joke without a caption; the interpretation players defend should be speakable. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
+* **Make the table funny:** combine a recognizable human situation with an unexpected reaction, action, image or short line. A still image can carry the joke without a caption; the interpretation players defend should be speakable. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
 * **Editorial dimensions:** record human situation, comic mechanism, cultural reach, shelf life and accessibility in the planning record. These supplement the existing tone bucket; they are not new pack fields, server filters or inferred demographic labels.
 * **Freshness hypothesis:** start by testing a release mix of **70% evergreen, 20% seasonal or cultural, 10% topical**. It is an experiment to revise using feedback and reuse observations, not a fixed quota, runtime tuning parameter or change to the roughly balanced tone mix.
 * **Topical records:** retain the source, observation date, intended regions/languages, one-sentence context, review date and expiry date for each topical candidate. Trends identify possible topics; verify factual premises separately against the original event/announcement or reliable reporting. An editor reviews topical material weekly and at expiry, deciding whether to retain, rewrite or retire it; retirements ship through a new pack version. Dates are editorial obligations, not an implemented automatic scheduler.
 * **Cultural fit and care:** regional contributors recreate jokes in their own voice rather than translating literally. Check rights, originality, age suitability, reference accessibility and local meaning. Satire can address institutions, powerful figures and everyday frustrations; victims of a current tragedy are not punchlines.
-* **Pilot and proof:** begin with three themes and two target cultures/languages, prioritize lo-fi GIF candidates under the media direction above, explore several comic mechanisms per theme, then have a human select, trim or rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
+* **Pilot and proof:** begin with three themes and two target cultures/languages, develop lo-fi static images and concise text candidates under the media direction above, explore several comic mechanisms per theme, then have a human select, crop or rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
 
 ### 4. Secrecy, Sync & Anti-Cheat
 
@@ -583,7 +584,7 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 ### 2. Hosting: Home Server + Cloudflare (dev/beta), VPS at Launch
 
 * Dev and beta run entirely on the owner's home machine under Docker Compose. **Cloudflare Tunnel** (`cloudflared`, free) publishes `play.<domain>` (game server — WebSockets pass through) and `cdn.<domain>` (MinIO assets) with no open ports, no exposed home IP, TLS at the edge.
-* **Edge caching does the heavy lifting:** assets are content-hashed and immutable, so `cdn.<domain>/*` gets a Cache-Everything rule with a long edge TTL; after first request Cloudflare serves the media and the home uplink sees near-zero asset traffic. Low/medium media quality (⚙️ §3) keeps objects small; a round's prefetch is a few hundred KB across a table. v1 media is images and text only (loops ship as animated WebP), comfortably inside Cloudflare's free-plan content rules.
+* **Edge caching does the heavy lifting:** assets are content-hashed and immutable, so `cdn.<domain>/*` gets a Cache-Everything rule with a long edge TTL; after first request Cloudflare serves the media and the home uplink sees near-zero asset traffic. Low/medium media quality (⚙️ §3) keeps objects small; a round's prefetch is a few hundred KB across a table. Playable media is static images and text only; small objects suit the edge-cache path. CDN policy must be checked at deployment.
 * **Public launch moves the stack to a small VPS** (~€5/mo class): an online-first product can't ride a home ISP's uptime into the stores. It's a lift-and-shift — same images, same config model; assets can offload to Cloudflare R2's free tier (10 GB, zero egress) if the home box retires completely.
 * **Volume-portable data from day one:** every stateful service pins a named Docker volume (`pg_data`, `redis_data`, `minio_data`); containers never write outside them. Cloud migration is a rehearsed runbook, not a project: stop writes, snapshot (`pg_dump`/base backup for PostgreSQL, RDB snapshot for Redis, `mc mirror` for MinIO), restore onto the target volumes, re-point the tunnel/DNS — no schema changes, no path changes.
 * Secrets that leave the machine: the tunnel token and API keys — injected via env into the config layer below, never committed.

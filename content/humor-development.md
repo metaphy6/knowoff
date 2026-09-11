@@ -13,58 +13,56 @@ Knowoff's playable media should feel **lo-fi, candid and abruptly funny**.
 The original contract in `BLUEPRINT.md` at commit
 `33380a6c8fcd493238903245b10da19b9d63cc4d` (2026-08-10, Media Pipeline §3)
 specified deliberately medium/low quality: stills ≤720 px longest side,
-compressed WebP; GIFs ≤480p / ≤2 MB, animated WebP, because lo-fi is the meme
-aesthetic. Its Visual Identity chapter also separated UI and content pipelines.
+compressed WebP, because lo-fi is the meme aesthetic. Its Visual Identity
+chapter also separated UI and content pipelines.
 The 2026-09-10 generation change (`467ab5e1e3ecab646fba120307163fb2bcf586e5`)
 retained those targets. The drift was in how briefs and reviews applied them.
 
-The owner's 2026-09-11 clarification restores that intent and adds **GIF-first
-priority** and **natural abruptness**. Those are current directions, not a
-claim that an old document specified a GIF quota. The normative
+The owner's final 2026-09-11 decision limits all Nowns and cards to **static
+images and plain text**, while retaining lo-fi texture, recognizable situations
+and natural abruptness. [ADR-011](../docs/design/ADR-011-static-image-and-text-content.md)
+records this decision and supersedes the earlier motion-led format direction.
+The normative
 [playable media direction](../BLUEPRINT.md#playable-media-direction) governs:
 
-- Start with silent reaction/action loops for the majority of a full mixed
-  Nown pool and card pool, checking each separately. Use stills next and
-  text-only media as a smaller supporting share. Follow explicit format briefs;
-  a small request needs no forced percentages. Report the actual mix and any
-  departure. This editorial priority does not change dealing probabilities,
-  tone balance or the freshness experiment below.
+- Choose a static image when a visual moment carries the joke, or plain text
+  when wording carries it. Record the completed image/text mix for Nowns and
+  cards separately; concepts, captions and planning prose are not extra assets.
+  There is no required format ratio. The choice does not change dealing
+  probabilities, tone balance or the freshness experiment below.
 - Seek ordinary settings, accidental-looking framing, awkward gestures, rough
-  crops and visible compression. A sudden action or blunt loop reset can be
-  the punchline. Motion should read without audio or an explanatory caption.
+  crops and visible compression. A frozen awkward gesture, incongruous object
+  or blunt short line can supply the abrupt punchline.
   Preserve recognizability and plausible alternative interpretations.
 - Usually work below the still-image ceiling: 360–640 px longest side is a
   useful starting range, with 720 px a maximum rather than a delivery target.
-  Keep loops within the original limits and retain their aspect ratio. Inspect
+  Deliver compressed static WebP and retain the source aspect ratio. Inspect
   the compressed result at card size; do not upscale, sharpen or beautify by
   default. A small glossy render is still the wrong style.
 - Use found or contributed moments with recorded rights/provenance, or brief
   generated candidates for that same rough feel. Do not apply UI pastels,
   doodle grammar, uniform illustration or advertising polish to pack content.
-  Do not claim generated footage is an authentic capture.
+  Do not claim a generated image is an authentic capture.
 
 ### Briefs that preserve the feel
 
 | Format | Useful candidate brief | Drift to revise |
 |---|---|---|
-| GIF, first choice | A person repeatedly checks an empty doorway, then abruptly sits down; off-center phone framing, ordinary room, compressed texture, blunt reset; action readable silently. | A cinematic camera move, perfect lighting and a smooth promotional reveal. |
-| Still, supporting | An awkwardly cropped snapshot of an overprepared desk beside one tiny task; modest detail, ordinary light, visible compression. | A pristine editorial illustration or glossy 3D desk, even if exported small. |
-| Text, occasional | A short line whose wording carries the joke, such as “This meeting has a sequel.” | Filling a mixed-media batch with captions because loop production is unavailable. |
+| Static image | An awkwardly cropped snapshot of an overprepared desk beside one tiny task; modest detail, ordinary light, visible compression. | A pristine editorial illustration or glossy 3D desk, even if exported small. |
+| Plain text | A short line whose wording carries the joke, such as “This meeting has a sequel.” | Explaining the whole joke or naming its intended Nown so there is nothing left to defend. |
 
-These are briefs, not produced or approved assets. For each loop specify the
-start, action/reaction and reset. Check that the selected tool can actually
-produce it; a concept, storyboard, single frame or panning still is not a
-finished GIF. If motion is unavailable, retain a labeled concept/source lead
-and its production dependency instead of substituting high-quality images.
-Record actual source/output dimensions, format, bytes, edits and loop review
-when an asset exists; use **not run** for unperformed checks.
+These are briefs, not produced or approved assets. Record actual source/output
+dimensions, static format, bytes, edits and card-size visual review when an
+image exists; use **not run** for unperformed checks. Validate a single frame;
+GIFs, animated WebP and video are unsupported. Keep concept descriptions
+distinct from finished images and playable text cards.
 
 ## Make the table funny
 
 Create cards that give players something to defend. A recognizable situation
 and an unexpected reaction, action, image or short line should start a
 conversation without revealing Nown by itself. The interpretation players say
-aloud matters; a GIF does not need a written punchline to be funny.
+aloud matters; a static image does not need a written punchline to be funny.
 
 For example, a theme about waiting could inspire “Your parcel is enjoying a
 gap year.” A theme about meetings could use “This meeting has a sequel.” A
@@ -121,11 +119,12 @@ into a punchline.
 
 ## A small editorial loop
 
-1. Choose three themes and two target cultures/languages for a GIF-led pilot;
+1. Choose three themes and two target cultures/languages for an image/text pilot;
    plan the media mix separately for Nowns and playable cards.
-2. Explore several mechanisms per theme, starting with reaction/action loops;
+2. Automatically read the [dealing path](curator-guide.md#read-the-dealing-path-before-authoring),
+   then explore several visual and verbal mechanisms per theme;
    a human editor selects, trims or rewrites. Review compressed media at card
-   size and watch the full loop for timing and natural abruptness.
+   size for recognizability and an abrupt visual joke.
 3. Check sources, rights, originality, age suitability and local meaning.
 4. Run automatic screening and human review; neither substitutes for the other.
 5. Playtest real 4- and 6-player hands. Record recognition, laughter, plausible
@@ -145,13 +144,13 @@ laugh but makes every card obviously correct can still weaken Knowoff.
 |---|---|
 | Research, writing variants, cultural alternatives, editing, test planning | Work with Codex here; retain source links and human decisions in the editorial record. |
 | Trend discovery | Google Trends and TikTok Creative Center as inputs; verify each factual premise separately. |
-| Accepted text and moderation history | The repository's Contributor Portal and Admin Console. They store the implemented text workflow's approval state; editorial planning fields, Nown/deck authoring and finished image/GIF packs remain outside this slice. Acceptance is for curation, not certification or deployment. |
+| Accepted text and moderation history | The repository's Contributor Portal and Admin Console. They store the implemented text workflow's approval state; editorial planning fields, Nown/deck authoring and finished image packs remain outside this slice. Acceptance is for curation, not certification or deployment. |
 | Optional shared editorial calendar | Airtable if a separate planning board becomes useful. Its [content calendar template](https://www.airtable.com/templates/content-calendar/exp3FNmOkdHZvprXB) supports that workflow; avoid duplicating approval state. |
 | Promotional artwork and collaborative review | Canva's existing integration and [content planning tools](https://www.canva.com/solutions/content-planning-scheduling/). Keep game assets in the specified media pipeline. |
 | Interface polish | Impeccable for the presentation and usability of the content tools. Humor still needs editorial judgment. |
 | Text safety checks | The implemented server moderation adapter, followed by a human reviewer. It does not judge funniness, rights or factual accuracy. |
 
-Text exercises can test wording, but do not fulfill the GIF-led media pilot.
+Image and text exercises both support the editorial pilot; neither is a release.
 No additional plugin is required to start editorial planning. External services may
 need account access or credentials when we choose to use them. No recurring
 monitor, service purchase or content publication is configured by this guidance.

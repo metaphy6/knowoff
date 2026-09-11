@@ -14,18 +14,21 @@ saves whole rewrites.
 ### Knowoff content
 
 - [`knowoff-content-create`](knowoff-content-create/SKILL.md) — draft or culturally
-  adapt lo-fi, GIF-first Nowns/cards with an editorial record and current sources.
+  adapt lo-fi image/text Nowns/cards with an editorial record and current sources.
 - [`knowoff-content-review`](knowoff-content-review/SKILL.md) — assess humor,
-  ambiguity, lo-fi style, GIF motion, culture, rights and actual review evidence.
+  ambiguity, lo-fi style, culture, rights and actual review evidence.
 - [`knowoff-content-integrate`](knowoff-content-integrate/SKILL.md) — prepare and
-  verify lo-fi pack/app integration and animated delivery, keeping certification
+  verify lo-fi image/text pack/app delivery, keeping certification
   and activation distinct.
 
 These are complementary stages, not competing rulebooks. Each reads the
 Blueprint and linked content docs; none treats agent opinion as human approval
-or a synthetic fixture as production certification. Full mixed batches prioritize
-GIF loops, then stills, then text-only assets; explicit format briefs remain in
-scope. The UI design matrix governs chrome around media, not pack imagery.
+or a synthetic fixture as production certification. All three automatically
+follow the [High/Distant/Chaos source map](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
+through current tuning, server dealing/secrecy and client consumption/rendering;
+the user need not request this context again. Game content uses static images
+and plain text only, with no compulsory format ratio. The UI design matrix
+governs chrome around media, not pack imagery.
 
 ### Coding
 

@@ -4,16 +4,16 @@ Every media asset in a Knowoff pack is tagged into one of four humor
 buckets. The buckets keep pack mixes balanced and give curators a shared
 vocabulary for why something fits.
 
-Apply these buckets across the [lo-fi, GIF-first media direction](../BLUEPRINT.md#playable-media-direction).
-They describe humor, not rendering polish or media-type shares. Prioritize
-rough reaction/action loops; a still or text example below is not a format quota.
+Apply these buckets across the [lo-fi image/text media direction](../BLUEPRINT.md#playable-media-direction).
+They describe humor, not rendering polish or media-type shares. A static image
+or text example below is not a format quota.
 
 | Bucket | Vibe | Examples |
 |---|---|---|
-| **millennial-cope** | Nostalgia, anxiety, earnest absurdity, "adulting" fatigue. | A compressed loop of someone slumping beside a cold coffee; a 90s cartoon frame about debt. |
-| **gen-z-absurdism** | Surreal, non-sequitur, irony-poisoned, TikTok logic. | An ordinary action that suddenly loops at the wrong moment; a cursed stock photo with no caption. |
-| **social-awkwardness** | Cringe, misread signals, second-hand embarrassment. | A rough loop of a wave returned too late; a text exchange that went wrong. |
-| **chaos** | No thesis, just vibes; the wild card that breaks pattern-matching. | Random shapes, explosive GIFs, nonsense text. |
+| **millennial-cope** | Nostalgia, anxiety, earnest absurdity, "adulting" fatigue. | A rough snapshot of someone slumped beside a cold coffee; a 90s cartoon frame about debt. |
+| **gen-z-absurdism** | Surreal, non-sequitur, irony-poisoned, TikTok logic. | An ordinary gesture frozen at the wrong moment; a cursed stock photo with no caption. |
+| **social-awkwardness** | Cringe, misread signals, second-hand embarrassment. | An awkwardly cropped unanswered wave; a text exchange that went wrong. |
+| **chaos** | No thesis, just vibes; the wild card that breaks pattern-matching. | Random shapes, incongruous objects, nonsense text. |
 
 ## Curator rules
 

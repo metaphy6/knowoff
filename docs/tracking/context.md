@@ -35,12 +35,15 @@ treating this context pack as a completion snapshot. For content work, read the
 [content skills](../../.agents/skills/README.md#knowoff-content). Drafting,
 human acceptance, certification and activation are separate states.
 
-Playable media follows the restored [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction):
-natural abruptness, rough everyday captures, usually below the still-image
-ceiling, GIF-led mixed batches with stills and text supporting. UI design
-polish does not govern pack imagery; format priority is editorial, not dealing
-tuning. The current text-only tools and synthetic fixture do not set the
-desired production mix.
+Playable media uses **static images and plain text only**, per
+[ADR-011](../design/ADR-011-static-image-and-text-content.md) and the
+[lo-fi media direction](../../BLUEPRINT.md#playable-media-direction). Keep rough,
+everyday framing and modest detail; GIF and animated-image formats are removed.
+Humor themes, cultural adaptation, tone buckets and relevance bands remain.
+For every content task, follow the [dealing source checklist](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
+automatically: inspect the authoritative server dealer, tuning and client
+state/rendering path before proposing High, Distant or Chaos relationships.
+Editorial band labels are hypotheses until measured and certified.
 
 ## Project-specific conventions
 

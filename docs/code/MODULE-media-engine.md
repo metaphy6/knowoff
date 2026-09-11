@@ -34,8 +34,18 @@ flowchart LR
 
 `manifest.json` identifies the pack, language, embedding model/version and
 checksums; `media.jsonl` contains Nowns; `cards.jsonl` contains playable prompts.
-Text lives in the item data; images and GIFs use asset references. The intended
-asset store is MinIO, with content-addressed objects.
+Text lives in the item data; static images use asset references. These are the
+only playable media formats under
+[ADR-011](../design/ADR-011-static-image-and-text-content.md). The intended asset
+store is MinIO, with content-addressed objects.
+
+The candidate preparation tool accepts static PNG/JPEG/WebP inputs and writes
+static WebP. Pack validation accepts only image/text item types and fully
+decoded static WebP assets within the 720 px longest-side limit; a GIF, an
+animated WebP/APNG or another format renamed as an image is not a valid pack
+asset. `ValidatePackContent` runs during loading, certification and bundle
+writing. This format validation does not complete the moderation, embedding
+or production activation pipeline below.
 
 Startup loads `media.local_bundle_path` synchronously and refuses to start
 without a usable pack. `LoadPack` validates the bundle and computes band lists
@@ -55,6 +65,12 @@ they do not establish semantic relevance or comic quality for real text.
 development pack exists.
 
 ### Relationships and chances
+
+For content tasks, automatically follow the
+[server and client source map](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
+before proposing High/Distant/Chaos relationships. It identifies the dealer,
+match actions, payload privacy, client state and rendering paths; the client
+displays server-owned outcomes rather than calculating relevance bands.
 
 The [mesh](../../server/pkg/media/dealing.go) compares each Nown vector with
 every card vector using cosine similarity. Current defaults in
@@ -134,7 +150,7 @@ pilot. See the [content readiness audit](../planning/ROADMAP.md#content-readines
 
 Initial hands/reserves are private. During a round, active Nowers receive Nown
 and Donowers/eliminated players receive `{decoy: true}`; text is inline and
-image/GIF media uses signed URLs. The final verdict reveals Nowns from rounds
+static-image media uses signed URLs. The final verdict reveals Nowns from rounds
 actually begun.
 
 The following target guarantees are **not yet fully implemented**:

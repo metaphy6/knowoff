@@ -95,13 +95,12 @@ type MediaType string
 const (
 	MediaText  MediaType = "text"
 	MediaImage MediaType = "image"
-	MediaGIF   MediaType = "gif"
 )
 
 // ValidMediaType reports whether t is a known media type.
 func ValidMediaType(t string) bool {
 	switch MediaType(t) {
-	case MediaText, MediaImage, MediaGIF:
+	case MediaText, MediaImage:
 		return true
 	}
 	return false

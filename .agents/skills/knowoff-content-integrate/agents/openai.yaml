@@ -1,4 +1,4 @@
 interface:
   display_name: "Integrate Knowoff content"
-  short_description: "Prepare lo-fi packs and verify animated delivery"
-  default_prompt: "Use $knowoff-content-integrate to prepare reviewed GIF-first content, preserving lo-fi texture and verifying compressed assets and animated app delivery."
+  short_description: "Prepare lo-fi image/text packs and verify delivery"
+  default_prompt: "Use $knowoff-content-integrate to prepare reviewed static image and text content. Automatically check current High/Distant/Chaos server/client logic, preserve lo-fi texture, and verify static assets, certification and role-scoped app delivery."

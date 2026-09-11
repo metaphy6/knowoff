@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-review
-description: Evaluate or rework Knowoff Nowns, cards and localizations for lo-fi GIF-first style, humor, ambiguity and content evidence. Use for editorial quality review and playtest-evidence assessment; recommendations do not approve submissions or release packs.
+description: Evaluate or rework Knowoff image/text Nowns, cards and localizations for lo-fi style, humor, ambiguity and content evidence, automatically checking High/Distant/Chaos server/client logic. Recommendations do not approve submissions or release packs.
 ---
 
 # Knowoff content review
@@ -26,6 +26,11 @@ before judging it; an earlier conversation summary is not the contract:
 - [Server content and dealing](../../../docs/code/MODULE-media-engine.md)
   and [Community operations](../../../docs/guides/COMMUNITY_OPERATIONS.md):
   what the current dealer, simulator, and submission workflow actually support.
+- [Read the dealing path before authoring](../../../content/curator-guide.md#read-the-dealing-path-before-authoring):
+  automatically follow its source map through tuning, server band construction,
+  final retained hands, role-scoped delivery and client consumers on every
+  content task. The user need not request an algorithm check. Verify source
+  before judging High/Distant/Chaos claims or reporting a former gap as closed.
 - [Roadmap content readiness audit](../../../docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11):
   open proof gaps and sequencing; inspect newer updates if they supersede it.
 
@@ -78,27 +83,26 @@ when checking technical results; do not copy tunable values into this skill.
    Read measured similarity as technical evidence, never a correct-answer or
    funniness score; the chaos relevance band is separate from the chaos tone.
 
-## Review the delivered look and motion
+## Review the delivered image and text
 
-Inspect the actual compressed asset at card size and watch each complete loop,
-including its reset. Look for a readable everyday action, candid awkwardness,
-rough crop, modest detail and natural abruptness. Flag glossy lighting, pristine
-3D or illustration and polished brand scenes even if downsized under the limit.
+Inspect the actual compressed static image at card size. Look for a readable
+everyday situation, candid awkwardness, rough crop, modest detail and an abrupt
+visual joke. Review plain-text cards for legibility and wording. Flag glossy
+lighting, pristine 3D or illustration and polished brand scenes even if downsized
+under the limit.
 UI palette, doodle and zero-blur rules do not govern imagery inside media packs.
 
-Check actual dimensions, bytes and encoding against the Blueprint: stills are
-usually below 720 px longest side (720 is the maximum); GIF loops are ≤480p,
-≤2 MB and delivered as animated WebP. A static frame, storyboard or pan/zoom over
-a still is not a completed reaction/action GIF. If the asset or playback cannot
-be inspected, mark that visual/motion check **not run**, rather than treating a
-prompt, filename or technical metadata as proof of style or action.
+Check actual dimensions, bytes and encoding against the Blueprint: images use
+compressed static WebP, usually below the 720 px longest-side maximum. Verify
+that image files contain one frame; GIFs, animated WebP and video are unsupported
+game formats. If an asset cannot be inspected, mark that visual check **not run**;
+a prompt, filename or metadata alone does not prove visual fit.
 
-For full mixed batches/releases, check Nown and playable-card pools separately:
-GIF loops form the majority, stills follow and text-only assets have a smaller
-share. Count actual assets separately from concepts; captions, translations and
-planning descriptions are not extra text cards. Respect small or explicitly
-format-scoped briefs and record deliberate departures. Keep media priority
-separate from tone/freshness mixes and runtime weights or hand quotas.
+Count completed image/text assets separately from concepts in the Nown and
+playable-card pools. Captions, translations and planning descriptions are not
+extra text cards. Choose format for the joke; there is no required image/text
+ratio, runtime format weight or hand quota. Keep format counts separate from
+tone and freshness mixes.
 
 ## Keep evidence honest
 

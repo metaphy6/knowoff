@@ -104,7 +104,7 @@ func (r *PayloadRenderer) mediaItemPayload(roundID, id string, typ media.MediaTy
 	case media.MediaTypeText:
 		// Text items carry their literal content; there is no asset to sign.
 		payload["content"] = content
-	case media.MediaTypeImage, media.MediaTypeGIF:
+	case media.MediaTypeImage:
 		if assetRef == "" {
 			return nil, fmt.Errorf("item %q has empty asset_ref", id)
 		}
