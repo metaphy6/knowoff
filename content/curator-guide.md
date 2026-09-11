@@ -12,7 +12,8 @@ available operations.
 ## What a Curator does
 
 - Create media submissions that become **Nowns** (the round's secret item).
-- Author **cards** — text, image, or GIF prompts — against each Nown.
+- Author **cards** — prioritize GIF loops, then still images and supporting
+  text — against candidate Nowns in the shared pool.
 - Use the **deal simulator** to verify that every Nown has full band coverage at both 4- and 6-player table sizes.
 - Screen Weekly Nown Challenge entries before they become publicly visible and votable.
 
@@ -59,11 +60,33 @@ every scheduled Nown. Treat a successful current simulation as a partial
 technical check, not proof of that guarantee; the remaining work is tracked in
 the [roadmap](../docs/planning/ROADMAP.md).
 
+## Visual review and media mix
+
+Apply the Blueprint's [playable media direction](../BLUEPRINT.md#playable-media-direction)
+and the [historical context and briefs](humor-development.md#visual-direction-and-history).
+For a full mixed release, aim for a GIF majority in both the Nown pool and
+playable-card pool, with stills next and text a smaller supporting share.
+Record counts and deliberate format-scoped exceptions; this is editorial
+planning, not a draw weight or hand quota.
+
+Review the **actual compressed asset at card size**, and watch each full loop:
+does the everyday situation read, does the awkward action/crop/reset supply
+natural abruptness, and does it leave room to argue? Preserve rough framing,
+modest detail and compression while keeping the premise recognizable. Rework
+polished studio/cinematic/illustrated output even when it fits the pixel cap;
+do not prescribe upscaling, smoothing or beautification as the default fix.
+The UI palette, doodles and chrome effects are not a pack-media template.
+
+Record source/output dimensions, encoding, bytes and motion review against
+the Blueprint limits. A concept, single frame or panning still does not count
+as a finished reaction/action GIF. Missing media or an unviewed loop remains
+an unresolved check; metadata and an AI description do not prove visual fit.
+
 ## Editorial planning and freshness
 
 Use [Humor development](humor-development.md) for the writing loop. Begin the
-pilot with three themes and two target cultures/languages, then draft several
-comic mechanisms per theme for a human editor to select and rewrite. The pilot
+pilot with three themes and two target cultures/languages, then draft GIF-led
+mechanisms per theme for a human editor to select, trim or rewrite. The pilot
 is planned; the guide's example lines are not created or published assets.
 
 Record human situation, comic mechanism, cultural reach, shelf life and

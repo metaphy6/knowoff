@@ -5,6 +5,18 @@ description: "Neo-brutalism UI design. The Knowoff client UI (or any new screen/
 
 # Neo-brutalism UI design (Knowoff)
 
+## Scope: interface around playable media
+
+This skill styles UI chrome, controls and decorative interface art. Playable
+Nowns/cards follow the Blueprint's [lo-fi, GIF-first media direction](../../../BLUEPRINT.md#playable-media-direction):
+candid rough captures, modest detail and abrupt reaction/action loops. Its
+anti-rawness, zero-blur, sparse-doodle and UI motion restrictions apply to the
+interface, not the imagery or action inside media packs. Preserve media
+readability and playback performance without polishing it into matching pastel
+illustrations or static brand scenes. Use the [content creation](../knowoff-content-create/SKILL.md),
+[review](../knowoff-content-review/SKILL.md) and
+[integration](../knowoff-content-integrate/SKILL.md) skills for that pipeline.
+
 ## When to use
 
 - The user says the UI looks "mundane", "generic", "too Material", "boring", or asks

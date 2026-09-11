@@ -57,9 +57,11 @@ is the development fixture described by ADR-005; its synthetic embedding
 geometry must not be reused as semantic proof for rewritten jokes.
 
 **Next content sequence.** Select three themes and two target cultures/languages;
-record the editorial dimensions and experimental 70/20/10 freshness mix;
-draft and human-edit candidates; check sources, rights, originality, local
-meaning and age suitability; apply automated screening and human review;
+apply the restored [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction),
+record the media mix separately for Nowns and cards, the editorial dimensions
+and experimental 70/20/10 freshness mix; draft and human-edit GIF-led candidates,
+watch actual loops and inspect compressed assets at card size; check sources,
+rights, originality, local meaning and age suitability; apply automated screening and human review;
 playtest actual 4- and 6-player schedules; certify and activate a small pack
 per language after the engineering gaps above are closed. Record recognition,
 laughter, alternative explanations and references needing explanation. Review
@@ -616,13 +618,18 @@ laughter and plausible alternatives. A technical pass or AI score alone
 cannot complete the production-content deliverable. For topical material,
 retain source/observation/context/region/language/review/expiry records and
 the human weekly review decision; the freshness mix is an experiment.
+Review actual compressed media for the lo-fi direction and loop timing, with
+GIFs leading each full Nown/card pool per ⚙️ §3. Record dimensions, encoding,
+bytes, actual motion and editorial mix; a downsized polished image or a static
+frame labeled as a GIF does not meet that proof. Format priority does not
+alter runtime dealing weights or certify the existing synthetic text fixture.
 
 - [x] Pack bundle format (⚙️ §1): `manifest.json` (pack tag, **format version**, checksums, license + attribution per asset, age rating, **BCP 47 language tag**, **pinned embedding model + version**), `media.jsonl`, `cards.jsonl`, content-hash-addressed assets in object storage — packs are language-scoped, so new languages ship as new packs, never format changes.
 - [ ] `tools/mediapack` stages: `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (provider-swappable automated moderation) → `tag` + `embed` → `certify` → `bundle` → `publish` → `simulate` (deal feasibility **and** offline balance questions: band-threshold sweeps, Donower-survival proxies, Shuffle/Revote impact, expected per-match Noin); every stage seeded and deterministic — same inputs + seed reproduce byte-identical bundles — with meaningful non-zero exits for CI use.
 - [ ] `server/pkg/media`: in-memory pack loader with checksum verification (a tampered bundle is refused and the current pack keeps serving), between-matches hot-swap that never blocks a live room, precomputed per-media band candidate lists (zero embedding math in the hot path), and the signed-URL issuer — short-lived, single-round, expiry enforced server-side.
 - [ ] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
 - [x] Versioned fixture packs committed for CI (a tiny golden pack + the band-starved pack): the test fuel every later phase reuses — gamebot matches, load tests, client cache tests, compose dev seeding.
-- [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra** for images, GIF loops, and text cards, bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
+- [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra**, prioritizing lo-fi GIF loops, then still images and supporting text per ⚙️ §3; actual motion capability and delivered media must be verified. Bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
 - [ ] Seed pack generated via **GPT-6 Astra**: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded per asset; tone rubric landed in `content/tone-matrix.md`; adopt the humor-development editorial record, experimental freshness mix and actual 4/6-player pilot evidence from ⚙️ §3 before release.
 - [x] `client/lib/media`: pack metadata OTA sync (app start + unrecognized tag), signed-URL prefetch with retry/backoff on flaky networks (URLs short-lived, single-round), hash-verified LRU asset cache under an explicit size budget (corrupt entries evicted, never rendered), Donower placeholder renderer — also shown while a Nower's asset is still loading, so loading state leaks nothing (⚙️ §4).
 - [ ] Gate: Phase 2 proof tests pass on a clean tree.

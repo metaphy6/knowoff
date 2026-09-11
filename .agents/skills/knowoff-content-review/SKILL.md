@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-review
-description: Evaluate or rework Knowoff candidate Nowns, cards, and localization batches against the current humor, ambiguity, tone, cultural, and content standards. Use for editorial quality review and playtest-evidence assessment; recommendations do not approve submissions or release packs.
+description: Evaluate or rework Knowoff Nowns, cards and localizations for lo-fi GIF-first style, humor, ambiguity and content evidence. Use for editorial quality review and playtest-evidence assessment; recommendations do not approve submissions or release packs.
 ---
 
 # Knowoff content review
@@ -16,7 +16,8 @@ before judging it; an earlier conversation summary is not the contract:
 
 - [Blueprint](../../../BLUEPRINT.md): terminology, Game Rules §§2–3,
   Contributor Portal §§1–3, Media Engine §§1–4 (including Humor development
-  and editorial release), and Product Baseline content/localization rules.
+  and editorial release), [playable media direction](../../../BLUEPRINT.md#playable-media-direction),
+  and Product Baseline content/localization rules.
   This is the normative product and content specification.
 - [Humor development](../../../content/humor-development.md),
   [Curator guide](../../../content/curator-guide.md), and
@@ -76,6 +77,28 @@ when checking technical results; do not copy tunable values into this skill.
    prove a band nor create exclusive decks or card-to-card dependencies.
    Read measured similarity as technical evidence, never a correct-answer or
    funniness score; the chaos relevance band is separate from the chaos tone.
+
+## Review the delivered look and motion
+
+Inspect the actual compressed asset at card size and watch each complete loop,
+including its reset. Look for a readable everyday action, candid awkwardness,
+rough crop, modest detail and natural abruptness. Flag glossy lighting, pristine
+3D or illustration and polished brand scenes even if downsized under the limit.
+UI palette, doodle and zero-blur rules do not govern imagery inside media packs.
+
+Check actual dimensions, bytes and encoding against the Blueprint: stills are
+usually below 720 px longest side (720 is the maximum); GIF loops are ≤480p,
+≤2 MB and delivered as animated WebP. A static frame, storyboard or pan/zoom over
+a still is not a completed reaction/action GIF. If the asset or playback cannot
+be inspected, mark that visual/motion check **not run**, rather than treating a
+prompt, filename or technical metadata as proof of style or action.
+
+For full mixed batches/releases, check Nown and playable-card pools separately:
+GIF loops form the majority, stills follow and text-only assets have a smaller
+share. Count actual assets separately from concepts; captions, translations and
+planning descriptions are not extra text cards. Respect small or explicitly
+format-scoped briefs and record deliberate departures. Keep media priority
+separate from tone/freshness mixes and runtime weights or hand quotas.
 
 ## Keep evidence honest
 

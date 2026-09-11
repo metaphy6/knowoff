@@ -14,15 +14,18 @@ saves whole rewrites.
 ### Knowoff content
 
 - [`knowoff-content-create`](knowoff-content-create/SKILL.md) — draft or culturally
-  adapt Nowns/cards with an editorial record and current source requirements.
+  adapt lo-fi, GIF-first Nowns/cards with an editorial record and current sources.
 - [`knowoff-content-review`](knowoff-content-review/SKILL.md) — assess humor,
-  ambiguity, culture, rights and actual review/playtest evidence.
+  ambiguity, lo-fi style, GIF motion, culture, rights and actual review evidence.
 - [`knowoff-content-integrate`](knowoff-content-integrate/SKILL.md) — prepare and
-  verify real pack/app integration, keeping certification and activation distinct.
+  verify lo-fi pack/app integration and animated delivery, keeping certification
+  and activation distinct.
 
 These are complementary stages, not competing rulebooks. Each reads the
 Blueprint and linked content docs; none treats agent opinion as human approval
-or a synthetic fixture as production certification.
+or a synthetic fixture as production certification. Full mixed batches prioritize
+GIF loops, then stills, then text-only assets; explicit format briefs remain in
+scope. The UI design matrix governs chrome around media, not pack imagery.
 
 ### Coding
 
@@ -56,7 +59,7 @@ or a synthetic fixture as production certification.
 
 ### Design
 
-- [`/neo-brutalism-ui-design`](neo-brutalism-ui-design/SKILL.md) — Redesign/beautify the Knowoff client against the 🎨 Soft Neo-Brutalism Design Matrix.
+- [`/neo-brutalism-ui-design`](neo-brutalism-ui-design/SKILL.md) — Redesign the Knowoff interface around media against the 🎨 Soft Neo-Brutalism Design Matrix; playable imagery uses the content skills above.
 
 ### Collaboration
 

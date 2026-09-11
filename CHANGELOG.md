@@ -56,6 +56,12 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- Restored the original deliberately low-quality meme aesthetic in content
+  briefs and review: rough everyday framing, compression and abrupt action,
+  usually below the 720 px still-image ceiling. Mixed Nown/card batches now
+  prioritize GIF loops over stills and text. Creation, review and integration
+  skills distinguish this from UI styling and verify actual loop output;
+  this changes editorial guidance, not runtime dealing or existing packs.
 - Made the content skills' tracking handoff explicit: completed repository
   changes require a pending commit row, staging and a verified `make git.dry`
   preview. Corrected the Codex tracking-agent enum in the setup guide.

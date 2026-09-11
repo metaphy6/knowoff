@@ -12,8 +12,12 @@ in [Humor development](../../../../content/humor-development.md) and the
   languages, intended rating and media types; label provisional choices.
 - Source documents/sections consulted and date or repository revision, noting
   relevant working-tree changes. Reference the documents instead of copying rules.
-- Experimental release mix and tone mix observations when the sample warrants
-  them; do not force percentages into a tiny batch or encode dealing weights.
+- Planned and completed GIF/still/text counts for Nown and playable-card pools
+  separately; note concepts and explicit format departures. Captions, translations
+  and planning prose are not extra text cards. Check GIF-majority direction for
+  full mixed batches; no forced quota for small or format-scoped work.
+- Freshness and tone mix observations stay separate from media priority; these
+  planning records do not encode dealing weights or change pack schema.
 - Actual generation provenance, output locations and human edits. A seed is
   recorded only when the tool supports and reports one.
 
@@ -23,6 +27,8 @@ in [Humor development](../../../../content/humor-development.md) and the
 |---|---|
 | Candidate ID and revision | Stable editorial ID; link to the prior revision when rewritten. This is not yet an assigned runtime ID. |
 | Role and content | Nown or playable card, language, text or actual local asset reference, theme and intended rating. |
+| Media and delivery | Intended type versus actual concept/source/completed asset; measured dimensions, bytes and format, output reference, actual loop/action and reset evidence or **not run**. |
+| Visual direction | Candid situation, rough crop/texture, abrupt timing and readable action; card-size compressed inspection result or **not run**. A downsized polished render is not lo-fi evidence. |
 | Tone | Exactly one bucket from the current tone matrix. |
 | Editorial dimensions | Human situation, comic mechanism, cultural reach, shelf life and accessibility/reference difficulty. |
 | Relationship hypotheses | Related Nown candidate IDs, plausible interpretation, alternative explanation and risk of giving Nown away; measured bands recorded separately. |

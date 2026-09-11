@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-integrate
-description: Prepare, certify and integrate reviewed Knowoff Nowns/cards into media packs and the app, or audit pack release readiness. Use when adding, publishing, activating, replacing or retiring game content; ordinary drafting belongs to the creation skill.
+description: Prepare, certify and integrate reviewed lo-fi, GIF-first Knowoff content into media packs and the app, or audit pack release readiness. Use when adding, publishing, activating, replacing or retiring game content; ordinary drafting belongs to the creation skill.
 ---
 
 # Integrate Knowoff content
@@ -12,7 +12,8 @@ authorized scope, the app. Report the last evidenced state accurately.
 
 - [AGENTS.md](../../../AGENTS.md) for repository operations and authority.
 - [Blueprint](../../../BLUEPRINT.md): Media Engine §1–4, Game Rules §2–5,
-  Contributor Portal, Product Baseline and relevant configuration requirements.
+  Contributor Portal, Product Baseline, [playable media direction](../../../BLUEPRINT.md#playable-media-direction)
+  and relevant configuration requirements.
   It defines intended behavior; runtime bugs do not amend it.
 - [Curator Guide](../../../content/curator-guide.md),
   [Humor development](../../../content/humor-development.md) and
@@ -73,6 +74,20 @@ change game rules to accommodate a pack.
    those checks. Keep missing checks visible; do not label a pack certified
    or ready for release on partial evidence.
 
+Preserve the reviewed lo-fi texture, crop and abrupt action through transcoding;
+do not upscale, denoise or sharpen into a premium finish. Verify actual compressed
+outputs: stills usually below the 720 px longest-side maximum, loops ≤480p and
+≤2 MB as animated WebP. Inspect card-size readability and complete loop playback
+after conversion; a first-frame preview, filename or successful transcode does
+not prove delivered action. Record output dimensions, bytes, checksums and motion
+evidence; a concept, static frame or pan/zoom still cannot become GIF proof.
+
+Check the full release's Nown and playable-card media mixes separately against
+the GIF-majority direction, followed by stills and a smaller text-only share.
+Honor explicit format scope and document departures. Keep concepts distinct from
+completed assets and exclude captions/planning prose from asset counts. This is
+an editorial check, not a new pack field, dealer weight or per-hand quota.
+
 ## Activate and verify when authorized
 
 Complete reversible preparation before any final approval that is actually
@@ -82,7 +97,9 @@ Do not install services, buy tools, schedule monitors or message contributors
 as a side effect of preparing content.
 
 Use the supported activation path and verify the active tag/checksums, new-match
-rendering and role-scoped delivery in the target app. Prove in-flight matches
+rendering, actual animated playback and role-scoped delivery in the target app.
+If the renderer shows only a still or cannot be exercised, record that gap;
+do not claim GIF delivery from a valid animated file alone. Prove in-flight matches
 retain their original media and record the previous working version for rollback.
 For retirement, verify the new version excludes the retired items; editing an
 editorial date does not change the deployed pack.

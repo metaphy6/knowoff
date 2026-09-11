@@ -1,4 +1,4 @@
 interface:
   display_name: "Create Knowoff content"
-  short_description: "Draft original Nowns and cards from current guides"
-  default_prompt: "Use $knowoff-content-create to draft a Knowoff content batch using the current Blueprint and editorial guides."
+  short_description: "Draft lo-fi, GIF-first Knowoff Nowns and cards"
+  default_prompt: "Use $knowoff-content-create to draft candid, rough Knowoff content with GIF loops leading the mix, following the current Blueprint and my format brief."

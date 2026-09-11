@@ -1,4 +1,4 @@
 interface:
   display_name: "Review Knowoff content"
-  short_description: "Assess humor, ambiguity and content evidence"
-  default_prompt: "Use $knowoff-content-review to evaluate these candidates against current editorial and gameplay requirements."
+  short_description: "Review lo-fi style, GIF motion and humor evidence"
+  default_prompt: "Use $knowoff-content-review to assess these candidates for natural abruptness, GIF priority, actual compressed playback and current editorial/gameplay requirements."

@@ -54,3 +54,5 @@ nginx/certs/active/
 nginx/certs/external/*
 !nginx/certs/external/.gitkeep
 
+# Local candidate imagery and generation receipts (owner-requested initial batch)
+content/batches/*/generated/

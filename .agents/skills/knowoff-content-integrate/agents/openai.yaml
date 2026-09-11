@@ -1,4 +1,4 @@
 interface:
   display_name: "Integrate Knowoff content"
-  short_description: "Prepare and verify content packs for the app"
-  default_prompt: "Use $knowoff-content-integrate to prepare reviewed content for a verified pack and app integration."
+  short_description: "Prepare lo-fi packs and verify animated delivery"
+  default_prompt: "Use $knowoff-content-integrate to prepare reviewed GIF-first content, preserving lo-fi texture and verifying compressed assets and animated app delivery."

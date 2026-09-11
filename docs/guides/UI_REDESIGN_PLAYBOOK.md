@@ -19,6 +19,13 @@ in this repo.
 
 This file is the third leg: the **method and the scar tissue**.
 
+Its rules apply to interface chrome. For the Nown/card media inside those
+surfaces, use the Blueprint's [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction)
+and [content creation skill](../../.agents/skills/knowoff-content-create/SKILL.md).
+Keep rough crops, compression and abrupt reaction loops; do not render pack
+content as polished illustrations matching the UI palette. Calm Nown-stage
+layout means a stable frame, not freezing the GIF it contains.
+
 ---
 
 ## 0. What the job actually was

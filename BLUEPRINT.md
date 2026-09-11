@@ -300,6 +300,11 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 
 Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
 
+This matrix styles the **interface around media**. Playable Nowns and cards follow
+the [lo-fi, GIF-first media direction](#playable-media-direction) in ⚙️ §3:
+rough everyday captures, compressed memes and abrupt loops. Do not turn them
+into matching pastel illustrations, brand doodles or polished scene art.
+
 > **Implementing or redesigning any client UI against this chapter?** Load
 > [`.agents/skills/neo-brutalism-ui-design/SKILL.md`](.agents/skills/neo-brutalism-ui-design/SKILL.md)
 > first — it's the execution playbook for this matrix: neo-brutalism
@@ -405,16 +410,29 @@ These are the target dealing guarantees. The [current server mechanics](docs/cod
 * Production stack: **GPT-6 Astra** is the planned AI generation lane for image, GIF-loop and text candidates; human-authored contributions and human rewrites enter the same curation process. Images/loops use (animated) WebP per the quality targets above; text remains plain text. Local on-device generation (diffusion models, local LLMs) is out of scope for v1. Generation produces candidates, not approved material; human judgment is the binding constraint. The synthetic development builder is not evidence that this production lane is implemented.
 * Tone rubric: the [four-bucket humor matrix](content/tone-matrix.md) retains exactly one bucket per asset: `millennial-cope`, `gen-z-absurdism`, `social-awkwardness`, or `chaos`. Aim for a roughly even release mix, keeping chaos under roughly 30%. These editorial targets are separate from similarity bands and runtime draw probabilities.
 
+#### Playable media direction
+
+* **Natural abruptness:** favor candid, ordinary, awkward moments that feel caught or shared: imperfect framing, rough crops, visible compression, modest detail, an unexpected gesture, a sudden cut or a blunt loop reset. Preserve enough clarity to recognize the action and argue about it. Low fidelity is an aesthetic choice from the start; merely shrinking a polished illustration does not satisfy it.
+* **Usually below the ceiling:** 720 px is the still-image maximum longest side, not a target or a minimum, and not 1280×720. Start stills around 360–640 px on the longest side when the premise remains readable. Keep GIFs within the existing ≤480p / ≤2 MB targets; preserve the source aspect ratio and never upscale or enhance a candidate just to make it look premium. Review the delivered compressed asset at card size and watch the actual loop.
+* **GIFs lead:** unless the owner requests a particular format, make silent reaction/action GIF loops the majority of a full mixed batch and release, with still images next and text-only media a smaller supporting share. Check the Nown pool and playable-card pool separately; text captions, planning descriptions and translations are not extra text cards. This is an editorial sourcing/production priority, independent of freshness and tone mixes. It introduces no per-hand quotas, type-based dealing weights or tuning changes. Small or explicitly format-scoped requests need no forced quota; record deliberate departures in the batch brief.
+* **Brief for the moment:** describe the everyday situation, reaction/action, awkward crop, source texture and abrupt timing before tools or rendering polish. For generated candidates, explicitly request the same lo-fi result; avoid default prompts for cinematic lighting, studio photography, glossy 3D, high detail, immaculate vector art or consistent branded illustration. Real or contributed meme/GIF sources still require provenance and rights checks; a found appearance is not proof of a real source.
+* **Motion must exist:** a loop idea, storyboard, single generated frame or panning/zooming still is not a completed reaction/action GIF. If the available tool cannot produce the intended motion, keep a clearly labeled concept or source candidate with that dependency recorded. Do not quietly fill a GIF-led brief with high-resolution stills or text because those are easier to generate. Text-only cards remain useful where wording carries the joke.
+
+The original low-quality contract is restored here with concrete authoring and
+review criteria. GIF priority and the explanation of natural abruptness reflect
+the owner's 2026-09-11 direction. [Humor development](content/humor-development.md#visual-direction-and-history)
+records the historical source and practical examples.
+
 #### Humor development and editorial release
 
 The owner-adopted [humor development guide](content/humor-development.md) supplies the working method for this standard; the [Curator Guide](content/curator-guide.md) applies it to pack review.
 
-* **Make the table funny:** combine a recognizable human situation, an unexpected interpretation and a short, speakable line. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
+* **Make the table funny:** combine a recognizable human situation with an unexpected reaction, action, image or short line. A silent GIF can carry the joke without a caption; the interpretation players defend should be speakable. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
 * **Editorial dimensions:** record human situation, comic mechanism, cultural reach, shelf life and accessibility in the planning record. These supplement the existing tone bucket; they are not new pack fields, server filters or inferred demographic labels.
 * **Freshness hypothesis:** start by testing a release mix of **70% evergreen, 20% seasonal or cultural, 10% topical**. It is an experiment to revise using feedback and reuse observations, not a fixed quota, runtime tuning parameter or change to the roughly balanced tone mix.
 * **Topical records:** retain the source, observation date, intended regions/languages, one-sentence context, review date and expiry date for each topical candidate. Trends identify possible topics; verify factual premises separately against the original event/announcement or reliable reporting. An editor reviews topical material weekly and at expiry, deciding whether to retain, rewrite or retire it; retirements ship through a new pack version. Dates are editorial obligations, not an implemented automatic scheduler.
 * **Cultural fit and care:** regional contributors recreate jokes in their own voice rather than translating literally. Check rights, originality, age suitability, reference accessibility and local meaning. Satire can address institutions, powerful figures and everyday frustrations; victims of a current tragedy are not punchlines.
-* **Pilot and proof:** begin with three themes and two target cultures/languages, generate several comic mechanisms per theme, then have a human select and rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
+* **Pilot and proof:** begin with three themes and two target cultures/languages, prioritize lo-fi GIF candidates under the media direction above, explore several comic mechanisms per theme, then have a human select, trim or rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
 
 ### 4. Secrecy, Sync & Anti-Cheat
 

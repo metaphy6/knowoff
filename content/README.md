@@ -8,11 +8,14 @@ how to write, review and test content against it.
   editorial dimensions and relevance bands.
 - [Curator guide](curator-guide.md) — contribution, human review, humor playtests
   and deal-certification rules.
-- [Humor development](humor-development.md) — adopted editorial guidance for
-  themes, freshness, cultural rewriting and the first text pilot.
+- [Humor development](humor-development.md) — restored lo-fi visual direction,
+  GIF-led pilots, themes, freshness and cultural adaptation, with historical evidence.
 
-Start by planning three themes for two target cultures/languages, then write and
-review candidates before pack certification. Planning records hold editorial
+Start by planning three themes for two target cultures/languages, prioritizing
+rough, low-resolution reaction/action GIFs, followed by stills and supporting
+text. Follow the [playable media direction](../BLUEPRINT.md#playable-media-direction);
+the UI design matrix does not style game media. Draft and review candidates
+before pack certification. Planning records hold editorial
 dimensions and topical review dates; the current Contributor Studio does not
 provide these fields or author/deploy Nown decks. Accepted text submissions are
 curation inputs, not automatically playable content. See

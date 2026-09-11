@@ -35,6 +35,13 @@ treating this context pack as a completion snapshot. For content work, read the
 [content skills](../../.agents/skills/README.md#knowoff-content). Drafting,
 human acceptance, certification and activation are separate states.
 
+Playable media follows the restored [lo-fi, GIF-first direction](../../BLUEPRINT.md#playable-media-direction):
+natural abruptness, rough everyday captures, usually below the still-image
+ceiling, GIF-led mixed batches with stills and text supporting. UI design
+polish does not govern pack imagery; format priority is editorial, not dealing
+tuning. The current text-only tools and synthetic fixture do not set the
+desired production mix.
+
 ## Project-specific conventions
 
 - **Terminology is normative** (see `docs/project/GLOSSARY.md`): Nower,

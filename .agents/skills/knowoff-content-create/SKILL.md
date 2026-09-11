@@ -1,12 +1,13 @@
 ---
 name: knowoff-content-create
-description: Draft, rewrite or culturally adapt Knowoff Nowns and playable text, image or GIF card candidates. Use for humor pilots and content batches; use the separate review or integration skill for evaluation or adding approved content to the app.
+description: Draft, rewrite or culturally adapt Knowoff Nowns and cards with lo-fi, GIF-first media direction. Use for humor pilots and content batches; use the separate review or integration skill for evaluation or adding approved content to the app.
 ---
 
 # Create Knowoff content
 
-Produce original, speakable candidates that give players something plausible
-to defend. Keep drafts useful even while production tooling is incomplete.
+Produce original candidates that give players something plausible to defend.
+Favor lo-fi reaction/action GIFs; the interpretation should be speakable even
+when the asset is silent. Keep drafts useful while production tooling is incomplete.
 
 ## Read the current contract
 
@@ -16,7 +17,8 @@ current scope and choices, then the repository's source-of-truth order:
 
 - [AGENTS.md](../../../AGENTS.md) governs repository operations and handoffs.
 - [Blueprint](../../../BLUEPRINT.md): Game Rules §2–5, Media Engine §1–4,
-  Contributor Portal, Product Baseline, and Visual Identity's voice rule.
+  Contributor Portal, Product Baseline, [playable media direction](../../../BLUEPRINT.md#playable-media-direction),
+  and Visual Identity's voice rule. The UI matrix styles chrome, not pack media.
   This is the normative product contract; this skill is an execution guide.
 - [Humor development](../../../content/humor-development.md),
   [tone matrix](../../../content/tone-matrix.md) and
@@ -66,6 +68,35 @@ questions to any delegated writer; a paraphrased brief alone is insufficient.
    and available tools within the existing authorization; record actual model,
    prompt, parameters and any supported seed. Do not invent reproducibility
    guarantees, silently substitute a model, or create extra paid/service work.
+
+## Make the media feel caught, not polished
+
+Follow the [playable media direction](../../../BLUEPRINT.md#playable-media-direction):
+for a full mixed batch, make GIF loops the majority in the Nown and playable-card
+pools separately, stills next and text-only assets a smaller share. Respect an
+explicit format brief or small request; record departures without inventing
+per-hand quotas, runtime weights or new schema fields. Captions, translations
+and planning descriptions do not count as extra text cards.
+
+Brief the ordinary situation, recognizable gesture, awkward framing, source
+texture and abrupt timing. For example: “compressed phone clip; someone starts
+a confident nod, hesitates and looks away; rough crop, flat room light, blunt
+loop reset.” Preserve candid roughness and readable action. Avoid cinematic
+lighting, studio photography, glossy 3D, immaculate illustration and high-detail
+defaults; downsizing a polished render alone does not create this atmosphere.
+
+Start stills around 360–640 px on the longest side where readable, never above
+the Blueprint's 720 px maximum. Keep loops ≤480p and ≤2 MB, delivered as animated
+WebP. Preserve aspect ratio; do not upscale or enhance for a premium finish.
+Inspect the compressed result at card size and watch the actual loop. Record
+actual dimensions, bytes and motion evidence, not requested output settings.
+
+Check whether the available tool can produce the intended motion. A storyboard,
+single generated frame or pan/zoom over a still remains a labeled concept or
+source candidate, not a completed reaction/action GIF. Record that dependency
+and continue useful preparation; do not quietly replace a GIF-led brief with
+high-resolution stills or text. Never describe generated “found” texture as
+proof of a real capture or cleared rights.
 
 ## Deliver and hand off
 

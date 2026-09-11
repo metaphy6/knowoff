@@ -1,0 +1,85 @@
+{
+  "batch_id": "initial-images-20260911",
+  "revision": 1,
+  "source_revision": "5a368c7",
+  "requested_images": {
+    "minimum": 500,
+    "maximum": 1000,
+    "initial_target": 500
+  },
+  "kind": "editorial_candidate_collection",
+  "runtime_loadable": false,
+  "role": "card",
+  "themes": [
+    "everyday-pressure",
+    "social-misfires",
+    "impossible-seriousness"
+  ],
+  "review_contexts": [
+    {
+      "language": "en",
+      "culture": "English-speaking audiences (provisional)"
+    },
+    {
+      "language": "tr",
+      "culture": "Turkish-speaking audiences (provisional)"
+    }
+  ],
+  "cultural_validation": "not run",
+  "rating": "general non-erotic audience (provisional; no store certification)",
+  "media_type": "image",
+  "shelf_life": "evergreen",
+  "topical_context": "not applicable; no topical premises",
+  "tone_targets": {
+    "millennial-cope": 125,
+    "social-awkwardness": 125,
+    "gen-z-absurdism": 125,
+    "chaos": 125
+  },
+  "tone_note": "Editorial target only; no draw probabilities or relevance bands implied.",
+  "freshness_note": "Evergreen-first candidate production; the 70/20/10 release experiment remains for later curation.",
+  "style_prefix": "Shared art direction: tactile editorial cartoon with chunky ink contours, warm cream #F7F2E9, muted violet #B49AF5 and aqua #7FE7DC accents, soft side lighting, restrained paper texture, clear mid-distance framing and a sparse environmental background. Expressive fictional adults when relevant, readable gestures and one dominant visual gag; no UI chrome or game branding.",
+  "prompt_suffix": "Full scene is legible as a small card. Invite several plausible interpretations without spelling out one answer. No visible text, captions, letters, logos, watermark, speech bubbles, real-person likeness, franchise characters, nudity or graphic violence. Generate exactly one finished image, not a contact sheet. Square source suitable for conversion to 720x720 compressed WebP.",
+  "output": {
+    "format": "WebP",
+    "longest_side_max_px": 720,
+    "generated_directory": "generated",
+    "git_ignored": true
+  },
+  "provenance": {
+    "author": "Codex coordinated agent drafting",
+    "generation_tool": "image_gen.imagegen",
+    "model": null,
+    "model_note": "Tool does not report image model; GPT-6 Astra production-lane compliance is not established.",
+    "seed": null,
+    "seed_note": "Not exposed by tool; no deterministic image reproduction claimed.",
+    "parameters": "Exact tool arguments retained per generated image.",
+    "rights": "Original AI-generated candidate concepts; no third-party source image requested. Human rights and originality review not run; no license clearance claimed."
+  },
+  "evidence": {
+    "automated_image_screening": "not run",
+    "human_editorial_review": "not run",
+    "human_rights_review": "not run",
+    "target_language_playtests_4_players": "not run",
+    "target_language_playtests_6_players": "not run",
+    "semantic_embeddings": "not run",
+    "technical_certification": "not run",
+    "publication": "not run",
+    "activation": "not run"
+  },
+  "sources": [
+    "AGENTS.md",
+    "BLUEPRINT.md#Game Rules §§2–5; Media Engine §§1–4; Contributor Portal; Product Baseline; Visual Identity voice",
+    "content/humor-development.md",
+    "content/curator-guide.md",
+    "content/tone-matrix.md",
+    "docs/project/GLOSSARY.md",
+    "docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11",
+    "docs/code/MODULE-media-engine.md",
+    "docs/guides/COMMUNITY_OPERATIONS.md",
+    "configs/gameplay/tuning.yaml",
+    "docs/design/ADR-004-media-package-in-server-pkg.md",
+    "docs/design/ADR-005-synthetic-seed-pack.md",
+    ".agents/skills/knowoff-content-create/references/editorial-record.md"
+  ]
+}
