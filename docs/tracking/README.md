@@ -42,6 +42,60 @@ flowchart LR
 
 ## Common patterns
 
+### Commit candidate handoff
+
+`make git.dry` selects rows with **all three** values:
+`action=commit`, `status=completed`, `commit_sha=pending`. It then excludes
+run IDs found as `[run_id]` anywhere in `git log --all` commit messages. `note`, `implement`,
+`review`, `test` and `block` rows never create commit candidates, even when
+their status says `completed`. A later block/note row does not cancel a pending
+commit row; append completion rows only for the work being handed over.
+
+For every completed repository change, the coordinating agent must:
+
+1. Review the exact change set and record truthful validation results under
+   [AGENTS.md](../../AGENTS.md). A completed draft/document/skill change is
+   distinct from content approval, technical certification or app activation.
+   Keep unperformed release checks and existing failures explicit; a commit
+   candidate is not evidence that those checks passed.
+2. Append a completion row through the script below, using the task's existing
+   `run_id` when it already has tracking rows. Never edit historical CSV rows.
+   Use a fresh ID for new work if an earlier ID already appears in Git history.
+3. Run `git add -A` after checking the full set for unrelated or sensitive files.
+4. Run `make git.dry` and verify the intended summary and `[run_id]` appear in
+   its proposed commit message. Report that evidence rather than assuming a
+   tracking append succeeded. Agents stop here; the human runs `make git`.
+
+Example from the repository root, after the applicable checks/authorization:
+replace the example ID, summary and refs with the actual task's values.
+Codex uses `--agent=local` in this repository's current schema; `codex` is not
+an accepted enum value.
+
+```bash
+pwd
+bash xops/agent/tracking_append.sh \
+  --run-id=content-batch-20260911 --agent=local --scope=content \
+  --action=commit --status=completed --commit-sha=pending \
+  --summary='docs(content): add reviewed draft candidates' \
+  --refs='content/README.md'
+pwd
+git add -A
+pwd
+make git.dry
+```
+
+Use `type(scope): description` for the actual change; keep the summary within
+200 characters and refs separated by semicolons. Multiple pending run IDs in
+one staging window produce **one combined commit**, with the first summary as
+the subject and the others under `Also includes:`. `refs` describe evidence;
+they do not select which files are committed. Preview does not stage or run
+tests, and the human's `make git` stages all current changes before committing.
+No empty commit is created. CSV rows stay `pending` after the human commits;
+the recorded Git message IDs prevent them from becoming candidates again.
+If a real blocker prevents the handoff under current instructions, explicitly
+say that **no commit candidate was registered**, name the blocker and preserve
+the checkpoint; do not describe the change as ready for `make git`.
+
 ### "I just finished a feature"
 
 ```bash

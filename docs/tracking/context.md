@@ -28,10 +28,12 @@
 
 ## Active context (update as the project evolves)
 
-Blueprint + roadmap written; no game code exists yet. Next work:
-**Phase 1 — Foundation** (`phase-1` in `docs/planning/ROADMAP.md`): monorepo
-tree, layered YAML config loader, Compose stack, Flutter scaffold with
-WebSocket echo on Android + Web.
+The server, Flutter client and text contribution workflow exist. Consult the
+[roadmap](../planning/ROADMAP.md) for current proof and open work rather than
+treating this context pack as a completion snapshot. For content work, read the
+[server mechanics audit](../code/MODULE-media-engine.md) and the source-linked
+[content skills](../../.agents/skills/README.md#knowoff-content). Drafting,
+human acceptance, certification and activation are separate states.
 
 ## Project-specific conventions
 
@@ -45,8 +47,9 @@ WebSocket echo on Android + Web.
   changes near payload rendering need a protocol-level no-leak test.
 - **Every tunable number** lives in `configs/gameplay/tuning.yaml` — never
   hardcode a timer, price, threshold, or reward value.
-- **Lockstep rule**: a spec-chapter change lands in the same commit as its
-  roadmap-chapter update — both live in `docs/planning/ROADMAP.md`.
+- **Lockstep rule**: normative chapters live in `BLUEPRINT.md`; the implementation
+  sequence lives in `docs/planning/ROADMAP.md`. Update both in the same change
+  when a specification change affects the roadmap.
 - Config discipline: env vars only select the config file
   (`KNOWOFF_CONFIG`) and inject secrets; secrets never in YAML or images.
 - No third-party analytics SDK in the client; KPIs derive from the
@@ -68,7 +71,7 @@ WebSocket echo on Android + Web.
 |---|---|---|
 | Cloudflare Tunnel | `TUNNEL_TOKEN` | dev/beta ingress; injected via env, never committed |
 | Google Sign-In / Facebook Login | (client ids/secrets via config `${VAR}` interpolation) | Phase 4 — OAuth registration/linking |
-| GPT-6 Astra | (API key via `${VAR}`) | sole engine for Nown/card image, GIF, and text generation; also produces offline raster batches (avatars, app icon, store art) |
+| GPT-6 Astra | (API key via `${VAR}`) | planned AI candidate-generation lane per Blueprint ⚙️ §3; human-authored contributions and rewrites use the same curation process; also planned for offline raster batches |
 | Gemini Embedding 2 | (API key via `${VAR}`) | optional API lane; local SigLIP/CLIP is default |
 | Platform billing (Play Billing / StoreKit) | — | Noin bulks + Premium subscription, Phase 5 |
 | Ad network with SSV | (keys via `${VAR}`) | rewarded post-match doubler; server-side verification only |

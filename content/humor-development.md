@@ -1,8 +1,11 @@
-# Humor development proposal
+# Humor development
 
-Editorial recommendations for the owner's next content session, 2026-09-10.
-This is a proposal, not a change to the Blueprint or the four required tone
-buckets in [the tone matrix](tone-matrix.md).
+Editorial guidance proposed on 2026-09-10 and adopted at the owner's request
+on 2026-09-11. The [Blueprint](../BLUEPRINT.md) carries the normative content
+requirements; this guide supplies the writing and review workflow. The four
+required tone buckets in [the tone matrix](tone-matrix.md) remain unchanged.
+Adopting this guidance does not create, certify or publish the pilot or the
+illustrative draft lines below.
 
 ## Make the table funny
 
@@ -17,8 +20,11 @@ food theme might get “I opened the fridge for emotional support.” These are
 draft examples, not certified cards: curators still need to test ambiguity,
 relevance bands and hands at both table sizes.
 
-Keep the existing bucket on every asset. Add editorial dimensions to the
-planning sheet rather than replacing the game schema:
+Keep exactly one existing bucket on every asset. Record the following
+orthogonal editorial dimensions in planning records, alongside the candidate
+and its human review decisions. They are not additional tone buckets, runtime
+schema fields or inputs to the relevance/dealing algorithm; the current text
+studio does not implement these planning fields.
 
 | Dimension | Starting choices |
 |---|---|
@@ -39,7 +45,8 @@ errors and moderation decisions should stay clear.
 Start with an experimental release mix of **70% evergreen, 20% seasonal or
 cultural, and 10% topical**. This is a playtest hypothesis, not a fixed quota;
 it is separate from the roughly balanced tone-bucket mix. Change it using
-player feedback and reuse data.
+player feedback and reuse data. These percentages describe a release-level
+editorial experiment, not card drop chances, hand quotas or dealing weights.
 
 Use trends to discover topics, then write original material. Google Trends
 supports regional comparisons and time windows; TikTok Creative Center offers
@@ -50,11 +57,15 @@ Sources: [Google Trends](https://support.google.com/trends/answer/3076011?hl=en-
 [TikTok Creative Center](https://ads.tiktok.com/help/article/creative-center?lang=en).
 
 For each topical candidate record the source, observation date, intended
-regions/languages, context in one sentence, review date and expiry date. Review
-topical material weekly and retire references that no longer land. Ask regional
-contributors to recreate the joke in their own voice; literal translation is
-rarely enough. Satire can target institutions, powerful figures and everyday
-frustrations without turning victims of a current tragedy into a punchline.
+regions/languages, context in one sentence, review date and expiry date. A human
+editor reviews topical material weekly and decides whether to rewrite, retain
+or retire it, including at expiry. These are editorial records and decisions;
+there is no automated review, expiry or pack-removal job supplied by this
+guidance. Ask regional contributors to recreate the joke in their own voice;
+literal translation is rarely enough. Recheck ambiguity and reference knowledge
+in each target culture/language. Satire can target institutions, powerful
+figures and everyday frustrations without turning victims of a current tragedy
+into a punchline.
 
 ## A small editorial loop
 
@@ -63,8 +74,12 @@ frustrations without turning victims of a current tragedy into a punchline.
 3. Check sources, rights, originality, age suitability and local meaning.
 4. Run automatic screening and human review; neither substitutes for the other.
 5. Playtest real 4- and 6-player hands. Record recognition, laughter, plausible
-   alternative explanations and references players needed explained.
-6. Release a small certified pack, inspect feedback, revise or retire weak cards.
+   alternative explanations and references players needed explained. Check
+   whether the humor reveals Nown too directly or leaves Donowers no plausible
+   bluff; a successful joke must preserve the game's ambiguity.
+6. Build and certify a small language-scoped pack through the media pipeline,
+   publish and activate its verified version, then inspect feedback and revise
+   or retire weak cards. Text approval alone does not complete these steps.
 
 Do not rate quality only by AI scores or raw popularity. A joke that gets a
 laugh but makes every card obviously correct can still weaken Knowoff.
@@ -75,7 +90,7 @@ laugh but makes every card obviously correct can still weaken Knowoff.
 |---|---|
 | Research, writing variants, cultural alternatives, editing, test planning | Work with Codex here; retain source links and human decisions in the editorial record. |
 | Trend discovery | Google Trends and TikTok Creative Center as inputs; verify each factual premise separately. |
-| Approved work and moderation history | The repository's Contributor Portal and Admin Console. They are the product source of truth; this initial slice supports text, not finished image/GIF packs. |
+| Accepted text and moderation history | The repository's Contributor Portal and Admin Console. They store the implemented text workflow's approval state; editorial planning fields, Nown/deck authoring and finished image/GIF packs remain outside this slice. Acceptance is for curation, not certification or deployment. |
 | Optional shared editorial calendar | Airtable if a separate planning board becomes useful. Its [content calendar template](https://www.airtable.com/templates/content-calendar/exp3FNmOkdHZvprXB) supports that workflow; avoid duplicating approval state. |
 | Promotional artwork and collaborative review | Canva's existing integration and [content planning tools](https://www.canva.com/solutions/content-planning-scheduling/). Keep game assets in the specified media pipeline. |
 | Interface polish | Impeccable for the presentation and usability of the content tools. Humor still needs editorial judgment. |
@@ -83,4 +98,4 @@ laugh but makes every card obviously correct can still weaken Knowoff.
 
 No additional plugin is required to start the text pilot. External services may
 need account access or credentials when we choose to use them. No recurring
-monitor, service purchase or content publication is configured by this proposal.
+monitor, service purchase or content publication is configured by this guidance.

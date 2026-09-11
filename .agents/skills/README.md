@@ -1,13 +1,28 @@
 # 🧠 Skills library
 
 Each subfolder is **one agent skill** with a `SKILL.md` file at its root.
-Type `/` in Copilot Chat to invoke any of them as a slash command.
+Codex can invoke a skill by `$name`; agents without a skill picker read the
+linked `SKILL.md` directly. Repository instructions require the matching skills
+for content work regardless of the assistant's interface.
 
 A skill is a **short, model-agnostic procedure** for one recurring task. Load
 the relevant skill *before* the matching work — reading takes seconds and
 saves whole rewrites.
 
 ## Catalog
+
+### Knowoff content
+
+- [`knowoff-content-create`](knowoff-content-create/SKILL.md) — draft or culturally
+  adapt Nowns/cards with an editorial record and current source requirements.
+- [`knowoff-content-review`](knowoff-content-review/SKILL.md) — assess humor,
+  ambiguity, culture, rights and actual review/playtest evidence.
+- [`knowoff-content-integrate`](knowoff-content-integrate/SKILL.md) — prepare and
+  verify real pack/app integration, keeping certification and activation distinct.
+
+These are complementary stages, not competing rulebooks. Each reads the
+Blueprint and linked content docs; none treats agent opinion as human approval
+or a synthetic fixture as production certification.
 
 ### Coding
 

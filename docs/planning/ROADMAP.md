@@ -32,6 +32,41 @@ tracking rows, then stage. Emoji references (🏛️ ⚙️ 🎮 💰 🧑‍�
 
 ### 📊 Status snapshot
 
+#### Content readiness audit — 2026-09-11
+
+The owner adopted [humor-development.md](../../content/humor-development.md)
+as editorial guidance and requested an explanation of current server content
+logic before creating content. The Blueprint's ⚙️ §3 now owns the standard;
+the [Curator Guide](../../content/curator-guide.md) applies it. No content was
+generated, certified or published in this documentation slice.
+
+The [source audit](../code/MODULE-media-engine.md) supersedes earlier completion
+claims for the affected Phase 2/3 items below. It found:
+
+| Area | Current state | Required proof before real-content readiness |
+|---|---|---|
+| Production pipeline | CLI `build` generates synthetic text/vectors; `publish` copies a directory. The current fixture has 150 Nowns and 5,400 cards. | Real candidates, compatible semantic embeddings, screened/curated bundles and verified activation; the fixture is not production humor. |
+| Final hand coverage | First Nown fills five hand slots; second fills three reserve slots; later selections are discarded. The fifth card can come from any band. | Check each player's retained cards against every scheduled Nown at both table sizes; reject invalid deals and make certification inspect final coverage. |
+| Shuffle | Replaces hands, reserves and specialties. | Preserve reserves and intended specialty state; prove the redeal's schedule coverage and repeated-use rules. |
+| Draw handling | Allows out-of-turn draws during play and broadcasts drawn identities. A test explicitly expects out-of-turn drawing. | Align handler and regression tests with 🕹️ §3: owner's turn only; public who/count announcement and private card payloads. |
+| Pack hot swap | Dealing retains the old pack; payload lookup uses the global active pack. | A running match renders its original pack correctly after another pack activates. |
+
+Current simulator success does not prove all-Nown coverage or editorial
+quality. Existing passing tests do not close these gaps. The checked-in pack
+is the development fixture described by ADR-005; its synthetic embedding
+geometry must not be reused as semantic proof for rewritten jokes.
+
+**Next content sequence.** Select three themes and two target cultures/languages;
+record the editorial dimensions and experimental 70/20/10 freshness mix;
+draft and human-edit candidates; check sources, rights, originality, local
+meaning and age suitability; apply automated screening and human review;
+playtest actual 4- and 6-player schedules; certify and activate a small pack
+per language after the engineering gaps above are closed. Record recognition,
+laughter, alternative explanations and references needing explanation. Review
+topical records weekly, including their review/expiry dates, and revise or
+retire weak content through pack versions. This pilot precedes the full
+production seed-pack target; drafting does not require claiming release readiness.
+
 **Frontend reset (2026-09-10):** the owner requested removal of the existing
 Flutter UI. Historical UI completions below are superseded by this reset:
 screens, widgets, design-system implementation, media rendering and their
@@ -387,8 +422,8 @@ chapter).
 |---|---|---|---|
 | 0 — Agent framework & project docs | — | — | ✅ landed (pre-roadmap) |
 | 1 — Foundation | 12 | 12 | ✅ done |
-| 2 — Media Engine & Pipeline | 9 | 6 | 🚧 in progress — content generation moved to GPT-6 Astra |
-| 3 — Realtime Game Loop | 18 | 18 | ✅ done |
+| 2 — Media Engine & Pipeline | 9 | 3 | 🚧 incomplete — content audit reopened pipeline, certification and hot-swap proof |
+| 3 — Realtime Game Loop | 18 | 14 | 🚧 incomplete — content audit reopened draw privacy, dealing, Shuffle and gate |
 | 4 — Accounts, Quick Play & Hardening | 12 | 9 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
 | 5 — Noin Economy, Admin & Launch Polish | 13 | 6 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
 | 6 — Contributor Portal & Community | 5 | 0 | 🚧 incomplete — source audit reopened unproven end-to-end claims |
@@ -575,13 +610,20 @@ on a mid-range phone, and still converges (retry/backoff behind the
 placeholder) on a throttled, lossy network profile; rebuilding the seed
 pack from its logged inputs reproduces identical bundle hashes.
 
+Real-content acceptance also requires the ⚙️ §3 editorial record and human
+playtests at both sizes across complete schedules, including recognition,
+laughter and plausible alternatives. A technical pass or AI score alone
+cannot complete the production-content deliverable. For topical material,
+retain source/observation/context/region/language/review/expiry records and
+the human weekly review decision; the freshness mix is an experiment.
+
 - [x] Pack bundle format (⚙️ §1): `manifest.json` (pack tag, **format version**, checksums, license + attribution per asset, age rating, **BCP 47 language tag**, **pinned embedding model + version**), `media.jsonl`, `cards.jsonl`, content-hash-addressed assets in object storage — packs are language-scoped, so new languages ship as new packs, never format changes.
-- [x] `tools/mediapack` stages: `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (provider-swappable automated moderation) → `tag` + `embed` → `certify` → `bundle` → `publish` → `simulate` (deal feasibility **and** offline balance questions: band-threshold sweeps, Donower-survival proxies, Shuffle/Revote impact, expected per-match Noin); every stage seeded and deterministic — same inputs + seed reproduce byte-identical bundles — with meaningful non-zero exits for CI use.
-- [x] `server/internal/media`: in-memory pack loader with checksum verification (a tampered bundle is refused and the current pack keeps serving), between-matches hot-swap that never blocks a live room, precomputed per-media band candidate lists (zero embedding math in the hot path), and the signed-URL issuer — short-lived, single-round, expiry enforced server-side.
-- [x] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
+- [ ] `tools/mediapack` stages: `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (provider-swappable automated moderation) → `tag` + `embed` → `certify` → `bundle` → `publish` → `simulate` (deal feasibility **and** offline balance questions: band-threshold sweeps, Donower-survival proxies, Shuffle/Revote impact, expected per-match Noin); every stage seeded and deterministic — same inputs + seed reproduce byte-identical bundles — with meaningful non-zero exits for CI use.
+- [ ] `server/pkg/media`: in-memory pack loader with checksum verification (a tampered bundle is refused and the current pack keeps serving), between-matches hot-swap that never blocks a live room, precomputed per-media band candidate lists (zero embedding math in the hot path), and the signed-URL issuer — short-lived, single-round, expiry enforced server-side.
+- [ ] Certification gate: full band coverage per Nown at 6 players, every card reachable in some band, Monte Carlo deal feasibility at both sizes, **manifest completeness** (license, attribution, age rating, language tag) and one consistent embedding model per pack — TDD'd against a band-starved fixture pack.
 - [x] Versioned fixture packs committed for CI (a tiny golden pack + the band-starved pack): the test fuel every later phase reuses — gamebot matches, load tests, client cache tests, compose dev seeding.
 - [ ] Media Workbench (server-rendered, dev-only): issues generation batches through **GPT-6 Astra** for images, GIF loops, and text cards, bulk keep/kill grid with tone buckets + per-batch keep-rate, embedding nearest-neighbor sanity view, deal simulator.
-- [ ] Seed pack generated via **GPT-6 Astra**: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded per asset; tone rubric landed in `content/tone-matrix.md`.
+- [ ] Seed pack generated via **GPT-6 Astra**: **≥150 certified Nowns, ≥1,500 cards** at ⚙️ §3 quality targets, curated to the ⚙️ §3 content standard (suggestive/erotic allowed — cartoon, drawn, abstract — **never pornographic**; erotic-leaning media only in age-gated packs) with every asset tagged into the four-bucket tone rubric for pack-mix balancing; every generation run logged with model, seed, and params (reproducible curation input); license + attribution recorded per asset; tone rubric landed in `content/tone-matrix.md`; adopt the humor-development editorial record, experimental freshness mix and actual 4/6-player pilot evidence from ⚙️ §3 before release.
 - [x] `client/lib/media`: pack metadata OTA sync (app start + unrecognized tag), signed-URL prefetch with retry/backoff on flaky networks (URLs short-lived, single-round), hash-verified LRU asset cache under an explicit size budget (corrupt entries evicted, never rendered), Donower placeholder renderer — also shown while a Nower's asset is still loading, so loading state leaks nothing (⚙️ §4).
 - [ ] Gate: Phase 2 proof tests pass on a clean tree.
 
@@ -650,13 +692,13 @@ stacked translucency), the diacritics render check, the pseudo-locale +
 text-expansion sweep of the match flow, and the low-end frame-budget trace
 on Round and Knowoff.
 
-- [x] Role-scoped payload rendering through one choke point — a single payload-renderer module every outbound event must pass through: Nower → `{nown: {id, signed_url, type}}`, Donower/eliminated → `{decoy: true}` — built first, security-reviewed before dependents land, with the event-stream leak scanner in CI from day one.
+- [ ] Role-scoped payload rendering through one choke point — a single payload-renderer module every outbound event must pass through: Nower → `{nown: {id, signed_url, type}}`, Donower/eliminated → `{decoy: true}` — built first, security-reviewed before dependents land, with the event-stream leak scanner in CI from day one.
 - [x] Room lifecycle: exactly 4/6 seats, 6-character codes + QR deep links (into the native app if installed, the PWA otherwise — a guest is never blocked), seat reservation, 20 s reconnect grace, session-token snapshot rejoin (role-scoped); session scoreboard across a room's matches; room→node affinity (Redis `room_id → node`, no cross-node game state); finished rooms torn down and memory reclaimed — no leaked room state (soak-proven).
 - [x] Versioned JSON protocol with sequence numbers — the full intent/event set from 🌐 defined once, so the wire format stays stable across phases (later-phase intents like `convert_points` and `report_media` parse and reject cleanly as unavailable until their backends land); version handshake rejecting unknown protocol versions with an explicit error; unknown, malformed, or oversized frames rejected without state change; client-detected sequence gaps trigger a snapshot resync.
 - [x] `tools/gamebot`: N seeded policy bots over the real WebSocket protocol, no server backdoors; a 6-seat dev match crosses every phase in under a minute; external bot connections refused whenever the `bots:` config block is absent — and it never exists in `prod.yaml`; doubles as the Phase 4 load-test engine.
 - [x] Seeded match-replay harness: every match logs its seed + intent script; a replay run reproduces the byte-identical event stream — failing matches replay exactly, and failing seeds are committed as regression fixtures.
-- [x] Phase state machine: role assignment, role-blind constraint dealing, randomized per-round turn order, `timers.play_turn` turns with immediate attributed reveals (played cards stay on the table all match — the evidence votes are argued over), table-announced penalized pile draws (who, how many), timeout auto-pass + random card loss.
-- [x] Specialties (Rules §5): Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle (Donower-use-only, usable at any point in the round, sweeps the table's plays and restarts the turn order with a time bonus, draw piles untouched) / attributed once-per-match Revote (Nower-use-only, open Knowoff ballot or runoff only, never the result window) — off-role and duplicate uses rejected (dead cards remain usable as discard fodder); Reveal and One More Free Card leave the normal hand-card action open, with the free draw spent before that action; Shuffle re-deals against the current Nown schedule so the dealing guarantee survives.
+- [ ] Phase state machine: role assignment, role-blind constraint dealing, randomized per-round turn order, `timers.play_turn` turns with immediate attributed reveals (played cards stay on the table all match — the evidence votes are argued over), table-announced penalized pile draws (who, how many), timeout auto-pass + random card loss.
+- [ ] Specialties (Rules §5): Pass / full-hand Reveal / penalty-free One More Free Card / anonymous once-per-match Shuffle (Donower-use-only, usable at any point in the round, sweeps the table's plays and restarts the turn order with a time bonus, draw piles untouched) / attributed once-per-match Revote (Nower-use-only, open Knowoff ballot or runoff only, never the result window) — off-role and duplicate uses rejected (dead cards remain usable as discard fodder); Reveal and One More Free Card leave the normal hand-card action open, with the free draw spent before that action; Shuffle re-deals against the current Nown schedule so the dealing guarantee survives.
 - [x] Discussion window (`timers.discussion_per_player × players`, Ready fast-forward) with localizable canned Quick Chat plus server-masked free text; English is applied to every message and configured language lists apply from the active client locale. Poke once per target per phase (buzz on native, screen shake on the PWA — no vibration API; pokes show who poked whom, no score effect), cap enforced server-side.
 - [x] Knowoff: open live attributed ballot — never vote for yourself, targets may change until resolution → tied-player runoff → `timers.vote_result_window` result display with elimination + role reveal. Ballot, runoff and result end early only when every connected active seat marks Ready; casting alone does not count as Ready (ADR-009). Early-end rule (votes remaining < uncaught Donowers); still-tied runoff = survived voting for Donowers; eliminated-spectator scoping (no Nown, no actions); verdict screen reveals all Nowns to everyone.
 - [x] Disconnect handling per Rules §7: auto-played seats (turns pass instantly, abstain from votes, count Ready, stay votable), 20 s grace, team forfeits + scored low-population ending; match points per Rules §6 with the zero floor (absent at match end = 0 points; already-earned Noin stays).
@@ -667,7 +709,7 @@ on Round and Knowoff.
 - [x] Illustration policy — deliberately sparse: no mascot, no scene art in the match flow; the ~12-glyph single-weight doodle set (sparkle, static-burst, eye, cloud, the Donower placeholder glyphs) shipped as hand-authored SVG paths, reserved for empty states, win moments, and the Donower-side placeholder.
 - [x] Performance guardrails + asset discipline: flat fills (the reveal-header gradient is the one exception), zero blur radii, no stacked translucency — enforced by a widget-tree guardrail audit test that fails on any blur, second gradient, or translucency stack, plus a frame-budget trace on a low-end device profile for the busiest screens (Round, Knowoff); UI chrome 100 % widgets/`CustomPainter` — code first, raster last (true raster arrives only via the curated GPT-6 Astra batches in Phases 4–5); the design system and media-pack content never mix.
 - [x] Flutter match flow on native + PWA against the live protocol: MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict — `RoleCard` (press-and-hold role check), `NownStage`, `HandFan`, `PlayTable`, `VoteBoard`, `QuickChatBar`, `ReadyButton`, `PokeNudge`; every string through the localization catalogs (the wire stays ids/codes only), with a pseudo-locale sweep + text-expansion check across the match flow.
-- [x] Gate: full Phase 3 proof tests pass, including the no-leak protocol assertion, plus the 📦 §4 criterion: a full 6-player match — four `gamebot` seats + one native client + one PWA client — playable against the local stack with zero cloud dependencies.
+- [ ] Gate: full Phase 3 proof tests pass, including the no-leak protocol assertion, plus the 📦 §4 criterion: a full 6-player match — four `gamebot` seats + one native client + one PWA client — playable against the local stack with zero cloud dependencies.
 
 ---
 
@@ -851,7 +893,7 @@ one payout, and one transfer at next close; admin routes are unreachable
 from the portal ingress.
 
 - [ ] Promote Workbench → public Contributor Portal: role applications gated by `portal.min_account_level_to_apply` with admin grants (Contributor / Curator / Guard), every role action audited and reversible; player-account sessions + role claims on the public subdomain, strictly separated from the Admin Console's internal port (route separation proven by test).
-- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), Nown + deck authoring with the deal simulator; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
+- [ ] Curator toolchain: Curator Guide (derived from ⚙️ §2–3), shared Nown/card-pool authoring with the deal simulator and human ambiguity playtests; retain editorial dimensions, topical source/review/expiry records and cultural rewrites separately from the tone bucket; submission pipeline with terms-consent capture (version + timestamp), the `submissions_per_contributor_per_day` cap, and upload hardening (size/type caps, transcode-on-ingest, automated screen before any human review) — credits + Noin rewards on acceptance; submissions immutable once submitted; withdraw + resubmit is the only correction path and it costs the queue slot.
 - [ ] Guard freeze flows wired to the Admin Console case queue: timeboxed ≤ `guard_freeze_max_h`, one active freeze per Guard per target, auto-expiry surviving a server restart, admin-final dismiss / timed ban / permanent ban.
 - [ ] Weekly Nown Challenge end-to-end (🎮 §3): Monday topic publication, in-app entries (first-100 cap race-proof under concurrency, rejection-reopened slots, immutable once submitted, per-entry consent stored with terms version + timestamp), pre-vote screening queue, open live tallies with one immutable vote and no self-votes, atomic **and idempotent** weekly close (Week Winner title + `challenge_winner` payout + optional community-pack inclusion, transferred at next close); challenge scheduler + contribution-terms versioning land in the Admin Console (🛡️).
 - [ ] Gate: full Phase 6 proof tests pass on a clean tree.

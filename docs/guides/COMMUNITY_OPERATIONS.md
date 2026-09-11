@@ -49,6 +49,37 @@ Approval means accepted for curation. Building, certifying and deploying a real
 media pack is a separate pipeline; the old status-only publish action is
 disabled instead of pretending a pack was deployed.
 
+## Prepare the humor pilot
+
+Follow the adopted [Humor development guide](../../content/humor-development.md)
+and [Curator guide](../../content/curator-guide.md): choose three themes and two
+target cultures/languages, draft several comic mechanisms per theme, and have
+human editors select and culturally rewrite the candidates. The illustrative
+lines in the guide are drafts, not submitted, certified or deployed assets.
+
+Keep human situation, comic mechanism, cultural reach, shelf life and
+accessibility in editorial planning records alongside source links and human
+decisions. These fields are not implemented in the text studio. Every eventual
+Nown/card still needs exactly one of the existing four tone buckets; neither
+these dimensions nor the experimental 70/20/10 freshness mix changes dealing.
+The mix is a release-level hypothesis to refine using feedback and reuse data.
+
+For topical candidates, record source, observation date, intended
+regions/languages, one-sentence context, review date and expiry date. A human
+editor reviews them weekly and at expiry and decides whether to retain, rewrite
+or retire them. This process has no configured scheduler or automatic removal
+from deployed packs.
+
+Before release, combine automated screening with human checks for sources,
+rights, originality, age suitability and local meaning, then playtest actual
+4- and 6-player hands. Record recognition, laughter, alternative explanations
+and references that need explaining. Deal simulation and certification must
+pass separately: a funny card must also preserve ambiguity around Nown.
+Record editorial decisions in the planning record and submission decisions in
+the existing review workflow; do not duplicate approval state in a separate
+calendar. A successful pilot still needs a built, certified, published and
+activated pack before its content can appear in matches.
+
 ## Run a text challenge
 
 In **Weekly challenge**, choose an approved text submission as the topic and a

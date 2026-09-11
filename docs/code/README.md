@@ -6,6 +6,8 @@ extend it without breaking invariants.
 
 ## Files
 
+- [`MODULE-media-engine.md`](MODULE-media-engine.md) — current server content,
+  Nown selection, card relationships, dealing probabilities and readiness gaps.
 - [`ARCHITECTURE.template.md`](ARCHITECTURE.template.md) — repo-level
   architecture overview; system context, top-level components, data flow.
 - [`MODULE.template.md`](MODULE.template.md) — one per significant module.

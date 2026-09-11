@@ -21,6 +21,13 @@ humans on **the project's design and history**.
 
 ## Discoverability rule
 
+For content work, start with the Blueprint's Media Engine chapter, the
+[humor development guide](../content/humor-development.md),
+[Curator Guide](../content/curator-guide.md) and
+[current server content mechanics](code/MODULE-media-engine.md).
+The [readiness audit](planning/ROADMAP.md#content-readiness-audit--2026-09-11)
+separates editorial preparation from pending production integration.
+
 Before creating a new doc, search for an existing one. Templates live next
 to their READMEs (e.g. [`code/MODULE.template.md`](code/MODULE.template.md)).
 Use them.

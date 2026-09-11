@@ -15,6 +15,10 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Added shared content creation, review and pack-integration skills with current
+  documentation references and an editorial record. All repository agents are
+  directed to use them for Nown/card work, preserving human review and release
+  evidence across handoffs.
 - Added a usable Contributor Studio: account pairing from Profile, browser
   sessions, role applications, private text drafts, explicit contribution terms,
   editing, submission, withdrawal and review history.
@@ -52,6 +56,9 @@ All notable changes to Knowoff are documented in this file.
 
 ### Fixed
 
+- Made the content skills' tracking handoff explicit: completed repository
+  changes require a pending commit row, staging and a verified `make git.dry`
+  preview. Corrected the Codex tracking-agent enum in the setup guide.
 - Completed localization resource descriptions and required them during code
   generation, resolving `arb(missing_metadata_for_key)` diagnostics.
 - Fixed ordinary browser admin navigation after login; mutations retain CSRF
@@ -112,8 +119,14 @@ All notable changes to Knowoff are documented in this file.
 
 ### Changed
 
+- Adopted the humor-development guidance in the Blueprint and content guides:
+  editorial dimensions, experimental freshness mix, cultural adaptation and
+  human playtests. Documented current server dealing and production-content
+  gaps; this documentation update does not generate or publish a pack.
 - `make git` never creates empty commits anymore: all pending tracking rows in a staging window now ride one real commit (first pending summary as the subject, the rest under "Also includes:", one `[run_id]` trailer each), and with a clean tree the rows simply wait for the next real commit instead of committing empty markers.
-- Developer-granted specialty cards remain current-hand test overrides; subsequent rounds still deal a fresh role-blind specialty, as specified by the game rules.
+- Developer-granted specialty cards remain current-hand test overrides. Source
+  audit correction: ordinary specialties are dealt at match start and are not
+  refreshed each round; held cards carry over and spent cards remain empty.
 - The main menu now uses clearer doodles for Play, Local Room, Profile, Store, and Notices: a play symbol, map pin, person, market, and hailer.
 - The round action window is now titled "Logs" with a larger bold heading for easier scanning.
 - Round log entries are now bold as well, making the action history easier to scan.

@@ -11,7 +11,7 @@
 - Format: RFC 4180 CSV. The header is the first line and is fixed.
 - **Append-only.** Existing rows are immutable. Corrections land as a *new*
   row with `action=note` and a `refs` link to the prior `run_id`.
-- Append via [`xops/agent/tracking_append.sh`](../xops/agent/tracking_append.sh) —
+- Append via [`xops/agent/tracking_append.sh`](../../xops/agent/tracking_append.sh) —
   it enforces every invariant below and is atomic under `flock(1)`.
 
 ## Columns (9, in order)
@@ -41,11 +41,13 @@
 | `note` | Informational — anything else worth recording | `completed` |
 | `block` | Real blocker hit; checkpoint written | `blocked` |
 
-## Invariants the appender enforces
+## Invariants and enforcement
 
 1. Header is exactly:
    `ts_utc,run_id,agent,scope,action,status,summary,refs,commit_sha`.
-2. Every row has exactly **9** columns.
+   The Git dispatcher validates this header when reading candidates.
+2. Every row has exactly **9** columns. The appender writes a CSV-escaped
+   nine-field row; it does not validate or repair historical rows.
 3. `ts_utc` strictly ≥ previous row's `ts_utc` (clock-monotone).
 4. `action`, `status`, `agent` are one of the enum values above.
 5. `commit_sha` rules:
@@ -62,12 +64,13 @@
 
 ## How `make git` reads this file
 
-See [`xops/makefile/git_ops.py`](../xops/makefile/git_ops.py):
+See [`xops/makefile/git_ops.py`](../../xops/makefile/git_ops.py) and the
+[commit candidate handoff](README.md#commit-candidate-handoff):
 
 1. Find rows where `action=commit`, `status=completed`,
    `commit_sha=pending` AND `run_id` is NOT already mentioned in any
    existing commit message (`git log --all --format=%B`).
-2. Group consecutive rows by `run_id`.
+2. Group rows by `run_id`, preserving the first-seen order (rows need not be consecutive).
 3. Create **one commit for the whole batch** (git has a single staging
    window, so per-`run_id` diffs are not separable):
    - **subject** = the first pending group's `summary`, verbatim,

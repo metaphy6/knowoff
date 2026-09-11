@@ -75,7 +75,11 @@ of work, the agent:
    `summary` that follows [Conventional Commits](https://www.conventionalcommits.org/)
    (e.g. `feat(scope): add X`, `fix(scope): correct Y`).
 2. Runs `git add -A` to stage all changed files.
-3. Stops. The human commits and pushes whenever they're ready:
+3. Runs `make git.dry` and verifies the intended summary and `[run_id]` are
+   present in the proposed commit message. Note/test/block rows alone never
+   register a commit candidate; follow the
+   [exact handoff](docs/tracking/README.md#commit-candidate-handoff).
+4. Stops. The human commits and pushes whenever they're ready:
 
 ```bash
 make git       # commit all staged changes (one commit per staging window; all pending run_ids ride its message) then push
@@ -291,6 +295,12 @@ tool-to-intent mapping and re-index rules.
 
 Especially load before the matching work:
 
+- **Knowoff content work:** use [`knowoff-content-create`](.agents/skills/knowoff-content-create/SKILL.md)
+  for drafting/cultural adaptation, [`knowoff-content-review`](.agents/skills/knowoff-content-review/SKILL.md)
+  for editorial assessment, and [`knowoff-content-integrate`](.agents/skills/knowoff-content-integrate/SKILL.md)
+  for pack/app integration. These apply to every agent working on Nowns/cards.
+  Read their current source documents; pass the same links and unresolved checks
+  to delegated agents. Skills execute the Blueprint; they never replace it.
 - [`test-driven-development`](.agents/skills/test-driven-development/SKILL.md) — before adding behavior.
 - [`systematic-debugging`](.agents/skills/systematic-debugging/SKILL.md) — before "fixing" a flaky test.
 - [`verification-before-completion`](.agents/skills/verification-before-completion/SKILL.md) — before declaring done.

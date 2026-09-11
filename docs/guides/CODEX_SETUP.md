@@ -47,7 +47,11 @@ instructions before work. These adaptations change client mechanics only:
 - A request to switch to an agent means use the matching native Codex role.
   The coordinating parent owns tracking and staging; children return evidence
   and never append duplicate tracking rows or stage one another's work.
-  Use `--agent=codex` in tracking commands even when source examples say copilot.
+  Use `--agent=local` for Codex in this repository's current tracking schema
+  (`codex` is not an accepted enum). Follow the exact
+  [commit candidate handoff](../tracking/README.md#commit-candidate-handoff),
+  including verification with `make git.dry`; note/test/block rows alone do
+  not register completed work as a commit candidate.
   Before final staging, reviewers and verifiers inspect the complete current
   diff, including unstaged changes and new files supplied by the parent.
   References to a staged diff in source workflows also accept this review set.

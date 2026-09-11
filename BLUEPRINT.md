@@ -234,7 +234,7 @@ Any player may **apply for a role** from their portal profile; applications are 
 | Role | Permissions |
 |---|---|
 | **Contributor** (entry role) | Submit media to open pack calls; view own submission history and Noin rewards. (The Weekly Nown Challenge needs no role — it is open to every player, in-app, 🎮 §3) |
-| **Curator** | Everything a Contributor can, plus: **create Nowns and the decks that relate to them** — authoring cards against a Nown, testing hands in the deal simulator, checking band coverage; screen Weekly Challenge entries before they go public. Curators work from the **Curator Guide**, a clear rulebook derived from this blueprint (⚙️ §2–3): quality targets, tone rubric, band-coverage requirements, and how to test a Nown before submitting it for certification |
+| **Curator** | Everything a Contributor can, plus: **create Nowns and candidate card pools that relate to them** — authoring cards against multiple Nowns, testing complete match schedules in the deal simulator, checking band coverage and human playtest results; screen Weekly Challenge entries before they go public. Cards belong to the pack's shared pool, not an exclusive deck for one Nown. Curators work from the [Curator Guide](content/curator-guide.md), derived from ⚙️ §2–3: quality targets, tone rubric, editorial records, band coverage, and how to test a Nown before certification |
 | **Guard** | Community safety: review flagged accounts and **freeze** them — a timeboxed suspension (up to 48 h) from matchmaking and the portal, pending admin review. **Final action is always the admin's**: dismiss, timed ban, or permanent ban. One active freeze per Guard per target; freezes auto-expire if no admin acts |
 | **Admin** | Everything: role grants, bans, pack publishing, challenge scheduling, takedowns |
 
@@ -246,6 +246,7 @@ Any player may **apply for a role** from their portal profile; applications are 
 * Flow: upload or write media (**image, GIF, or text** only) → automated processing (transcode to quality targets ⚙️ §3, perceptual-hash dedupe, auto-tag, embedding, automated content screen) → **submit** → screening/curation → accepted media enters the next pack version.
 * Workflow states: `draft → submitted → in_review → approved | rejected → published(pack-tag)` — every transition audited. **Submissions are immutable once submitted** — no edits; withdraw and resubmit is the only correction path, and it costs the queue slot.
 * Moderation: everything passes the automated screen *and* human review before any player sees it; published media stays reportable (👤 §3) and takedown-able, with removals shipping in the next pack version.
+* **Acceptance and release are separate:** approval accepts a contribution for curation. Playable release requires a versioned pack, technical certification, editorial playtests and activation through the media pipeline. Editorial source/expiry records supplement the approval history; they do not replace it. Current text-only capabilities and remaining integration work are described in [Community operations](docs/guides/COMMUNITY_OPERATIONS.md).
 
 ### 3. Media Workbench (dev/staging — ships early, Phase 2)
 
@@ -255,6 +256,7 @@ The same application pointed at dev/staging, where the owner curates the AI gene
 * **Bulk curation grid:** keep/kill at keyboard speed with tone-bucket and rating assignment; keep-rate measured per batch (the pipeline's core KPI — expect 10–30% at this humor bar).
 * **Embedding sanity view:** nearest-neighbor browser for any asset — catches mis-embedded media before it corrupts dealing.
 * **Deal simulator:** for any candidate Nown, render the hands the mesh would actually deal at both table sizes — the same tool Curators later use, per the Curator Guide.
+* **Editorial review:** use the dimensions and pilot process in ⚙️ §3 alongside the tone bucket. Retain source context, cultural adaptation, human decisions and real-hand playtest observations in the editorial record; keep-rate and automated scores alone do not establish comic quality or fair ambiguity.
 
 ### 4. Architecture
 
@@ -318,6 +320,7 @@ Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skel
 * Illustration policy — deliberately sparse: no mascot, no scene art in the match flow. One tiny single-weight doodle glyph set (13 glyphs: sparkle, static-burst, eye, cloud, placeholder, crown, coin, cards, check, cross, poke, mask, clock) reserved for empty states, win moments, state badges, and the Donower-side placeholder.
 * Fixed color semantics: violet = interact, lime = truth/reward, pink = accuse/risk, ink = information. No verdict leans on hue alone — color always pairs with icon + label (colorblind-safe by construction).
 * Performance guardrails: flat fills (the one gradient exception above), zero blur radii, no stacked translucency — low-end devices are the norm.
+* **Voice:** short, speakable jokes and rotating callbacks can appear in low-pressure moments. Rules, consent, errors and moderation decisions stay clear and literal; a joke must never obscure a required action or a fairness rule. Recurring editorial characters belong to pack content, within the illustration policy above.
 * Asset strategy — code first, raster last: UI chrome is 100% widgets/`CustomPainter`s (borders, hard shadows, grid tile, highlighter sweep, press animation); doodles ship as hand-authored SVG paths. True raster — preset avatars, app icon, store art — is produced offline in curated batches via **GPT-6 Astra**, prompts derived from this matrix; candidates → human curation → consistency pass → committed like any asset. API keys live under the config discipline (📦 §3). In-game *media content* comes exclusively from media packs (⚙️) — the design system and the content pipeline never mix.
 
 ---
@@ -388,6 +391,9 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 * Dealing guarantee: the server picks the match's Nowns up front (secret, RNG seed logged) and deals each 5+3 hand as a constraint deal: against **every** scheduled Nown, each player holds ≥ `min_high_per_nown` high cards and ≥ `min_distant_per_nown` distant cards, with the remainder chaos. Every hand always has a good answer, a stretch, and garbage — for Nower and Donower alike.
 * Shuffle re-deals are dealt *against the current Nown schedule* so the guarantee survives mid-match mutation.
 * Per-media candidate lists for all bands are precomputed at pack build; runtime dealing is array sampling, zero embedding math in the hot path.
+* **Relationships are many-to-many:** a card can be high for one Nown, distant for another and chaos for a third. These Nown-to-card bands guide dealing; they are not a correct-answer key, a funniness score or a card-to-card dependency tree. Players may connect cards to earlier plays when arguing; votes determine the outcome. The `chaos` similarity band is independent of the `chaos` humor bucket.
+
+These are the target dealing guarantees. The [current server mechanics](docs/code/MODULE-media-engine.md) and [roadmap](docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11) record implementation gaps that must be closed before a real pack can claim these guarantees.
 
 ### 3. Media Pipeline (`tools/mediapack`) & Content Production
 
@@ -396,8 +402,19 @@ The Media Engine owns what media exists, how hands are dealt against it, and who
 * **Content standard:** humor may include sexuality within the bounds of eroticism — suggestive, cartoon, drawn, abstract — but **never pornographic or explicit content**, and always within app-store content rules. Erotic-leaning media carries an adult rating and ships only in age-gated packs (Product Baseline); the automated screen and human curation both enforce the line.
 * Certification (the anti-dead-content gate): a pack version is publishable only if it declares its language tag (§1), every Nown has full band coverage for a 6-player deal, every card is reachable in some band, and Monte Carlo `simulate` confirms deal feasibility at both table sizes. Uncertifiable media stays in draft. The same checks back the Curator Guide's testing workflow (🧑‍🎨 §1).
 * `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Donower-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
-* Production stack: images, GIF loops, and text cards are all generated through **GPT-6 Astra** — one engine for every Nown/card media type, rendered to (animated) WebP per the quality targets above. Local on-device generation (diffusion models, local LLMs) is explicitly out of scope for v1 — content generation is a cloud API concern only. The binding constraint is human curation keep-rate, not compute.
-* Tone rubric: the four-bucket humor matrix (millennial cope / Gen-Z absurdism / social awkwardness / chaos) lives in `content/tone-matrix.md`; every asset carries its bucket for pack-mix balancing.
+* Production stack: **GPT-6 Astra** is the planned AI generation lane for image, GIF-loop and text candidates; human-authored contributions and human rewrites enter the same curation process. Images/loops use (animated) WebP per the quality targets above; text remains plain text. Local on-device generation (diffusion models, local LLMs) is out of scope for v1. Generation produces candidates, not approved material; human judgment is the binding constraint. The synthetic development builder is not evidence that this production lane is implemented.
+* Tone rubric: the [four-bucket humor matrix](content/tone-matrix.md) retains exactly one bucket per asset: `millennial-cope`, `gen-z-absurdism`, `social-awkwardness`, or `chaos`. Aim for a roughly even release mix, keeping chaos under roughly 30%. These editorial targets are separate from similarity bands and runtime draw probabilities.
+
+#### Humor development and editorial release
+
+The owner-adopted [humor development guide](content/humor-development.md) supplies the working method for this standard; the [Curator Guide](content/curator-guide.md) applies it to pack review.
+
+* **Make the table funny:** combine a recognizable human situation, an unexpected interpretation and a short, speakable line. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
+* **Editorial dimensions:** record human situation, comic mechanism, cultural reach, shelf life and accessibility in the planning record. These supplement the existing tone bucket; they are not new pack fields, server filters or inferred demographic labels.
+* **Freshness hypothesis:** start by testing a release mix of **70% evergreen, 20% seasonal or cultural, 10% topical**. It is an experiment to revise using feedback and reuse observations, not a fixed quota, runtime tuning parameter or change to the roughly balanced tone mix.
+* **Topical records:** retain the source, observation date, intended regions/languages, one-sentence context, review date and expiry date for each topical candidate. Trends identify possible topics; verify factual premises separately against the original event/announcement or reliable reporting. An editor reviews topical material weekly and at expiry, deciding whether to retain, rewrite or retire it; retirements ship through a new pack version. Dates are editorial obligations, not an implemented automatic scheduler.
+* **Cultural fit and care:** regional contributors recreate jokes in their own voice rather than translating literally. Check rights, originality, age suitability, reference accessibility and local meaning. Satire can address institutions, powerful figures and everyday frustrations; victims of a current tragedy are not punchlines.
+* **Pilot and proof:** begin with three themes and two target cultures/languages, generate several comic mechanisms per theme, then have a human select and rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
 
 ### 4. Secrecy, Sync & Anti-Cheat
 
