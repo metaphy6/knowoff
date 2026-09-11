@@ -21,6 +21,11 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Documented five shortlisted text game modes as a potential project divergence,
+  with the intended direction of player selection in one Knowoff app. The
+  proposal records examples and open design questions; the modes are not yet
+  implemented.
+
 - Recorded the static-image-and-text decision in ADR-011 and made the content
   skills automatically consult High/Distant/Chaos tuning, server dealing and
   client state/rendering logic before drafting or evaluating a batch.

@@ -7,6 +7,7 @@ Records — accepted decisions with rationale).
 
 - [`DESIGN.template.md`](DESIGN.template.md) — for proposing a non-trivial change before building it.
 - [`ADR.template.md`](ADR.template.md) — for recording a code-level decision after it's made.
+- [`DESIGN-text-game-modes.md`](DESIGN-text-game-modes.md) — draft project divergence collecting five short-text modes intended for player selection in one Knowoff app.
 
 ## When to write
 
