@@ -1,0 +1,13 @@
+{
+  "consulted_date": "2026-09-11",
+  "source_sha256": {
+    "BLUEPRINT.md": "e7543d2705cb40b422dd42964130c7aa82799645139de0c7e647e52c31ba23bf",
+    "content/humor-development.md": "beeb343915ed22fd4e62a362e2a0830818cbd848cf54852fede6e986ef0f71ab",
+    "content/tone-matrix.md": "19deeaea70bc819b91f32fd7bf0b8607ea49cfdef9497a9b4ecaea7119216ff5",
+    "content/curator-guide.md": "a9fae56f053021ff2c89e7180877cf78082fafaa9d56babcc33e8fd58435ba1c",
+    "docs/project/GLOSSARY.md": "277e7176c3b73833521b336398f16133983ddaa785c7cac8d9dbc2f6ce5aa09a",
+    "docs/planning/ROADMAP.md": "cf442133b6427847a4ce96884c64dd33b05f1214e5db61c2ebbea37c1a96c07f",
+    "docs/code/MODULE-media-engine.md": "f98c5654c9cec3afbd9030bbfb9f52ae21958a9e9af5dba405ee37ad7e0e8bf0",
+    "docs/guides/COMMUNITY_OPERATIONS.md": "8d6431944eab0de80ec74993e47e9e1b6d26cce1818aca33cccf936f97d5b040"
+  }
+}

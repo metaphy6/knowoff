@@ -1,0 +1,15 @@
+{
+  "purpose": "Verify the original10assets remain unchanged during modernaddition",
+  "assets": {
+    "loops/g01-awkward-greeting.webp": "f9bf8098ac04d6fd9d381fef212dc64760efca30c394a543ea5fd18727d59af1",
+    "loops/g02-piano-handoff.webp": "b8fbeb25c7f4a1d8f8f225024f7022b8fa97404090fdaa949e8287badf55b5ad",
+    "loops/g03-rug-negotiation.webp": "4afe8e09ffdf6507c8753b135e0cb12fbc4ce137ad96eba75ca2f58a92779169",
+    "loops/g04-waking-up.webp": "4090b9871df7ad5f34ebf9d4fcf84d5eeeabea27eb8075b0e66e52ab1b0ada2e",
+    "loops/g05-window-shortcut.webp": "bcffb182d4eeb0370c9594b442ec48093bd50b6c6faceca6356ba0054bde984a",
+    "loops/g06-dessert-etiquette.webp": "81442c59c9fb3bec14de8336a9f24eaddedaf8861f76cb61f53c0238b05861e1",
+    "stills/sample-07.webp": "282798dc2c20afa2fa321735c709f68dd135b43b0eb6448bb73ff48cdca28a35",
+    "stills/sample-08.webp": "e839aaf4e53122dd54ee2b2276a834ce7dc7cd5269e53bceb9dca874a80518c3",
+    "stills/sample-09.webp": "49df1abf2d5981a7f3e255f47fa6ea04645da4118ab13763a2d39cb908fbc579",
+    "stills/sample-10.webp": "3d134417775a29565cae099a573dabd8c2c5efa3f369589ab81c3d9f6f43b421"
+  }
+}

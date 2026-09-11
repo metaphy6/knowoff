@@ -1,0 +1,496 @@
+{
+  "batch": "review-samples-20260911",
+  "extension": "five-modern-loops",
+  "producer": "modern_humans",
+  "ffmpeg_version": "8.0.1-3ubuntu2+esm4",
+  "notes": "Original ten preserved. These three assets are explicit format-scoped additions; no new runtime pack fields or release claim. Source upload dates are verified; capture dates remain unknown. Titles are new review prose and are not encoded onto media.",
+  "candidates": [
+    {
+      "id": "m13",
+      "slug": "m13-phone-jumpscare",
+      "title": "The feed has entered real life.",
+      "tone": "social-awkwardness",
+      "source_page": "https://www.pexels.com/video/woman-surprised-while-using-phone-outdoors-29288830/",
+      "source_author": "VIDEOS2B Amazon Productions",
+      "source_author_url": "https://www.pexels.com/@videos2b-amazon-productions-1725864185/",
+      "source_upload_date": "2024-11-07",
+      "source_asset_url": "https://videos.pexels.com/video-files/29288830/12631813_2560_1440_50fps.mp4",
+      "source_title": "Woman Surprised While Using Phone Outdoors",
+      "modern_context": "Smartphone attention collides with a passing e-scooter in an ordinary street; scrolling distraction is visible in the actual footage.",
+      "situation": "Phone distraction / everyday urban life",
+      "mechanism": "Abrupt interruption; attention reversal",
+      "shelf_life": "evergreen contemporary",
+      "motion_observation": "0.00–1.67s: woman looking down at green smartphone while walking; around 2.08s a scooter rider crosses close to camera; 2.50–3.33s she jolts backward with both hands raised and looks after him; 4.08s turns back toward her phone; blunt cut resets to oblivious scrolling.",
+      "style_review": "Ordinary street, moving handheld framing, awkward closeness and an unpolished interruption read at card size. This is staged stock footage, not an asserted candid accident.",
+      "recommendation": "keep",
+      "recommendation_reason": "Physical interruption is readable silently and has more than one defensible reading; the modern device and scooter are in the action itself.",
+      "hypotheses": [
+        "When the group chat finally gets your attention.",
+        "The world interrupts your doomscroll.",
+        "An unexpected update arrives at full speed."
+      ],
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silent media; English review-only title)",
+      "regions": [
+        "global English provisional"
+      ],
+      "rating": "general-audience provisional, non-explicit",
+      "source_capture_date": "unknown; upload date is not filming date",
+      "source_date_evidence": "Pexels More info dialog inspected in browser on 2026-09-11",
+      "observed_date": "2026-09-11",
+      "rights": {
+        "license": "Pexels License",
+        "license_url": "https://www.pexels.com/license/",
+        "evidence": "Asset page labels footage Free to use and links Pexels License; official license page inspected 2026-09-11. It permits downloading and modification, subject to restrictions including no offensive/negative depiction of identifiable people and no implied endorsement.",
+        "attribution": "Video by VIDEOS2B Amazon Productions on Pexels; excerpted and compressed for Knowoff private draft review.",
+        "status": "license evidence recorded; contextual use, identifiable-person rights and human release review pending",
+        "model_release": "not independently obtained or verified"
+      },
+      "generation": {
+        "method": "Real footage excerpt and FFmpeg transcode; no AI motion generation",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "start_seconds": 2.0,
+        "requested_duration_seconds": 4.2,
+        "speed": "unchanged",
+        "crop": "none; source aspect ratio retained to even pixel rounding",
+        "audio": "removed / silent",
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "2.0",
+          "-i",
+          "/tmp/agent-runs/modern-b/phone.mp4",
+          "-t",
+          "4.2",
+          "-an",
+          "-vf",
+          "fps=12,scale='if(gte(iw,ih),480,-2)':'if(gte(ih,iw),480,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "0",
+          "-q:v",
+          "45",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m13-phone-jumpscare.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "2.0",
+          "-i",
+          "/tmp/agent-runs/modern-b/phone.mp4",
+          "-t",
+          "4.2",
+          "-an",
+          "-filter_complex",
+          "fps=10,scale='if(gte(iw,ih),360,-2)':'if(gte(ih,iw),360,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m13-phone-jumpscare.gif"
+        ]
+      },
+      "accessibility": "Action and facial gesture readable without sound; no burnt-in title or required text. English interpretations are optional review prose.",
+      "relationship_status": "All interpretations are editorial hypotheses only; no embeddings measured or exclusive answer keys.",
+      "playback_review": {
+        "method": "Inspected actual compressed WebP in browser at native card-size dimensions, checked changing frames; extracted decoded output sequence at 0.42s intervals with final-to-first reset contact sheet.",
+        "full_loop_motion_evidence": "Actual time-varying subject action, not a still pan/zoom; frame sequence and reset inspected.",
+        "human_review": "not run"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "source_file_sha256": "5e0828dd5da9a510015f1e111fcd9ec0a5523fdf1a48912aa48884441168bb0b",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 2560,
+            "height": 1440,
+            "r_frame_rate": "50/1"
+          }
+        ],
+        "format": {
+          "duration": "6.800000"
+        }
+      },
+      "assets": [
+        {
+          "path": "modern-loops/m13-phone-jumpscare.webp",
+          "format": "WEBP",
+          "width": 480,
+          "height": 270,
+          "frames": 50,
+          "duration_ms": 4166,
+          "bytes": 640120,
+          "sha256": "22dd2ea234637145c54558ca4d034c6507eed79e0d0d7318ad89fc812f333193",
+          "unique_decoded_frames": 50,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        },
+        {
+          "path": "modern-loops/m13-phone-jumpscare.gif",
+          "format": "GIF",
+          "width": 360,
+          "height": 202,
+          "frames": 42,
+          "duration_ms": 4200,
+          "bytes": 1566587,
+          "sha256": "1e9f1422ddc979a39e7cdaa2b8aa7f8f4f7b4bfb41b8ae793c0ff6d2986c070e",
+          "unique_decoded_frames": 42,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        }
+      ],
+      "poster": "modern-loops/m13-phone-jumpscare-poster.webp",
+      "contact_sheet": "modern-loops/m13-phone-jumpscare-contact.jpg"
+    },
+    {
+      "id": "m14",
+      "slug": "m14-notification-overload",
+      "title": "One more quick question.",
+      "tone": "millennial-cope",
+      "source_page": "https://www.pexels.com/video/frustrated-woman-using-a-laptop-8632780/",
+      "source_author": "Kampus Production",
+      "source_author_url": "https://www.pexels.com/@kampus/",
+      "source_upload_date": "2021-07-05",
+      "source_asset_url": "https://videos.pexels.com/video-files/8632780/8632780-uhd_2560_1440_25fps.mp4",
+      "source_title": "Frustrated Woman Using a Laptop",
+      "modern_context": "Laptop overload as an original reaction to the always-on workday. Microsoft’s June 17, 2025 Work Trend Index follow-up describes meetings, messages and notifications fragmenting work; this source clip predates the report and does not document its participants or a visible notification.",
+      "context_source": "https://www.microsoft.com/en-us/worklab/work-trend-index/breaking-down-infinite-workday",
+      "context_source_date": "2025-06-17",
+      "context_review_date": "2026-09-18",
+      "context_expiry_date": "2026-10-11",
+      "situation": "Digital work / meeting and notification overload",
+      "mechanism": "Accumulation; exaggerated tiny frustration",
+      "shelf_life": "topical framing on evergreen digital-work footage",
+      "motion_observation": "0.00s laptop focus; 0.42–1.25s removes glasses and rubs face; 1.67s exasperated hand gesture; 2.08–2.92s double facepalm/head slump; 3.75–4.42s chin in hands before abrupt return to focused starting pose.",
+      "style_review": "Flat office scene and readable facepalm. Cleaner, more staged composition than preferred candid lo-fi direction; retain as an owner-review option with this caveat, not as an approved style benchmark. Compression alone does not resolve that limitation.",
+      "recommendation": "hold",
+      "recommendation_reason": "The modern overload interpretation works, but owner should decide whether this clean stock staging is too polished; no notification or video call is actually visible.",
+      "hypotheses": [
+        "The quick call has a sequel.",
+        "The computer asks you to restart again.",
+        "The group chat is planning one simple dinner."
+      ],
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silent media; English review-only title)",
+      "regions": [
+        "global English provisional"
+      ],
+      "rating": "general-audience provisional, non-explicit",
+      "source_capture_date": "unknown; upload date is not filming date",
+      "source_date_evidence": "Pexels More info dialog inspected in browser on 2026-09-11",
+      "observed_date": "2026-09-11",
+      "rights": {
+        "license": "Pexels License",
+        "license_url": "https://www.pexels.com/license/",
+        "evidence": "Asset page labels footage Free to use and links Pexels License; official license page inspected 2026-09-11. It permits downloading and modification, subject to restrictions including no offensive/negative depiction of identifiable people and no implied endorsement.",
+        "attribution": "Video by Kampus Production on Pexels; excerpted and compressed for Knowoff private draft review.",
+        "status": "license evidence recorded; contextual use, identifiable-person rights and human release review pending",
+        "model_release": "not independently obtained or verified"
+      },
+      "generation": {
+        "method": "Real footage excerpt and FFmpeg transcode; no AI motion generation",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "start_seconds": 0.0,
+        "requested_duration_seconds": 4.5,
+        "speed": "unchanged",
+        "crop": "none; source aspect ratio retained to even pixel rounding",
+        "audio": "removed / silent",
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0.0",
+          "-i",
+          "/tmp/agent-runs/modern-b/work.mp4",
+          "-t",
+          "4.5",
+          "-an",
+          "-vf",
+          "fps=12,scale='if(gte(iw,ih),480,-2)':'if(gte(ih,iw),480,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "0",
+          "-q:v",
+          "45",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m14-notification-overload.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0.0",
+          "-i",
+          "/tmp/agent-runs/modern-b/work.mp4",
+          "-t",
+          "4.5",
+          "-an",
+          "-filter_complex",
+          "fps=10,scale='if(gte(iw,ih),360,-2)':'if(gte(ih,iw),360,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m14-notification-overload.gif"
+        ]
+      },
+      "accessibility": "Action and facial gesture readable without sound; no burnt-in title or required text. English interpretations are optional review prose.",
+      "relationship_status": "All interpretations are editorial hypotheses only; no embeddings measured or exclusive answer keys.",
+      "playback_review": {
+        "method": "Inspected actual compressed WebP in browser at native card-size dimensions, checked changing frames; extracted decoded output sequence at 0.42s intervals with final-to-first reset contact sheet.",
+        "full_loop_motion_evidence": "Actual time-varying subject action, not a still pan/zoom; frame sequence and reset inspected.",
+        "human_review": "not run"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "source_file_sha256": "4b57877a60631cdc120adaa365514bf129c8cf5ed8091439dcc96599a3dab082",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 2560,
+            "height": 1440,
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "duration": "7.760000"
+        }
+      },
+      "assets": [
+        {
+          "path": "modern-loops/m14-notification-overload.webp",
+          "format": "WEBP",
+          "width": 480,
+          "height": 270,
+          "frames": 54,
+          "duration_ms": 4499,
+          "bytes": 242568,
+          "sha256": "6e7d055c162f4f83ec46c369135cd0259fb56c0ed430ebad39abd90537513ca1",
+          "unique_decoded_frames": 54,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        },
+        {
+          "path": "modern-loops/m14-notification-overload.gif",
+          "format": "GIF",
+          "width": 360,
+          "height": 202,
+          "frames": 45,
+          "duration_ms": 4500,
+          "bytes": 1082537,
+          "sha256": "3d8c55ee8c7e593e8d49f80b48dea9f3018eda219bdec1e4be787334d9a49ff2",
+          "unique_decoded_frames": 45,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        }
+      ],
+      "poster": "modern-loops/m14-notification-overload-poster.webp",
+      "contact_sheet": "modern-loops/m14-notification-overload-contact.jpg"
+    },
+    {
+      "id": "m15",
+      "slug": "m15-one-more-round",
+      "title": "We said one casual game.",
+      "tone": "gen-z-absurdism",
+      "source_page": "https://www.pexels.com/video/gamers-celebrating-a-win-7849252/",
+      "source_author": "Ron Lach",
+      "source_author_url": "https://www.pexels.com/@ron-lach/",
+      "source_upload_date": "2021-05-10",
+      "source_asset_url": "https://videos.pexels.com/video-files/7849252/7849252-uhd_1440_2732_25fps.mp4",
+      "source_title": "Gamers Celebrating a Win",
+      "modern_context": "Headset, microphone and multiplayer PC setup frame an exaggerated gaming celebration. Contemporary online gaming culture; no claim that this is footage of a named tournament or a recent event.",
+      "situation": "Multiplayer gaming / tiny achievement",
+      "mechanism": "Petty stakes treated as epic; sudden reversal from concentration to celebration",
+      "shelf_life": "evergreen contemporary / gaming culture",
+      "motion_observation": "0.00–0.83s leans forward in headset concentrating on PC; 1.25–2.08s face opens into shout/laugh; 2.50–3.75s both fists rise while leaning back; 4.17–4.92s smiles and begins to settle; abrupt reset to keyboard focus.",
+      "style_review": "Close awkward vertical crop, candid-like outburst and visible practical gaming LEDs. Staged stock with colored lighting; no cinematic camera move or added premium treatment.",
+      "recommendation": "keep",
+      "recommendation_reason": "The visible sudden reaction supplies the joke without a caption; headset/PC context is immediately modern, while achievement, relief and competitive overreaction remain defensible alternatives.",
+      "hypotheses": [
+        "One tiny win after a terrible evening.",
+        "The Wi-Fi finally reconnects.",
+        "Everyone survives the supposedly casual match."
+      ],
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silent media; English review-only title)",
+      "regions": [
+        "global English provisional"
+      ],
+      "rating": "general-audience provisional, non-explicit",
+      "source_capture_date": "unknown; upload date is not filming date",
+      "source_date_evidence": "Pexels More info dialog inspected in browser on 2026-09-11",
+      "observed_date": "2026-09-11",
+      "rights": {
+        "license": "Pexels License",
+        "license_url": "https://www.pexels.com/license/",
+        "evidence": "Asset page labels footage Free to use and links Pexels License; official license page inspected 2026-09-11. It permits downloading and modification, subject to restrictions including no offensive/negative depiction of identifiable people and no implied endorsement.",
+        "attribution": "Video by Ron Lach on Pexels; excerpted and compressed for Knowoff private draft review.",
+        "status": "license evidence recorded; contextual use, identifiable-person rights and human release review pending",
+        "model_release": "not independently obtained or verified"
+      },
+      "generation": {
+        "method": "Real footage excerpt and FFmpeg transcode; no AI motion generation",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "start_seconds": 5.7,
+        "requested_duration_seconds": 5.0,
+        "speed": "unchanged",
+        "crop": "none; source aspect ratio retained to even pixel rounding",
+        "audio": "removed / silent",
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "5.7",
+          "-i",
+          "/tmp/agent-runs/modern-b/gaming.mp4",
+          "-t",
+          "5.0",
+          "-an",
+          "-vf",
+          "fps=12,scale='if(gte(iw,ih),480,-2)':'if(gte(ih,iw),480,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "0",
+          "-q:v",
+          "45",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m15-one-more-round.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "5.7",
+          "-i",
+          "/tmp/agent-runs/modern-b/gaming.mp4",
+          "-t",
+          "5.0",
+          "-an",
+          "-filter_complex",
+          "fps=10,scale='if(gte(iw,ih),360,-2)':'if(gte(ih,iw),360,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/modern-loops/m15-one-more-round.gif"
+        ]
+      },
+      "accessibility": "Action and facial gesture readable without sound; no burnt-in title or required text. English interpretations are optional review prose.",
+      "relationship_status": "All interpretations are editorial hypotheses only; no embeddings measured or exclusive answer keys.",
+      "playback_review": {
+        "method": "Inspected actual compressed WebP in browser at native card-size dimensions, checked changing frames; extracted decoded output sequence at 0.42s intervals with final-to-first reset contact sheet.",
+        "full_loop_motion_evidence": "Actual time-varying subject action, not a still pan/zoom; frame sequence and reset inspected.",
+        "human_review": "not run"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "source_file_sha256": "bac101d21b48d79761c8e14dbf13b299aac6d2af49a053a310c5550381d1c64d",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1440,
+            "height": 2732,
+            "r_frame_rate": "25/1"
+          }
+        ],
+        "format": {
+          "duration": "29.200000"
+        }
+      },
+      "assets": [
+        {
+          "path": "modern-loops/m15-one-more-round.webp",
+          "format": "WEBP",
+          "width": 254,
+          "height": 480,
+          "frames": 60,
+          "duration_ms": 4999,
+          "bytes": 244314,
+          "sha256": "c860059954524637659bc232360fa9aad3a6714125138434465439a237b24cf9",
+          "unique_decoded_frames": 60,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        },
+        {
+          "path": "modern-loops/m15-one-more-round.gif",
+          "format": "GIF",
+          "width": 190,
+          "height": 360,
+          "frames": 50,
+          "duration_ms": 5000,
+          "bytes": 1219700,
+          "sha256": "9927afec797538850a5ae33b79766a33ba467eef4a211a2b6428649acf7f501f",
+          "unique_decoded_frames": 50,
+          "loop": 0,
+          "checks": "PASS: animated, longest side <=480, bytes <=2,000,000"
+        }
+      ],
+      "poster": "modern-loops/m15-one-more-round-poster.webp",
+      "contact_sheet": "modern-loops/m15-one-more-round-contact.jpg"
+    }
+  ]
+}

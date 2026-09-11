@@ -1,0 +1,512 @@
+{
+  "batch": "review-samples-20260911",
+  "extension": "ten-casual-loops",
+  "producer": "modern_humans",
+  "ffmpeg_version": "8.0.1-3ubuntu2+esm4",
+  "notes": "Threeadditionaldrafts; previousassetsuntouched. Alltitles/interpretations optionalreviewprose, notburned-intext. No paidgeneration, release approval, or runtime integration.",
+  "candidates": [
+    {
+      "id": "c16",
+      "slug": "c16-greeting-buffering",
+      "title": "Greeting still buffering.",
+      "tone": "social-awkwardness",
+      "source_page": "https://tenor.com/view/awkward-handshake-chess-tournament-gif-25270366",
+      "source_author": "simplytabby (Tenor uploader; original videographer unverified)",
+      "source_author_url": "https://tenor.com/users/simplytabby",
+      "source_upload_date": "2022-04-01",
+      "source_capture_date": "unknown; modern chess event with masks visible",
+      "source_title": "Awkward Handshake GIF",
+      "modern_context": "Two chess players repeatedly choose different greetings: fist bump versus handshake. No specific event, match result or 2026 recency asserted.",
+      "situation": "Meeting someone / failed greeting",
+      "mechanism": "Repeated social misread; mutual correction makes it worse",
+      "shelf_life": "evergreen contemporary",
+      "motion_observation": "Open hand and fist repeatedly mismatch. Their hands briefly appear to connect around3.6seconds; the seated player then pulls back and covers their face before the abrupt reset.",
+      "style_review": "Rough elevated spectator/event framing, casual body language, backgroundpeople and soft compression. Visible action—not a professional reaction pose—carries the awkwardness.",
+      "recommendation": "keep",
+      "recommendation_reason": "The mismatch repeats just long enough to escalate, then ends in embarrassment. Universal greeting premise needs no chess knowledge.",
+      "hypotheses": [
+        "Two people following different instructions.",
+        "The group chat cannot agree on one simple plan.",
+        "Trying to act normal around someone new."
+      ],
+      "accessibility": "Hands must remain large enough to see open palm versus fist. The 480pxWebP preserves this;300pxGIF offers lower clarity. No audio or chessrules needed.",
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silentmedia; titles/interpretations review-only)",
+      "regions": [
+        "global-English provisional"
+      ],
+      "rating": "general audience provisional, non-explicit",
+      "observed_date": "2026-09-11",
+      "source_asset_url": "https://media.tenor.com/vKD2KFUZIcEAAAPo/awkward-handshake.mp4",
+      "source_date_evidence": "Created fieldon verifiedTenor sourcepage; upload dates are not filming dates.",
+      "rights": {
+        "license": "unresolved; no reuse license granted or inferred",
+        "license_url": null,
+        "evidence": "Public Tenor sourcepage anduploader provenance retained; platformavailability isnot copyrightclearance.",
+        "attribution": "simplytabby (Tenor uploader; original videographer unverified)",
+        "status": "HOLD forcommercialpackrelease untilcopyright/contextualuse/personalityrightsverified; privateownerreviewdraftonly",
+        "model_release": "notrun"
+      },
+      "generation": {
+        "method": "Excerpt ofexisting movingfootage; FFmpegtranscode; noAIgeneration",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "slug": "c16-greeting-buffering",
+        "source_key": "c16",
+        "source": "/tmp/agent-runs/casual-a/c16.mp4",
+        "start_seconds": 0,
+        "requested_duration_seconds": 4.6,
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0",
+          "-i",
+          "/tmp/agent-runs/casual-a/c16.mp4",
+          "-t",
+          "4.6",
+          "-an",
+          "-vf",
+          "fps=10,scale='if(gte(iw,ih),480,-2)':'if(gte(ih,iw),480,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "0",
+          "-q:v",
+          "45",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c16-greeting-buffering.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0",
+          "-i",
+          "/tmp/agent-runs/casual-a/c16.mp4",
+          "-t",
+          "4.6",
+          "-an",
+          "-filter_complex",
+          "fps=10,scale='if(gte(iw,ih),300,-2)':'if(gte(ih,iw),300,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c16-greeting-buffering.gif"
+        ],
+        "speed": "unchanged",
+        "crop": "none; aspectratio retained toevenpixelrounding",
+        "audio": "removed / silent"
+      },
+      "source_file_sha256": "9fc2d168ec0ba49fb866a05021a1d6af4cc66e7f58624882c260c4eb47f33cbc",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 640,
+            "height": 640,
+            "r_frame_rate": "10/1"
+          }
+        ],
+        "format": {
+          "duration": "4.600000"
+        }
+      },
+      "relationship_status": "Allproposedrelationships areeditorialhypotheses, not embeddingbands/answerkeys.",
+      "playback_review": {
+        "method": "Decoded compressedWebPframes inspectedchronologically at~0.33sintervals includingfinalframe→firstframereset contact sheet.",
+        "browser_playback": "notrun bychild: browserinventoryempty; rootwillverifygalleryframes.",
+        "continuous_watch": "notclaimed fromscreenshots orcontactsheet"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "assets": [
+        {
+          "path": "casual-loops/c16-greeting-buffering.webp",
+          "format": "WEBP",
+          "width": 480,
+          "height": 480,
+          "frames": 46,
+          "duration_ms": 4600,
+          "bytes": 390552,
+          "sha256": "a542998f017c059638beee712895412f7210fb9160a5b250ce94474931209082",
+          "unique_decoded_frames": 46,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        },
+        {
+          "path": "casual-loops/c16-greeting-buffering.gif",
+          "format": "GIF",
+          "width": 300,
+          "height": 300,
+          "frames": 46,
+          "duration_ms": 4600,
+          "bytes": 1597465,
+          "sha256": "7ba01189e8761b46937c27ad079da2f4e5347a7698ab7d4fb51d0de5652b4809",
+          "unique_decoded_frames": 46,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        }
+      ],
+      "poster": "casual-loops/c16-greeting-buffering-poster.webp",
+      "contact_sheet": "casual-loops/c16-greeting-buffering-contact.jpg"
+    },
+    {
+      "id": "c17",
+      "slug": "c17-party-overconfidence",
+      "title": "We rehearsed this zero times.",
+      "tone": "chaos",
+      "source_page": "https://tenor.com/view/jump-failarmy-please-help-me-im-falling-fails-of-the-week-gif-18191931",
+      "source_author": "FailArmy (official Tenor account; original filmer unidentified)",
+      "source_author_url": "https://tenor.com/official/failarmy",
+      "source_upload_date": "2020-08-22",
+      "source_capture_date": "unknown; do not equate platform upload with filming date",
+      "source_title": "Jump Failarmy GIF",
+      "modern_context": "Modern party footage turns a confident dance lift into a messy group scramble. The specific event, date and injury outcome are unverified.",
+      "situation": "Party / showing off with friends",
+      "mechanism": "Misplaced confidence; overcommitment; abrupt physical reversal",
+      "shelf_life": "evergreen contemporary",
+      "motion_observation": "0.00–0.67s personrunsinto partner for lift;1.00–2.33s lifts higher and tips nearlyvertical with feetoverhead;2.67–3.33s lands awkwardly into a crouching cluster;3.67–4.42s friendsbend/react and startrecovering; reset cuts back to overconfidentapproach.",
+      "style_review": "Handheld party recording with onlookers, clutter and rapidbodymovement. Existing FailArmy watermark retained. No graphic injuryvisible; outcome beyond this shortclip unknown.",
+      "recommendation": "keep",
+      "recommendation_reason": "Big confidentsetup and sudden loss of coordination read silently; the surrounding people supply spontaneous awkwardness. Human review should check comfort with slapstick falling.",
+      "hypotheses": [
+        "Trusting the plan before anybody reads it.",
+        "The celebration needs its own emergency meeting.",
+        "A simple favor becomes a group project."
+      ],
+      "accessibility": "Broad lift/fall visible atcard-size. Avoid describing actual injury or making the subjects pathological; humor concerns the visible overambitiousmaneuver.",
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silentmedia; titles/interpretations review-only)",
+      "regions": [
+        "global-English provisional"
+      ],
+      "rating": "general audience provisional, non-explicit",
+      "observed_date": "2026-09-11",
+      "source_asset_url": "https://media.tenor.com/FGYIHT7n2MAAAAPo/jump-failarmy.mp4",
+      "source_date_evidence": "Created fieldon verifiedTenor sourcepage; upload dates are not filming dates.",
+      "rights": {
+        "license": "unresolved; no reuse license granted or inferred",
+        "license_url": null,
+        "evidence": "Public Tenor sourcepage anduploader provenance retained; platformavailability isnot copyrightclearance.",
+        "attribution": "FailArmy (official Tenor account; original filmer unidentified)",
+        "status": "HOLD forcommercialpackrelease untilcopyright/contextualuse/personalityrightsverified; privateownerreviewdraftonly",
+        "model_release": "notrun"
+      },
+      "generation": {
+        "method": "Excerpt ofexisting movingfootage; FFmpegtranscode; noAIgeneration",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "slug": "c17-party-overconfidence",
+        "source_key": "alt",
+        "source": "/tmp/agent-runs/casual-a/alt.mp4",
+        "start_seconds": 0.4,
+        "requested_duration_seconds": 4.5,
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0.4",
+          "-i",
+          "/tmp/agent-runs/casual-a/alt.mp4",
+          "-t",
+          "4.5",
+          "-an",
+          "-vf",
+          "fps=12,scale='if(gte(iw,ih),480,-2)':'if(gte(ih,iw),480,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "0",
+          "-q:v",
+          "45",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c17-party-overconfidence.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0.4",
+          "-i",
+          "/tmp/agent-runs/casual-a/alt.mp4",
+          "-t",
+          "4.5",
+          "-an",
+          "-filter_complex",
+          "fps=12,scale='if(gte(iw,ih),300,-2)':'if(gte(ih,iw),300,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c17-party-overconfidence.gif"
+        ],
+        "speed": "unchanged",
+        "crop": "none; aspectratio retained toevenpixelrounding",
+        "audio": "removed / silent"
+      },
+      "source_file_sha256": "8d4e7a898267a96d21a6ae721e874c04aa4251c2bde0ef778176a33dc408ae45",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 640,
+            "height": 366,
+            "r_frame_rate": "100/7"
+          }
+        ],
+        "format": {
+          "duration": "5.180000"
+        }
+      },
+      "relationship_status": "Allproposedrelationships areeditorialhypotheses, not embeddingbands/answerkeys.",
+      "playback_review": {
+        "method": "Decoded compressedWebPframes inspectedchronologically at~0.33sintervals includingfinalframe→firstframereset contact sheet.",
+        "browser_playback": "notrun bychild: browserinventoryempty; rootwillverifygalleryframes.",
+        "continuous_watch": "notclaimed fromscreenshots orcontactsheet"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "assets": [
+        {
+          "path": "casual-loops/c17-party-overconfidence.webp",
+          "format": "WEBP",
+          "width": 480,
+          "height": 274,
+          "frames": 54,
+          "duration_ms": 4499,
+          "bytes": 387808,
+          "sha256": "340e6ebd8c7e66aca08837dafb8974d22af85003687c057fa8b0ce7dc368fb85",
+          "unique_decoded_frames": 54,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        },
+        {
+          "path": "casual-loops/c17-party-overconfidence.gif",
+          "format": "GIF",
+          "width": 300,
+          "height": 172,
+          "frames": 54,
+          "duration_ms": 4500,
+          "bytes": 1324462,
+          "sha256": "d676458e434d391592eb1698d2668889c44ad059bd8bd2c2b51528151c36c1b6",
+          "unique_decoded_frames": 54,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        }
+      ],
+      "poster": "casual-loops/c17-party-overconfidence-poster.webp",
+      "contact_sheet": "casual-loops/c17-party-overconfidence-contact.jpg"
+    },
+    {
+      "id": "c18",
+      "slug": "c18-reconsidering",
+      "title": "No. Actually… wait.",
+      "tone": "gen-z-absurdism",
+      "source_page": "https://tenor.com/view/brittany-tomlinson-brittany-tomlinson-kombucha-woman-gif-1222175417584094023",
+      "source_author": "Brittany Broski / Brittany Tomlinson (underlying creator); Camibels (Tenor repost)",
+      "source_author_url": "https://tenor.com/users/camibels",
+      "source_upload_date": "2024-09-17",
+      "source_capture_date": "2019 underlying kombucha-video origin; exact filming date not independently verified",
+      "source_title": "Brittany Tomlinson Kombucha GIF",
+      "origin_evidence": [
+        {
+          "url": "https://www.diaridebarcelona.cat/w/brittany-broski-entrevista-1",
+          "date": "2020-07-19",
+          "basis": "Interview withBroski describes the kombucha clip goingviral inAugust2019."
+        },
+        {
+          "url": "https://knowyourmeme.com/memes/people/kombucha-girl-brittany-broski",
+          "basis": "Documents the underlying2019TikTok andlinks originalembed; notrightspermission."
+        }
+      ],
+      "modern_context": "Creator-recorded kitchen reaction from internet culture: disgust switches suddenly to open-minded side-eye. A familiar2019meme, not a new2026event.",
+      "situation": "Second thoughts / trying something unfamiliar",
+      "mechanism": "Immediate emotionalreversal; awkwardhonesty",
+      "shelf_life": "evergreen internet-culture reaction",
+      "motion_observation": "0.00s neutral;0.33–1.33s face tightens into disgust;about1.5s sharpheadturn withraisedeyebrows abruptlyreconsiders;2.0–2.6s holds skepticalmaybe; bluntreset returns tofirstlook.",
+      "style_review": "Imperfect self-recorded kitchen framing, ordinary light andcompressedphone texture. FinalWebP uses300pxlosslessencoding ofthe alreadycompressedsource toavoid newdelta-box artifacts observedin480pxlossytranscode; noenhancementorupscaling.",
+      "recommendation": "keep",
+      "recommendation_reason": "The fast facial reversal has a clear silent punchline and flexiblemeaning. Existing meme familiarity may causefatigue; owner/playerrecognition checkpending.",
+      "hypotheses": [
+        "Rejecting an idea before hearing the price.",
+        "Your bad plan suddenly sounds reasonable.",
+        "The first impression did not survive the second thought."
+      ],
+      "accessibility": "Expressive headturn andeyebrows read withoutknowingBroski orkombucha;300pxsquare fitscard-size.",
+      "revision": 1,
+      "kind": "playable-card candidate",
+      "language": "en (silentmedia; titles/interpretations review-only)",
+      "regions": [
+        "global-English provisional"
+      ],
+      "rating": "general audience provisional, non-explicit",
+      "observed_date": "2026-09-11",
+      "source_asset_url": "https://media.tenor.com/EPYKESJQi0cAAAPo/brittany-tomlinson-brittany.mp4",
+      "source_date_evidence": "Created fieldon verifiedTenor sourcepage; upload dates are not filming dates.",
+      "rights": {
+        "license": "unresolved; no reuse license granted or inferred",
+        "license_url": null,
+        "evidence": "Public Tenor sourcepage anduploader provenance retained; platformavailability isnot copyrightclearance.",
+        "attribution": "Brittany Broski / Brittany Tomlinson (underlying creator); Camibels (Tenor repost)",
+        "status": "HOLD forcommercialpackrelease untilcopyright/contextualuse/personalityrightsverified; privateownerreviewdraftonly",
+        "model_release": "notrun"
+      },
+      "generation": {
+        "method": "Excerpt ofexisting movingfootage; FFmpegtranscode; noAIgeneration",
+        "model": null,
+        "prompt": null,
+        "seed": null
+      },
+      "edit": {
+        "slug": "c18-reconsidering",
+        "source_key": "c18",
+        "source": "/tmp/agent-runs/casual-a/c18.mp4",
+        "start_seconds": 0,
+        "requested_duration_seconds": 2.7,
+        "webp_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0",
+          "-i",
+          "/tmp/agent-runs/casual-a/c18.mp4",
+          "-t",
+          "2.7",
+          "-an",
+          "-vf",
+          "fps=12,scale='if(gte(iw,ih),300,-2)':'if(gte(ih,iw),300,-2)'",
+          "-c:v",
+          "libwebp_anim",
+          "-lossless",
+          "1",
+          "-q:v",
+          "70",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c18-reconsidering.webp"
+        ],
+        "gif_command": [
+          "ffmpeg",
+          "-hide_banner",
+          "-loglevel",
+          "error",
+          "-y",
+          "-ss",
+          "0",
+          "-i",
+          "/tmp/agent-runs/casual-a/c18.mp4",
+          "-t",
+          "2.7",
+          "-an",
+          "-filter_complex",
+          "fps=12,scale='if(gte(iw,ih),300,-2)':'if(gte(ih,iw),300,-2)',split[a][b];[a]palettegen=max_colors=64[p];[b][p]paletteuse=dither=bayer:bayer_scale=4",
+          "-loop",
+          "0",
+          "content/batches/review-samples-20260911/casual-loops/c18-reconsidering.gif"
+        ],
+        "speed": "unchanged",
+        "crop": "none; aspectratio retained toevenpixelrounding",
+        "audio": "removed / silent"
+      },
+      "source_file_sha256": "bf1b34c81144662a2b8aeb777da40b6d925d762e5422fdde4d5a44e44e7d3978",
+      "source_metadata": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 498,
+            "height": 498,
+            "r_frame_rate": "30/1"
+          }
+        ],
+        "format": {
+          "duration": "2.700000"
+        }
+      },
+      "relationship_status": "Allproposedrelationships areeditorialhypotheses, not embeddingbands/answerkeys.",
+      "playback_review": {
+        "method": "Decoded compressedWebPframes inspectedchronologically at~0.33sintervals includingfinalframe→firstframereset contact sheet.",
+        "browser_playback": "notrun bychild: browserinventoryempty; rootwillverifygalleryframes.",
+        "continuous_watch": "notclaimed fromscreenshots orcontactsheet"
+      },
+      "screening": "not run",
+      "human_review": "not run",
+      "rights_human_review": "not run",
+      "playtest_4_players": "not run",
+      "playtest_6_players": "not run",
+      "semantic_embeddings": "not run",
+      "technical_pack_certification": "not run",
+      "activation": "not run",
+      "release_state": "private draft assets prepared for owner review; no pack integration",
+      "assets": [
+        {
+          "path": "casual-loops/c18-reconsidering.webp",
+          "format": "WEBP",
+          "width": 300,
+          "height": 300,
+          "frames": 32,
+          "duration_ms": 2666,
+          "bytes": 1723936,
+          "sha256": "fe37effa0be1cc6438a83b803a88bf672e607a542c918b788cfef049d2b7056f",
+          "unique_decoded_frames": 32,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        },
+        {
+          "path": "casual-loops/c18-reconsidering.gif",
+          "format": "GIF",
+          "width": 300,
+          "height": 300,
+          "frames": 32,
+          "duration_ms": 2660,
+          "bytes": 735692,
+          "sha256": "ec97a710090ea240099bf48ed52198d89b527e82f540be6c2fd1b8551f33b9a3",
+          "unique_decoded_frames": 32,
+          "loop": 0,
+          "checks": "PASS animated/<=480longest/<=2000000bytes"
+        }
+      ],
+      "poster": "casual-loops/c18-reconsidering-poster.webp",
+      "contact_sheet": "casual-loops/c18-reconsidering-contact.jpg"
+    }
+  ]
+}

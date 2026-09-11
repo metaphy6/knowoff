@@ -1,0 +1,408 @@
+{
+  "batch_id": "review-samples-20260911-modern-extension",
+  "status": "two additional completed motion samples prepared for owner review",
+  "preservation": "Existing samples 01–10 unchanged.",
+  "schema_note": "Editorial provenance only; not a loadable pack manifest or official approval database. GIF previews and posters/contact sheets are renditions/supporting evidence of the same two items.",
+  "sources": {
+    "bolivia": {
+      "title": "Robot Humanoide, Robotics Creators Bolivia",
+      "author": "SilvEsth",
+      "original_date": "2026-06-18",
+      "upload_date": "2026-07-23",
+      "page_revision": "https://commons.wikimedia.org/w/index.php?title=File:Robot_Humanoide,_Robotics_Creators_Bolivia.webm&oldid=1250782691",
+      "rights": "CC0 1.0 Universal Public Domain Dedication stated by uploader as own work",
+      "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "date_basis": "Source description lists 18 June 2026 as creation date; file history lists 23 July 2026 upload. These are distinct from this task observation date.",
+      "modern_context": "A real humanoid-robot demonstration recorded in 2026, recast editorially around robotic coworkers and the enthusiasm surrounding automation. No claim of autonomous AI control or a product launch.",
+      "source_description": "Humanoid robot created by Robotics Creators Bolivia; a phone clip in a workshop/shop.",
+      "derivative_license_note": "CC0 source; modified by trimming, audio removal, scaling, frame-rate reduction and compression; no added captions.",
+      "page": "https://commons.wikimedia.org/wiki/File:Robot_Humanoide,_Robotics_Creators_Bolivia.webm",
+      "download_url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/d/d2/Robot_Humanoide%2C_Robotics_Creators_Bolivia.webm/Robot_Humanoide%2C_Robotics_Creators_Bolivia.webm.480p.vp9.webm",
+      "source_bytes": 3830164,
+      "observed_date": "2026-09-11",
+      "source_sha256": "5ec14aaa21376dfa8dff6f01733b7c987bceab70bd0c8f78704a0b9cbc61fac0",
+      "source_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp9",
+            "codec_type": "video",
+            "width": 270,
+            "height": 480,
+            "avg_frame_rate": "30/1"
+          },
+          {
+            "index": 1,
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "avg_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "61.490000",
+          "size": "3830164"
+        }
+      },
+      "human_rights_review": "not run",
+      "full_source_retention": "Temporary source in /tmp/agent-runs/modern-producer-a only; not a repository deliverable."
+    },
+    "vr": {
+      "title": "Registro de realidad virtual y de percepción sensorial holística en la Escuela libre (2)",
+      "author": "Luisalvaz",
+      "original_date": "2024-03-30",
+      "upload_date": "2024-04-18",
+      "page_revision": "https://commons.wikimedia.org/w/index.php?title=File:Registro_de_realidad_virtual_y_de_percepci%C3%B3n_sensorial_hol%C3%ADstica_en_la_Escuela_libre_(2).webm&oldid=967732541",
+      "rights": "Creative Commons Attribution-ShareAlike 4.0 International stated by uploader as own work",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "date_basis": "Source description lists 30 March 2024 workshop; file history lists 18 April 2024 upload. Not relabeled as a 2026 event.",
+      "modern_context": "Contemporary VR and immersive-digital-life reaction, filmed at a 2024 audiovisual workshop. The joke is an editorial metaphor for digital overload; no claim of current breaking news, distress or equipment failure.",
+      "source_description": "Virtual reality and holistic sensory-perception session at an open audiovisual-production workshop in Aguascalientes, Mexico.",
+      "derivative_license_note": "These cropped/transcoded excerpt derivatives are supplied under CC BY-SA 4.0. Credit Luisalvaz, source link and license link; changes: trim,640×480 crop at x110/y0 of 854×480 source, audio removal, scaling, frame-rate reduction and compression. No endorsement implied.",
+      "page": "https://commons.wikimedia.org/wiki/File:Registro_de_realidad_virtual_y_de_percepci%C3%B3n_sensorial_hol%C3%ADstica_en_la_Escuela_libre_(2).webm",
+      "download_url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/2c/Registro_de_realidad_virtual_y_de_percepci%C3%B3n_sensorial_hol%C3%ADstica_en_la_Escuela_libre_%282%29.webm/Registro_de_realidad_virtual_y_de_percepci%C3%B3n_sensorial_hol%C3%ADstica_en_la_Escuela_libre_%282%29.webm.480p.vp9.webm",
+      "source_bytes": 53667116,
+      "observed_date": "2026-09-11",
+      "source_sha256": "30462a725203a02b1e61630f1215eeae51353391a6b4bb6e4e099fdfd30bb771",
+      "source_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "vp9",
+            "codec_type": "video",
+            "width": 854,
+            "height": 480,
+            "avg_frame_rate": "30000/1001"
+          },
+          {
+            "index": 1,
+            "codec_name": "opus",
+            "codec_type": "audio",
+            "avg_frame_rate": "0/0"
+          }
+        ],
+        "format": {
+          "duration": "481.047000",
+          "size": "53667116"
+        }
+      },
+      "human_rights_review": "not run",
+      "full_source_retention": "Temporary source in /tmp/agent-runs/modern-producer-a only; not a repository deliverable."
+    }
+  },
+  "items": [
+    {
+      "sample": "11",
+      "id": "m11-robot-onboarding",
+      "revision": "r1",
+      "role": "playable_card",
+      "media_kind": "gif",
+      "source_id": "bolivia",
+      "source_start_seconds": 46,
+      "source_end_seconds": 55,
+      "source_crop": "None; portrait source aspect preserved.",
+      "title": "The new hire has range.",
+      "tone": "gen-z-absurdism",
+      "caption_burned_into_asset": false,
+      "language": "en",
+      "intended_regions": [
+        "International English-language review; source regions Bolivia or Mexico identified in provenance"
+      ],
+      "intended_rating": "Provisional non-erotic general-audience sample; human suitability review not run",
+      "modern_topic_context": "A real humanoid-robot demonstration recorded in 2026, recast editorially around robotic coworkers and the enthusiasm surrounding automation. No claim of autonomous AI control or a product launch.",
+      "human_situation": "Automation and meeting a new coworker",
+      "comic_mechanism": "A familiar social gesture performed by an unexpected participant",
+      "cultural_reach": "Contemporary technology recognizable without identifying the specific robot or VR workshop; target-culture validation not run.",
+      "shelf_life": "Modern cultural theme; source event dated explicitly rather than presented as breaking news.",
+      "accessibility": "Silent motion with no on-image caption. Humor is an editorial hypothesis and still needs human review.",
+      "actual_action": "A humanoid robot torso on a support opens its arms, turns sideways, then faces the camera again; its eye display changes during the movement.",
+      "suggested_spoken_interpretations": [
+        "I volunteered before reading the job description.",
+        "I am ready to help with absolutely everything.",
+        "That was the entire onboarding."
+      ],
+      "relationship_hypotheses": [
+        "Could relate to hypothetical Nowns about learning technology, workplace expectations or awkward introductions; multiple explanations remain possible.",
+        "No embeddings, measured similarity bands, scheduled Nown set or answer key supplied."
+      ],
+      "agent_recommendation": "keep",
+      "agent_reason": "The expressive eyes and overcommitted arm gestures make a 2026 robot demonstration usable as a social or workplace reaction. The ordinary workshop and off-center phone framing supply the requested roughness.",
+      "topical_record": {
+        "source_observed_date": "2026-09-11",
+        "source_event_date": "2026-06-18",
+        "editorial_review_date": "2026-09-18",
+        "editorial_expiry_date": "2026-10-11",
+        "meaning": "Dates request a human freshness/fit review and are not automated retirement or claims that the event occurred now."
+      },
+      "technical": {
+        "webp": {
+          "path": "modern-loops/m11-robot-onboarding.webp",
+          "width": 270,
+          "height": 480,
+          "encoding": "WEBP",
+          "bytes": 1532946,
+          "frames": 108,
+          "unique_decoded_frames": 108,
+          "duration_ms": 8999,
+          "loop_count": 0,
+          "sha256": "8b57aee99636e0202c6a643b5e452360136081f4b7899e0edd8a96e529f0db60",
+          "audio": false,
+          "minimum_adjacent_mean_rgb_difference": 0.7851980452674897,
+          "maximum_adjacent_mean_rgb_difference": 15.849169238683126
+        },
+        "gif": {
+          "path": "modern-loops/m11-robot-onboarding.gif",
+          "width": 180,
+          "height": 320,
+          "encoding": "GIF",
+          "bytes": 1490217,
+          "frames": 72,
+          "unique_decoded_frames": 72,
+          "duration_ms": 9010,
+          "loop_count": 0,
+          "sha256": "d10360f53b61485afd304e3572c7026cc6c5f565a7e20b8e44080cc7070b13e7",
+          "audio": false,
+          "minimum_adjacent_mean_rgb_difference": 0.5090972222222222,
+          "maximum_adjacent_mean_rgb_difference": 15.35035300925926
+        }
+      },
+      "motion_evidence": {
+        "subject_motion": "Real source subject arm/hand/head/body movement, not pan or zoom over a still.",
+        "complete_file_decode": "pass; every frame decoded for both encodings and unique pixel-frame hashes counted.",
+        "contact_sheet": "modern-loops/m11-robot-onboarding-contact.jpg",
+        "contact_sheet_review": "Inspected actual compressed output at card size through half-second samples plus last→first reset. No unrelated scene at reset.",
+        "complete_realtime_playback": "not run by producer; root gallery and owner review pending.",
+        "reset": "Blunt forward-motion end-to-start jump; loop metadata 0 means infinite repetition."
+      },
+      "generation": {
+        "model": "not applicable: real sourced video, no AI generation service",
+        "prompt": "not applicable; original editorial framing plus source selection",
+        "seed": "not applicable",
+        "ffmpeg_version": "ffmpeg version 8.0.1-3ubuntu2+esm4 Copyright (c) 2000-2025 the FFmpeg developers"
+      },
+      "ffmpeg_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        "46",
+        "-i",
+        "/tmp/agent-runs/modern-producer-a/bolivia.webm",
+        "-t",
+        "9",
+        "-an",
+        "-vf",
+        "fps=12,scale=-2:480:flags=bilinear",
+        "-c:v",
+        "libwebp_anim",
+        "-quality",
+        "58",
+        "-compression_level",
+        "5",
+        "-loop",
+        "0",
+        "-map_metadata",
+        "-1",
+        "-y",
+        "content/batches/review-samples-20260911/modern-loops/m11-robot-onboarding.webp"
+      ],
+      "gif_preview_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        "46",
+        "-i",
+        "/tmp/agent-runs/modern-producer-a/bolivia.webm",
+        "-t",
+        "9",
+        "-an",
+        "-filter_complex",
+        "fps=8,scale=-2:320:flags=bilinear,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=none",
+        "-loop",
+        "0",
+        "-map_metadata",
+        "-1",
+        "-y",
+        "content/batches/review-samples-20260911/modern-loops/m11-robot-onboarding.gif"
+      ],
+      "rights_reference": "bolivia",
+      "checks": {
+        "media_integrity": "pass",
+        "agent_editorial_review": "keep for further curation",
+        "automated_content_screening": "not run",
+        "human_editorial_acceptance": "not run",
+        "human_rights_review": "not run",
+        "target_culture_review": "not run",
+        "four_player_playtest": "not run",
+        "six_player_playtest": "not run",
+        "compatible_embeddings": "not run",
+        "pack_certification": "not run",
+        "publication": "not run",
+        "activation": "not run"
+      }
+    },
+    {
+      "sample": "12",
+      "id": "m12-vr-reality-check",
+      "revision": "r1",
+      "role": "playable_card",
+      "media_kind": "gif",
+      "source_id": "vr",
+      "source_start_seconds": 407.5,
+      "source_end_seconds": 416.5,
+      "source_crop": "Crop 640×480 at x110, y0 from 854×480 landscape; rescale that crop to 480×360 without stretching.",
+      "title": "This meeting is too immersive.",
+      "tone": "millennial-cope",
+      "caption_burned_into_asset": false,
+      "language": "en",
+      "intended_regions": [
+        "International English-language review; source regions Bolivia or Mexico identified in provenance"
+      ],
+      "intended_rating": "Provisional non-erotic general-audience sample; human suitability review not run",
+      "modern_topic_context": "Contemporary VR and immersive-digital-life reaction, filmed at a 2024 audiovisual workshop. The joke is an editorial metaphor for digital overload; no claim of current breaking news, distress or equipment failure.",
+      "human_situation": "Immersive technology and digital overload",
+      "comic_mechanism": "Literalizing a familiar complaint",
+      "cultural_reach": "Contemporary technology recognizable without identifying the specific robot or VR workshop; target-culture validation not run.",
+      "shelf_life": "Modern cultural theme; source event dated explicitly rather than presented as breaking news.",
+      "accessibility": "Silent motion with no on-image caption. Humor is an editorial hypothesis and still needs human review.",
+      "actual_action": "A seated adult wearing a VR headset opens both hands, looks upward and then lowers his head while workshop participants stand nearby.",
+      "suggested_spoken_interpretations": [
+        "The instructions skipped a step.",
+        "I opened too many tabs and now I live in them.",
+        "I said I wanted to work remotely."
+      ],
+      "relationship_hypotheses": [
+        "Could relate to hypothetical Nowns about learning technology, workplace expectations or awkward introductions; multiple explanations remain possible.",
+        "No embeddings, measured similarity bands, scheduled Nown set or answer key supplied."
+      ],
+      "agent_recommendation": "keep",
+      "agent_reason": "The headset, searching head movement and open palms make the digital-life premise recognizable. The meeting framing is an editorial interpretation; the recorded event is a VR workshop, and player recognition/funniness remain untested.",
+      "topical_record": {
+        "source_observed_date": "2026-09-11",
+        "source_event_date": "2024-03-30",
+        "editorial_review_date": "2026-09-18",
+        "editorial_expiry_date": "2026-10-11",
+        "meaning": "Dates request a human freshness/fit review and are not automated retirement or claims that the event occurred now."
+      },
+      "technical": {
+        "webp": {
+          "path": "modern-loops/m12-vr-reality-check.webp",
+          "width": 480,
+          "height": 360,
+          "encoding": "WEBP",
+          "bytes": 802762,
+          "frames": 108,
+          "unique_decoded_frames": 108,
+          "duration_ms": 8999,
+          "loop_count": 0,
+          "sha256": "a5a4359687cbaeea0368ff3877bfb5125a0b258ecc94befc6401fc751ac0b049",
+          "audio": false,
+          "minimum_adjacent_mean_rgb_difference": 1.5932812499999998,
+          "maximum_adjacent_mean_rgb_difference": 10.516033950617285
+        },
+        "gif": {
+          "path": "modern-loops/m12-vr-reality-check.gif",
+          "width": 320,
+          "height": 240,
+          "encoding": "GIF",
+          "bytes": 1079752,
+          "frames": 72,
+          "unique_decoded_frames": 72,
+          "duration_ms": 9010,
+          "loop_count": 0,
+          "sha256": "aae05e703f2a9f51be1ab98705b3359c65b83b42262f037c37cdb5a6a049438f",
+          "audio": false,
+          "minimum_adjacent_mean_rgb_difference": 1.498910590277778,
+          "maximum_adjacent_mean_rgb_difference": 12.032764756944445
+        }
+      },
+      "motion_evidence": {
+        "subject_motion": "Real source subject arm/hand/head/body movement, not pan or zoom over a still.",
+        "complete_file_decode": "pass; every frame decoded for both encodings and unique pixel-frame hashes counted.",
+        "contact_sheet": "modern-loops/m12-vr-reality-check-contact.jpg",
+        "contact_sheet_review": "Inspected actual compressed output at card size through half-second samples plus last→first reset. No unrelated scene at reset.",
+        "complete_realtime_playback": "not run by producer; root gallery and owner review pending.",
+        "reset": "Blunt forward-motion end-to-start jump; loop metadata 0 means infinite repetition."
+      },
+      "generation": {
+        "model": "not applicable: real sourced video, no AI generation service",
+        "prompt": "not applicable; original editorial framing plus source selection",
+        "seed": "not applicable",
+        "ffmpeg_version": "ffmpeg version 8.0.1-3ubuntu2+esm4 Copyright (c) 2000-2025 the FFmpeg developers"
+      },
+      "ffmpeg_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        "407.5",
+        "-i",
+        "/tmp/agent-runs/modern-producer-a/vr.webm",
+        "-t",
+        "9",
+        "-an",
+        "-vf",
+        "fps=12,crop=640:480:110:0,scale=480:-2:flags=bilinear",
+        "-c:v",
+        "libwebp_anim",
+        "-quality",
+        "58",
+        "-compression_level",
+        "5",
+        "-loop",
+        "0",
+        "-map_metadata",
+        "-1",
+        "-y",
+        "content/batches/review-samples-20260911/modern-loops/m12-vr-reality-check.webp"
+      ],
+      "gif_preview_command": [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-ss",
+        "407.5",
+        "-i",
+        "/tmp/agent-runs/modern-producer-a/vr.webm",
+        "-t",
+        "9",
+        "-an",
+        "-filter_complex",
+        "fps=8,crop=640:480:110:0,scale=320:-2:flags=bilinear,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=none",
+        "-loop",
+        "0",
+        "-map_metadata",
+        "-1",
+        "-y",
+        "content/batches/review-samples-20260911/modern-loops/m12-vr-reality-check.gif"
+      ],
+      "rights_reference": "vr",
+      "checks": {
+        "media_integrity": "pass",
+        "agent_editorial_review": "keep for further curation",
+        "automated_content_screening": "not run",
+        "human_editorial_acceptance": "not run",
+        "human_rights_review": "not run",
+        "target_culture_review": "not run",
+        "four_player_playtest": "not run",
+        "six_player_playtest": "not run",
+        "compatible_embeddings": "not run",
+        "pack_certification": "not run",
+        "publication": "not run",
+        "activation": "not run"
+      }
+    }
+  ],
+  "unused_source_lead": {
+    "title": "2025-3-17 Engine AI plays Axe Gang Dance",
+    "reason": "Not selected: polished promotional lighting and inconsistent Commons license-version metadata. No output created."
+  }
+}
