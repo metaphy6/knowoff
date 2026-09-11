@@ -27,3 +27,44 @@ Agents use the shared [creation](../.agents/skills/knowoff-content-create/SKILL.
 [integration](../.agents/skills/knowoff-content-integrate/SKILL.md) skills.
 Their source links and editorial record keep handoffs grounded in these guides;
 the skills do not replace the Blueprint or record approval on a human's behalf.
+
+## Media tools across workspaces
+
+FFmpeg and FFprobe are command-line tools used through the terminal. Agents
+should use existing system tools first: check both commands on `PATH` before
+installing anything, in this or another workspace.
+
+```bash
+command -v ffmpeg
+command -v ffprobe
+ffmpeg -version
+ffprobe -version
+```
+
+If either command is missing on Ubuntu/Debian, install the distribution's
+`ffmpeg` package, which supplies both tools:
+
+```bash
+sudo apt-get update
+sudo apt-get install --no-install-recommends ffmpeg
+```
+
+OS package installation requires user authorization when it has not already
+been granted for the task; reuse existing authorization. On other operating
+systems, follow the [official FFmpeg download page](https://ffmpeg.org/download.html)
+and the platform's installation instructions.
+
+Verify access from outside the repository:
+
+```bash
+(cd /tmp && command -v ffmpeg && command -v ffprobe && ffmpeg -version && ffprobe -version)
+```
+
+A system installation is available to other workspaces through `PATH`; no
+project-local binary path or per-project installation is needed. Check again
+on each workstation: copying these instructions does not install software.
+
+Use FFmpeg for trimming, cropping, frame-rate adjustment, audio removal and
+animated WebP encoding; inspect metadata with FFprobe and watch the actual
+loop. Follow the Blueprint's media limits and preserve the intended roughness.
+Conversion is preparation, not editorial approval or pack certification.

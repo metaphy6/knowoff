@@ -15,6 +15,8 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
+- Documented system FFmpeg/FFprobe discovery, installation when missing, and
+  verification from another directory for reuse across workspaces.
 - Added shared content creation, review and pack-integration skills with current
   documentation references and an editorial record. All repository agents are
   directed to use them for Nown/card work, preserving human review and release

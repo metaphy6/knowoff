@@ -1,5 +1,6 @@
 # local state
 .venv/
+.tools/ffmpeg/
 __pycache__/
 *.pyc
 .pytest_cache/
