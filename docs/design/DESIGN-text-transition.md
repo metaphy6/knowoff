@@ -1,6 +1,6 @@
 # Design: Text-only transition and system integrity
 
-**Status:** Adopted technical planning baseline, 2026-09-12; no implementation.
+**Status:** Phase 1 technical baseline and design proofs verified, 2026-09-12.
 **Authority:** [Blueprint](../../BLUEPRINT.md) owns the rules; [Roadmap](../planning/ROADMAP.md)
 owns the ordered work. [ADR-012](ADR-012-text-only-selectable-modes.md) records
 the pivot. [Business plan](../product/BUSINESS_PLAN.md) owns commercial hypotheses.
@@ -10,12 +10,13 @@ This design is an implementation handoff and source evidence, not another roadma
 
 Transition all five modes without losing user value, exposing secret state or
 leaving a dormant copy of the old game. Preserve shared account/community/UI
-capabilities and their tests. This document changes no executable code, SQL,
-configuration, content packs or deployed systems. Current source references
+capabilities and their tests. The original planning pass changed no executable
+code or deployed state. The [foundation report](../reports/2026-09-12-text-phase1-validation.md)
+records subsequent local implementation and its limits. Current source references
 were inspected through CodeGraph on 2026-09-12; line numbers can move after
 implementation. Production data, traffic and active purchases were not inspected.
 Historical test success does not certify current gaps, and none of the new
-protocol fields below exist merely because they are specified here.
+protocol fields below reach the live runtime merely because they are specified here.
 
 ## Target data flow and ownership
 
@@ -77,11 +78,43 @@ trade offers/results and ballots against the configured frame maximum. If a
 snapshot exceeds it, use versioned public-history pages with cursor/hash and
 bounded assembly; do not silently truncate evidence or send private raw scripts.
 Use separate public `evidence_seq` and per-recipient `recipient_seq` within a
-new `stream_epoch` on reconnect. Every outbound message increments only that
-recipient stream; private messages to another seat cause no gap. A snapshot
+new `stream_epoch` on reconnect. Match snapshots and authenticated match-action
+`ErrorEvent` messages consume only that recipient stream; messages to another
+seat cause no gap. A typed rejection advances `recipient_seq` with unchanged
+`evidence_seq` and board revision. Pages bind to their snapshot cursor and do not
+consume a second sequence. Hello, lobby/queue controls, acknowledgements and
+private terminal settlement deliveries are outside the match cursor. A snapshot
 sets both cursors atomically at a serialized match revision; stale epochs are
-ignored. Internal action ordering remains common. Freeze these planned fields
-and snapshot/page sequencing in v2 fixtures before handlers are written.
+ignored. Internal action ordering remains common. The shared v2 fixtures freeze
+these fields and snapshot/page sequencing.
+
+Authored chat has a narrow recipient-specific visibility projection. A block or
+unblock may replace only a chat event's authored `text` with
+`phrase_id: "chat.hidden"`, or restore that same authored text. Every other field
+(actor, event ID, evidence sequence, phase, round, locale, cards and revisions)
+remains identical. Clients retain a fingerprint of any previously observed
+wording and reject text A → hidden → text B. Initially hidden wording can first
+be learned only from an authenticated complete projection. Exact hashes still
+bind each snapshot and history page; gameplay history has no redaction exception.
+
+Result snapshots carry `result_reveal_at_ms`, derived from the pinned
+`timers.vote_result_falling` duration and result start. Before that boundary the
+server withholds the voted player's role and newly earned displayed points;
+the points remain committed internally and role-linked Noin stays private until
+match end. The server wakes at the reveal boundary to send the role-result
+poster, then at the existing result deadline. Unanimous active-connected Ready
+may finalize early under the unchanged rule. A reveal timestamp is forbidden
+outside the result phase; clients never infer it from half the remaining timer.
+
+The Phase 1 v2 fixture contract defines `Board.Revision` as monotonic across the
+whole match, including round boundaries. Snapshots include ordered seats and
+the current acting seat, ballot candidates/votes/deadline and readiness state.
+History pages bind to the snapshot's match, round, board revision and evidence cursor;
+assembly rejects gaps, altered hashes and inconsistent context. Page SHA-256
+uses recursively sorted ASCII schema keys, compact UTF-8 JSON, decimal integers
+and only JSON-required escaping (Unicode and HTML stay literal). The independent
+Dart golden test recomputes that encoding; it does not certify the future client
+reducer, live sequence assignment or reconnect integration.
 
 ### Validation and failure behavior
 
@@ -200,6 +233,69 @@ The following require real owner/operator evidence before the dependent release:
 - `GameMediaWell` (`client/lib/presentation/widgets/game_surfaces.dart:274`) renders text already, but image network/cache branches at 300–327 are still live gameplay rendering. Shared visual tokens, role shutter, accessible controls, cards, people/chat, ballots and result surfaces can stay; old gameplay image URLs, prefetch/retry affordances, specialty panels and terminology retire.
 - `client/lib/media/media_engine.dart:11` MediaEngine has only `client/test/media/media_engine_test.dart:14` as a CodeGraph constructor caller. This is a concrete dead-code candidate for the retirement inventory. Verify its cache/pack/downloader dependencies and test-only consumers before removal; do not indiscriminately delete shared avatar/brand assets or avatar services.
 
+### Phase 1 executed reproductions — 2026-09-12
+
+Six isolated probes executed at 09:08 UTC against the current v1 engine using
+the local `knowoff-test-go:local` image (Go 1.25.14, CGO enabled). The five
+production files for match handling, payload rendering, websocket handling,
+room locking and media-manager lookup matched Git HEAD `1862316`; the concurrent
+baseline repair in `match_test.go` did not change the reused setup helpers.
+Only temporary Go overlay files under `/tmp/agent-runs/text-phase1-repros/`
+were added. The workspace was mounted read-only. These are expected failures
+of the adopted target assertions, not fixes or passing application tests.
+
+| Probe | Bounded setup and observed target failure | Repair phase |
+|---|---|---|
+| `TestPhase1OutOfTurnDrawProbe` | Four-seat seeded replay match, first turn, one reserve draw by another seat: current seat 1, actor 2, accepted action and hand size 5→6. Target requires rejection with no mutation. | 3 |
+| `TestPhase1PublicDrawProbe` | Valid current-seat draw after clearing recorded broadcasts: all three non-owner recipients received a `cards` array containing drawn identities. Target public event contains actor/count only. | 3 |
+| `TestPhase1PackDriftProbe` | Started synthetic text match, retained its original Pack pointer, atomically loaded a replacement with the same IDs and changed wording: existing match renderer returned replacement wording. Target retains the original bytes. | 2 |
+| `TestPhase1SequenceProbe` | Started first round with seeded replay: six startup/round events delivered to seat 0 had `Seq == 0`. Target assigns recipient sequence/epoch and public evidence cursors. | 4 |
+| `TestPhase1ReconnectProbe` | Actual four-websocket room in play; disconnected a non-current seat, awaited unbinding, reclaimed with its session token: only v1 `joined_joined` acknowledgement, sequence zero, no hand/board/history/deadline/cursor and no further message within 250 ms. Target sends the authorized complete snapshot without restarting clocks. | 4 |
+| `TestPhase1RoomDeadlockProbe` | Actual four-websocket room in play; current-seat `SetConnection(seat, nil)` did not return within 250 ms. Captured stack: `Room.SetConnection` (`room.go:325`) → `Match.SetConnected` (`match.go:293`) → `Match.autoPass` (`match.go:790`) → `roomBcast.Broadcast` (`room.go:861`) → `Room.Broadcast` (`room.go:617`), reentering the held room lock. | 3 |
+
+The [durable reproduction report](../reports/2026-09-12-text-phase1-reproductions.md)
+contains the complete harness source, extraction/build commands and expected
+results. It recreates the temporary Go overlay from a clean checkout without
+depending on this session's temporary files. Extracting and replaying the report
+at 09:12 UTC again collected exactly the six expected failures.
+
+The driver streams its two overlay test files into a disposable container and
+runs `go test -json -overlay ... -count=1 -p=1 -timeout=20s -run
+'^TestPhase1.*Probe$' ./internal/game ./internal/handler`. Its raw Go subprocess
+exit is **1**, with exactly the six named failed assertions above. The evidence
+driver exits **0 only after checking all six expected target failures**; that
+exit does not mark the runtime gate green. Other failure/compile/timeout output
+is an evidence-collection error. No test is skipped or installed in the ordinary
+suite, and no live service/data/credential is used. Four-seat reproduction does
+not replace later 4/6-seat, race, role-specific reconnect or no-leak regression
+coverage with each fix.
+
+Evidence files are `command.json`, `go-test.jsonl`, `go-test.exit`, `summary.json`
+and `source-hashes.json` beside the temporary driver. The successful collection
+log is `/tmp/agent-runs/text-phase1-repros--20260912T090823Z-167633.log`;
+the raw `go-test.jsonl` SHA-256 is
+`8626b38abdf1dc3ca9fef40bda53f2d726a263b0d17faaeff436f10d0d6e6620`.
+These temporary artifacts are session evidence, not a permanent regression
+suite. The report preserves the reproducible assertions; promote them with the
+corresponding fixes before cleaning up the owned artifacts.
+
+The Phase 3 lock contract is: snapshot/update seat bindings under the room lock,
+release it before calling Match methods, serialize match state mutations under
+the match lock, and emit completion callbacks and socket output after releasing
+that lock. Revalidate captured membership/revisions at the serialized boundary;
+do not replace a deadlock with a stale-seat mutation. One connection writer
+serializes join/error/private/broadcast output. Test current-seat disconnect,
+grace-expiry/finish, last-seat startup and later offer accept/expiry/leave races
+with bounded real-room tests and the race detector. Neither a fake broadcaster
+nor an increased timeout demonstrates the repair.
+
+**Review conclusion.** The [replayed defect evidence](../reports/2026-09-12-text-phase1-reproductions.md)
+confirms the audited authority/privacy, content pinning, reconnect and lock
+gaps. It completes the two reproduction records, not their runtime repairs.
+The [foundation validation and review report](../reports/2026-09-12-text-phase1-validation.md)
+records the separate new-contract/config/preflight checks and remaining owner,
+deployment and migration-proof gates; the full Phase 1 gate remains open.
+
 ## Data inventory and disposition
 
 The schema is eight applied-version up/down pairs, `000001` through `000008`. Preserve applied migration history/checksums. No current `matches`, `match_actions`, `media_packs`, or full live-state persistence table exists.
@@ -211,9 +307,193 @@ The schema is eight applied-version up/down pairs, `000001` through `000008`. Pr
 - **Other retained:** `custom_avatars` (image blobs, entitlement/review), `system_notices`, `reports`, `feedback`. Reports and feedback gain content version/mode context without leaking private prompts; historical reports stay resolvable. Test deletion/anonymization across FK, JSONB and blob records plus backups according to the approved retention policy. Existing historical rows with no FK (e.g. leaderboard_history and daily counters) need explicit deletion handling.
 - **New durable minimum:** private account-block relationships with unique actor/target identity and versioned chat/UGC terms acceptance, plus stable match contract/outcome and per-account settlement/admission identity, plus per-day leaderboard counts if not derivable from an immutable event table. Do not persist every hidden live state by default: current match state is ephemeral and a process restart cannot reconstruct it from Redis. Public action history is required for same-process reconnect; any durable history introduces a separate retention/access boundary and needs a deliberate decision.
 
+### Phase 1 durable identity and transaction design
+
+**Engineering design reviewed, 2026-09-12.** The independent wallet-domain
+review and accepted corrections are recorded in the
+[continuation report](../reports/2026-09-12-text-phase1-continuation.md#wallet-engineering-review).
+These records are an implementation contract, not applied SQL or evidence of a
+working settlement service. CodeGraph inspection confirms that
+`Room.matchFinishCallback`, `recordQuickPlayStart`, `Wallet.Grant` and
+`GrantDailyFirstWin` currently perform separate operations; `audit_events`
+already has a nullable text `match_id`, while no durable match table exists.
+Preserve those historical rows and all eight migration files. This design stores
+the minimum required contract/value facts, not prompts, hands, secret schedules,
+RNG state or a durable live-game replay.
+
+| Proposed record | Identity, state and invariant |
+|---|---|
+| Match contract/outcome | Server-generated opaque UUID `match_id`, distinct from reusable room ID. Pin original size, entry path, mode/rules/protocol, content language/release/hash, tuning identity and reward eligibility. States: `prepared`, `started`, then exactly one `completed`, `scored_low_population`, `interrupted` or pre-start `cancelled`; outcome/body hash cannot change on duplicate finish. Forfeit is a completed outcome reason, not a second settlement. |
+| Match ownership fence | Persist the owning process incarnation and a monotonic fencing epoch. Every new admission/start, event-award and terminal-outcome write validates that epoch and allowed match state in its database transaction. A paused former owner cannot write after recovery advances the fence; a process label or expired lease alone is insufficient. Workers may still settle an already committed immutable outcome under its settlement identity. |
+| Match participant | Unique `(match_id, seat)` and `(match_id, account_id)`, retaining authenticated account association, eligibility and immutable final award inputs. A rematch receives a new match ID; reconnect does not create a new participation. Define deletion/anonymization and retained financial references with the account-retention owner before enforcing FKs. |
+| Admission/reservation | Unique `(match_id, account_id)` plus a stable admission ID and original settings revision. Record free/pass/Premium/local/prototype access classification, original quota day and `reserved`, `started`, `released` or `compensated` status. Only a successful `reserved→started` transition consumes free allowance; only its single interruption-compensation record can return it. |
+| Award event and receipt | Unique `(match_id, account_id, event_kind, event_ordinal)` with immutable body hash, source occurrence time/day, eligible amount and actually credited amount. Use resolved round/vote identity for event awards and a fixed terminal ordinal for result awards. Zero credited because of a cap is still a completed idempotent event. Same key/body returns its receipt; conflicting body fails and is audited. |
+| Per-account settlement | Unique `(match_id, account_id)` with outcome hash and `pending`, `applied` or explicit retry/failure state. Stores committed profile/points/XP/leaderboard/private-settlement effects. An interrupted record records recovery status only; it cannot manufacture a normal match result. |
+| Outbox work | Unique `(award_or_settlement_id, effect_kind)` with bounded payload, attempts, next-attempt time and claim/lease state. An expired worker claim can be retried; the destination effect has its own unique identity, so a crash after effect commit and before acknowledgement cannot apply it again. No private award payload is sent to public analytics. |
+| Shared daily claims/counts | Keep `(account_id, server_day)` Quick Play and earned-Noin buckets; first-win uniqueness is `(account_id, server_day, first_win)`. Leaderboard daily eligibility is `(account_id, server_day)` with the accepted event's existing week ID for aggregation. Never add mode/language/room to cap or first-win keys. Preserve existing historical totals; do not infer missing historical match identities. |
+
+Transaction boundaries to prove with PostgreSQL failure injection:
+
+1. **Admission.** Validate settings/readiness/pack feasibility and current access
+   before consuming anything. In one transaction, create/lock the account/day
+   quota row, reserve available allowance including outstanding reservations,
+   and create the uniquely keyed admission. Failed setup, leave, settings change
+   or queue change releases the reservation once. At accepted start revalidate
+   expiry and UTC day, then atomically mark start and increment its stored quota
+   day once. Crossing midnight moves/rechecks an unconsumed reservation under
+   both day locks; a retry never charges the retry's day. Local/prototype and
+   currently eligible paid access consume no free Quick Play allowance; paid
+   access retains original expiry. Same-table rematches receive a fresh
+   admission check and match identity; reconnect receives neither a new charge
+   nor a new reservation.
+2. **Event reward.** Serialize the accepted event identity, then insert/claim its
+   unique award record, create/lock the account/day and wallet rows, apply the
+   shared cap, insert the append-only ledger entry and update wallet/counter in
+   one transaction. Claim first-win uniqueness in the qualifying terminal award
+   transaction, never in a separate check before granting. A failed
+   write rolls back the receipt too; a successful zero/capped award cannot later
+   mint more because a retry occurs after midnight. Database failure must be
+   surfaced before acknowledging a supposedly durable reward. Event Noin is
+   committed at the event, while role-linked presentation waits for the owner's
+   private settlement. Existing committed grants survive disconnect/interruption.
+3. **Terminal result.** Atomically establish one outcome hash and immutable
+   per-account result inputs plus pending settlement/outbox records. For each
+   account, the settlement transaction claims its unique identity and applies
+   all local profile points/XP, eligible daily leaderboard count/points and
+   remaining terminal award receipts, then marks applied. External delivery
+   occurs after commit via idempotent outbox processing. No socket I/O occurs
+   inside DB transactions or nested Room/Match locks. Scored low-population
+   endings use this durable path with accrued points for disconnected players;
+   ordinary absent-at-end and team-award rules remain the Blueprint's rules.
+4. **Confirmed process interruption.** A server-owner process identity plus
+   confirmed loss distinguishes interruption from a player's disconnect. Advance
+   and enforce the durable ownership fence before closing started matches; the
+   epoch/state comparison must protect the actual database writes, not merely
+   routing or logs. Serialize terminal-outcome and interruption transitions so
+   a resumed old process cannot award after compensation. Recovery claims the
+   unique interruption state and compensates only consumed free admissions in
+   their original quota bucket. It preserves already committed awards and
+   finishes already committed outcome settlements, but creates no new
+   completion/team/first-win/points/XP/leaderboard result from missing live state.
+   A paid expiry is never extended. Repeated worker restart/compensation is a
+   no-op; a terminal outcome already committed wins over interruption recovery.
+5. **Accounting time and week close.** Persist server occurrence/acceptance time
+   and its UTC day/week when the event is established; retries do not re-date it.
+   Count a match for daily leaderboard eligibility once, across all modes, using
+   a real account/day bucket rather than the weekly aggregate's `updated_at`.
+   Week close and eligible writers share a database-enforced barrier: briefly
+   lock and persist a closing state/cutoff, stop admitting new effects for that
+   generation, then release the lock while accepted pre-cutoff settlements
+   drain/reconcile. Never wait while holding a lock those workers need. Reacquire
+   the barrier to prove the drain complete, atomically snapshot and mark closed.
+   A racing or delayed writer cannot change a closed ranking; repeated close
+   returns the same snapshot. Next-week events retain their own pinned week.
+   Unresolved accepted work keeps close pending rather than silently dropping
+   it or re-dating it. Keep a stable operational reconciliation report of
+   unprocessed/failed work; do not describe a merely enqueued event as credited.
+
+All account-value writers use one lock protocol, including gameplay settlement,
+point conversion, admission/compensation and existing contribution/purchase
+paths. Lock stable account rows in account-ID order before claiming dependent
+records; create missing daily rows under that serialization, then lock relevant
+UTC day buckets in date order, profile and wallet rows in that order. Skipping an
+unused row is allowed; acquiring an earlier row after a later one is not. A
+transaction that also needs a match fence or week barrier acquires those before
+account rows in a fixed match/week order shared with recovery/close workers.
+Do not lock a nonexistent daily row and assume `SELECT ... FOR UPDATE` serialized
+its creation. Adapt retained money writers to this protocol before combining
+them with the new transaction path; keeping a profile-first settlement beside
+a daily-first conversion introduces a lock inversion.
+
+Use bounded, context-aware retries of the **whole transaction** for retryable
+PostgreSQL serialization/deadlock errors (`40001`, `40P01`). Keep the same
+immutable request/award identity, outcome hash and occurrence day on every
+attempt. An uncertain commit is resolved by reading that identity/receipt; it
+must not create a new key. Other errors remain explicit pending/failed work, and
+exhaustion never becomes a claimed grant. Repeatable-read isolation can abort a
+first-row race; it does not supply durable retry or logical idempotency itself.
+
+The implementation must preserve these existing Blueprint boundaries explicitly:
+
+| Event/result class | Settlement boundary |
+|---|---|
+| Correct vote / Donower vote survival | One immutable event per accepted final vote occurrence, with Blueprint eligibility and existing configured amounts. Credit at the event; never collapse occurrences into a match-level boolean or require an eventual team win for a survival event. Role-linked presentation remains private and deferred; later absence/interruption cannot revoke committed credit. |
+| Completed match / team forfeit | Establish the terminal outcome once, then apply eligible completion/team/first-win receipts and profile results once. Preserve the ordinary absent-at-end zero-points rule and connected eliminated-player entitlement to full points. Do not pay event receipts again during terminal settlement. |
+| Scored low-population ending | Use the same durable result path for accrued, floored points of every participant, including disconnected players. There is no team winner, team-win Noin or first-win claim; do not reuse a fabricated normal winner to trigger settlement. |
+| Confirmed process interruption | Preserve already committed awards/outcomes; compensate consumed free admission once. Missing live state creates no completion/team/first-win award, points, XP or leaderboard result. |
+| Prototype / paid access | Prototypes create no live points, XP, Noin, leaderboard credit or free-quota consumption. Paid access consumes no free allowance and keeps its original expiry; ordinary shared earn/leaderboard caps and human eligibility still apply. |
+
+Reconciliation joins immutable outcome/award receipts to ledger effects,
+profile deltas, daily claims/counts, leaderboard entries and pending outbox work.
+`wallet balance == ledger sum` is necessary arithmetic evidence but cannot detect
+an award duplicated consistently in both or omitted from both. Best-effort audit
+events are not the durable source for repairing missing value, and historical
+rows without match identity must not be invented into replayable settlements.
+
+Required review traces are duplicate start/finish, same key with changed inputs,
+two accounts/first rows racing, two simultaneous first wins, day/week rollover,
+crash before/after ledger commit, crash after start before first action,
+worker lease expiry, a paused former owner resuming after fencing, week close
+racing a delayed settlement, scored low-population, disconnected/eliminated recipients,
+prototype zero-value, expired paid access and an old paid-pack entitlement.
+Check ledger sums, profile deltas, receipt counts and private payload access after
+each replay. Approval/publication rewards keep their existing separate consent
+and submission identities; this gameplay key design cannot repay contributors.
+
+### Migration number allocation and review gate
+
+Repository discovery on 2026-09-12 found only `000001`–`000008`. Reserve the
+following next numbers for the reviewed Phase 5 implementation; recheck the
+directory and deployment head before writing any file, and adjust this table
+if another accepted migration consumes a number first. The filenames below are
+planned allocations, not files created by this design pass.
+
+| Version / planned basename | Additive scope and proof before application |
+|---|---|
+| `000009_text_match_admissions` | Match contracts/participants and uniquely keyed admission records; nullable/default-safe links for new records only. Prove one seat/account per match, allowed state transitions, cancellation and original-day compensation; existing v1 account/ledger/entitlement reads still work. |
+| `000010_idempotent_match_settlement` | Award receipts, settlement/outbox, shared first-win claims and daily leaderboard counts; unique identities plus indexes for account/day, pending work and match status. Audit duplicate legacy first-win records before adding any constraint; keep old ledger rows unchanged and do not reconstruct unknown awards. Prove fresh-row concurrency, exact-once replay and pre/post value parity. |
+| `000011_text_content_revisions` | Explicit legacy/archival status and nullable reviewed mode/language/revision metadata; new-write/activation constraints distinguish approved text from retained images. Preserve self-references, challenge/report IDs, consent/credits and entitlement tags. Backfill by primary-key cursor with bounded transactions; interruption and duplicate/conflicting input tests must pass before applying to a copy. |
+| `000012_player_trust_terms` | Unique private actor/target block relation and immutable terms-version acceptance; required FK/index/deletion handling reviewed with account retention. Preserve account identity and existing terms history. Prove self/duplicate block rejection, isolated visibility and no reward/backfill side effects. |
+
+Use new indexes/constraints without changing existing data semantics; an
+unvalidated FK/check is not completed migration proof. Detect dangling references
+and conflicting receipts before validation, report counts, and require an
+explicit reviewed remedy rather than silently deleting rows. Financial events
+need DB-enforced append-only behavior with a separately reviewed retention path;
+the comment on the current ledger table is not that enforcement.
+
+The first migration harness uses a dedicated disposable PostgreSQL 16 database,
+fresh schema and realistic `000008` fixture, including historical images and paid
+entitlements. Capture schema/version/dirty state, migration checksums, account
+and relationship counts, ledger sums, and stable hashes of receipts/entitlements
+before and after. Refuse dirty and pre-`000008` transition input; ordinary fresh
+installation still runs the complete migration history. Test repeated up and
+interrupted/resumed bounded backfill. The owner stated **“No deployment exists”**
+on 2026-09-12; [continuation evidence](../reports/2026-09-12-text-phase1-continuation.md)
+records that attestation and local corroboration. Live deployment categories are
+not applicable today. A future deployment needs its own timestamped inventory;
+a local fixture neither describes that future data nor authorizes migrating it.
+
+Controlled downs may remove only unapplied-to-runtime additive structures after
+proving they contain no retained new data and the old app is compatible. Once
+new admissions/awards/content/trust records exist, rollback uses a compatible
+application on the same expanded database or a reviewed forward fix. Down steps
+must refuse loss of those records. Do not invoke all-migrations `MigrateDown`,
+rewrite `000003`/`000005`/`000007`, or restore an old snapshot over new purchases.
+Final text-only cleanup constraints receive a later number after the Phase 6
+drain, archive and rollback-window proofs, not an early destructive migration.
+
+**Review evidence:** the [independent wallet-domain review](../reports/2026-09-12-text-phase1-continuation.md#wallet-engineering-review)
+accepted this concrete transaction/replay design after correcting fencing,
+lock ordering, event receipts and week-close handling. It changes no adopted
+economy policy and does not certify a working settlement engine. Actual Phase 5
+schema/runtime failure tests, retention/deletion implementation and any future
+legacy paid-benefit disposition remain release prerequisites. No migration or
+settlement gate is complete merely because this allocation or a mock passes.
+
 ## Database migration and cutover contract
 
-1. **Inventory and preflight:** snapshot migration version/dirty state; inspect deployed app/server/protocol/pack generations; count legacy content types/statuses and dangling references; inventory object prefixes and theme entitlements. Production data presence is unknown: never assume dev-only empty DB. Freeze only transition-sensitive writes at the appropriate later rollout gate. Create rollback manifests with exact app image/config/schema/pack IDs.
+1. **Inventory and preflight:** snapshot migration version/dirty state; inspect deployed app/server/protocol/pack generations; count legacy content types/statuses and dangling references; inventory object prefixes and theme entitlements. The current owner-attested absence of a deployment does not permit assuming a future database is empty. Freeze only transition-sensitive writes at the appropriate later rollout gate. Create rollback manifests with exact app image/config/schema/pack IDs.
 2. **Expand additively:** allocate new migration number(s) after 000008 when implementation starts. Add nullable/default-safe mode/language/revision fields and new idempotent settlement/daily counter structures. Introduce a text-only *new-write/active-content* rule that can coexist with immutable legacy history. Explicitly model archive/retirement status instead of calling image bytes text. Validate SQL privileges, FKs, indexes and unique constraints on a disposable PostgreSQL 16 copy. Existing server must remain read-compatible during the declared rollback window.
 3. **Backfill deterministically:** batch by stable primary key, checkpoint cursors, commit bounded transactions, resume safely, record before/after counts and payload hashes. Classify pre-transition events as legacy; content receives mode labels only after actual review. Export any legacy blobs to an access-controlled archive with checksummed archive manifests and relationship maps; preserve IDs or a tested map. Do not change wallet totals, receipts, approved terms or credits. Detect duplicates/conflicts as hard failures, never silently discard rows.
 4. **Prepare v2 text artifacts:** immutable mode/language response/item catalogs and prompt catalogs; versioned manifest/schema, exact content normalization policy and hashes, provenance/license and review evidence, model/version/dimension where embeddings used, and mode/size certification. Keep synthetic fixtures clearly synthetic. Build into new directories/tags and atomically activate only after complete validation. Existing CLI build is synthetic and publish is an unchecked directory copy (`tools/mediapack/cmd/mediapack/main.go:49,155`); implement ingestion/review-to-pack/bundle/certification/activation before claiming pipeline readiness.

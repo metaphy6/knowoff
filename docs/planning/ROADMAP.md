@@ -1,11 +1,12 @@
 # 🗺 Knowoff — Text Transition Roadmap
 
-**Status: planning adopted, implementation not started — 2026-09-12.**
+**Status: Paused at owner request — 2026-09-12. Phase 1 complete; Phases 2–5 implementation and integration remain in progress.**
+See the [end-of-day handoff](../reports/2026-09-12-text-transition-pause.md) for saved changes, test evidence and exact resumption work.
 Read [Blueprint](../../BLUEPRINT.md) for normative requirements, then the
 [technical transition design](../design/DESIGN-text-transition.md) for audited
 source gaps, data contracts and retirement inventory, and the
 [business plan](../product/BUSINESS_PLAN.md) for experiments and economics.
-This is the only active sequence. All implementation boxes below are unchecked.
+This is the only active sequence. Checkboxes below require fresh implementation evidence.
 The [pre-text roadmap](ROADMAP-pre-text-20260912.md) preserves original wording,
 checkboxes and evidence; old checks do not certify the new offering.
 
@@ -17,8 +18,9 @@ no unexplained executable remnants of the association/image architecture.
 
 ## Non-goals
 
-No code, migration execution, live content activation, deployment or asset/data
-removal in this planning change. Implementation later excludes specialty powers,
+The original planning pass changed no code or deployed data; the owner's
+subsequent request authorizes implementation following this sequence.
+Implementation excludes specialty powers,
 production bot backfill, free-typed turn answers, semantic judges, new currencies,
 paid gameplay advantage, renamed roles, a visual rebrand or orchestration rewrite.
 All five modes remain intended; stagger exposure according to evidence.
@@ -27,11 +29,11 @@ All five modes remain intended; stagger exposure according to evidence.
 
 | Phase | Items | Done | Status |
 |---|---|---|---|
-| 1 — Contract, baseline and migration preflight | 12 | 0 | Planned |
-| 2 — Text catalog, dealing and content certification | 10 | 0 | Planned |
-| 3 — Shared match state and five mode engines | 14 | 0 | Planned |
-| 4 — Lobbies, protocol and client integration | 12 | 0 | Planned |
-| 5 — Durable value, community and trust | 20 | 0 | Planned |
+| 1 — Contract, baseline and migration preflight | 12 | 12 | Complete; independent review and full validation passed |
+| 2 — Text catalog, dealing and content certification | 10 | 3 | Catalog/dealing verified; client/lifecycle/human gates open |
+| 3 — Shared match state and five mode engines | 14 | 11 | Core engines independently verified; output/client and full gate open |
+| 4 — Lobbies, protocol and client integration | 12 | 0 | Server/client implementation in progress |
+| 5 — Durable value, community and trust | 20 | 0 | Durable core verified; recovery/trust integration in progress |
 | 6 — Retirement, compatibility and operations | 11 | 0 | Planned |
 | 7 — Playtests, business validation and release | 12 | 0 | Planned |
 
@@ -61,12 +63,14 @@ The audit is based on repository source, not production inspection. Open risks:
   and current native WebP gate lacks a C compiler. Avatar WebP still needs CGO.
 
 Exact symbols, table dispositions and acceptance evidence belong to the
-transition design. Preserve existing failing-test evidence until resolved; do
-not spend this documentation pass repairing code or disabling checks.
+transition design. Preserve existing failing-test evidence until resolved and
+record fixes with their regression proof. The unified-runner/compiler issues
+above are addressed by the [Phase 1 foundation](../reports/2026-09-12-text-phase1-validation.md);
+the listed runtime defects remain open.
 
 ## Execution discipline and dependency order
 
-Phase 1 precedes implementation. Phase 2 content work and Phase 3 engine work
+Phase 1 foundations precede mode implementation. Phase 2 content work and Phase 3 engine work
 may use the frozen contract in parallel; Phase 3 initially uses synthetic
 fixtures, not a falsely certified production pack. Phase 4 integrates those
 contracts. Phase 5 value/trust work can proceed after Phase 1 schema contracts
@@ -97,18 +101,142 @@ transition design contracts, database and verification sections.
 **Proof tests.** Dedicated disposable DB only; full baseline with skip accounting;
 wire/config negative fixtures; unchanged pre-transition ledger/data snapshots.
 
-- [ ] Capture current build/test baseline including tool modules, native compiler and actual DB execution; preserve failures with logs and required environment remedies.
-- [ ] Inventory deployed schema/dirty version, clients/protocol, content types, active matches, entitlements and object consumers; produce count/hash preflight without exposing secrets.
-- [ ] Freeze version-2 match/lobby/action/snapshot schemas and golden fixtures, including all five mode IDs, content vs copy IDs and language vs UI locale.
-- [ ] Define monotonic event sequencing, request dedupe/conflict errors, expected revision checks and maximum history/frame budgets with negative fixtures.
-- [ ] Add typed config contract for mode availability, compatibility and trade response; retain numeric economy/clock defaults; define obsolete-key migration errors.
-- [ ] Record isolated failing reproductions for out-of-turn/public draw, active-pack drift and incomplete sequence/reconnect; land executable regressions with their fixes in Phases 2–4, not as a red completed baseline.
-- [ ] Record a bounded real Room/Match deadlock reproduction and define lock/callback ordering; the executable regression lands with the Phase 3 fix.
-- [ ] Design stable durable match, admission, settlement/outbox and daily-count keys; transaction boundaries and replay states reviewed with wallet owners.
-- [ ] Allocate new migration numbers after current 000008; additive up/controlled down plans, legacy archival states, indexes/FKs/unique constraints and resumable backfill.
-- [ ] Add fresh/head/repeated-up/dirty/interrupted/legacy-fixture migration proof on isolated PostgreSQL; mark unsupported lossy rollback explicitly.
-- [ ] Extend unified validation to all retained Go/Python tools, real integration services and skip failure; separate macOS iOS build from Linux jobs.
-- [ ] Gate: contracts reviewed, baseline limitations explicit, migration preflight and schema/wire/config fixtures verified; no historical completion claim substitutes for evidence.
+- [x] Capture current build/test baseline including tool modules, native compiler and actual DB execution; preserve failures with logs and required environment remedies.
+- [x] Inventory deployed schema/dirty version, clients/protocol, content types, active matches, entitlements and object consumers; produce count/hash preflight without exposing secrets.
+- [x] Freeze version-2 match/lobby/action/snapshot schemas and golden fixtures, including all five mode IDs, content vs copy IDs and language vs UI locale.
+- [x] Define monotonic event sequencing, request dedupe/conflict errors, expected revision checks and maximum history/frame budgets with negative fixtures.
+- [x] Add typed config contract for mode availability, compatibility and trade response; retain numeric economy/clock defaults; define obsolete-key migration errors.
+- [x] Record isolated failing reproductions for out-of-turn/public draw, active-pack drift and incomplete sequence/reconnect; land executable regressions with their fixes in Phases 2–4, not as a red completed baseline.
+- [x] Record a bounded real Room/Match deadlock reproduction and define lock/callback ordering; the executable regression lands with the Phase 3 fix.
+- [x] Design stable durable match, admission, settlement/outbox and daily-count keys; transaction boundaries and replay states reviewed with wallet owners.
+- [x] Allocate new migration numbers after current 000008; additive up/controlled down plans, legacy archival states, indexes/FKs/unique constraints and resumable backfill.
+- [x] Add fresh/head/repeated-up/dirty/interrupted/legacy-fixture migration proof on isolated PostgreSQL; mark unsupported lossy rollback explicitly.
+- [x] Extend unified validation to all retained Go/Python tools, real integration services and skip failure; separate macOS iOS build from Linux jobs.
+- [x] Gate: contracts reviewed, baseline limitations explicit, migration preflight and schema/wire/config fixtures verified; no historical completion claim substitutes for evidence.
+
+#### Phase 1 execution detail — 2026-09-12
+
+**Initial foundation handoff.** Eight of twelve parent items were complete; see the
+[foundation validation report](../reports/2026-09-12-text-phase1-validation.md)
+for the independent review, 18 passing checks and 636 tests with zero skips.
+The continuation below addresses the then-open inventory, wallet review and
+transition backfill/legacy-conflict proofs. Live gameplay still uses v1.
+
+**Goal.** Establish executable, reviewed text-mode contracts and a trustworthy
+validation/migration baseline before implementing mode behavior. The owner's
+subsequent implementation request authorizes local engineering; the earlier
+documentation-only boundaries describe the completed planning pass. This detail
+decomposes the twelve checkboxes above and does not add another phase sequence.
+
+**Non-goals.** No live v2 cutover, enabled mode, production content approval,
+wallet rewrite, applied-migration edit, asset/dependency retirement or public
+release in this foundation slice. V2 contract fixtures can coexist with the
+current v1 runtime until the Phase 4 compatibility implementation; they must not
+advertise an available v2 game. Preserve current economy/clock values and avatar
+WebP support. Owner/operator release evidence is never inferred from local tests.
+
+**File ownership.** Give each parallel worker one boundary: validation owns
+`xops/test/` and `.github/workflows/ci.yaml`; contracts own
+`server/internal/transport/` and versioned wire fixtures; configuration owns
+`server/internal/config/` and `configs/`; migration/preflight owns
+`server/internal/store/` and newly allocated migration fixtures. Existing
+`protocol_test.go`, config `loader_test.go`/`loader_config_test.go`, store
+`migrate_test.go`, and client `websocket_transport_test.dart`/game-session tests
+are the starting points. Search before adding fixtures; share the same JSON
+bytes across server and client validation rather than maintain independent
+examples. Reproduction work may inspect game/lobby/handler/media code but lands
+behavior fixes with the corresponding later phase. The parent alone updates
+roadmap completion, tracking and staging.
+
+**Bounded tasks and proof.** Each row is a reviewable child task of the named
+checkbox; complete both subparts where listed before checking the parent box.
+Write behavior tests first and retain the expected failing output, then the
+passing result with its implementation. Evidence-only reproductions stay outside
+the normal green suite until their repair phase.
+
+| Parent checkbox / child task | Delivery and acceptance evidence |
+|---|---|
+| Baseline — toolchain | Record exact retained modules/platform tools and inherited native WebP failure; prove a workspace/container toolchain builds avatars with CGO. Do not install host packages merely to make this record green. |
+| Baseline — execution | Run the unified gate and retained standalone modules; record commands, counts, skips and service/tool versions. An unreachable PostgreSQL test remains unexecuted, never passed. |
+| Deployed inventory | Produce a read-only, redacted preflight with schema version/dirty state, image/protocol/pack IDs, active-match counts, content/status counts, entitlement totals and object-consumer inventory. Include counts/hashes of retained rows and migration files; distinguish an unavailable deployment from a proved empty one. |
+| Wire schemas — identities/actions | Freeze five mode IDs and `respond`, `place`, `replace`, `offer`, `resolve_offer`, `top`; encode separate room/match, content/revision/copy, round/turn/phase and request identities. Golden fixtures cover each action plus invalid discriminator, unknown/contradictory fields, fractional rating/count, rating outside 1–5, invalid slot, wrong version and malformed language. |
+| Wire schemas — lobby/snapshots | Freeze original 4/6 size, settings/Ready revision, content language separate from UI locale, pinned rules/tuning/pack identity and server-owned reward eligibility. Round-trip the same fixtures for active Nower, Donower and eliminated views; public data excludes current secret for unauthorized seats, future prompts, other hands and all hidden reserve identities. Equal-text copies retain distinct IDs. |
+| Sequencing — replay contract | Freeze public `evidence_seq`, per-recipient `recipient_seq`, reconnect `stream_epoch` and atomic snapshot cursors. Fixtures cover a private event to another seat without a local gap, duplicate/out-of-order events, stale epoch/board, identical request retry and conflicting reuse. Cached outcomes reauthorize private replies after elimination; absolute deadlines survive reconnect. |
+| Sequencing — bounds | Serialize a six-seat/three-round maximum-action trace with draws, penalties, trades, ballots and permitted chat. Prove the configured effective frame/history limits; if it exceeds them, freeze and test bounded cursor/hash pages with complete assembly. Never truncate required evidence or claim a future runtime sequence assignment already exists. |
+| Typed config — additions | Add strict typed mode/language availability and compatibility contracts with positive bounded `timers.trade_response_s: 10`. Positive/negative load fixtures prove missing/unknown/duplicate modes, unknown defaults, unsupported versions/languages and timer bounds. Availability starts closed until certification; a known future default can remain disabled, and loading config does not enable unimplemented handlers. |
+| Typed config — transition | Define the v2 obsolete-key migration errors and neutral round-start countdown replacement. Preserve legacy config compatibility until the declared boundary; test old-key rejection there, unchanged economy/clock defaults and fail-fast unknown keys. Final specialty/image/backfill field removal remains Phase 6 consumer-verified work. |
+| Regression records — draws/pack | Record bounded reproductions of out-of-turn/public draw and same-ID wording replacement during a match, with preconditions and expected target assertions. Keep the current contradictory draw test attributable; replace it with the adopted regression alongside the Phase 3 repair, and pinning proof with Phase 2. |
+| Regression records — resync/locks | Record zero-sequence/incomplete reconnect and a real websocket Room→Match→Room current-turn disconnect deadlock under an explicit timeout. Specify callbacks and socket writes outside incompatible nested locks and one connection writer. Save the observed failure; fixes and executable green regressions belong to Phases 3/4. |
+| Durable identity design | Review match/account admission identity, immutable award keys, settlement/outbox replay states and shared UTC daily counters with wallet ownership. Specify atomic reserve/start/cancel/interrupt compensation, committed-award preservation, no double first-win/points/XP/leaderboard grants, and no process-loss fabrication of results. Tabletop failure traces include crash after start, partial award, callback retry and first-row races. |
+| Migration allocation/design | Recheck head `000008`; allocate unused subsequent numbers in the transition design before SQL lands. Specify additive tables/columns, unique keys, FKs/indexes, legacy/unknown states, bounded primary-key backfill cursors and controlled down/forward-fix boundaries. Review data/entitlement parity and old-server compatibility; never rewrite the eight applied migrations. |
+| Migration proofs — harness | Require an explicitly disposable PostgreSQL 16 database; refuse accidental shared/default DSNs before any schema drop. Prove fresh→head, realistic 000008 fixture→head, repeated up, dirty/pre-000008 refusal and unchanged retained-data hashes. Test exact supported rollback; generic all-migrations-down is not a recovery gate. |
+| Migration proofs — resume | In Phase 1, exercise interruption/resume and duplicate/conflicting legacy rows against the reviewed additive migration/backfill design fixture on isolated PostgreSQL. A harness-only pass cannot complete this parent checkbox. Phase 5 reruns these cases against its actual migrations/backfill; Phase 1 fixture proof never certifies that later implementation. Unsupported lossy rollback remains an explicit refusal with forward-fix evidence. |
+| Unified validation — coverage | Include both retained Go tools and Python suites, real integration services and failing skip accounting. Prove missing service/test failures propagate; retain meaningful existing assertions and avoid environment skips as success. |
+| Unified validation — platform | Keep Linux Android/Web and macOS/Xcode iOS jobs separate. Run platform-appropriate commands and state unavailable local iOS evidence; configuring a macOS job is not a successful iOS build. |
+
+**Acceptance gates.** Independent review then verification inspect the complete
+diff and shared fixtures. Run `python3 xops/test/tests-lints.py` through safe-run
+from the repository root after targeted red→green checks; record every omitted
+platform/integration proof explicitly. Existing migration checksums, local
+fixture ledger/receipt/entitlement hashes and v1 runtime compatibility must remain
+unchanged unless the reviewed slice explicitly extends them. Tick a main box
+only when all its listed proof is present; twelve boxes and the phase gate stay
+authoritative. The parent records the tested scope and verified commit preview.
+
+**Dependencies and risks.** Local contracts/config, isolated reproductions,
+runner coverage and migration design can proceed now. Actual deployed inventory
+needs operator access/evidence; wallet transaction review needs the responsible
+owner. Neither is a reason to stop independent local work, but both keep the
+full Phase 1 gate open until supplied. Content certification, actual engine
+ordering/resync, durable backfill and platform/provider/public-cohort evidence
+remain in Phases 2–7; fixture agreement cannot substitute for them. Highest
+risks are enabling v2 before consumers agree, losing private-state boundaries in
+replay, destructive DB fixtures, and concurrent edits to shared configuration;
+mitigate with closed availability, role-negative fixtures, isolated services
+and explicit file ownership. No owner spending, data deletion or deployment
+authorization is implied by a planning default.
+
+#### Phase 1 continuation — remaining evidence, 2026-09-12
+
+**Verified completion.** All twelve Phase 1 items are now complete. The
+[continuation report](../reports/2026-09-12-text-phase1-continuation.md) records
+the owner-attested deployment absence, wallet-domain design review, realistic
+migration/backfill proof and final 18 checks/648 tests with zero failures/skips.
+Phase 2 catalog/dealing and Phase 3 synthetic engine work can now proceed;
+actual production migrations, content certification and live v2 remain later gates.
+
+**Goal and boundary.** Finish the executable inventory and realistic migration
+proofs for remaining items 2, 8, 10 and 12. The owner states **“No deployment
+exists.”** Record live deployment categories as not applicable under that dated
+attestation; local SQL hashes and disposable fixtures remain local evidence.
+Retain all previously staged work. No applied SQL rewrite, live v2 activation,
+content approval, new wallet behavior or data-retirement operation is in scope.
+
+**Ownership and ordered proof tasks.** The parent owns the existing preflight
+CLI/store report and review packet; the migration worker owns store test helpers
+and discovered testdata; the inventory worker performs read-only discovery.
+The planner edits this continuation only. These rows decompose existing items;
+they do not add parent checkboxes.
+
+| Item / task | Concrete delivery and required proof |
+|---|---|
+| 2 — Inventory/report | Extend `server/internal/store/preflight*.go` and `server/cmd/transition-preflight/`: fixed-vocabulary content/status/entitlement counts and wallet/ledger aggregates; reject ambiguous migration state. Wrap deterministic DB evidence with version, timestamp, local SQL-file hashes and explicit coverage. Test privacy for unknown labels, missing DSN, invalid timeout/manifest and database errors. Never label local files as deployed artifacts or unavailable categories as measured zero. |
+| 8 — Wallet review | Review the existing design's match/admission/award/settlement/outbox/day identities against actual wallet and finish paths. Record duplicate start/finish, partial commit, first-row/day/week races, interruption compensation and private presentation outcomes. Existing Blueprint policy and numeric defaults remain adopted; request a decision only for a concrete unresolved departure, not another approval of unchanged rules. Record who reviewed what and any remaining owner-specific evidence. |
+| 10 — Real legacy fixture | On guarded disposable PostgreSQL 16, apply the actual migration chain to 8 and seed text/static-image submissions, Nown self-references, terms/consent, challenge topic/entry/vote/winner links, contributor credits, wallet/ledger, theme entitlement and verified/refunded receipts. Fingerprint every original table before additive sidecar archival structures; copied rows stay `legacy_unreviewed` without invented mode/language suitability. |
+| 10 — Bounded copy/resume | Namespace source kind plus UUID; persist source hash, bounded copy/verification cursors and ordered counts/hashes. Commit sidecar rows and cursor together. Interrupt after one committed batch and inside another, reconnect and resume; copied/verified batch sizes never exceed the explicit test limit. Two bounded passes compare actual source rows with mappings and detect changed/deleted/late keys. Input writers must be frozen throughout; a maximum UUID alone is not a stable snapshot or an online-migration guarantee. |
+| 10 — Refusal/parity | Actual pre-8 schema and dirty-8 refuse before DDL; fresh installation to 8 remains valid. Repeated up and identical replay are no-ops; duplicate manifest/source mappings and conflicting hashes fail without overwrite, while identical UUIDs in different source kinds remain distinct. Empty additive structures may be removed by the exact fixture down; populated retained structures refuse. Prove unchanged original rows, references, blobs, terms, credit/receipt/entitlement values and totals after each success/failure; no publication or reward side effect. |
+| 12 — Review/verification | Independent review inspects all new files and retained staged changes, then run `python3 xops/test/tests-lints.py` through safe-run with the runner's disposable services. Require zero failures/skips, unchanged 16 applied SQL files, red-to-green targeted evidence and a dated report distinguishing fixture proof from future production migration. Mark only fully proved parent items; unresolved required review keeps the gate open. |
+
+**Dependencies and risks.** After these local continuation proofs, the existing
+parallel-dependency rule permits Phase 2's versioned text schema, validation and
+snapshot pinning, and Phase 3's lock/ownership work using synthetic fixtures and
+the frozen wire contract. Those tasks do not consume deployed data or approve
+wallet policy. Keep any outstanding Phase 1 review visible; settlement changes,
+activation, retirement and public exposure still require their actual gates.
+The principal risks are mistaking archival copy for reviewed playable content,
+missing source drift between batches and treating a successful fixture as a
+production migration. Preserve source hashes, explicit frozen-input assumptions
+and the later Phase 5 rehearsal against its actual migrations.
 
 ### Phase 2 — Text catalog, dealing and content certification
 
@@ -125,16 +253,71 @@ normalization damaging language, treating a synthetic pass as humor proof.
 **Proof tests.** Both sizes × all modes × certified languages; malformed/tampered
 pack refusal, immutable activation and deterministic fixture replay.
 
-- [ ] Implement versioned text-only manifest/records with mode/pool/language/rules suitability, provenance, hashes and stable content revisions; reject nontext active data.
+- [x] Implement versioned text-only manifest/records with mode/pool/language/rules suitability, provenance, hashes and stable content revisions; reject nontext active data.
 - [ ] Implement bounded Unicode text validation/rendering contract, safe normalization and duplicate review; malicious markup/control characters and Turkish/RTL fixtures.
 - [ ] Pin complete validated text snapshots per match; failed activation leaves prior release active, and mid-match activation never changes wording or evidence.
-- [ ] Replace required multimodal assumptions with reviewed versioned text suitability; record optional evaluator/model data without leaking candidate bands to clients.
-- [ ] Deal role-blind 5+3 against every scheduled Nown and reject infeasible setup; test retained hand/reserve coverage instead of discarded intermediate selections.
+- [x] Replace required multimodal assumptions with reviewed versioned text suitability; record optional evaluator/model data without leaking candidate bands to clients.
+- [x] Deal role-blind 5+3 against every scheduled Nown and reject infeasible setup; test retained hand/reserve coverage instead of discarded intermediate selections.
 - [ ] Certify distinct neutral system seeds independent of roles/prompts, unique copy identities and mode-specific reachable action/depletion viability.
 - [ ] Build isolated synthetic fixtures for five modes, small exhaustive ownership/state tests and reproducible production-candidate schedule simulations.
 - [ ] Connect accepted immutable contributions to reviewed bundle/certify/publish/activate lifecycle; preserve consent/credits and forbid duplicate publication rewards.
 - [ ] Run editorial pilots in three themes/two cultures at 4/6 sizes; retain comprehension/ambiguity/first-seat/draw/repetition evidence per mode and language.
 - [ ] Gate: technical certification and human release decision both present for each candidate mode/language; old seed volume counts never constitute production readiness.
+
+**Verified implementation evidence (2026-09-12).** Immutable text schema,
+reviewed mode suitability and role-blind retained 5+3 dealing passed independent
+source review and cold tests: 35 media top-level tests (123 terminal cases) and
+9 CLI tests, zero failures/skips. Run `text-transition-rest-20260912` records
+exact logs. Unicode/client rendering, runtime pinning/lifecycle integration and
+actual editorial/release evidence remain separately open; synthetic fixtures
+never authorize production activation.
+
+#### Phase 2 execution detail — 2026-09-12
+
+**Goal/boundary.** Build the shared text release and dealing path, then collect
+the distinct editorial evidence required for availability. Synthetic releases
+exercise implementation with zero live value; they never satisfy human review.
+These numbered children decompose the ten parent items without changing counts.
+
+**Ownership/API.** Content owns `server/pkg/media/`, `tools/mediapack/` and their
+fixtures; the parent coordinates `portal`/`workbench` adapters and config. Reuse
+`Manifest`, `Pack`, `LoadPack`, `Certify`, `Dealer.Deal` and `Manager` boundaries
+where compatible; version incompatible records explicitly. Agree an immutable
+validated release snapshot, complete secret schedule and role-blind deal result
+with the engine owner before either changes the shared call boundary. The result
+carries content revisions and extra system seeds; the engine allocates distinct
+physical copy IDs. Only authorized v2 projections reach players. Discover exact
+symbols through CodeGraph before changing consumers or adding files.
+The agreed adapter is immutable `TextSnapshot` → `TextDeal`, with independent
+schedule/hand/system randomness, pinned release/language/rules/hash, Nowns,
+per-seat cards/reserve and per-round system seeds. Reviewed High/Distant pair
+bands retain configured minimum coverage when used; no fabricated vectors or
+omitted metadata may masquerade as whole-schedule suitability.
+
+| Parent / child | Ordered implementation and proof |
+|---|---|
+| 1a — Records | Add strict format/release/rules/language/pool/Nown-kind and immutable revision records; negative tests reject unknown/nontext/duplicate/incompatible records without coercion. |
+| 1b — Manifest integrity | Validate exact member hashes, provenance/license/age and certification references before constructing a snapshot; tamper, traversal and missing-member fixtures fail closed. |
+| 2a — Text boundary | Freeze configurable UTF-8 byte bounds and normalization rules shared with client validation, with grapheme-aware layout; reject invalid Unicode, blanks, excess length and spoofing controls while preserving Turkish casing, accents and legitimate RTL. |
+| 2b — Duplicate/render proof | Separate canonical duplicate candidates from human near-duplicate decisions; hostile markup remains inert plain text, with expansion/line-overflow fixtures and no URL fetch. |
+| 3a — Immutable lookup | Add release-bound lookup that cannot expose mutable manager storage; attempted caller mutation and failed activation leave existing snapshots unchanged. |
+| 3b — Match pin adapter | Replace global active lookups in match rendering with pinned release bytes; replay the Phase 1 same-ID wording-drift reproduction and prove history/reconnect/verdict retain original wording. Parent coordinates `game/payload.go` with engine work. |
+| 4 — Suitability | Version reviewed mode/prompt/card relations and optional evaluator metadata; validate pool/rules/language coverage without mandatory synthetic vectors. Negative projections prove candidates/model/thresholds never enter player DTOs. |
+| 5a — Schedule/retention | Select distinct full 2/3-round schedules and retain each seat's actual 5+3 against every scheduled prompt; deterministic infeasible fixtures reject before admission. |
+| 5b — Fairness | Same schedule/RNG inputs produce identical deals independent of later role assignment; both-size tests inspect retained hand/reserve coverage, depletion and absence of fallback/refill. |
+| 6a — Seeds/copies | Generate distinct-text neutral seeds independently of roles/prompts, outside player budgets; tests prove copy uniqueness and correct three-bag/per-seat-display/single-target counts. |
+| 6b — Action viability | Add mode-specific reachable-state certification for consumption, replacement, transfer/refusal and target chains; exhaustive small fixtures expose stranded choices and preserve explicit no-card pass behavior. |
+| 7 — Reproducibility | Keep five-mode synthetic fixtures isolated and labelled; save release/rules/tuning identity, seed, ordered actions/clock inputs and simulation denominators. Repeat runs agree; sampled production candidates are never labelled exhaustive. |
+| 8a — Accepted input | Adapt approved immutable text revisions with original consent/credits into bundle input; withdrawn/unreviewed/mutated content and mismatched approval identities refuse. |
+| 8b — Lifecycle | Implement separate prepare/certify/publish/activate/takedown operations with immutable artifacts, audit and compatible text rollback; repeated publication neither duplicates approvals nor grants value. |
+| 9 — Editorial pilots | Prepare exact-revision scripts and evidence records for three themes/two cultures, all five modes and both sizes; conduct human sessions and record comprehension/ambiguity/opening-seat/draw/repetition outcomes. Unrun sessions remain pending. |
+| 10 — Gate | Independent review and unified verification cover loader/dealer/tools/adapters; each released mode/language additionally requires its recorded human decision and actual compatible activated artifact. |
+
+**Risks/dependencies.** Do not make a mutable `Pack` pointer an immutability
+promise or replace all-schedule coverage with first-prompt counts. Optional
+embeddings cannot become a semantic judge. Engine tests may consume synthetic
+snapshots while pilots/review continue; availability stays closed until both
+technical and human release gates pass. Parent alone records completion/staging.
 
 ### Phase 3 — Shared match state and five mode engines
 
@@ -152,19 +335,65 @@ response/timeout races, result callbacks firing twice.
 state-machine/property/race tests, full no-leak event scanning.
 
 - [ ] Repair Room/Match lock/callback ordering with real disconnect broadcasts and concurrent completion; no socket I/O under nested state locks.
-- [ ] Add stable match/round/action/copy identity and one-owner location registry for hand/reserve/board/discard/pending; copied wording never conflates copies.
-- [ ] Implement whole-match ordered public evidence and private per-seat state, round reset and bounded snapshots using the pinned pack/rules.
-- [ ] Fix draws to current-turn-only, private owner delivery/public count and exactly-once penalty; reject eliminated/disconnected/pending-offer draws.
-- [ ] Remove specialty dealing/use from text engine and reject legacy specialty/dev grants; preserve timeout passes and tied runoffs.
-- [ ] Implement Missed the Briefing response confirmation/consumption, preview revision and attributed evidence with idempotent retry.
-- [ ] Implement Secret Scale atomic card+1–5 placement, neutral labels, multiple copies per rating and immutable history.
-- [ ] Implement Make Room three-item seeding and atomic slot replacement/discard with original before/after evidence retained.
-- [ ] Implement Bad Bargains offer reservation, recipient-only accept/refuse and atomic ownership transfer with display/hand conservation.
-- [ ] Implement Bad Bargains response deadline, disconnect/forced-transition cancellation and no-recipient pass; accept/expiry/leave race has one result.
-- [ ] Implement Top That neutral seed/current-target revision and ordered chain, with no semantic superiority judge or veto.
-- [ ] Prove all-mode shared vote budgets, early team victory, tied runoff, eliminated permissions, timeout penalties, grace/forfeit/low-population and begun-round-only verdict.
+- [x] Add stable match/round/action/copy identity and one-owner location registry for hand/reserve/board/discard/pending; copied wording never conflates copies.
+- [x] Implement whole-match ordered public evidence and private per-seat state, round reset and bounded snapshots using the pinned pack/rules.
+- [x] Fix draws to current-turn-only, private owner delivery/public count and exactly-once penalty; reject eliminated/disconnected/pending-offer draws.
+- [x] Remove specialty dealing/use from text engine and reject legacy specialty/dev grants; preserve timeout passes and tied runoffs.
+- [x] Implement Missed the Briefing response confirmation/consumption, preview revision and attributed evidence with idempotent retry.
+- [x] Implement Secret Scale atomic card+1–5 placement, neutral labels, multiple copies per rating and immutable history.
+- [x] Implement Make Room three-item seeding and atomic slot replacement/discard with original before/after evidence retained.
+- [x] Implement Bad Bargains offer reservation, recipient-only accept/refuse and atomic ownership transfer with display/hand conservation.
+- [x] Implement Bad Bargains response deadline, disconnect/forced-transition cancellation and no-recipient pass; accept/expiry/leave race has one result.
+- [x] Implement Top That neutral seed/current-target revision and ordered chain, with no semantic superiority judge or veto.
+- [x] Prove all-mode shared vote budgets, early team victory, tied runoff, eliminated permissions, timeout penalties, grace/forfeit/low-population and begun-round-only verdict.
 - [ ] Update dev/test gamebot policies and seeded ordered replay scripts for each mode/role, own observation only; test matches never earn live value.
 - [ ] Gate: engine/property/race/no-leak tests pass at 4/6 and multi-round schedules, with no pending trade crossing round/elimination/verdict and no duplicate finish.
+
+
+#### Phase 3 execution detail — 2026-09-12
+
+**Goal/boundary.** Extend one serialized match engine to the five adopted actions
+with conserved physical copies and complete recipient-safe evidence. Engine
+ownership is `server/internal/game/`, `lobby/room.go`, their tests and
+`tools/gamebot`; the parent owns lobby-manager/transport/handler/client integration
+and durable store work. Shared v2 schema
+changes require the contract owner and regenerated shared fixtures. No local
+prototype grants live value, and no legacy intent silently becomes a new action.
+
+**First dependency.** Agree the release/deal adapter above and the mutation/output
+boundary before parallel edits. Mutate state under one match serialization order;
+return immutable event/callback work, release incompatible locks, then deliver
+through one connection writer. Stable outcome identities must survive callback
+retry; Phase 5 owns their durable persistence.
+
+| Parent / child | Ordered implementation and proof |
+|---|---|
+| 1a — Lock regression | Land the actual Room→Match→Room disconnect/deadlock regression with the repair; bounded real WebSocket tests finish and preserve intended broadcasts. |
+| 1b — Output ordering | Move finish callbacks/socket writes outside nested state locks and serialize each connection writer; race-test disconnect, last Ready, simultaneous completion and error/event output. |
+| 2a — Identity | Establish new match/round/turn/phase IDs and a copy registry mapping each physical instance to exactly one legal zone/owner; duplicate text does not merge copies. |
+| 2b — Conservation | Centralize move/reserve/transfer/discard validation and mutation; property tests prove the conserved initial-plus-system multiset after valid, rejected and duplicate actions. |
+| 3a — History | Retain attributed ordered actions, public before/after state, penalties and system seeds by original round; board reset preserves hand/reserve and previous evidence. |
+| 3b — Projection | Build v2 active-Nower/Donower/eliminated snapshots from pinned bytes, including ballot/Ready/pending deadlines; full serialized scans reject future prompts, other hands/reserves and role-linked value. Page assembly preserves complete history. |
+| 4 — Draw repair | Add current-turn-only text-engine draw proof; private instances/public count, one penalty per copy and no mutation for disconnected/eliminated/pending/stale requests. Keep the historical v1 behavior test until its consumer is retired under Phase 6. |
+| 5 — Legacy rejection | Text setup deals no specialties; specialty/dev grants fail explicitly at every text entry point. Keep ordinary timeout passes, random penalty discard, no-card pass and tied runoff proofs. |
+| 6 — Respond | Validate phase/turn/copy/preview revision, consume once and append attributed response; same request/body replays, changed body/stale revision refuses unchanged. |
+| 7 — Place | Commit copy plus integer 1–5 atomically; duplicate ratings are legal, neutral endpoints expose no criterion, malformed ratings never spend a copy. |
+| 8 — Replace | Seed three distinct items, replace one occupied slot and archive its removed copy; before/after history remains exact and restoration requires another owned copy. |
+| 9a — Offer reservation | Validate connected recipient, both instances and board revision; reserve exactly those copies and block proposer draw/action while pending. |
+| 9b — Offer resolution | Only the named recipient accepts/refuses; accept swaps offered hand/requested display while conserving hand size, refusal restores reservation and preserves public knowledge. |
+| 10a — Response clock | Start absolute trade deadline independently of expired submission clock; fake-clock accept/expiry races produce exactly one resolution and advance once. |
+| 10b — Cancellation | Participant disconnect/leave and forced round/elimination/end cancel first; no-recipient path passes without loss. Recipient keeps their later turn; Poke uses existing play budget. |
+| 11 — Top | Confirm owned copy against exact current-target revision, append an immutable attributed chain and advance; no ranking, veto or semantic evaluator decides legality. |
+| 12a — Vote/clock matrix | Both sizes/all modes prove fixed 2/3 vote budgets, early team result, one runoff, final ties, result Ready and discussion based on original table size; Ready never implicitly follows a cast vote. |
+| 12b — Absence/result matrix | Fake-clock grace/reconnect/forfeit/scored-low-population cases preserve role/points rules, eliminate permissions immediately and reveal only begun Nowns. Duplicate close emits one immutable outcome. |
+| 13 — Real test clients | Adapt gamebot to v2 observations and deterministic ordered scripts for each mode/role, including recipient replies; prove no global secret access and authenticated prototype zero-value policy. |
+| 14 — Gate | Review then unified validation plus focused race/property/no-leak suites cover 4/6 and multi-round schedules. Pending offers never survive a forced boundary; whole-match copy conservation and single finish hold. |
+
+**Risks/dependencies.** Timer callbacks must carry the phase/offer identity they
+were created for; reconnect never extends a deadline. Known public cards remain
+historical knowledge after returning to private hands. Content certification and
+financial persistence continue independently, but their actual adapters must be
+verified before a production gameplay gate can pass.
 
 ### Phase 4 — Lobbies, protocol and client integration
 
@@ -193,6 +422,41 @@ small-screen/large-text/keyboard/screen-reader/native/Web evidence.
 - [ ] Localize mode/rule/error/instruction copy; keep content language explicit, test long/RTL/diacritic text and touch/keyboard/screen-reader action equivalence.
 - [ ] Exercise native/PWA 4/6-seat flows, resize/reduced motion, stale deep links, old client/new server and new client/old server refusal; profile action/history updates against Blueprint client p95 ≤16.7 ms on the stated low-end device.
 - [ ] Gate: no text secret in downloaded catalog, persistent cache, logs, unauthorized/hidden/eliminated semantics or unauthorized snapshot; active-Nower reveal is screen-reader accessible, all five action and lobby journeys proven, no stale hidden controls.
+
+#### Phase 4 execution detail — 2026-09-12
+
+**Goal/ownership.** Integrate the frozen v2 contract through existing lobby,
+handler, client DTO/session and game-screen paths. The parent owns manager/
+handler changes; coordinate Room integration with its engine owner. Assign client
+DTO/reducer and presentation/localization separately if parallel workers are
+available. Use the Soft Neo-Brutalism skill before UI edits; retain existing
+tokens, fonts and accessible role checks. No persistent secret catalog or
+compatibility adapter may quietly translate legacy actions.
+
+| Parent / child | Ordered implementation and proof |
+|---|---|
+| 1a — Admission handshake | Negotiate v2/rules before seat binding, quota reservation or mutation; real sockets reject old/unknown versions with stable codes and no reserved seat. |
+| 1b — Streams/resync | Assign recipient/evidence sequence and stream epoch at the single output boundary; gaps request an authorized atomic snapshot/page set, duplicate events and resync requests never replay actions. |
+| 2a — Queue identity | Key FIFO by explicit mode/size/content-language/compatibility/eligible pack, with one account reservation; concurrency tests prove no double seat and no cross-tuple matching. |
+| 2b — Queue change | Keep waiting preserves position; change atomically cancels old tuple and joins new tail, leave/disconnect/retry releases exactly once. Timeout only offers the three explicit choices. |
+| 3 — Discovery | Serve available mode/language/pack metadata without secret content; default/remembered-mode tests explain withdrawn choices and refuse disabled queues. |
+| 4a — Settings/Ready | Enforce host-only settings revision, full connected membership and Ready acknowledgments; stale revision, membership change and oversized downsizing refuse/reset as specified. |
+| 4b — Host sponsorship | Host departure elects longest-present connected member, with seat order breaking a timestamp tie; transfer clears Ready and revalidates next-match pack access. Started match stays pinned, guests are never charged and missing sponsorship requires an explicit new choice. |
+| 5 — Rematch | Return both entry paths to settings/Ready; Local host persists when present, Quick Play host is the lowest original seat among returners. Preserve each entry path's caps/packs; same-tuple FIFO replacements enter unready and membership changes clear Ready. Setting changes cancel old replacement reservations before publishing the new tuple; an empty table is retired rather than creating a host policy. |
+| 6a — Client state | Parse v2 into typed copy-ID state; apply atomic snapshots and ordered events with dedupe/epoch validation. Replay/out-of-order/error tests never remove or spend another equal-text copy. |
+| 6b — Confirmation | Show pinned contract and revision-bound action preview; editing preview is local, confirmation emits one stable request identity and stale replies require refreshed state. |
+| 7 — Mode boards | Add response, scale, three-slot bag, display/trade and chain controls individually with widget tests for legal targets, attribution and chronological history; keyboard/touch/semantics invoke equivalent confirmations. |
+| 8 — Private reconnect | Restore only authorized prompt/hand/history/pending absolute deadline; elimination/logout/match change clears private state, semantics and stale buffered callbacks. Test hidden/background and later reconnect paths. |
+| 9 — Cache boundary | Remove active gameplay catalog/prefetch use, version obsolete cache/service-worker keys selectively, preserve auth/preferences/avatar assets; seeded-v1-cache tests prove no stale secret or broken login. |
+| 10 — Localization | Add stable system codes/ARB messages and explicit content-language labels; pseudo-locale, Turkish/RTL/large-text tests preserve authored text and readable action/error controls. |
+| 11a — Journey matrix | Run real v2 4/6-seat native/PWA join/action/disconnect/rejoin/rematch plus stale link/cache and both version-mismatch directions; record device/build/platform evidence separately. |
+| 11b — Accessibility/performance | Verify focus order, screen-reader role reveal, reduced motion, resizing and worst-history update profiles; record actual low-end device p95 frame total against 16.7 ms, not a desktop substitute. |
+| 12 — Gate | Review and unified tests plus complete wire/cache/log/semantics no-leak checks and all five mode journeys. Manual device evidence stays unexecuted until observed; disabled modes remain unavailable. |
+
+**Risks.** Queue changes and blocks share reservation serialization; Ready is a
+revisioned server fact, not a local checkbox. Reconnect drains obsolete pending
+requests rather than replaying mutations under a new match. Native iOS evidence
+requires macOS/Xcode; absence does not stop Android/PWA or server implementation.
 
 ### Phase 5 — Durable value, community and trust
 
@@ -229,6 +493,101 @@ pre/post balance+ledger+receipt+FK parity, privilege/privacy tests.
 - [ ] Verify ledger append-only enforcement, wallet reconciliation and deletion/retention handling across rows/JSONB/blobs; no private role rewards in public stats/analytics.
 - [ ] Gate: financial/data parity and duplicate/failure-recovery proofs pass; current user value preserved, live trust surfaces verified, unresolved launch dependencies explicit.
 
+#### Phase 5 execution detail — 2026-09-12
+
+**Goal/boundary.** Implement durable value and trust with actual PostgreSQL
+constraints and recovery. The parent owns initial migrations/store/economy work;
+assign later account/community/provider modules one owner each before editing.
+Schema and synthetic outcome tests can proceed alongside Phases 2/3. Actual
+engine/handler callbacks must use this path before integration is complete.
+Preserve numeric policy and all original migration bytes; the no-deployment
+attestation does not weaken fixture parity or future deployment preflight.
+
+**Initial contract.** Recheck and use allocated `000009_text_match_admissions`
+and `000010_idempotent_match_settlement`, then separately `000011` content and
+`000012` trust. Pin Phase 1 historical tests to actual migrations 1–8 as new head
+advances; add fresh→new-head and actual 8→new-head proofs. Match ID, immutable
+body hash, account/event ordinal and original UTC day/week are shared identity,
+never a reusable room ID or retry time. Follow the reviewed fence/week/account/
+day/profile/wallet lock order and bounded whole-transaction retry protocol.
+
+| Parent / child | Ordered implementation and proof |
+|---|---|
+| 1a — Admission schema | Add match/participant/admission states, FKs/unique keys and pending indexes in 9; real SQL tests reject duplicate seats/accounts and impossible states, preserve old reads, and refuse populated down. |
+| 1b — Settlement schema | Add immutable outcomes/award receipts, settlement/outbox, first-win/day/leaderboard claims in 10; prove conflicting identity refusal, required indexes/FKs, append-only privileges and empty-only exact down. |
+| 1c — Content/trust schema | Implement 11/12 separately with nullable legacy metadata, private block/terms keys and reviewed retention; execute the realistic Phase 1 corpus against actual bounded copy/verify/resume and conflicting-source behavior. |
+| 2a — Reserve/release | Atomically reserve match/account eligibility against current entitlement and shared free-day allowance; duplicate reserve/cancel is a no-op, local/paid/prototype does not consume free quota, rematch gets a new identity. |
+| 2b — Start | Revalidate and commit start/count once after feasible content/full Ready; failed setup releases reservations. Race last-slot starts, entitlement expiry, settings cancellation and UTC rollover on real PostgreSQL. |
+| 3a — Outcome receipt | Establish one immutable terminal outcome and participant settlement intent; duplicate callbacks agree, conflicting bodies reject, including scored low-population and caught teammate wins. |
+| 3b — Atomic effects | Apply profile points/XP/eligible leaderboard and Noin receipts atomically per account with durable retry/outbox; inject failure after each write and uncertain commit, then replay without missing or duplicate effects. |
+| 3c — Runtime adapter | Replace legacy sequential finish writes with durable outcome delivery, including low-population callback; integrate actual engine finish/reconnect and prove retry after callback failure. |
+| 4a — Fenced interruption | Persist owner incarnation/epoch and serialized terminal/interrupted transition; paused old writers lose the fence and cannot award after recovery. A client disconnect alone cannot claim interruption. |
+| 4b — Compensation | Compensate consumed free admission once in its original day; crash after start/mid-award/worker restart preserves committed events, invents no terminal value and never extends paid expiry. |
+| 4c — Process lease schema | Allocate `000013_text_process_ownership` after trust 12: persistent incarnation UUID/generation, singleton current owner, loss/recovery state and owner identity on reservations/matches. Preserve historical rows; fresh/upgrade/empty-down tests reject impossible ownership and populated down. |
+| 4d — Session authority | Acquire one PostgreSQL session advisory lock on a dedicated pinned connection, then atomically advance the singleton generation and record predecessor loss. Prove two-process exclusion, failed acquisition cleanup, forced backend loss, healthy release and permanent refusal by a lost instance. A heartbeat expiry alone never authorizes takeover. |
+| 4e — Transaction fence | Bind production `TextValueStore` to the acquired token; before reserve/prepare/start/award/finish/cancel/interrupt, hold the singleton `FOR SHARE` and validate current ownership through commit. Takeover uses `FOR UPDATE`. Prove a paused old transaction completes before takeover or fails after it; unbound writers refuse whenever a singleton exists. |
+| 4f — Bounded lost-owner recovery | Process only confirmed-lost incarnations in stable bounded batches: release unbound reservations, cancel prepared matches, interrupt started matches and compensate actual consumed free quota once. Preserve committed outcomes/awards and drain pending terminal settlement independently. Crash between batches, retry after uncertain commit, midnight and simultaneous finish/recovery tests retain exact value parity. |
+| 4g — Runtime readiness | Inject the owner token/check into `TextManager`; remove its independent random process label. Admission opens only after prior-owner cleanup; lease loss stops admission/actions/output and never silently reacquires the same incarnation. Real WebSocket/process-loss tests return clients cleanly without reconstructed hands, offers or completion rewards. |
+| 5a — Shared caps | Serialize first-row creation and unique first-win/day/leaderboard claims with conversion/gameplay writers; race all modes at earn/conversion/Quick Play limits and midnight without moving old events into new buckets. |
+| 5b — Week close | Persist closing cutoff, drain accepted work without holding worker-required locks, then atomically seal immutable rankings; delayed writers/repeated close cannot alter history. |
+| 6 — Event timing/privacy | Credit each correct-vote/survival event once at occurrence, including capped-zero receipts; absence/interruption preserves it. Only authorized private settlement displays role-linked amounts; ratings/trades and prototype matches grant nothing. |
+| 7 — Paid equivalence | Implement explicit reviewed legacy-theme mapping with unresolved-state reporting; tests preserve owned benefits and block disabling unknown promises. Current deployed-owner set is N/A, not a fabricated universal mapping. |
+| 8 — Historical relationships | Preserve submission/challenge/report/terms/blob/credit links while validating text-only new writes; retry backfill/publication without approval or reward replay. |
+| 9 — Curation operations | Connect screened-plus-human-approved immutable revisions to certification/activation/takedown and public report resolution; privilege, stale-revision and failed-screen tests expose no unapproved content. |
+| 9a — Content administration | Add authenticated, CSRF-protected internal-console capture/export of exact accepted inputs, bounded certified-bundle publication, separate activation/withdrawal and restart-visible release metadata. Store operations validate the actor again and commit their audit atomically; browser tests cover failed screening, unauthorized access, inert text and no publication payout. |
+| 9b — Archive operation | Expose explicit bounded archive start/copy/verify/status operations with a deadline and an audit in the same transaction. Interrupted requests resume existing progress; read-only status never starts a backfill. |
+| 9c — Immutable source boundary | Protect actual historical asset fields and approved decision/consent bytes. Submitted text cannot change until an explicit withdrawal, and challenge entry content stays immutable; report resolution references exact release/revision and never masquerades as a status-only takedown. |
+| 10 — Challenge close | Add deterministic scheduler/close identity, one current title and exactly-once winner payout; test restart, ties under the documented rule, slot reopening and boundary races. Any unspecified winner-tie policy needs a concrete decision before that branch. |
+| 11 — Guard enforcement | Correct authenticated Guard identity, one freeze per Guard/target, overlap isolation and expiry; only admin final actions affect all relevant sessions, with audited reversible case decisions. |
+| 12a — Terms/block store | Require versioned user terms before authored chat/UGC and immutable contribution consent separately; reject self/duplicate abuse and implement private symmetric future-match exclusion. |
+| 12b — Safety journey | Wire block/report/contact UI and queue reservation serialization; hide authored chat/UGC while preserving card/vote evidence, current membership/scoring and private block identity. Test unauthorized access and no role leaks. |
+| 13 — Admin/contributor UI | Complete existing audited product mutations, role separation, CSRF/session controls and text submission/review journey; failure paths cannot publish or silently bypass screening. |
+| 14 — Identity restore | Complete OAuth provider validation/link/second-device restore with collision, revoked-token and lost-session tests; provider sandbox evidence remains distinct from deterministic contract fixtures. |
+| 14a — Development identity | Migration 14 adds immutable account purpose, preserving existing players. A server-configured local/staging prototype may issue signed development credentials through a secret-authenticated route; production rejects both token and stored development identity before admission. Device/OAuth/refresh cannot convert its purpose; tests prove zero prototype value and no ordinary-account substitution. Guard identity uses migration 15. |
+| 15 — Deletion | Add reauthenticated in-app deletion through reviewed relational/JSONB/blob retention rules; preserve legally required immutable value history with no orphan PII or public statistics. |
+| 16 — Avatar | Preserve entitlement, 256×256 WebP/crop/EXIF/size behavior and provider-screen/takedown flow; rejected or failed moderation never activates an upload. |
+| 17a — Billing implementation | Implement authenticated server receipt verification, unique transaction entitlement grant and restore/refund reconciliation; fixture tests cover replay, wrong account/product/platform and provider failure. |
+| 17b — Billing evidence | Run Play/StoreKit test transactions, restore and refund on configured platform accounts/devices; save redacted provider evidence. No mock or absent credentials counts as this proof. |
+| 18a — Doubler/consent | Verify SSV signatures/transaction identity and Premium eligibility server-side; cap/replay/private-settlement tests prove client callbacks grant nothing and denied consent uses the allowed flow. |
+| 18b — Provider evidence | Exercise actual configured ad verification and UMP/platform consent paths with test accounts; record revocation/refusal and policy review for intended markets. |
+| 19 — Reconciliation | Check immutable accepted outcomes against every value effect and outbox item, not wallet=sum alone; enforce ledger immutability at DB privilege/trigger boundary with a separately authorized retention path. |
+| 20 — Gate | Review complete integration and run unified real-service concurrency/failure/privacy checks; retain exact original-row/file parity, provider/manual results and unresolved launch dependencies separately. |
+
+**Ownership 13 handoff.** Own `server/migrations/000013_*` and new
+`server/internal/store/text_owner*.go`; coordinate changes to existing value
+methods with their owner and `TextDeps`/startup with the lobby owner. Proposed
+API: `AcquireTextOwner(ctx, dedicatedDB)` returns an immutable
+`Token{IncarnationID, Generation}`, `Done()`, `Check(ctx)` and `Release(ctx)`;
+an owner-bound value-store constructor supplies that token to all new writes.
+`RecoverLostOwners(ctx, token, limit)` returns aggregate released/cancelled/
+interrupted/pending counts and completion. Migration 12 remains the trust lane;
+14 may separately extend Guard identity. No hidden match state is persisted.
+
+The singleton guard precedes match, week, sorted accounts, day, profile and
+wallet locks; takeover cannot pass an in-flight guarded transaction. Persist
+the owning backend identity and verify its advisory authority, not just its
+last heartbeat. Keep one lease acquisition per dedicated session: advisory
+locks are reentrant, so repeated acquisition is not a health probe. Explicitly
+unlock on healthy shutdown; on uncertain loss discard the dedicated physical
+connection/pool rather than returning a session-held lock to the shared pool.
+Loss permanently fences the local instance. Recovery uses the new token and
+the recorded lost incarnation, never an exception allowing the old token to
+write. Stable indexes and per-match transactions keep each batch bounded;
+partial progress survives another owner loss. Ownerless historical active work
+must be classified explicitly before readiness, while isolated unit helpers may
+operate unbound only when the database has no ownership singleton. Test this
+fallback's refusal after first acquisition, backend termination, paused writer
+and takeover races, healthy-owner exclusion, prepared/unbound cleanup, crash
+after each compensation write, terminal-outcome precedence and clean client
+return. Test/production configuration cannot bypass the persisted fence.
+
+**External evidence.** Provider credentials/test accounts, current platform
+policy review, retention/legal decisions and any actual legacy paid remedy are
+required for their named paths; implement/test unrelated local paths meanwhile.
+Human approval is needed only for a concrete new policy or external action, not
+for the already adopted reward rules. Financial correctness cannot be inferred
+from a passing fixture helper or a successful enqueue.
+
 ### Phase 6 — Retirement, compatibility and operations
 
 **What/why.** Remove the obsolete architecture safely and prove deployment,
@@ -255,6 +614,41 @@ inventory, rollback before/after writes, every module/platform build.
 - [ ] Replace obsolete fixtures/assertions with mode/privacy/migration/unsupported-input tests; obtain concrete approval before deleting test files and record release notes.
 - [ ] Close every temporary compatibility entry after measured rollback window; run no-leftovers source/call/dependency/route/packaged-artifact scans and align active docs/skills.
 - [ ] Gate: rehearsal/parity/build/load/security tests green, rollback demonstrated, retirement exceptions have owner/reason/expiry, no dormant old gameplay architecture.
+
+#### Phase 6 execution detail — 2026-09-12
+
+**Goal/boundary.** Prove exact disposable restore/cutover behavior, then remove
+obsolete executable consumers. Assign `infra/`/ops scripts and retirement modules
+explicit owners; inspect callers before deleting dependencies. No deployment
+exists, so live migration/drain/rollback-window observations are N/A today;
+document that fact instead of inventing a host. Artifact rehearsals and retained
+data tests still apply. Future deployment actions require their concrete target,
+release manifest and operator authorization.
+
+| Parent / child | Ordered implementation and proof |
+|---|---|
+| 1a — Snapshot | Repair existing snapshot tooling with finite waits, checked errors, safe destination/permissions and complete PG/retained-object manifests; forced failure leaves no falsely valid backup. |
+| 1b — Restore | Restore only into uniquely named empty disposable stores with explicit identity guards; prove roles/sequences/FKs/rows/blob/checksum parity and refusal to overwrite an occupied target. |
+| 1c — Drain | Implement authenticated admission-close/status based on real room/trade/settlement counts; timeout reports pending work, maintenance and Redis messages alone cannot report drained. |
+| 2 — Upgrade/rollback | Rehearse old restore, actual 8→new-head interrupted backfill and new restore separately; exact empty-only down refuses retained data, compatible app/pack rollback preserves target writes, forward fix remains executable. |
+| 3a — Release artifact | Build actual production image plus secret-free config/protocol/text release manifest and startup validation; wrong schema/dirty state/uncertified pack refuses readiness. |
+| 3b — Version fence | Start old fixtures under original rules and drain before v2 admission; explicit v1 rejection never binds/charges. New client/old server also fails clearly. |
+| 4a — Single writer | Coordinate app/admin/community/jobs/receipt writers and durable pending work with cutover watermark; disposable dual-writer attempts refuse, held callback replay applies once. |
+| 4b — Selective invalidation | Namespace/expire stale room/queue/cache generations while retaining identity/security/entitlement state; fixture parity and real human smoke cover every enabled mode/size. |
+| 5a — Outage recovery | Inject server, Redis and PostgreSQL loss, restore from actual artifacts and prove readiness recovery/clean interruption without reconstructed hands or duplicated value. |
+| 5b — Budgets | Run recorded-host 100-room mixed-size latency (p95≤200 ms/p99≤500 ms), worst-frame and 100-match soak tests; after cleanup/GC heap within 10% of warm baseline and room/socket/goroutine counts recover. |
+| 6 — Gameplay retirement | Remove active association/specialty/dev-grant/backfill scheduler/wire/UI/string consumers in bounded module patches after replacement rejection tests; update every retained caller before removing its API. |
+| 7a — Content retirement | Remove playable-image loaders/URLs/prefetch/catalog/workbench ingest routes and stale packaged secrets; prove unsupported input rejection and absence from route/artifact inventories. |
+| 7b — Dependency retirement | Remove only packages/config/assets with no retained caller using official module tooling; rebuild server/tools/Android/Web and macOS iOS, retaining avatar WebP/CGO and account/UI utilities. |
+| 8 — Storage retirement | Inventory archive/artifact/avatar consumers, then remove unused MinIO/CDN wiring, secrets and readiness checks; preserve authorized archives/applied SQL and verify text fresh-clone startup without cloud keys. |
+| 9 — Test migration | Replace obsolete assertions with substantive mode/privacy/unsupported-input/restore coverage; present an exact file-removal list and release-note entry for required approval before deleting test files. Continue other retirement while that narrow decision is pending. |
+| 10 — Final inventory | Compare source/call/dependency/route/config/packaged-artifact inventories with every temporary compatibility entry; close evidenced entries and record owner/reason/expiry for justified historical retention. |
+| 11 — Gate | Independent review and full build/load/security/parity/restore verification precede staging. A future live rollback window needs measured operator evidence; no-deployment N/A does not certify one. |
+
+**Risks.** Never use `compose down -v`, broad Redis flush or generic all-history
+down as recovery. Avatar processing is an active image consumer. After new
+financial writes, an old database snapshot cannot be routine rollback; preserve
+one authoritative database or reconcile the exact durable delta before reopening.
 
 ### Phase 7 — Playtests, business validation and release
 
@@ -283,6 +677,41 @@ measured latency/completion/role outcomes/content quality/cost assumptions.
 - [ ] Rehearse public host migration, backup/restore, incident/takedown and customer-support escalation with explicit rollback triggers and responsible operator.
 - [ ] Enable each certified mode/language progressively; observe agreed window, rollback on privacy/value/integrity failure and halt acquisition if queues or economics fail.
 - [ ] Gate: all launched cohorts have signed technical/content/business/operations evidence; unlaunched intended modes remain tracked and unavailable, never falsely advertised as playable.
+
+#### Phase 7 execution detail — 2026-09-12
+
+**Goal/boundary.** Prepare and execute evidence collection for the implemented
+product without fabricating people, elapsed cohorts or commercial results.
+Engineering can build privacy-safe measurement, local prototype scripts,
+analysis/reporting and release checks while recruitment/provider/device work is
+pending. External outreach, spending, publication and deployment require the
+actual named scope/target; an experiment budget in a document is not approval.
+
+| Parent / child | Ordered delivery and proof |
+|---|---|
+| 1a — Instrumented prototype | Implement authorized zero-value prototype cohorts with pinned build/rules/pack and privacy-safe authoritative events; tests exclude them from live wallet/progression/leaderboard and public secret telemetry. |
+| 1b — Human sessions | Prepare consented recruitment and facilitator sheets, then run five modes×both sizes across the three-theme/two-culture pilot. Record participant/table counts and exact observations; AI/bot runs are engineering evidence only. |
+| 2 — Comprehension/balance | Produce reproducible per-cell reports for first-turn success, alternatives/laughter, first-seat/role outcomes, draws, completion and repeats; test denominators with synthetic data, then collect the specified human samples and uncertainty. |
+| 3 — Farming | Implement deliberate abuse scripts and shared-cap probes, then compare actual credited/pre-cap rewards per human-minute with standardized role/cap mix and repeated-pairing evidence; investigate >1.25× rate before enabling rewards. |
+| 4 — Queue liquidity | Record exact FIFO join/start/leave reasons and p50/p95 waits; run two staffed windows with ≥100 joins per exposed cell and apply the business plan's 90% start-within-timeout/≤10% abandonment assumptions. |
+| 5 — First-run/accessibility | Run new-player onboarding/default/change/rematch sessions on real target accessibility/low-end devices; retain failures and versioned fixes without silently changing a selected tuple. |
+| 6a — Cohort computation | Implement authoritative activation, second-match, D1/D7 and invitation definitions with UTC boundaries, exclusions and deletion-safe pseudonymous analysis; synthetic boundary tests prove formulas only. |
+| 6b — Elapsed evidence | Observe two weekly ≥100-human activation cohorts and the defined return windows; report numerator/denominator/group correlation and missing data, never infer D7 before day seven. |
+| 7 — Economics | Replace illustrative values with dated host/provider quotes, actual net settlements and measured authoring/moderation/support hours; validate units/formulas/sensitivity, then obtain owner cash/reserve/burn/authority records. No unapproved spend. |
+| 8 — Decisions | Record named content/locale/safety/operations owners, launch cells, staffed capacity, age/content/market review, real legal/support URLs, billing/consent approval and any paid legacy remedy. Adopted game/economy defaults need no redundant approval. |
+| 9 — Shipping assets | After final UI/engine/netcode gates, capture actual enabled journeys and ≤45 s clip, localized rules/screenshots/disclosures; verify real build identities, privacy cuts, captions/diacritics, dimensions/duration/size and store requirements. |
+| 10 — Operator drill | Prepare a target-specific host/backup/incident/takedown/support packet and rehearse on disposable artifacts first; actual public-host migration requires selected host/operator/access and explicit routing authorization. |
+| 11 — Exposure | Apply an audited per-cell enable/hold matrix only after technical/content/business approval; observe the agreed real window, stop admission on integrity/value/privacy failures and halt acquisition on failed liquidity/economics. |
+| 12 — Gate | Review signed evidence for every launched cell; unavailable intended cells retain their missing proof and next action. Tests of reports/config never stand in for human, platform, commercial or production observations. |
+
+**Specific external inputs.** Real consenting 4/6-player groups and locale
+editors; declared pilot languages/cohort dates; Android/PWA low-end devices and
+macOS/Xcode/iOS access; OAuth/billing/ad/moderation test accounts and provider
+results; owner-controlled legal/support URLs and intended-market review;
+named operator/host with launch and spending limits; elapsed playtest/retention/
+rollout observations. Ask only for the next concrete missing input when its
+dependent work is ready; keep unrelated implementation progressing. No existing
+deployment or paid-customer inventory is asserted beyond the owner's dated N/A.
 
 ## Appendix A — Tracking and truthful completion
 

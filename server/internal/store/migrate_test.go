@@ -1,27 +1,13 @@
 package store
 
 import (
-	"database/sql"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 func TestMigrateUpIdempotent(t *testing.T) {
-	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
-	}
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	defer db.Close()
-	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available (%v), skipping integration test", err)
-	}
+	db := disposableMigrationDB(t)
 
 	// Ensure we start clean: drop the public schema and recreate it so the
 	// migration runs against an empty database even if previous test runs left

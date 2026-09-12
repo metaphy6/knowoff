@@ -14,11 +14,11 @@ saves whole rewrites.
 ### Knowoff content
 
 - [`knowoff-content-create`](knowoff-content-create/SKILL.md) — draft or culturally
-  adapt lo-fi image/text Nowns/cards with an editorial record and current sources.
+  adapt plain-text five-mode Nowns/cards with an editorial record and current sources.
 - [`knowoff-content-review`](knowoff-content-review/SKILL.md) — assess humor,
   ambiguity, lo-fi style, culture, rights and actual review evidence.
 - [`knowoff-content-integrate`](knowoff-content-integrate/SKILL.md) — prepare and
-  verify lo-fi image/text pack/app delivery, keeping certification
+  verify plain-text bundle/app delivery, keeping certification
   and activation distinct.
 
 These are complementary stages, not competing rulebooks. Each reads the
@@ -26,9 +26,10 @@ Blueprint and linked content docs; none treats agent opinion as human approval
 or a synthetic fixture as production certification. All three automatically
 follow the [High/Distant/Chaos source map](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
 through current tuning, server dealing/secrecy and client consumption/rendering;
-the user need not request this context again. Game content uses static images
-and plain text only, with no compulsory format ratio. The UI design matrix
-governs chrome around media, not pack imagery.
+the user need not request this context again. Playable Nowns and cards use plain
+text only, with reviewed mode/pool/language suitability and optional text search
+evaluators. Historic image rights/approval data stays retained; avatars, store
+art and tutorial/promotional media have separate non-playable requirements.
 
 ### Coding
 
@@ -62,7 +63,7 @@ governs chrome around media, not pack imagery.
 
 ### Design
 
-- [`/neo-brutalism-ui-design`](neo-brutalism-ui-design/SKILL.md) — Redesign the Knowoff interface around media against the 🎨 Soft Neo-Brutalism Design Matrix; playable imagery uses the content skills above.
+- [`/neo-brutalism-ui-design`](neo-brutalism-ui-design/SKILL.md) — Redesign the Knowoff interface against the 🎨 Soft Neo-Brutalism Design Matrix; playable text uses the content skills above.
 
 ### Collaboration
 

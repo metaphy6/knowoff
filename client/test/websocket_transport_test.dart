@@ -1,11 +1,112 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowoff_client/core/network/game_transport.dart';
 import 'package:knowoff_client/core/network/websocket_transport.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+class _DelayedChannel implements WebSocketChannel {
+  final incoming = StreamController<dynamic>();
+  final handshake = Completer<void>();
+  @override
+  Stream<dynamic> get stream => incoming.stream;
+  @override
+  Future<void> get ready => handshake.future;
+  @override
+  final WebSocketSink sink = _DetachedSink();
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _DetachedSink implements WebSocketSink {
+  @override
+  Future<void> close([int? code, String? reason]) async {}
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
+  test('a failed opening handshake still schedules a later attempt', () async {
+    final first = _DelayedChannel();
+    final next = _DelayedChannel()..handshake.complete();
+    var opened = 0;
+    final transport = WebSocketTransport(
+        url: 'ws://example.invalid/ws/v2',
+        reconnectDelay: const Duration(milliseconds: 5),
+        maxReconnectDelay: const Duration(milliseconds: 10),
+        reconnectJitter: 0,
+        channelFactory: (_) => opened++ == 0 ? first : next);
+    final subscription = transport.messages.listen((_) {}, onError: (_) {});
+    final connecting = transport.connect();
+    first.handshake.completeError(const FormatException('handshake failed'));
+    await connecting;
+    await Future<void>.delayed(const Duration(milliseconds: 30));
+    expect(opened, 2);
+    expect(transport.isConnected, isTrue);
+    await transport.close();
+    await next.incoming.close();
+    await subscription.cancel();
+  });
+
+  test('concurrent connect requests share one pending handshake', () async {
+    final channel = _DelayedChannel();
+    var opened = 0;
+    final transport = WebSocketTransport(
+        url: 'ws://example.invalid/ws/v2',
+        channelFactory: (_) {
+          opened++;
+          return channel;
+        });
+    final first = transport.connect(), second = transport.connect();
+    expect(opened, 1);
+    channel.handshake.complete();
+    await Future.wait([first, second]);
+    await transport.connect();
+    expect(opened, 1);
+    await transport.close();
+    await channel.incoming.close();
+  });
+
+  test(
+      'stale socket callbacks cannot disconnect or expose errors on a fresh connection',
+      () async {
+    final first = _DelayedChannel()..handshake.complete();
+    final next = _DelayedChannel()..handshake.complete();
+    var attempt = 0;
+    final transport = WebSocketTransport(
+        url: 'ws://example.invalid/ws/v2',
+        channelFactory: (_) => attempt++ == 0 ? first : next);
+    final errors = <Object>[];
+    final subscription = transport.messages.listen((_) {}, onError: errors.add);
+    await transport.connect();
+    await transport.reconnect();
+    first.incoming.addError(StateError('discarded socket'));
+    await first.incoming.close();
+    expect(errors, isEmpty);
+    expect(transport.isConnected, isTrue);
+    await transport.close();
+    next.incoming.addError(StateError('disposed socket'));
+    await next.incoming.close();
+    await subscription.cancel();
+  });
+
+  test('connected is announced only after the socket handshake completes',
+      () async {
+    final channel = _DelayedChannel();
+    final transport = WebSocketTransport(
+        url: 'ws://example.invalid/ws/v2', channelFactory: (_) => channel);
+    final connecting = transport.connect();
+    await Future<void>.delayed(Duration.zero);
+    expect(transport.isConnected, isFalse);
+    channel.handshake.complete();
+    await connecting;
+    expect(transport.isConnected, isTrue);
+    await transport.close();
+    await channel.incoming.close();
+  });
+
   group('WebSocketTransport contract', () {
     late HttpServer server;
     late String url;

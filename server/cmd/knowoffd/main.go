@@ -99,6 +99,20 @@ func run() error {
 	}
 	defer db.Close()
 
+	startup, startupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	textService, err := newTextRuntime(startup, db, cfg, os.Getenv("KNOWOFF_TEXT_PROTOTYPE_PACK"))
+	startupCancel()
+	if err != nil {
+		return fmt.Errorf("initialize text runtime: %w", err)
+	}
+	defer func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace())
+		defer cancel()
+		if err := textService.Close(cleanup); err != nil {
+			logger.Error("text runtime shutdown failed", "error", err)
+		}
+	}()
+
 	authManager := auth.NewManager(db, []byte(cfg.Security.JWTSigningKey), cfg.Security.JWTIssuer, cfg.Security.JWTAudience,
 		time.Duration(cfg.Security.AccessTokenTTLM)*time.Minute,
 		time.Duration(cfg.Security.RefreshTokenTTLH)*time.Hour,
@@ -113,7 +127,10 @@ func run() error {
 				ClientSecret: cfg.Security.OAuth.Facebook.ClientSecret,
 				RedirectURL:  cfg.Security.OAuth.Facebook.RedirectURL,
 			},
-		})
+			})
+	if err := authManager.ConfigureDevelopment(cfg.App.Env, textService.Lobby.Prototype()); err != nil {
+		return fmt.Errorf("configure development authentication: %w", err)
+	}
 	profileManager := profile.NewManager(db, cfg.Tuning.Progression)
 	auditLogger := audit.NewLogger(db)
 	leaderboardManager := leaderboard.NewManager(db)
@@ -194,10 +211,13 @@ func run() error {
 	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
 	publicMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
 	publicMux.HandleFunc("/ws", handler.RealtimeHandler(handlerDeps))
+	textHandlerDeps := handler.TextHandlerDeps{Config: cfg, Lobby: textService.Lobby, Auth: authManager, ConnLimiter: connLimiter, Deliveries: textService.Values, DeliveryWorker: textService.Lobby.Owner()}
+	publicMux.HandleFunc("/ws/v2", handler.TextRealtimeHandler(textHandlerDeps))
+	publicMux.HandleFunc("/api/text/availability", handler.TextAvailabilityHandler(textHandlerDeps))
 	publicBaseURL := fmt.Sprintf("http://%s:%d", cfg.Server.BindAddr, cfg.Server.Port)
 	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
 	publicMux.HandleFunc("/rooms/create", handler.RoomCreateHandler(lobbyManager))
-	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager})
+	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager, DevBotKey: cfg.Security.DevBotKey})
 	handler.RegisterProfileRoutes(publicMux, handler.ProfileDeps{Profile: profileManager, Leaderboard: leaderboardManager}, authManager)
 	handler.RegisterPublicRoutes(publicMux, handler.PublicRouteDeps{
 		Auth:    authManager,
@@ -284,6 +304,8 @@ func run() error {
 	runCtx, runCancel := context.WithCancel(context.Background())
 	defer runCancel()
 	go runHealthWatcher(runCtx, deps, lobbyManager, logger)
+	go textService.Lobby.Run(runCtx, func(err error) { logger.Error("text match tick failed", "error", err) })
+	go textService.Lobby.RunDeliveries(runCtx, textService.Values, func(err error) { logger.Error("text delivery retry pending", "error", err) })
 	backfillManager.Start(runCtx)
 	defer backfillManager.Stop()
 
@@ -302,6 +324,11 @@ func run() error {
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("server error: %w", err)
 		}
+	case <-textService.Owner.Done():
+		runCancel()
+		transport.SetReady(false)
+		lobbyManager.SetReady(false)
+		return fmt.Errorf("text match ownership lost")
 	case sig := <-sigCh:
 		logger.Info("shutdown signal received", "signal", sig.String())
 	}
@@ -309,6 +336,11 @@ func run() error {
 	// Flip readiness off before draining so load balancers stop sending traffic.
 	transport.SetReady(false)
 	lobbyManager.SetReady(false)
+	textDrain, textDrainCancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace())
+	if err := textService.Close(textDrain); err != nil {
+		logger.Error("text drain failed", "error", err)
+	}
+	textDrainCancel()
 	runCancel()
 	logger.Info("readiness disabled, draining connections")
 	// Brief pause so a probe can observe the 503 before listeners close.

@@ -58,15 +58,18 @@ score judges whether an action is funny, correct or superior.
 For every Nown/card creation, review or integration task, automatically consult
 this map before making High/Distant/Chaos or gameplay-readiness claims. Reuse a
 reading only while sources remain unchanged; record revisions and open checks.
-Use CodeGraph first for indexed source. These are **audited starting paths**,
-not evidence that text-mode contracts already exist.
+Use CodeGraph first for indexed source. These are **audited starting paths**;
+the additive text implementation is under review and integration. A source path
+alone does not establish that a mode, human-reviewed pack or deployment is ready.
 
 | Source | What to inspect |
 |---|---|
 | [Blueprint Game Rules §§2–5 and Media Engine §2](../BLUEPRINT.md) | Five mode actions, provisional 5+3, full-schedule viability, copy ownership, ordinary draws and role secrecy; specialties absent from the first text release. |
-| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current hand/dealing/timer/point values and legacy specialty/backfill settings. This docs-only transition has not changed those values. |
+| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current hand/dealing/timer/point values, disabled-until-ready availability and remaining legacy settings; inspect the current typed validation boundary. |
+| [Text records](../server/pkg/media/text_types.go), [validation](../server/pkg/media/text_validation.go) and [loader](../server/pkg/media/text_loader.go) | `TextSnapshot` pins exact schema/release/language/rules/wording/provenance, configured bounds and member hashes; reviewed suitability replaces mandatory vectors. |
+| [Text dealer](../server/pkg/media/text_dealing.go), [certifier](../server/pkg/media/text_certify.go) and [manager](../server/pkg/media/text_manager.go) | Inspect complete schedule/actual retained coverage, separate system randomness, sampled certificate scope and failed activation. Confirm replay/action evidence and durable lifecycle separately; an in-memory lineage map is insufficient after restart. |
 | [Server mesh and dealer](../server/pkg/media/dealing.go) | `Cosine`, `BandFor`, `BuildCandidates`, `Dealer.Deal`, `DealFeasible`: existing vector bands, sampled versus retained cards, and actual simulation coverage. |
-| [Loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack`/`Certify` currently validate the old image/text schema and embeddings; planned text-only mode/language/action certificates are additional work. |
+| [Legacy loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack`/`Certify` validate the old image/text schema and embeddings; their successes do not certify the additive text path. |
 | [Server match](../server/internal/game/match.go) | `buildNownSchedule`, `dealHands`, `handleDrawCards`, `sendHandDealt`, `viewFor`, `playedNowns`: schedule, mutation, recipient scopes and verdict. `useShuffle` is a legacy retirement surface, not a required text action. |
 | [Payload renderer](../server/internal/game/payload.go) and [active manager](../server/pkg/media/manager.go) | Nown/decoy and inline-text projections; current signed-image branch retires. Ensure existing matches resolve pinned bytes instead of looking up the newest active pack. |
 | [Client DTOs](../client/lib/data/models/game_state_dto.dart) and [session state](../client/lib/presentation/state/game_session_provider.dart) | Instance-aware hand/board/history consumption, duplicate request/event handling and snapshot restore. Current content-ID plays maps cannot model all five modes. |
@@ -124,8 +127,9 @@ Before certifying a candidate release:
 Simulation addresses the cases it actually checks; exhaustive small fixtures and
 property tests complement sampled production schedules. Monte Carlo cannot alone
 prove every reachable state, and human playtests cannot prove wire secrecy.
-The current synthetic builder/certifier does not establish this complete contract.
-A green current simulation is partial evidence, not a text release certificate.
+The legacy synthetic builder and the additive sampled retained-card certifier
+do not establish this complete contract. Require distinct reachable-action,
+human/editorial and activation evidence before calling a release ready.
 
 ## Text review and evidence
 

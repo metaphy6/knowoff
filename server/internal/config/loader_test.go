@@ -226,3 +226,19 @@ func TestContentScreeningConfigRejectsInvalidSettings(t *testing.T) {
 		}
 	}
 }
+
+func TestUserTermsConfigurationSeparateAndBounded(t *testing.T) {
+	cfg, unknown := unmarshalStrict([]byte("trust:\n  user_terms_version: test-user-v2\n  support_url: https://support.example.invalid/contact\n  privacy_url: https://support.example.invalid/privacy\n"))
+	if len(unknown) != 0 || cfg.Trust.UserTermsVersion != "test-user-v2" || cfg.Tuning.Portal.TermsVersion != "" {
+		t.Fatalf("user terms conflated: %v", unknown)
+	}
+	for _, bad := range []string{"javascript:alert(1)", "http://example.invalid", "https://user:pass@example.invalid"} {
+		cfg.Trust.SupportURL = bad
+		if got := validateTrustConfig(cfg.Trust); len(got) == 0 {
+			t.Fatal("unsafe URL accepted", bad)
+		}
+	}
+	if got := validateTrustConfig(TrustConfig{}); len(got) != 0 {
+		t.Fatal("closed defaults", got)
+	}
+}

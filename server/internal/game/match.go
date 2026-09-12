@@ -88,6 +88,8 @@ type Match struct {
 	ballotTimer     *time.Timer
 	resultTimer     *time.Timer
 	prefetchTimer   *time.Timer
+	pendingFinish   func()
+	finishQueued    bool
 }
 
 // NewMatch creates a match in the waiting phase.
@@ -128,7 +130,7 @@ func NewMatch(size int, deps Dependencies, bcast Broadcaster, opts ...MatchOptio
 // Start seeds the RNG, assigns roles, deals hands, and moves to role reveal.
 func (m *Match) Start() error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 
 	if m.phase != PhaseWaiting {
 		return fmt.Errorf("match already started")
@@ -206,14 +208,14 @@ func (m *Match) Start() error {
 // Seed returns the match seed used for replay.
 func (m *Match) Seed() int64 {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.seed
 }
 
 // IntentScript returns the ordered list of processed intents.
 func (m *Match) IntentScript() []IntentRecord {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	out := make([]IntentRecord, len(m.intentScript))
 	copy(out, m.intentScript)
 	return out
@@ -222,14 +224,14 @@ func (m *Match) IntentScript() []IntentRecord {
 // Phase returns the current phase.
 func (m *Match) Phase() string {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.phase
 }
 
 // Roles exposes role assignment for tests.
 func (m *Match) Roles() []Role {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	out := make([]Role, len(m.roles))
 	copy(out, m.roles)
 	return out
@@ -238,7 +240,7 @@ func (m *Match) Roles() []Role {
 // SetSpecialty overrides the specialty card for a seat (test hook).
 func (m *Match) SetSpecialty(seat int, s string) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if seat < 0 || seat >= m.size {
 		return
 	}
@@ -253,7 +255,7 @@ func (m *Match) SetSpecialty(seat int, s string) {
 // prod so it can never become a cheat surface.
 func (m *Match) GrantSpecialty(seat int, specialty string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if m.deps.Config != nil && m.deps.Config.App.Env == "prod" {
 		return fmt.Errorf("dev_grant_specialty unavailable")
 	}
@@ -279,9 +281,13 @@ func (m *Match) GrantSpecialty(seat int, specialty string) error {
 
 // SetConnected tells the match whether a seat is currently connected.
 // Disconnection alone does not mark a seat absent; the grace timer decides that.
-func (m *Match) SetConnected(seat int, connected bool) {
+func (m *Match) SetConnected(seat int, connected bool) { m.SetConnectedDeferred(seat, connected)() }
+
+// SetConnectedDeferred commits connectivity and returns finish delivery. The
+// room invokes delivery synchronously after releasing its connection lock.
+func (m *Match) SetConnectedDeferred(seat int, connected bool) (deliver func()) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() { deliver = m.takeFinishLocked(); m.mu.Unlock() }()
 	if seat < 0 || seat >= m.size || m.eliminated[seat] {
 		return
 	}
@@ -306,6 +312,7 @@ func (m *Match) SetConnected(seat int, connected bool) {
 			m.checkBallotReady()
 		}
 	}
+	return
 }
 
 // OnDisconnect is called by the room when a seat disconnects.
@@ -314,15 +321,19 @@ func (m *Match) OnDisconnect(seat int) {
 }
 
 // OnGraceExpired is called when a seat's reconnect grace window closes.
-func (m *Match) OnGraceExpired(seat int) {
+func (m *Match) OnGraceExpired(seat int) { m.OnGraceExpiredDeferred(seat)() }
+
+// OnGraceExpiredDeferred mirrors SetConnectedDeferred for ordered grace events.
+func (m *Match) OnGraceExpiredDeferred(seat int) (deliver func()) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer func() { deliver = m.takeFinishLocked(); m.mu.Unlock() }()
 	if seat < 0 || seat >= m.size || m.eliminated[seat] || m.absent[seat] {
 		return
 	}
 	m.absent[seat] = true
 	m.players[seat].Connected = false
 	m.checkTeamForfeitOrLowPop()
+	return
 }
 
 func (m *Match) checkTeamForfeitOrLowPop() {
@@ -427,7 +438,7 @@ func (m *Match) finishMatchScored() {
 // HandleIntent is the single entry point for all gameplay intents.
 func (m *Match) HandleIntent(seat int, env *transport.Envelope) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 
 	if seat < 0 || seat >= m.size {
 		return fmt.Errorf("invalid seat")
@@ -645,7 +656,7 @@ func (m *Match) schedulePrefetch() {
 // beginRound is the timer-safe entry point; it acquires the lock.
 func (m *Match) beginRound() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	m.beginRoundLocked()
 }
 
@@ -765,7 +776,7 @@ func (m *Match) scheduleTurnAt(deadline time.Time) {
 
 func (m *Match) onTurnTimeout(expectedSeat int) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if m.phase != PhasePlay || m.currentTurn >= len(m.turnOrder) {
 		return
 	}
@@ -1194,7 +1205,7 @@ func (m *Match) checkBallotReady() {
 // endDiscussion is the timer-safe entry point; it acquires the lock.
 func (m *Match) endDiscussion() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	m.endDiscussionLocked()
 }
 
@@ -1246,7 +1257,7 @@ func (m *Match) scheduleBallot() {
 
 func (m *Match) onBallotTimeout() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if m.phase != PhaseKnowoff && m.phase != PhaseRunoff {
 		return
 	}
@@ -1429,7 +1440,7 @@ func (m *Match) scheduleResultWindow() {
 // finalizeKnowoff is the timer-safe entry point; it acquires the lock.
 func (m *Match) finalizeKnowoff() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	m.finalizeKnowoffLocked()
 }
 
@@ -1490,6 +1501,10 @@ func (m *Match) checkTeamWin() bool {
 }
 
 func (m *Match) finishMatch(winner Role) {
+	if m.phase == PhaseFinished || m.finishQueued {
+		return
+	}
+	m.finishQueued = true
 	m.stopTimers()
 	m.phase = PhaseVerdict
 	m.broadcastPhase()
@@ -1526,7 +1541,8 @@ func (m *Match) finishMatch(winner Role) {
 				Absent:      m.absent[i],
 			}
 		}
-		m.deps.OnFinish(winner, result)
+		callback := m.deps.OnFinish
+		m.pendingFinish = func() { callback(winner, result) }
 	}
 
 	// Verdict: the Nowns of the rounds actually played, revealed to everyone.
@@ -1598,7 +1614,7 @@ func (m *Match) announceSpecialty(seat int, specialty string) {
 // CurrentTurnSeat returns the seat whose turn it is, or -1 during other phases.
 func (m *Match) CurrentTurnSeat() int {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if m.phase != PhasePlay || m.currentTurn < 0 || m.currentTurn >= len(m.turnOrder) {
 		return -1
 	}
@@ -1608,7 +1624,7 @@ func (m *Match) CurrentTurnSeat() int {
 // PlayerHand returns the current hand for a seat.
 func (m *Match) PlayerHand(seat int) PlayerHand {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if seat < 0 || seat >= m.size {
 		return PlayerHand{}
 	}
@@ -1618,7 +1634,7 @@ func (m *Match) PlayerHand(seat int) PlayerHand {
 // PlayerRole returns the role for a seat.
 func (m *Match) PlayerRole(seat int) Role {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	if seat < 0 || seat >= m.size {
 		return ""
 	}
@@ -1628,14 +1644,14 @@ func (m *Match) PlayerRole(seat int) Role {
 // ActiveSeats returns seats still in the match (not eliminated, not absent).
 func (m *Match) ActiveSeats() []int {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.activeSeats()
 }
 
 // TablePlays returns the plays revealed so far this round.
 func (m *Match) TablePlays() []Play {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	out := make([]Play, 0, len(m.plays))
 	for seat, cardID := range m.plays {
 		out = append(out, Play{Seat: seat, CardID: cardID})
@@ -1646,14 +1662,14 @@ func (m *Match) TablePlays() []Play {
 // IsDiscussionReadyAllowed reports whether the discussion phase is active.
 func (m *Match) IsDiscussionReadyAllowed() bool {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.phase == PhaseDiscussion
 }
 
 // KnowoffActive reports whether a ballot is open.
 func (m *Match) KnowoffActive() bool {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.phase == PhaseKnowoff || m.phase == PhaseRunoff
 }
 
@@ -1661,14 +1677,14 @@ func (m *Match) KnowoffActive() bool {
 // after Revote and a newly started runoff.
 func (m *Match) BallotVersion() int {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.ballotVersion
 }
 
 // ResultWindowActive reports whether the post-ballot result window is open.
 func (m *Match) ResultWindowActive() bool {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	defer m.unlockAndDeliver()
 	return m.phase == PhaseResult
 }
 
@@ -1802,3 +1818,16 @@ func (m *Match) stopResultTimer() {
 		m.resultTimer = nil
 	}
 }
+
+// Stop releases the legacy engine's timers when its room is retired. It emits
+// no fabricated outcome and fences timer callbacks that have already fired.
+func (m *Match) Stop() { m.mu.Lock(); m.stopTimers(); m.phase = PhaseFinished; m.mu.Unlock() }
+func (m *Match) takeFinishLocked() func() {
+	fn := m.pendingFinish
+	m.pendingFinish = nil
+	if fn == nil {
+		return func() {}
+	}
+	return fn
+}
+func (m *Match) unlockAndDeliver() { fn := m.takeFinishLocked(); m.mu.Unlock(); fn() }

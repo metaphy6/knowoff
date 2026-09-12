@@ -1,0 +1,5521 @@
+[
+  {
+    "name": "respond",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "place",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "secret_scale",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "place",
+        "copy_id": "copy-1",
+        "rating": 3
+      }
+    }
+  },
+  {
+    "name": "replace",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "make_room",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "replace",
+        "copy_id": "copy-1",
+        "slot": 0
+      }
+    }
+  },
+  {
+    "name": "offer",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "bad_bargains",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "offer",
+        "copy_id": "copy-1",
+        "target_seat": 1,
+        "target_copy_id": "display-1"
+      }
+    }
+  },
+  {
+    "name": "top",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "top_that",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "top",
+        "copy_id": "copy-1",
+        "target_copy_id": "target-1"
+      }
+    }
+  },
+  {
+    "name": "resolve_offer",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "bad_bargains",
+      "round": 1,
+      "turn": 1,
+      "phase": "trade_response",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "resolve_offer",
+        "offer_id": "offer-1",
+        "resolution": "accept"
+      }
+    }
+  },
+  {
+    "name": "draw",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "draw",
+        "count": 1
+      }
+    }
+  },
+  {
+    "name": "vote",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "knowoff",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "vote",
+        "target_seat": 1
+      }
+    }
+  },
+  {
+    "name": "ready",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "discussion",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "ready"
+      }
+    }
+  },
+  {
+    "name": "poke",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "poke",
+        "target_seat": 1
+      }
+    }
+  },
+  {
+    "name": "chat",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "discussion",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "chat",
+        "text": "Merhaba",
+        "ui_locale": "tr"
+      }
+    }
+  },
+  {
+    "name": "chat-phrase",
+    "kind": "action",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "discussion",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "chat",
+        "phrase_id": "chat.suspicious",
+        "ui_locale": "en-US"
+      }
+    }
+  },
+  {
+    "name": "match",
+    "kind": "match",
+    "code": "",
+    "wire": {
+      "protocol_version": 2,
+      "match_id": "match-a",
+      "room_id": "room-a",
+      "original_size": 4,
+      "mode_id": "missed_the_briefing",
+      "rules_version": "text-1",
+      "content_language": "tr",
+      "pack_release_id": "release-1",
+      "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tuning": {
+        "version": "tuning-1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "eligibility": {
+        "admission_id": "admission-a",
+        "entry_path": "quick_play",
+        "rewards": true,
+        "leaderboard": true
+      }
+    }
+  },
+  {
+    "name": "lobby-ready-revisions",
+    "kind": "lobby",
+    "code": "",
+    "wire": {
+      "protocol_version": 2,
+      "room_id": "room-a",
+      "settings": {
+        "mode_id": "missed_the_briefing",
+        "size": 4,
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "rules_version": "text-1"
+      },
+      "settings_revision": 2,
+      "membership_revision": 3,
+      "host_seat": 0,
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "ready": {
+            "settings_revision": 2,
+            "membership_revision": 3
+          }
+        },
+        {
+          "seat": 1,
+          "connected": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "snapshot-nower",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-donower",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "donower",
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-eliminated",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": true,
+          "revealed_role": "nower"
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "hand": [],
+        "reserve_count": 0,
+        "capabilities": [],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 1,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-secret_scale",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "secret_scale",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "secret_scale",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "place",
+          "draw"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-make_room",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "make_room",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 1
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "make_room",
+        "revision": 1,
+        "cards": [
+          {
+            "card": {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "slot": 0
+          },
+          {
+            "card": {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "slot": 1
+          },
+          {
+            "card": {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "slot": 2
+          }
+        ]
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "replace",
+          "draw"
+        ],
+        "points": 0
+      },
+      "history": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "round_start",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "seed",
+          "cards": [
+            {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "seed",
+          "server_time_ms": 1000
+        }
+      ],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-bad_bargains",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "bad_bargains",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 1
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "bad_bargains",
+        "revision": 1,
+        "cards": [
+          {
+            "card": {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 0
+          },
+          {
+            "card": {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 1
+          },
+          {
+            "card": {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 2
+          },
+          {
+            "card": {
+              "copy_id": "seed-3",
+              "content": {
+                "content_id": "seed-content-3",
+                "revision": 1,
+                "text": "Item 3"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 3
+          }
+        ]
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "offer",
+          "draw"
+        ],
+        "points": 0
+      },
+      "history": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "round_start",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "seed",
+          "cards": [
+            {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            },
+            {
+              "copy_id": "seed-3",
+              "content": {
+                "content_id": "seed-content-3",
+                "revision": 1,
+                "text": "Item 3"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "seed",
+          "server_time_ms": 1000
+        }
+      ],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-pending-offer",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "bad_bargains",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 2
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "trade_response",
+      "phase_id": "phase-a",
+      "server_time_ms": 1001,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "bad_bargains",
+        "revision": 2,
+        "cards": [
+          {
+            "card": {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 0
+          },
+          {
+            "card": {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 1
+          },
+          {
+            "card": {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 2
+          },
+          {
+            "card": {
+              "copy_id": "seed-3",
+              "content": {
+                "content_id": "seed-content-3",
+                "revision": 1,
+                "text": "Item 3"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            },
+            "seat": 3
+          }
+        ]
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "round_start",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "seed",
+          "cards": [
+            {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            },
+            {
+              "copy_id": "seed-2",
+              "content": {
+                "content_id": "seed-content-2",
+                "revision": 1,
+                "text": "Item 2"
+              }
+            },
+            {
+              "copy_id": "seed-3",
+              "content": {
+                "content_id": "seed-content-3",
+                "revision": 1,
+                "text": "Item 3"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "seed",
+          "server_time_ms": 1000
+        },
+        {
+          "event_id": "event-2",
+          "evidence_seq": 2,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "offer",
+          "cards": [
+            {
+              "copy_id": "copy-1",
+              "content": {
+                "content_id": "content-1",
+                "revision": 1,
+                "text": "Spare key"
+              }
+            },
+            {
+              "copy_id": "seed-1",
+              "content": {
+                "content_id": "seed-content-1",
+                "revision": 1,
+                "text": "Item 1"
+              }
+            }
+          ],
+          "before_revision": 1,
+          "after_revision": 2,
+          "reason": "player",
+          "server_time_ms": 1001,
+          "deadline_ms": 21000,
+          "target_seat": 1,
+          "offer_id": "offer-1"
+        }
+      ],
+      "pending_offer": {
+        "offer_id": "offer-1",
+        "proposer_seat": 0,
+        "recipient_seat": 1,
+        "offered_copy_id": "copy-1",
+        "requested_copy_id": "seed-1",
+        "board_revision": 2,
+        "deadline_ms": 21000
+      },
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-top_that",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "top_that",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 1
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "top_that",
+        "revision": 1,
+        "cards": [
+          {
+            "card": {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            },
+            "actor": {
+              "kind": "system"
+            }
+          }
+        ]
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "top",
+          "draw"
+        ],
+        "points": 0
+      },
+      "history": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "round_start",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "seed",
+          "cards": [
+            {
+              "copy_id": "seed-0",
+              "content": {
+                "content_id": "seed-content-0",
+                "revision": 1,
+                "text": "Item 0"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "seed",
+          "server_time_ms": 1000
+        }
+      ],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-verdict-begun-only",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "verdict",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [],
+        "points": 0
+      },
+      "history": [],
+      "verdict_nowns": [
+        {
+          "round": 1,
+          "content": {
+            "content_id": "prompt-1",
+            "revision": 1,
+            "text": "A silent family dinner"
+          }
+        }
+      ],
+      "ready_seats": [],
+      "scores": [
+        {
+          "seat": 0,
+          "points": 0
+        },
+        {
+          "seat": 1,
+          "points": 0
+        },
+        {
+          "seat": 2,
+          "points": 0
+        },
+        {
+          "seat": 3,
+          "points": 0
+        }
+      ],
+      "verdict": {
+        "outcome": "completed",
+        "winner": "nower"
+      }
+    }
+  },
+  {
+    "name": "public-history-page",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "draw",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "count": 1
+        }
+      ],
+      "sha256": "131b4494be0db999b539e5ee44dbe2d44f866c4524f3e059fb34e67bd93a50f9"
+    }
+  },
+  {
+    "name": "stable-conflict-error",
+    "kind": "error",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 2,
+        "evidence_seq": 0
+      },
+      "request_id": "req-a",
+      "code": "request.conflict"
+    }
+  },
+  {
+    "name": "unknown-version",
+    "kind": "action",
+    "code": "protocol.upgrade_required",
+    "wire": {
+      "v": 9,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "unknown-mode",
+    "kind": "action",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "high",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "unknown-action",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "use_specialty",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "wrong-mode-action",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "top_that",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "nonintegral-rating",
+    "kind": "action",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "secret_scale",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "place",
+        "copy_id": "copy-1",
+        "rating": 2.5
+      }
+    }
+  },
+  {
+    "name": "rating-outside-range",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "secret_scale",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "place",
+        "copy_id": "copy-1",
+        "rating": 6
+      }
+    }
+  },
+  {
+    "name": "missing-rating",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "secret_scale",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "place",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "slot-outside-range",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "make_room",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "replace",
+        "copy_id": "copy-1",
+        "slot": 3
+      }
+    }
+  },
+  {
+    "name": "contradictory-rating",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1",
+        "rating": 3
+      }
+    }
+  },
+  {
+    "name": "nonowned-identity-field",
+    "kind": "action",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1",
+        "content_id": "content-1"
+      }
+    }
+  },
+  {
+    "name": "client-eligibility",
+    "kind": "action",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      },
+      "eligibility": {
+        "rewards": true
+      }
+    }
+  },
+  {
+    "name": "unsafe-revision",
+    "kind": "action",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "missed_the_briefing",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 9007199254740992,
+      "action": {
+        "kind": "respond",
+        "copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "same-offer-copy",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "bad_bargains",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "offer",
+        "copy_id": "copy-1",
+        "target_seat": 1,
+        "target_copy_id": "copy-1"
+      }
+    }
+  },
+  {
+    "name": "illegal-target-seat",
+    "kind": "action",
+    "code": "action.invalid",
+    "wire": {
+      "v": 2,
+      "request_id": "req-a",
+      "match_id": "match-a",
+      "mode_id": "bad_bargains",
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "expected_board_revision": 0,
+      "action": {
+        "kind": "offer",
+        "copy_id": "copy-1",
+        "target_seat": 6,
+        "target_copy_id": "display-1"
+      }
+    }
+  },
+  {
+    "name": "local-leaderboard",
+    "kind": "match",
+    "code": "protocol.malformed",
+    "wire": {
+      "protocol_version": 2,
+      "match_id": "match-a",
+      "room_id": "room-a",
+      "original_size": 4,
+      "mode_id": "missed_the_briefing",
+      "rules_version": "text-1",
+      "content_language": "tr",
+      "pack_release_id": "release-1",
+      "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tuning": {
+        "version": "tuning-1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "eligibility": {
+        "admission_id": "admission-a",
+        "entry_path": "local",
+        "rewards": true,
+        "leaderboard": true
+      }
+    }
+  },
+  {
+    "name": "room-reused-as-match-id",
+    "kind": "match",
+    "code": "protocol.malformed",
+    "wire": {
+      "protocol_version": 2,
+      "match_id": "room-a",
+      "room_id": "room-a",
+      "original_size": 4,
+      "mode_id": "missed_the_briefing",
+      "rules_version": "text-1",
+      "content_language": "tr",
+      "pack_release_id": "release-1",
+      "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tuning": {
+        "version": "tuning-1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "eligibility": {
+        "admission_id": "admission-a",
+        "entry_path": "quick_play",
+        "rewards": true,
+        "leaderboard": true
+      }
+    }
+  },
+  {
+    "name": "noncanonical-language",
+    "kind": "match",
+    "code": "protocol.malformed",
+    "wire": {
+      "protocol_version": 2,
+      "match_id": "match-a",
+      "room_id": "room-a",
+      "original_size": 4,
+      "mode_id": "missed_the_briefing",
+      "rules_version": "text-1",
+      "content_language": "en-us",
+      "pack_release_id": "release-1",
+      "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tuning": {
+        "version": "tuning-1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "eligibility": {
+        "admission_id": "admission-a",
+        "entry_path": "quick_play",
+        "rewards": true,
+        "leaderboard": true
+      }
+    }
+  },
+  {
+    "name": "ui-locale-in-match",
+    "kind": "match",
+    "code": "protocol.malformed",
+    "wire": {
+      "protocol_version": 2,
+      "match_id": "match-a",
+      "room_id": "room-a",
+      "original_size": 4,
+      "mode_id": "missed_the_briefing",
+      "rules_version": "text-1",
+      "content_language": "tr",
+      "pack_release_id": "release-1",
+      "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tuning": {
+        "version": "tuning-1",
+        "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "eligibility": {
+        "admission_id": "admission-a",
+        "entry_path": "quick_play",
+        "rewards": true,
+        "leaderboard": true
+      },
+      "ui_locale": "en-US"
+    }
+  },
+  {
+    "name": "ready-old-settings",
+    "kind": "lobby",
+    "code": "action.stale_revision",
+    "wire": {
+      "protocol_version": 2,
+      "room_id": "room-a",
+      "settings": {
+        "mode_id": "missed_the_briefing",
+        "size": 4,
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "rules_version": "text-1"
+      },
+      "settings_revision": 2,
+      "membership_revision": 3,
+      "host_seat": 0,
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "ready": {
+            "settings_revision": 1,
+            "membership_revision": 3
+          }
+        },
+        {
+          "seat": 1,
+          "connected": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "ready-old-membership",
+    "kind": "lobby",
+    "code": "action.stale_revision",
+    "wire": {
+      "protocol_version": 2,
+      "room_id": "room-a",
+      "settings": {
+        "mode_id": "missed_the_briefing",
+        "size": 4,
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "rules_version": "text-1"
+      },
+      "settings_revision": 2,
+      "membership_revision": 3,
+      "host_seat": 0,
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "ready": {
+            "settings_revision": 2,
+            "membership_revision": 2
+          }
+        },
+        {
+          "seat": 1,
+          "connected": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "disconnected-host",
+    "kind": "lobby",
+    "code": "protocol.malformed",
+    "wire": {
+      "protocol_version": 2,
+      "room_id": "room-a",
+      "settings": {
+        "mode_id": "missed_the_briefing",
+        "size": 4,
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "rules_version": "text-1"
+      },
+      "settings_revision": 2,
+      "membership_revision": 3,
+      "host_seat": 3,
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "ready": {
+            "settings_revision": 2,
+            "membership_revision": 3
+          }
+        },
+        {
+          "seat": 1,
+          "connected": true
+        }
+      ]
+    }
+  },
+  {
+    "name": "leaked-donower-nown",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "donower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "leaked-eliminated-nown",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": true,
+          "revealed_role": "nower"
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 1,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "future-prompt-schedule",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "schedule": [
+          "future-secret"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "reserve-identities",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "reserve": [
+          {
+            "copy_id": "reserve-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "wrong-board-mode",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "top_that",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "incomplete-inline-history",
+    "kind": "snapshot",
+    "code": "history.integrity",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 1
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "relative-deadline",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 0,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "hidden-role-on-public-seat",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false,
+          "revealed_role": "donower"
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "unknown-capability",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat",
+          "use_specialty"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "tampered-page",
+    "kind": "history_page",
+    "code": "history.integrity",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "draw",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "count": 1
+        }
+      ],
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  },
+  {
+    "name": "public-draw-copy-leak",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "draw",
+          "cards": [
+            {
+              "copy_id": "copy-1",
+              "content": {
+                "content_id": "content-1",
+                "revision": 1,
+                "text": "Spare key"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "count": 1
+        }
+      ],
+      "sha256": "938266e1eeeba3ac0f89fe704c5c8b88c8adcda49b632636d58e4acc4be07252"
+    }
+  },
+  {
+    "name": "snapshot-knowoff",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "knowoff",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "vote",
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "snapshot-runoff",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "runoff",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "vote",
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "runoff",
+        "candidates": [
+          1,
+          2
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "snapshot-result",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 5000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1,
+          "revealed_role": "donower"
+        }
+      },
+      "result_reveal_at_ms": 5000
+    }
+  },
+  {
+    "name": "snapshot-paged-history",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 1
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 1,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": [],
+      "history_pages": {
+        "total_events": 1,
+        "page_count": 1,
+        "through_evidence_seq": 1,
+        "root_sha256": "59c65230b30811be38a5a0b7a23c4a1fcce310a0f1b51a96bcdec5ae0db5e6e7"
+      }
+    }
+  },
+  {
+    "name": "public-history-unicode-hash",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "respond",
+          "cards": [
+            {
+              "copy_id": "copy-unicode",
+              "content": {
+                "content_id": "content-unicode",
+                "revision": 1,
+                "text": "Çay <&> العربية \\u2028"
+              }
+            }
+          ],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000
+        }
+      ],
+      "sha256": "b88b8e6c8c27339ec83229c902fd957538b65584105182153acc3c269cf48553"
+    }
+  },
+  {
+    "name": "public-chat-text",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "chat",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "text": "İyi fikir <script> مرحبا",
+          "ui_locale": "tr"
+        }
+      ],
+      "sha256": "cd7196f07e858b84a1a49a87c6dc2439f47007132ea910dd4a1f712f194bb6d6"
+    }
+  },
+  {
+    "name": "public-chat-phrase",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "chat",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "phrase_id": "chat.suspicious",
+          "ui_locale": "en"
+        }
+      ],
+      "sha256": "8870c3aad7d851f0d0ed004245296845c804d8b7eedcc6d28407ed4fd85d89cc"
+    }
+  },
+  {
+    "name": "public-chat-contradiction",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "chat",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "text": "Hi",
+          "phrase_id": "chat.suspicious",
+          "ui_locale": "en"
+        }
+      ],
+      "sha256": "e8be7af9d95ab3ae0598317ecd19ddce178845339e0e12546a54ab3cf2414fa9"
+    }
+  },
+  {
+    "name": "public-chat-control",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "chat",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "text": "Hi‮",
+          "ui_locale": "en"
+        }
+      ],
+      "sha256": "5d86d04e5d75164d4596527ca23477208b641f4a332c1c59671a95e99a657992"
+    }
+  },
+  {
+    "name": "public-chat-missing-locale",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "play",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "seat",
+            "seat": 0
+          },
+          "kind": "chat",
+          "cards": [],
+          "before_revision": 0,
+          "after_revision": 1,
+          "reason": "player",
+          "server_time_ms": 1000,
+          "text": "Hello"
+        }
+      ],
+      "sha256": "0293262202bbf3e73792f83348dc1b3def9973347ca5ffc5f2d001f38c53b5c3"
+    }
+  },
+  {
+    "name": "public-ballot-elimination",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [
+              {
+                "seat": 0,
+                "target_seat": 1
+              },
+              {
+                "seat": 2,
+                "target_seat": 1
+              }
+            ],
+            "result": {
+              "outcome": "elimination",
+              "seat": 1
+            }
+          }
+        }
+      ],
+      "sha256": "84c79f4651a301aed02bbe4b27cf46bf31c42e73e90f0b3db0c3e1d44581e1ca"
+    }
+  },
+  {
+    "name": "public-ballot-miss",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [],
+            "result": {
+              "outcome": "miss"
+            }
+          }
+        }
+      ],
+      "sha256": "3d129dc51445a8b50e7041e8f77c241e45a6e7bb3204cc90341b8cda6a90daab"
+    }
+  },
+  {
+    "name": "public-ballot-runoff",
+    "kind": "history_page",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [
+              {
+                "seat": 0,
+                "target_seat": 1
+              },
+              {
+                "seat": 2,
+                "target_seat": 3
+              }
+            ],
+            "result": {
+              "outcome": "runoff"
+            }
+          }
+        }
+      ],
+      "sha256": "1c89038e4c8e97968726e28986792597956da445fa812781a194df9c1fc01ef1"
+    }
+  },
+  {
+    "name": "invalid-ballot-role-leak",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [
+              {
+                "seat": 0,
+                "target_seat": 1
+              },
+              {
+                "seat": 2,
+                "target_seat": 1
+              }
+            ],
+            "result": {
+              "outcome": "elimination",
+              "seat": 1,
+              "revealed_role": "donower"
+            }
+          }
+        }
+      ],
+      "sha256": "a85dd2644007ddb7fd346fc5b94bf72fa61168dfdccc4836c07d8c71e59a703a"
+    }
+  },
+  {
+    "name": "invalid-ballot-false-winner",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [
+              {
+                "seat": 0,
+                "target_seat": 1
+              },
+              {
+                "seat": 2,
+                "target_seat": 1
+              }
+            ],
+            "result": {
+              "outcome": "elimination",
+              "seat": 3
+            }
+          }
+        }
+      ],
+      "sha256": "599af257d6d6842c957d709c56f6e51ef2ba43f750f61ff459b10a7823fbbe44"
+    }
+  },
+  {
+    "name": "invalid-ballot-duplicate-voter",
+    "kind": "history_page",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "match_id": "match-a",
+      "snapshot_id": "snapshot-a",
+      "stream_epoch": "epoch-a",
+      "index": 0,
+      "from_evidence_seq": 1,
+      "through_evidence_seq": 1,
+      "events": [
+        {
+          "event_id": "event-1",
+          "evidence_seq": 1,
+          "round": 1,
+          "phase": "knowoff",
+          "phase_id": "phase-a",
+          "actor": {
+            "kind": "system"
+          },
+          "kind": "ballot_result",
+          "cards": [],
+          "before_revision": 1,
+          "after_revision": 1,
+          "reason": "forced_transition",
+          "server_time_ms": 1000,
+          "ballot": {
+            "kind": "knowoff",
+            "candidates": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "votes": [
+              {
+                "seat": 0,
+                "target_seat": 1
+              },
+              {
+                "seat": 2,
+                "target_seat": 1
+              },
+              {
+                "seat": 0,
+                "target_seat": 1
+              }
+            ],
+            "result": {
+              "outcome": "elimination",
+              "seat": 1
+            }
+          }
+        }
+      ],
+      "sha256": "7adbf6515432c48fe013c1b18a4a4866fa383c34117884676577a99525e21390"
+    }
+  },
+  {
+    "name": "snapshot-eliminated-private-cards",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": true,
+          "revealed_role": "nower"
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 1,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-premature-scores",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": [],
+      "scores": [
+        {
+          "seat": 0,
+          "points": 10
+        }
+      ]
+    }
+  },
+  {
+    "name": "snapshot-negative-points",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": -1
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-unsafe-points",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 9007199254740992
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": []
+    }
+  },
+  {
+    "name": "snapshot-missing-verdict-scores",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "verdict",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [],
+        "points": 0
+      },
+      "history": [],
+      "verdict_nowns": [
+        {
+          "round": 1,
+          "content": {
+            "content_id": "prompt-1",
+            "revision": 1,
+            "text": "A silent family dinner"
+          }
+        }
+      ],
+      "ready_seats": [],
+      "verdict": {
+        "outcome": "completed",
+        "winner": "nower"
+      }
+    }
+  },
+  {
+    "name": "snapshot-contradictory-winner",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "verdict",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [],
+        "points": 0
+      },
+      "history": [],
+      "verdict_nowns": [
+        {
+          "round": 1,
+          "content": {
+            "content_id": "prompt-1",
+            "revision": 1,
+            "text": "A silent family dinner"
+          }
+        }
+      ],
+      "ready_seats": [],
+      "scores": [
+        {
+          "seat": 0,
+          "points": 0
+        },
+        {
+          "seat": 1,
+          "points": 0
+        },
+        {
+          "seat": 2,
+          "points": 0
+        },
+        {
+          "seat": 3,
+          "points": 0
+        }
+      ],
+      "verdict": {
+        "outcome": "scored_low_population",
+        "winner": "donower"
+      }
+    }
+  },
+  {
+    "name": "persistence-pending-error",
+    "kind": "error",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 2,
+        "evidence_seq": 0
+      },
+      "request_id": "req-a",
+      "code": "action.persistence_pending",
+      "current_board_revision": 7
+    }
+  },
+  {
+    "name": "rate-limited-error",
+    "kind": "error",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 2,
+        "evidence_seq": 0
+      },
+      "request_id": "req-a",
+      "code": "request.rate_limited",
+      "current_board_revision": 7
+    }
+  },
+  {
+    "name": "snapshot-result-falling",
+    "kind": "snapshot",
+    "code": "",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 4999,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1
+        }
+      },
+      "result_reveal_at_ms": 5000
+    }
+  },
+  {
+    "name": "snapshot-result-premature-role",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 4999,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1,
+          "revealed_role": "donower"
+        }
+      },
+      "result_reveal_at_ms": 5000
+    }
+  },
+  {
+    "name": "snapshot-result-missing-revealed-role",
+    "kind": "snapshot",
+    "code": "action.unauthorized",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 5000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1
+        }
+      },
+      "result_reveal_at_ms": 5000
+    }
+  },
+  {
+    "name": "snapshot-result-missing-reveal-time",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 5000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1,
+          "revealed_role": "donower"
+        }
+      }
+    }
+  },
+  {
+    "name": "snapshot-result-reveal-after-window",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 5000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1,
+          "revealed_role": "donower"
+        }
+      },
+      "result_reveal_at_ms": 21001
+    }
+  },
+  {
+    "name": "snapshot-result-zero-reveal-time",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "result",
+      "phase_id": "phase-a",
+      "server_time_ms": 5000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "ready"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "ready_seats": [
+        0
+      ],
+      "ballot": {
+        "kind": "knowoff",
+        "candidates": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "votes": [
+          {
+            "seat": 0,
+            "target_seat": 1
+          }
+        ],
+        "result": {
+          "outcome": "elimination",
+          "seat": 1,
+          "revealed_role": "donower"
+        }
+      },
+      "result_reveal_at_ms": 0
+    }
+  },
+  {
+    "name": "snapshot-play-result-reveal-time",
+    "kind": "snapshot",
+    "code": "protocol.malformed",
+    "wire": {
+      "v": 2,
+      "snapshot_id": "snapshot-a",
+      "contract": {
+        "protocol_version": 2,
+        "match_id": "match-a",
+        "room_id": "room-a",
+        "original_size": 4,
+        "mode_id": "missed_the_briefing",
+        "rules_version": "text-1",
+        "content_language": "tr",
+        "pack_release_id": "release-1",
+        "pack_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "tuning": {
+          "version": "tuning-1",
+          "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        "eligibility": {
+          "admission_id": "admission-a",
+          "entry_path": "quick_play",
+          "rewards": true,
+          "leaderboard": true
+        }
+      },
+      "cursor": {
+        "stream_epoch": "epoch-a",
+        "recipient_seq": 1,
+        "evidence_seq": 0
+      },
+      "round": 1,
+      "turn": 1,
+      "phase": "play",
+      "phase_id": "phase-a",
+      "server_time_ms": 1000,
+      "deadline_ms": 21000,
+      "board": {
+        "mode_id": "missed_the_briefing",
+        "revision": 0,
+        "cards": []
+      },
+      "seats": [
+        {
+          "seat": 0,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 1,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 2,
+          "connected": true,
+          "eliminated": false
+        },
+        {
+          "seat": 3,
+          "connected": true,
+          "eliminated": false
+        }
+      ],
+      "private": {
+        "seat": 0,
+        "role": "nower",
+        "nown": {
+          "content_id": "prompt-1",
+          "revision": 1,
+          "text": "A silent family dinner"
+        },
+        "hand": [
+          {
+            "copy_id": "copy-1",
+            "content": {
+              "content_id": "content-1",
+              "revision": 1,
+              "text": "Spare key"
+            }
+          }
+        ],
+        "reserve_count": 3,
+        "capabilities": [
+          "respond",
+          "draw",
+          "poke",
+          "chat"
+        ],
+        "points": 0
+      },
+      "history": [],
+      "current_seat": 0,
+      "ready_seats": [],
+      "result_reveal_at_ms": 5000
+    }
+  }
+]

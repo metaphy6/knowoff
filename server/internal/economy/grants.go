@@ -2,9 +2,7 @@ package economy
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/config"
@@ -112,20 +110,6 @@ func (m *Manager) GrantDailyFirstWin(ctx context.Context, accountID string) (int
 	}
 	if _, err := uuid.Parse(accountID); err != nil {
 		return 0, fmt.Errorf("invalid account id: %w", err)
-	}
-	day := serverDay(time.Now().UTC())
-	var exists bool
-	err := m.db.QueryRowContext(ctx,
-		`SELECT true FROM noin_ledger
-		 WHERE account_id = $1 AND event_type = $2 AND server_day = $3
-		 LIMIT 1`,
-		accountID, string(LedgerDailyFirstWin), day,
-	).Scan(&exists)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, fmt.Errorf("check daily first win: %w", err)
-	}
-	if exists {
-		return 0, nil
 	}
 	amount := m.config.Tuning.Noin.DailyFirstWin
 	if amount <= 0 {

@@ -225,6 +225,7 @@ class KoPage extends StatelessWidget {
       this.scroll = true,
       this.showBack = true,
       this.compactHeader = false,
+      this.showDevTools = true,
       super.key});
   final String title;
   final String? eyebrow;
@@ -236,6 +237,7 @@ class KoPage extends StatelessWidget {
   final bool scroll;
   final bool showBack;
   final bool compactHeader;
+  final bool showDevTools;
   @override
   Widget build(BuildContext context) {
     final phone = KoDeviceLayout.of(context).isPhone;
@@ -251,7 +253,10 @@ class KoPage extends StatelessWidget {
                         ? const EdgeInsets.fromLTRB(12, 16, 16, 24)
                         : const EdgeInsets.fromLTRB(20, 26, 24, 30),
                 child: child)));
-    final headerActions = [...actions, DevToolsButton(compact: compact)];
+    final headerActions = [
+      ...actions,
+      if (showDevTools) DevToolsButton(compact: compact)
+    ];
     return Scaffold(
       body: Stack(children: [
         const Positioned.fill(
@@ -301,7 +306,8 @@ class KoPage extends StatelessWidget {
                             children: [
                               for (final action in actions)
                                 Flexible(child: action),
-                              DevToolsButton(compact: compact),
+                              if (showDevTools)
+                                DevToolsButton(compact: compact),
                             ])),
                   ] else if (!stacked)
                     ...headerActions,

@@ -213,6 +213,15 @@ func TestChallengeEntryScreeningFailsClosed(t *testing.T) {
 func TestChallengeScreeningChecksExactPublishedText(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
+	// Deliberately simulate privileged database corruption in this disposable
+	// fixture. Ordinary submitted/reviewed writes are separately rejected by SQL;
+	// the screening path must still detect a changed source on its own.
+	if _, err := db.Exec(`ALTER TABLE portal_submissions DISABLE TRIGGER text_review_identity; ALTER TABLE challenge_entries DISABLE TRIGGER text_review_identity`); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if _, err := db.Exec(`ALTER TABLE portal_submissions ENABLE TRIGGER text_review_identity; ALTER TABLE challenge_entries ENABLE TRIGGER text_review_identity`); err != nil {t.Error(err)}
+	}()
 	m := newTestManager(t, db)
 	admin := newAdmin(t, db)
 	source, _ := legacyTopicForScreenTest(t, m)

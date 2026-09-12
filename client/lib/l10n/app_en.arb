@@ -1668,5 +1668,401 @@
   "challengeForbidden": "This account cannot participate in the challenge right now.",
   "@challengeForbidden": {
     "description": "Shown when the server denies challenge access or participation for a deleted or restricted account."
+  },
+  "textModeBriefing": "Missed the Briefing",
+  "@textModeBriefing": {
+    "description": "Text mode interface: textModeBriefing"
+  },
+  "textModeScale": "Secret Scale",
+  "@textModeScale": {
+    "description": "Text mode interface: textModeScale"
+  },
+  "textModeRoom": "Make Room",
+  "@textModeRoom": {
+    "description": "Text mode interface: textModeRoom"
+  },
+  "textModeBargains": "Bad Bargains",
+  "@textModeBargains": {
+    "description": "Text mode interface: textModeBargains"
+  },
+  "textModeTop": "Top That",
+  "@textModeTop": {
+    "description": "Text mode interface: textModeTop"
+  },
+  "textChooseMode": "Choose a mode",
+  "@textChooseMode": {
+    "description": "Text mode interface: textChooseMode"
+  },
+  "textContentLanguage": "Content language",
+  "@textContentLanguage": {
+    "description": "Text mode interface: textContentLanguage"
+  },
+  "textPack": "Pack",
+  "@textPack": {
+    "description": "Text mode interface: textPack"
+  },
+  "textUnavailable": "This mode is not available yet.",
+  "@textUnavailable": {
+    "description": "Text mode interface: textUnavailable"
+  },
+  "textWithdrawn": "Your last mode is unavailable. Choose an available mode to continue.",
+  "@textWithdrawn": {
+    "description": "Text mode interface: textWithdrawn"
+  },
+  "textConnect": "Check available modes",
+  "@textConnect": {
+    "description": "Text mode interface: textConnect"
+  },
+  "textCreate": "Create room",
+  "@textCreate": {
+    "description": "Text mode interface: textCreate"
+  },
+  "textJoin": "Join room",
+  "@textJoin": {
+    "description": "Text mode interface: textJoin"
+  },
+  "textConfirm": "Confirm move",
+  "@textConfirm": {
+    "description": "Text mode interface: textConfirm"
+  },
+  "textPreview": "Preview your move",
+  "@textPreview": {
+    "description": "Text mode interface: textPreview"
+  },
+  "textCancel": "Cancel",
+  "@textCancel": {
+    "description": "Text mode interface: textCancel"
+  },
+  "textRespond": "Respond",
+  "@textRespond": {
+    "description": "Text mode interface: textRespond"
+  },
+  "textPlace": "Place",
+  "@textPlace": {
+    "description": "Text mode interface: textPlace"
+  },
+  "textReplace": "Replace",
+  "@textReplace": {
+    "description": "Text mode interface: textReplace"
+  },
+  "textOffer": "Offer trade",
+  "@textOffer": {
+    "description": "Text mode interface: textOffer"
+  },
+  "textTop": "Top that",
+  "@textTop": {
+    "description": "Text mode interface: textTop"
+  },
+  "textAccept": "Accept trade",
+  "@textAccept": {
+    "description": "Text mode interface: textAccept"
+  },
+  "textRefuse": "Refuse trade",
+  "@textRefuse": {
+    "description": "Text mode interface: textRefuse"
+  },
+  "textReady": "Ready",
+  "@textReady": {
+    "description": "Text mode interface: textReady"
+  },
+  "textStart": "Start match",
+  "@textStart": {
+    "description": "Text mode interface: textStart"
+  },
+  "textLeave": "Leave",
+  "@textLeave": {
+    "description": "Text mode interface: textLeave"
+  },
+  "textKeepWaiting": "Keep waiting",
+  "@textKeepWaiting": {
+    "description": "Text mode interface: textKeepWaiting"
+  },
+  "textChangeMode": "Change mode",
+  "@textChangeMode": {
+    "description": "Text mode interface: textChangeMode"
+  },
+  "textWaiting": "Waiting for a full human table",
+  "@textWaiting": {
+    "description": "Text mode interface: textWaiting"
+  },
+  "textSync": "Synchronizing the complete match history…",
+  "@textSync": {
+    "description": "Text mode interface: textSync"
+  },
+  "textUpgrade": "Update the app to continue. This server uses a different game version.",
+  "@textUpgrade": {
+    "description": "Text mode interface: textUpgrade"
+  },
+  "textStale": "The table changed. Your move was cleared while the latest state is loaded.",
+  "@textStale": {
+    "description": "Text mode interface: textStale"
+  },
+  "textError": "The request could not be completed. Please try again.",
+  "@textError": {
+    "description": "Text mode interface: textError"
+  },
+  "textUnknownPrompt": "The shared prompt stays hidden for your role.",
+  "@textUnknownPrompt": {
+    "description": "Text mode interface: textUnknownPrompt"
+  },
+  "textBoard": "Public table",
+  "@textBoard": {
+    "description": "Text mode interface: textBoard"
+  },
+  "textHistory": "Public history",
+  "@textHistory": {
+    "description": "Text mode interface: textHistory"
+  },
+  "textHand": "Your hand",
+  "@textHand": {
+    "description": "Text mode interface: textHand"
+  },
+  "textDraw": "Draw one card",
+  "@textDraw": {
+    "description": "Text mode interface: textDraw"
+  },
+  "textRating": "Rating",
+  "@textRating": {
+    "description": "Text mode interface: textRating"
+  },
+  "textSlot": "Slot",
+  "@textSlot": {
+    "description": "Text mode interface: textSlot"
+  },
+  "textTarget": "Choose the displayed card to request",
+  "@textTarget": {
+    "description": "Text mode interface: textTarget"
+  },
+  "textSystem": "System",
+  "@textSystem": {
+    "description": "Text mode interface: textSystem"
+  },
+  "textSpectating": "You are spectating. Private cards and prompts have been cleared.",
+  "@textSpectating": {
+    "description": "Text mode interface: textSpectating"
+  },
+  "textRetry": "Retry the same request",
+  "@textRetry": {
+    "description": "Text mode interface: textRetry"
+  },
+  "textRematch": "Return to settings for a rematch",
+  "@textRematch": {
+    "description": "Text mode interface: textRematch"
+  },
+  "textChat": "Message",
+  "@textChat": {
+    "description": "Text mode interface: textChat"
+  },
+  "textSend": "Send",
+  "@textSend": {
+    "description": "Text mode interface: textSend"
+  },
+  "textPoke": "Poke",
+  "@textPoke": {
+    "description": "Text mode interface: textPoke"
+  },
+  "textVote": "Vote",
+  "@textVote": {
+    "description": "Text mode interface: textVote"
+  },
+  "textAbstain": "No vote selected",
+  "@textAbstain": {
+    "description": "Text mode interface: textAbstain"
+  },
+  "textReadyHint": "Ready acknowledges these settings and the current membership. Changes clear everyone’s Ready.",
+  "@textReadyHint": {
+    "description": "Text mode interface: textReadyHint"
+  },
+  "textPrivate": "Private prompt",
+  "@textPrivate": {
+    "description": "Text mode interface: textPrivate"
+  },
+  "textResults": "Results",
+  "@textResults": {
+    "description": "Text mode interface: textResults"
+  },
+  "textOfferPending": "A trade is awaiting its recipient’s response.",
+  "@textOfferPending": {
+    "description": "Text mode interface: textOfferPending"
+  },
+  "textDeadline": "Server deadline",
+  "@textDeadline": {
+    "description": "Text mode interface: textDeadline"
+  },
+  "textRoomCode": "Room code",
+  "@textRoomCode": {
+    "description": "Text mode interface: textRoomCode"
+  },
+  "textQuickPlay": "Quick Play",
+  "@textQuickPlay": {
+    "description": "Text mode interface: textQuickPlay"
+  },
+  "textLocalRoom": "Local Room",
+  "@textLocalRoom": {
+    "description": "Text mode interface: textLocalRoom"
+  },
+  "textReturnMenu": "Back to menu",
+  "@textReturnMenu": {
+    "description": "Text mode interface: textReturnMenu"
+  },
+  "textPreviousPage": "Previous page",
+  "textNextPage": "Next page",
+  "@textPreviousPage": {
+    "description": "Public evidence paging control."
+  },
+  "@textNextPage": {
+    "description": "Public evidence paging control."
+  },
+  "textRules": "Rules",
+  "textPlayers": "Players",
+  "textRewardsOn": "Rewards eligible",
+  "textRewardsOff": "No rewards for this match",
+  "textBriefingInstruction": "Play one card as your response.",
+  "textScaleInstruction": "Place a card at a rating from 1 to 5.",
+  "textRoomInstruction": "Replace one bag slot. The displaced card stays in public history.",
+  "textBargainsInstruction": "Offer a card for another player’s display. They may accept or refuse.",
+  "textTopInstruction": "Add a card above the current top.",
+  "textRunoff": "Runoff",
+  "textAutomatic": "Automatic",
+  "textSeed": "Starting cards",
+  "textDisconnected": "Disconnected",
+  "textCount": "Count",
+  "textRound": "Round",
+  "textTurn": "Turn",
+  "@textRules": {
+    "description": "Text match interface: textRules."
+  },
+  "@textPlayers": {
+    "description": "Text match interface: textPlayers."
+  },
+  "@textRewardsOn": {
+    "description": "Text match interface: textRewardsOn."
+  },
+  "@textRewardsOff": {
+    "description": "Text match interface: textRewardsOff."
+  },
+  "@textBriefingInstruction": {
+    "description": "Text match interface: textBriefingInstruction."
+  },
+  "@textScaleInstruction": {
+    "description": "Text match interface: textScaleInstruction."
+  },
+  "@textRoomInstruction": {
+    "description": "Text match interface: textRoomInstruction."
+  },
+  "@textBargainsInstruction": {
+    "description": "Text match interface: textBargainsInstruction."
+  },
+  "@textTopInstruction": {
+    "description": "Text match interface: textTopInstruction."
+  },
+  "@textRunoff": {
+    "description": "Text match interface: textRunoff."
+  },
+  "@textAutomatic": {
+    "description": "Text match interface: textAutomatic."
+  },
+  "@textSeed": {
+    "description": "Text match interface: textSeed."
+  },
+  "@textDisconnected": {
+    "description": "Text match interface: textDisconnected."
+  },
+  "@textCount": {
+    "description": "Text match interface: textCount."
+  },
+  "@textRound": {
+    "description": "Text match interface: textRound."
+  },
+  "@textTurn": {
+    "description": "Text match interface: textTurn."
+  },
+  "textSettlement": "Your settlement",
+  "@textSettlement": {
+    "description": "Private text match receipt: textSettlement."
+  },
+  "textPoints": "Points",
+  "@textPoints": {
+    "description": "Private text match receipt: textPoints."
+  },
+  "textLeaderboardCounted": "Counted for the leaderboard",
+  "@textLeaderboardCounted": {
+    "description": "Private text match receipt: textLeaderboardCounted."
+  },
+  "textLeaderboardUncounted": "Not counted for the leaderboard",
+  "@textLeaderboardUncounted": {
+    "description": "Private text match receipt: textLeaderboardUncounted."
+  },
+  "textAcknowledge": "Got it",
+  "@textAcknowledge": {
+    "description": "Private text match receipt: textAcknowledge."
+  },
+  "textAwardVote": "Correct vote",
+  "@textAwardVote": {
+    "description": "Private text match receipt: textAwardVote."
+  },
+  "textAwardSurvival": "Survived the vote",
+  "@textAwardSurvival": {
+    "description": "Private text match receipt: textAwardSurvival."
+  },
+  "textAwardCompleted": "Match completed",
+  "@textAwardCompleted": {
+    "description": "Private text match receipt: textAwardCompleted."
+  },
+  "textAwardWin": "Team win",
+  "@textAwardWin": {
+    "description": "Private text match receipt: textAwardWin."
+  },
+  "textAwardFirstWin": "First win today",
+  "@textAwardFirstWin": {
+    "description": "Private text match receipt: textAwardFirstWin."
+  },
+  "textAutoPass": "Auto Pass",
+  "@textAutoPass": {
+    "description": "Public text action evidence: textAutoPass."
+  },
+  "textReasonTimeout": "Time expired",
+  "@textReasonTimeout": {
+    "description": "Public text action evidence: textReasonTimeout."
+  },
+  "textReasonDisconnect": "Disconnected player",
+  "@textReasonDisconnect": {
+    "description": "Public text action evidence: textReasonDisconnect."
+  },
+  "textReasonNoRecipient": "No eligible recipient",
+  "@textReasonNoRecipient": {
+    "description": "Public text action evidence: textReasonNoRecipient."
+  },
+  "textReasonTransition": "Phase ended",
+  "@textReasonTransition": {
+    "description": "Public text action evidence: textReasonTransition."
+  },
+  "textInterrupted": "Match interrupted",
+  "@textInterrupted": {
+    "description": "Authoritative match verdict: textInterrupted."
+  },
+  "textLowPopulation": "Match ended with too few players",
+  "@textLowPopulation": {
+    "description": "Authoritative match verdict: textLowPopulation."
+  },
+  "textPrototype": "Prototype session · no rewards or leaderboard credit",
+  "@textPrototype": {
+    "description": "Text mode interface: textPrototype"
+  },
+  "textPersistencePending": "Your move is waiting to be saved. Retry the same request.",
+  "@textPersistencePending": {
+    "description": "Text mode interface: textPersistencePending"
+  },
+  "textRateLimited": "Too many requests. Wait, then retry the same request.",
+  "@textRateLimited": {
+    "description": "Text mode interface: textRateLimited"
+  },
+  "textChatHidden": "Message hidden",
+  "@textChatHidden": {
+    "description": "Text mode interface: textChatHidden"
+  },
+  "textPoked": "You were poked",
+  "@textPoked": {
+    "description": "Brief accessible feedback when a new live poke targets this player."
   }
 }

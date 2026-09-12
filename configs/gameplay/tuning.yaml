@@ -3,6 +3,21 @@
 
 seed: 42                            # reproducible dealing — same seed, same match
 
+# Private text release loading/search limits; shared by server and tooling.
+text_catalog:
+  max_records: 20000
+  max_file_bytes: 16777216
+  max_bundle_bytes: 67108864
+  max_search_nodes: 100000
+
+# Provisional engineering bounds for v2; paged evidence never truncates history.
+# Phase 3/4 must wire these and prove whole-match worst-case frames before release.
+contract:
+  max_history_events: 8192
+  max_history_page_events: 8
+  max_text_bytes: 512
+  max_requests_per_seat: 512
+
 game:
   room_sizes: [4, 6]                # the only valid room sizes
   donowers_by_size: {4: 1, 6: 2}    # public knowledge at the table
@@ -13,15 +28,18 @@ game:
   abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
 
 timers:                             # seconds; which windows may fast-forward is structure (Rules §8)
+  trade_response_s: 10              # v2 Bad Bargains response deadline; validated 1–60s
+  round_start_countdown: 5          # neutral v2 replacement for legacy asset prefetch
   play_turn: 20                     # each player's turn; the play reveals immediately, the turn ends on action
   discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
-  knowoff_ballot: 20                # always runs full
-  knowoff_runoff: 15                # tie-break among tied players; always runs full
+  knowoff_ballot: 20                # unanimous active-connected Ready may end early
+  knowoff_runoff: 15                # same Ready rule; casting a vote alone does not end it
   vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
+  vote_result_falling: 4            # role and newly earned points stay hidden until this boundary
   reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
   reveal_view: 3                    # each player may view an exposed hand for this many seconds
   shuffle_bonus_seconds: 10         # extra time granted when Shuffle is used
-  prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
+  prefetch_countdown: 5             # legacy v1 key; replace at text cutover after consumer proof
 
 hand:
   size: 5
@@ -41,7 +59,7 @@ points:                             # match points — leaderboard, session scor
   correct_vote: 10
   nower_win_bonus: 10
   donower_team_win: 30
-  draw_penalty: 5                   # per pile card drawn; a One More Free Card draw is exempt (Rules §3, §5)
+  draw_penalty: 5                   # text target: every draw; current v1 specialty exemption retires
   # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
 
 noin:                               # currency earnings — instant, kept on disconnect (Rules §6)

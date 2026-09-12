@@ -1,7 +1,21 @@
 # ADR-005: Seed pack for development and CI is synthetic text-only
 
 ## Status
-Accepted
+Historical decision; its playable formats and certification scope are
+superseded by [ADR-012](ADR-012-text-only-selectable-modes.md) and the
+[current Blueprint](../../BLUEPRINT.md). The decision below records why the
+legacy synthetic vector fixture exists; it is not the five-mode release gate.
+
+## Text transition — 2026-09-12
+
+New playable Nowns/cards are plain text, with versioned reviewed suitability;
+multimodal embeddings and fabricated geometry are not production requirements.
+Legacy count/band results below do not establish actual retained-card coverage,
+reachable mode actions, human humor/rights review or approval to activate a pack.
+New synthetic fixtures remain labelled, reproducible engineering data with no
+live value or human-release claim. See [Roadmap Phase 2](../planning/ROADMAP.md)
+for the current proof and editorial gates. Historic source/rights records are
+preserved; no future image/GIF gameplay release follows from this old decision.
 
 ## Context
 Phase 2 needs a certified seed pack with ≥150 Nowns and ≥1,500 cards before the

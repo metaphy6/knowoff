@@ -17,6 +17,10 @@ humans on **the project's design and history**.
 | [`design/DESIGN-text-transition.md`](design/DESIGN-text-transition.md) | Source audit, protocol/data contracts, migration, retirement and verification. | Engineering + operations. |
 | [`product/BUSINESS_PLAN.md`](product/BUSINESS_PLAN.md) | Customer strategy, content operations, economics assumptions and launch gates. | Product + business. |
 | [`reports/2026-09-12-text-transition-doc-audit.md`](reports/2026-09-12-text-transition-doc-audit.md) | Complete documentation coverage and retained historical exceptions. | Reviewers. |
+| [`reports/2026-09-12-text-phase1-validation.md`](reports/2026-09-12-text-phase1-validation.md) | Contract/config, validation and migration foundation evidence; remaining Phase 1 gates. | Engineering + reviewers. |
+| [`reports/2026-09-12-text-phase1-continuation.md`](reports/2026-09-12-text-phase1-continuation.md) | Deployment attestation, wallet transaction review and additive migration/backfill continuation proofs. | Engineering + operators. |
+| [`reports/2026-09-12-text-transition-pause.md`](reports/2026-09-12-text-transition-pause.md) | End-of-day implementation checkpoint, targeted test evidence and unfinished validation/work. | Resuming agents + owner. |
+| [`reports/2026-09-12-text-phase1-reproductions.md`](reports/2026-09-12-text-phase1-reproductions.md) | Replayable legacy draw, pack, reconnect, sequence and lock defect evidence. | Engine + protocol implementers. |
 | [`launch/`](launch/) | Release-gated copy, clip brief and migration runbook. | Launch operators. |
 | [`planning/`](planning/) | The **ROADMAP** — single source of truth for sequenced work. | Agents + humans. |
 | [`tracking/`](tracking/) | How the `docs/tracking/tracking.csv` workflow is used; [`context.md`](tracking/context.md) is the project context pack. | Agents. |

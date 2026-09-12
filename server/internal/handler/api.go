@@ -16,7 +16,8 @@ import (
 
 // AuthDeps bundles auth-related handlers.
 type AuthDeps struct {
-	Auth *auth.Manager
+	Auth      *auth.Manager
+	DevBotKey string
 }
 
 // ProfileDeps bundles profile and leaderboard API handlers.
@@ -27,6 +28,7 @@ type ProfileDeps struct {
 
 // RegisterAuthRoutes mounts anonymous login and OAuth routes on mux.
 func RegisterAuthRoutes(mux *http.ServeMux, deps AuthDeps) {
+	registerDevelopmentAuth(mux, deps)
 	mux.HandleFunc("/api/auth/device", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

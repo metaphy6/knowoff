@@ -13,6 +13,7 @@ import 'package:knowoff_client/data/auth_service.dart';
 import 'package:knowoff_client/presentation/screens/game_screen.dart';
 import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 import 'package:knowoff_client/presentation/screens/home_screen.dart';
+import 'package:knowoff_client/presentation/screens/text_play_screen.dart';
 import 'package:knowoff_client/presentation/widgets/ko_ui.dart';
 
 class _Auth extends AuthService {
@@ -67,8 +68,18 @@ class _Transport implements gt.GameTransport {
 }
 
 Future<_Transport> _pump(WidgetTester tester, Widget page,
-    {_Auth? auth, Size size = const Size(1280, 1000)}) async {
-  await AppConfig.initialize(ClientConfig.defaultConfig(), auth ?? _Auth());
+    {_Auth? auth,
+    int protocolVersion = 1,
+    String? websocketUrl,
+    Size size = const Size(1280, 1000)}) async {
+  // Preserve historical v1 journey assertions explicitly; new generation entry
+  // has its own admission/Ready tests and must never call these legacy intents.
+  await AppConfig.initialize(
+      ClientConfig.fromJson({
+        'protocolVersion': protocolVersion,
+        if (websocketUrl != null) 'websocketUrl': websocketUrl
+      }),
+      auth ?? _Auth());
   final transport = _Transport();
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -88,6 +99,21 @@ Future<_Transport> _pump(WidgetTester tester, Widget page,
 }
 
 void main() {
+  testWidgets(
+      'text generation opens explicit selection without legacy admission',
+      (tester) async {
+    final transport = await _pump(tester, HomeScreen(api: _Api()),
+        protocolVersion: 2,
+        websocketUrl: 'wss://example.invalid/knowoff/ws/v2');
+    await tester.tap(find.byKey(const Key('quick-play')));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextPlayScreen), findsOneWidget);
+    final dynamic screen = tester.state(find.byType(TextPlayScreen));
+    expect(screen.session.transport.url, 'wss://example.invalid/knowoff/ws/v2');
+    expect(transport.sent, isEmpty);
+    expect(find.byKey(const Key('text-connect')), findsOneWidget);
+  });
+
   testWidgets('community routes are discoverable from Play and own Profile',
       (tester) async {
     await _pump(tester, HomeScreen(api: _Api()), size: const Size(430, 932));

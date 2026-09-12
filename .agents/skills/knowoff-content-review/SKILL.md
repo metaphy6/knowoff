@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-review
-description: Evaluate or rework Knowoff image/text Nowns, cards and localizations for lo-fi style, humor, ambiguity and content evidence, automatically checking High/Distant/Chaos server/client logic. Recommendations do not approve submissions or release packs.
+description: Evaluate or rework plain-text Knowoff Nowns, response/item cards and localizations for five-mode humor, ambiguity, retained-card suitability and content evidence. Recommendations do not approve submissions or release packs.
 ---
 
 # Knowoff content review
@@ -31,8 +31,8 @@ before judging it; an earlier conversation summary is not the contract:
   final retained hands, role-scoped delivery and client consumers on every
   content task. The user need not request an algorithm check. Verify source
   before judging High/Distant/Chaos claims or reporting a former gap as closed.
-- [Roadmap content readiness audit](../../../docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11):
-  open proof gaps and sequencing; inspect newer updates if they supersede it.
+- [Roadmap](../../../docs/planning/ROADMAP.md): Phase 2 content certification,
+  Phase 3 action proofs and Phase 4 delivery; inspect current completion evidence.
 
 Follow [AGENTS.md](../../../AGENTS.md) for cross-cutting rules. The Blueprint
 wins product conflicts; the editorial guides apply it, and implementation
@@ -45,7 +45,8 @@ when checking technical results; do not copy tunable values into this skill.
 ## Review the candidates
 
 1. Identify the candidate IDs and exact revisions, Nown versus playable card,
-   intended language/region and audience rating, related candidate Nowns, and
+   intended mode, response/item pool, language/region and audience rating,
+   related candidate Nowns, and
    available source, editorial, screening, simulation, and playtest records.
    Keep these evidence types separate. Missing context becomes an unresolved
    check, not a made-up audience, test result, or approval.
@@ -75,34 +76,33 @@ when checking technical results; do not copy tunable values into this skill.
    require different wording or references. Record what changed and why;
    familiarity in one language cannot prove recognition or ambiguity elsewhere.
 7. For gameplay-readiness review, inspect actual 4- and 6-player hands across
-   every scheduled Nown, including retained hands/reserves and relevant redeals.
+   every scheduled Nown, including retained hands/reserves, depletion and changed
+   board/trade states. Hands persist across rounds; do not assume refill/redeal.
    If no hands exist yet, review relationship hypotheses and list that evidence
    as not run; continue draft review without claiming coverage. Cards share a many-to-many
    Nown relevance mesh; tone, tags, callbacks, and authoring intentions neither
    prove a band nor create exclusive decks or card-to-card dependencies.
-   Read measured similarity as technical evidence, never a correct-answer or
-   funniness score; the chaos relevance band is separate from the chaos tone.
+   Use reviewed, versioned mode/prompt/card relations as candidate evidence.
+   Optional measured similarity is neither required nor a correct-answer or
+   funniness score; the chaos relation is separate from the chaos tone.
 
-## Review the delivered image and text
+## Review delivered text and action evidence
 
-Inspect the actual compressed static image at card size. Look for a readable
-everyday situation, candid awkwardness, rough crop, modest detail and an abrupt
-visual joke. Review plain-text cards for legibility and wording. Flag glossy
-lighting, pristine 3D or illustration and polished brand scenes even if downsized
-under the limit.
-UI palette, doodle and zero-blur rules do not govern imagery inside media packs.
+Inspect exact accepted wording in small-screen, expanded-text and assistive
+views. Check configured UTF-8 limits, normalization, Turkish casing, legitimate
+RTL/script behavior, line overflow and inert markup. If the renderer cannot be
+exercised, record that check as **not run**; valid metadata is not rendering proof.
 
-Check actual dimensions, bytes and encoding against the Blueprint: images use
-compressed static WebP, usually below the 720 px longest-side maximum. Verify
-that image files contain one frame; GIFs, animated WebP and video are unsupported
-game formats. If an asset cannot be inspected, mark that visual check **not run**;
-a prompt, filename or metadata alone does not prove visual fit.
+Evaluate situation/response ambiguity, criterion/rating interpretation, bag
+replacement, trade/refusal and target-chain choices as appropriate. Neutral
+public seeds must not reveal the prompt or role. A system or reviewer never
+decides that a legal rating, comparison or trade is semantically correct.
 
-Count completed image/text assets separately from concepts in the Nown and
-playable-card pools. Captions, translations and planning descriptions are not
-extra text cards. Choose format for the joke; there is no required image/text
-ratio, runtime format weight or hand quota. Keep format counts separate from
-tone and freshness mixes.
+Count completed Nown/response/item revisions by mode/language separately from
+concepts and physical copies. New playable releases contain no image/GIF/video
+assets. Preserve historical image/source/rights records without relabeling them
+as approved text. Avatars, store art and tutorial/promotional media remain
+separate surfaces. Tone and freshness mixes do not create dealing weights.
 
 ## Keep evidence honest
 
@@ -114,9 +114,10 @@ tone and freshness mixes.
 - Automated screening supplements human review; it does not establish rights,
   truth, cultural fit, or humor. Simulation addresses technical feasibility;
   assess its actual coverage against the current readiness audit. Synthetic
-  fixture vectors do not prove semantic quality. A simulator establishes the
-  all-Nown guarantee only if its current implementation checks the final hands
-  against the full contract; recheck the source when an audit gap is closed.
+  records do not prove semantic quality. A retained-card simulation establishes
+  only its stated sampled or exhaustive coverage. Full release evidence also
+  needs reachable action/depletion proofs and actual human pilots; recheck the
+  source and exact evidence when an audit gap is closed.
 - Report each item's recommendation: **keep** for further curation, **rewrite**
   with a concrete change, **hold** for a named uncertainty, or **reject** with
   its specific reason. Include item/revision, evidence and source references,

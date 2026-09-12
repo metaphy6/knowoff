@@ -402,8 +402,14 @@ func TestMatch_TurnOrderRandomizesEachRound(t *testing.T) {
 	for _, s := range m.activeSeats() {
 		_ = m.HandleIntent(s, transport.NewIntent(transport.IntentReady, nil))
 	}
-	// Vote for the first active seat.
+	// Eliminate a Nower so the last Donower survives into round two.
 	target := m.activeSeats()[0]
+	for _, seat := range m.activeSeats() {
+		if m.roles[seat] == RoleNower {
+			target = seat
+			break
+		}
+	}
 	for _, s := range m.activeSeats() {
 		if s != target {
 			_ = m.HandleIntent(s, transport.NewIntent(transport.IntentCastVote, map[string]any{"target_seat": float64(target)}))
@@ -413,12 +419,20 @@ func TestMatch_TurnOrderRandomizesEachRound(t *testing.T) {
 	m.finalizeKnowoff()
 
 	if m.phase == PhaseFinished {
-		t.Skip("match ended early")
+		t.Fatal("fixture must reach the second round")
+	}
+	// Compare the same surviving seats: a shorter slice alone proves only
+	// elimination, not that their order was shuffled for the next round.
+	previousOrder := make([]int, 0, len(first)-1)
+	for _, seat := range first {
+		if seat != target {
+			previousOrder = append(previousOrder, seat)
+		}
 	}
 	second := make([]int, len(m.turnOrder))
 	copy(second, m.turnOrder)
-	if slicesEqual(first, second) {
-		t.Fatalf("turn order did not change between rounds: first=%v second=%v", first, second)
+	if slicesEqual(previousOrder, second) {
+		t.Fatalf("turn order did not change between rounds: first=%v second=%v", previousOrder, second)
 	}
 }
 
@@ -2000,5 +2014,54 @@ func TestMatch_Poke_LimitResetPerPhase(t *testing.T) {
 	// Verify can't poke same target again in PhaseKnowoff
 	if err := m.HandleIntent(0, transport.NewIntent(transport.IntentPoke, map[string]any{"target_seat": float64(1)})); err == nil {
 		t.Fatal("expected second poke to same target in knowoff phase rejected")
+	}
+}
+
+func TestFinishCallbackRunsAfterUnlockAndBeforeReturn(t *testing.T) {
+	for _, path := range []string{"grace", "result"} {
+		t.Run(path, func(t *testing.T) {
+			m, _ := newTestMatch(t, 4, WithSeed(42), WithReplay(true))
+			if e := m.Start(); e != nil {
+				t.Fatal(e)
+			}
+			calls := 0
+			callbackDone := false
+			m.deps.OnFinish = func(_ Role, r MatchResult) {
+				calls++
+				if m.Phase() != PhaseFinished {
+					t.Error("callback observed uncommitted finish")
+				}
+				if len(r.Players) != 4 {
+					t.Error("incomplete outcome")
+				}
+				callbackDone = true
+			}
+			done := make(chan struct{})
+			go func() {
+				if path == "grace" {
+					for seat, role := range m.Roles() {
+						if role == RoleDonower {
+							m.OnGraceExpired(seat)
+						}
+					}
+				} else {
+					m.mu.Lock()
+					m.phase = PhaseResult
+					m.remainingVotes = 1
+					m.eliminatedThisRound = -1
+					m.mu.Unlock()
+					m.finalizeKnowoff()
+				}
+				close(done)
+			}()
+			select {
+			case <-done:
+			case <-time.After(time.Second):
+				t.Fatal("finish callback deadlocked on match projection")
+			}
+			if !callbackDone || calls != 1 {
+				t.Fatal("finish returned before its exactly-once callback")
+			}
+		})
 	}
 }

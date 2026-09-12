@@ -15,6 +15,44 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Five-mode implementation checkpoint — 2026-09-12
+
+- Save the unfinished five-mode text catalog, engine, lobby/protocol, Flutter
+  client, development network bot and durable value/content/trust implementation.
+- Add migrations 9–14 for admission, settlement, content lifecycle, terms/blocks,
+  process ownership and development identities; preserve migrations 1–8.
+- Record clean Flutter analysis and 407 passing tests, plus targeted real-service
+  network, authentication, ownership and content/admin evidence. Final combined
+  review and repository validation remain open, including the known portal
+  rejection/immutable-review compatibility regression.
+- This owner-authorized backup checkpoint preserves progress, with production
+  availability still release-gated. Resume instructions and verification limits
+  are in `docs/reports/2026-09-12-text-transition-pause.md`.
+
+### Text transition foundations
+
+- Added strict version-2 action, lobby, snapshot and history contracts for all
+  five text modes, with shared Go/Dart fixture evidence and separate card-copy
+  identities. The active game remains protocol v1; no text mode is enabled.
+- Added closed mode/language availability, compatibility policy, trade/round
+  timers and bounded history/request config; legacy config remains usable
+  until explicit cutover, with obsolete-key preflight errors.
+- Added read-only database schema/row fingerprints and disposable migration
+  tests. Migration helpers now release their reserved connections without
+  closing the application's database pool.
+- Extended preflight artifacts with timestamps, local SQL hashes, fixed-category
+  content/entitlement counts, aggregate value totals and explicit observation
+  limits; ambiguous migration state is rejected. Recorded the owner's absence
+  of a deployment and the concrete wallet transaction/replay design review.
+- Added an isolated additive archival design fixture with bounded copy/verify
+  cursors, interruption/resume, source-drift and identity-conflict refusals,
+  legacy-data parity and guarded down. Applied migrations remain unchanged;
+  actual production backfill and settlement implementation are later work.
+- Extended validation to all retained Go/Python tools, disposable PostgreSQL
+  and Redis, native-compiler container fallback and failing skip accounting.
+  iOS CI now runs separately on macOS. Existing fixture skips were repaired
+  with executable assertions; no test files were deleted.
+
 ### Removed
 
 - Removed GIF and animated-image game content. Nowns, cards and challenge media

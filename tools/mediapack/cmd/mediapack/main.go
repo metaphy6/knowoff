@@ -28,6 +28,8 @@ func main() {
 	}
 	cmd := os.Args[1]
 	switch cmd {
+	case "text-prepare", "text-build-fixture", "text-certify", "text-simulate", "text-publish", "text-duplicates":
+		os.Exit(runTextCommand(cmd, os.Args[2:], os.Stdout, os.Stderr))
 	case "build":
 		os.Exit(cmdBuild(os.Args[2:]))
 	case "certify":
@@ -43,7 +45,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: mediapack <build|certify|simulate|publish> [options]")
+	fmt.Fprintln(os.Stderr, "usage: mediapack <build|certify|simulate|publish|text-prepare|text-build-fixture|text-certify|text-simulate|text-publish|text-duplicates> [options]")
 }
 
 func cmdBuild(args []string) int {
@@ -136,12 +138,12 @@ func cmdSimulate(args []string) int {
 
 	rng := rand.New(rand.NewSource(*seed))
 	report := map[string]any{
-		"pack_tag":        pack.Manifest.PackTag,
-		"players":         *players,
-		"rounds":          total,
-		"success":         success,
-		"feasible":        success == total,
-		"seed":            *seed,
+		"pack_tag":         pack.Manifest.PackTag,
+		"players":          *players,
+		"rounds":           total,
+		"success":          success,
+		"feasible":         success == total,
+		"seed":             *seed,
 		"sample_hand_hash": rng.Int63(), // deterministic consumption for byte stability
 	}
 	out, _ := json.MarshalIndent(report, "", "  ")

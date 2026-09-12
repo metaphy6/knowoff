@@ -1,6 +1,6 @@
 ---
 name: knowoff-content-integrate
-description: Prepare, certify and integrate reviewed lo-fi Knowoff image/text content into media packs and the app, automatically checking High/Distant/Chaos server/client logic. Use for release readiness, adding, activating, replacing or retiring content; drafting belongs to the creation skill.
+description: Prepare, certify and integrate reviewed plain-text Knowoff content into five-mode bundles and the app, checking versioned suitability, retained cards, action evidence and role-scoped delivery. Use for adding, activating, replacing or retiring content; drafting belongs to the creation skill.
 ---
 
 # Integrate Knowoff content
@@ -58,19 +58,22 @@ change game rules to accommodate a pack.
    tests when it falls within the user's scope, otherwise finish the prepared
    artifact and report the remaining dependency.
 3. Build a new version in the existing pack workflow. Preserve immutable
-   published versions and reproducible CI fixtures. Use compatible real
-   embeddings with the declared model/version for all Nowns and cards; never
-   relabel synthetic geometry as semantic proof or mix embedding spaces.
-   Keep language variants in language-scoped packs, preserve provenance and
-   license/attribution evidence, apply media limits and verify checksums.
-   Keep editorial dimensions out of runtime data unless a schema change is
-   explicitly part of the task. If real inputs or tooling are absent, preserve
-   a non-loadable candidate mapping and the concrete pack-preparation dependency;
-   do not fabricate embeddings or expand a single-card request into a full pilot.
+   published versions and reproducible CI fixtures. Require text-only Nown and
+   response/item records with stable revisions, mode/pool/language/rules identity,
+   reviewed versioned suitability and exact member/artifact hashes. Optional text
+   embeddings may aid search when evaluator/model versions are recorded; never
+   require multimodal vectors or relabel synthetic geometry as semantic proof.
+   Preserve accepted wording, source revision, consent, license and attribution.
+   Apply configured text/bundle limits without silently rewriting accepted bytes.
+   Keep editorial dimensions out of player DTOs and avoid inventing schema fields.
+   Missing human inputs leave a prepared candidate or labelled synthetic fixture,
+   with the unresolved release dependency recorded; do not fabricate approval.
 4. Prove final retained-hand coverage across every scheduled Nown at both
    supported table sizes, card reachability and required relevance bands using
-   current tuning. Validate Shuffle preservation, draw timing/privacy, Nown
-   secrecy and live-match pack isolation for the affected path. Inspect what
+   current tuning. Add reachable mode-action/depletion proof, copy conservation,
+   neutral system seeds, ordinary draw timing/privacy, Nown secrecy and pinned
+   match/history isolation. Specialties, refill and backfill are absent from
+   the first text release. Inspect what
    existing tests actually assert: successful sampling or correct hand lengths
    do not establish the complete guarantee. Record missing proofs as release
    prerequisites; repair runtime code only within the user's authorized scope,
@@ -80,17 +83,17 @@ change game rules to accommodate a pack.
    those checks. Keep missing checks visible; do not label a pack certified
    or ready for release on partial evidence.
 
-Preserve the reviewed lo-fi texture, crop and visual joke through transcoding;
-do not upscale, denoise or sharpen into a premium finish. Verify actual compressed
-outputs: compressed static WebP images, usually below the 720 px longest-side
-maximum, and plain text. Verify single-frame encoding and card-size readability;
-reject GIFs, animated WebP and video rather than relabeling them as images.
-Record output dimensions, bytes, checksums and visual inspection evidence.
+Verify exact plain text in hand, board and history layouts, including expanded
+text, Turkish/RTL scripts and inert markup. Record actual rendering checks or
+**not run**. New playable bundles contain no image/GIF/video assets. Preserve
+historical source/rights/approval data without reinterpreting image filenames or
+captions as accepted text. Avatar, store and tutorial/promotional assets retain
+their separate requirements; text gameplay does not remove their dependencies.
 
-Count completed image/text assets in the Nown and playable-card pools separately.
-Keep concepts distinct from completed assets and exclude captions/planning prose
-from asset counts. Format follows the joke; there is no mandatory format ratio,
-new pack field, dealer weight or per-hand quota.
+Count accepted Nown/response/item revisions by mode/language separately from
+drafts and physical copies. Keep tone and freshness metadata separate from
+dealing guarantees. Sampled technical certificates state their scope and retain
+private replay inputs; they do not prove every action state or actual human play.
 
 ## Activate and verify when authorized
 
@@ -101,11 +104,13 @@ Do not install services, buy tools, schedule monitors or message contributors
 as a side effect of preparing content.
 
 Use the supported activation path and verify the active tag/checksums, new-match
-image/text rendering and role-scoped delivery in the target app. If the renderer
+text rendering and role-scoped delivery in the target app. If the renderer
 cannot be exercised, record that gap; a valid file alone does not prove app
 delivery. Prove in-flight matches retain their original media and record the
 previous working version for rollback.
-For retirement, verify the new version excludes the retired items; editing an
+Verify immutable publication/activation lineage survives process restart and
+that retries cannot rerun contribution approvals or rewards. For retirement,
+verify the new version excludes the retired items; editing an
 editorial date does not change the deployed pack.
 
 Report actual states: prepared, screened, human-reviewed, playtested,

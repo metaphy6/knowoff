@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,18 +21,19 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/knowoff/knowoff/server/pkg/gamecontract"
 )
 
 const (
 	protocolVersion = 1
 
-	intentJoinRoom      = "join_room"
+	intentJoinRoom       = "join_room"
 	intentQueueQuickPlay = "queue_quickplay"
-	intentPlayCard      = "play_card"
-	intentReady         = "ready"
-	intentCastVote      = "cast_vote"
-	intentPoke          = "poke"
-	intentQuickChat     = "quick_chat"
+	intentPlayCard       = "play_card"
+	intentReady          = "ready"
+	intentCastVote       = "cast_vote"
+	intentPoke           = "poke"
+	intentQuickChat      = "quick_chat"
 
 	eventRoleAssigned    = "role_assigned"
 	eventHandDealt       = "hand_dealt"
@@ -64,24 +66,72 @@ type bot struct {
 	rng         *rand.Rand
 	accessToken string
 
-	seat    int
-	size    int
-	hand    []string
-	phase   string
-	turn    bool
+	seat  int
+	size  int
+	hand  []string
+	phase string
+	turn  bool
 }
 
 func main() {
 	var (
-		server = flag.String("server", "ws://localhost:8080/ws", "WebSocket endpoint")
-		room   = flag.String("room", "", "6-character room code (mutually exclusive with -queue)")
-		queue  = flag.Int("queue", 0, "queue size (4 or 6); used if -room is empty")
-		count  = flag.Int("count", 1, "number of bots to spawn")
-		seed   = flag.Int64("seed", time.Now().UnixNano(), "random seed")
+		textNetwork = flag.String("text-network", "", "run a v2 prototype match using authenticated development identities (stable mode ID)")
+		textOut     = flag.String("text-out", "", "new private 0600 simulation or network trace file (required for text runs)")
+		textReplay  = flag.String("text-replay", "", "replay a recorded zero-effect text simulation JSON file")
+		textMode    = flag.String("text-simulate", "", "run zero-effect text simulation for a stable mode ID")
+		textPack    = flag.String("text-pack", "", "private text bundle directory for simulation")
+		textTuning  = flag.String("text-tuning", "configs/gameplay/tuning.yaml", "pinned gameplay tuning YAML")
+		textSize    = flag.Int("text-size", 4, "text original table size (4 or 6)")
+		server      = flag.String("server", "ws://localhost:8080/ws", "WebSocket endpoint")
+		room        = flag.String("room", "", "6-character room code (mutually exclusive with -queue)")
+		queue       = flag.Int("queue", 0, "queue size (4 or 6); used if -room is empty")
+		count       = flag.Int("count", 1, "number of bots to spawn")
+		seed        = flag.Int64("seed", time.Now().UnixNano(), "random seed")
 	)
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	if *textNetwork != "" {
+		ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer cancel()
+		ctx, timeout := context.WithTimeout(ctx, 20*time.Minute)
+		defer timeout()
+		if err := runTextNetwork(ctx, *server, gamecontract.ModeID(*textNetwork), *textSize, *seed, *textOut, os.Getenv("KNOWOFF_DEV_BOT_KEY")); err != nil {
+			logger.Error("prototype network proof failed", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("prototype network proof complete", "mode", *textNetwork, "size", *textSize)
+		return
+	}
+	if *textReplay != "" {
+		script, err := readTextScript(*textReplay)
+		if err == nil {
+			_, err = replayText(*textPack, *textTuning, script)
+		}
+		if err != nil {
+			logger.Error("text replay failed", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("text replay verified", "evidence_sha256", script.EvidenceSHA256)
+		return
+	}
+	if *textMode != "" {
+		if *textOut == "" {
+			logger.Error("text simulation requires -text-out for privileged replay storage")
+			os.Exit(2)
+		}
+		result, err := simulateText(*textPack, *textTuning, gamecontract.ModeID(*textMode), *textSize, *seed)
+		if err != nil {
+			logger.Error("text simulation failed", "error", err)
+			os.Exit(1)
+		}
+		if err := writeTextScript(*textOut, result); err != nil {
+			logger.Error("text simulation output failed", "error", err)
+			os.Exit(1)
+		}
+		logger.Info("text simulation complete", "outcome", result.Outcome, "rounds", result.Rounds, "actions", len(result.Steps), "evidence_sha256", result.EvidenceSHA256)
+		return
+	}
 
 	if *room == "" && (*queue != 4 && *queue != 6) {
 		logger.Error("specify -room CODE or -queue 4/6")

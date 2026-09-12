@@ -47,7 +47,7 @@ xops/
 | [`agent/session-bootstrap.sh`](agent/session-bootstrap.sh) | Print orienting context at agent session start. |
 | [`agent/tracking_append.sh`](agent/tracking_append.sh) | Validated, atomic CSV appender for `docs/tracking/tracking.csv`. |
 | [`agent/run-with-retry.sh`](agent/run-with-retry.sh) | Wrap a flaky command in bounded retries with backoff. |
-| [`test/tests-lints.py`](test/tests-lints.py) | Run Go and Flutter tests, linters, and formatting checks. Stops at the first failing check. |
+| [`test/tests-lints.py`](test/tests-lints.py) | Run all retained Go/Python and Flutter checks with disposable integration services and explicit skip accounting. |
 | [`makefile/_common.py`](makefile/_common.py) | Shared helpers for the Python make dispatchers. |
 | [`makefile/git_ops.py`](makefile/git_ops.py) | `make git` / `make git.dry`. |
 | [`makefile/track_ops.py`](makefile/track_ops.py) | `make track.add` / `make track.list`. |
@@ -63,8 +63,18 @@ Run every repository test and lint check from the repository root:
 python3 xops/test/tests-lints.py
 ```
 
-The script runs Go tests and linting, then Flutter tests, analysis, and format
-checking. It exits non-zero at the first failing command.
+The script discovers retained Go modules and Python suites, runs tests plus Go
+vet/format/build, then Flutter tests, analysis and format. It reports every stage
+and fails on tests, incomplete output or skips. Go integration checks create
+dedicated PostgreSQL/Redis containers; caller database addresses are not used.
+The native Go toolchain is used when CGO and a C compiler are available,
+otherwise the existing server development Dockerfile supplies them. No host
+packages are installed.
+
+Use `--suite python`, `--suite go` or `--suite client` for a clearly labeled
+partial gate; `--report-json /tmp/agent-runs/result.json` retains machine-readable
+counts. The default runs all suites. CI builds Android/Web on Linux and iOS on
+macOS; a local Linux validation pass is not an iOS build claim.
 
 ## Add a new Makefile target
 

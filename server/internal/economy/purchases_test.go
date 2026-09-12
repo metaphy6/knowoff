@@ -147,3 +147,51 @@ func TestPurchases_SSVSignature(t *testing.T) {
 		t.Fatal("expected invalid signature to fail")
 	}
 }
+
+func TestPurchasesReceiptBindingAndSpentRefund(t *testing.T) {
+	db := setupPurchasesTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	w := NewWallet(db)
+	p := NewPurchases(db, w, nil, "")
+	id := newAccount(t, db)
+	other := newAccount(t, db)
+	txn := "refund-" + uuid.NewString()
+	receipt, _, err := p.RecordReceipt(ctx, id, PlatformGooglePlay, "noin_500", txn, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mismatch := range []struct {
+		account  string
+		platform PurchasePlatform
+		product  string
+	}{{other, PlatformGooglePlay, "noin_500"}, {id, PlatformAppStore, "noin_500"}, {id, PlatformGooglePlay, "noin_1200"}} {
+		if _, _, err = p.RecordReceipt(ctx, mismatch.account, mismatch.platform, mismatch.product, txn, nil); err == nil {
+			t.Error("receipt identity rebound")
+		}
+	}
+	if err = p.VerifyGooglePlay(ctx, txn, 500); err != nil {
+		t.Fatal(err)
+	}
+	if err = w.Debit(ctx, id, 450, "spent purchase"); err != nil {
+		t.Fatal(err)
+	}
+	if err = p.Refund(ctx, receipt); err == nil {
+		t.Error("spent refund wrote unmatched ledger")
+	}
+	balance, err := w.Balance(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum, err := w.LedgerSum(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if balance != 50 || sum != 50 {
+		t.Fatalf("refund parity balance=%d ledger=%d", balance, sum)
+	}
+	var refunded bool
+	if err = db.QueryRow(`SELECT refunded_at IS NOT NULL FROM store_purchases WHERE id=$1`, receipt).Scan(&refunded); err != nil || refunded {
+		t.Fatalf("failed refund marked applied: %v %v", refunded, err)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,65 @@ import (
 	"github.com/knowoff/knowoff/server/internal/store"
 	_ "github.com/lib/pq"
 )
+
+func TestWalletConcurrentFirstRowsAndFirstWin(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	db.SetMaxOpenConns(20)
+	m := NewManager(db, testConfig())
+	ctx := context.Background()
+	for _, firstWin := range []bool{false, true} {
+		id := newAccount(t, db)
+		start := make(chan struct{})
+		errs := make(chan error, 20)
+		credits := make(chan int, 20)
+		var wg sync.WaitGroup
+		for i := 0; i < 20; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				var n int
+				var err error
+				if firstWin {
+					n, err = m.GrantDailyFirstWin(ctx, id)
+				} else {
+					n, err = m.Wallet.Grant(ctx, id, LedgerCorrectVote, 50, "parallel", 300)
+				}
+				errs <- err
+				credits <- n
+			}()
+		}
+		close(start)
+		wg.Wait()
+		close(errs)
+		close(credits)
+		for err := range errs {
+			if err != nil {
+				t.Error(err)
+			}
+		}
+		total := 0
+		for n := range credits {
+			total += n
+		}
+		want := 300
+		if firstWin {
+			want = 25
+		}
+		if total != want {
+			t.Errorf("firstWin=%v total=%d want=%d", firstWin, total, want)
+		}
+		balance, err := m.Wallet.Balance(ctx, id)
+		if err != nil || balance != int64(want) {
+			t.Fatalf("balance %d %v", balance, err)
+		}
+		sum, err := m.Wallet.LedgerSum(ctx, id)
+		if err != nil || sum != balance {
+			t.Fatalf("ledger %d %v", sum, err)
+		}
+	}
+}
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -488,4 +548,50 @@ func TestManager_Reconcile(t *testing.T) {
 	if balance != sum {
 		t.Fatalf("balance %d != ledger sum %d", balance, sum)
 	}
+}
+
+func TestConcurrentDebitAndNegativeEntitlementPrice(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	id := newAccount(t, db)
+	w := NewWallet(db)
+	if _, err := w.Grant(ctx, id, LedgerContributorReward, 1000, "fixture", 0); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	errs := make(chan error, 20)
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() { defer wg.Done(); errs <- w.Debit(ctx, id, 10, "concurrent debit") }()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	if balance, err := w.Balance(ctx, id); err != nil || balance != 800 {
+		t.Fatalf("balance %d %v", balance, err)
+	}
+	e := NewEntitlements(db)
+	if err := e.GrantUnlock(ctx, id, EntitlementCustomAvatar, "custom_avatar", -1); err == nil {
+		t.Error("negative unlock price granted")
+	}
+	if _, err := e.GrantPlayPass(ctx, id, EntitlementPlayPass1D, -1); err == nil {
+		t.Error("negative pass price granted")
+	}
+	if err := e.GrantUnlock(ctx, id, EntitlementPremiumYearly, "premium", 1); err == nil {
+		t.Error("permanent premium accepted through unlock path")
+	}
+}
+
+func TestZeroCapSharedByGrantAndConversion(t *testing.T){
+ db:=setupTestDB(t);defer db.Close();ctx:=context.Background();id:=newAccount(t,db);w:=NewWallet(db)
+ for _,cap:=range []int64{0,-1}{if n,err:=w.Grant(ctx,id,LedgerMatchCompleted,10,"disabled cap",cap);err==nil&&n!=0{t.Errorf("cap %d credited %d",cap,n)}}
+ cfg:=testConfig();cfg.Tuning.Noin.DailyEarnCap=0;m:=NewManager(db,cfg)
+ if _,err:=db.Exec(`UPDATE profiles SET non_converted_points=1000 WHERE account_id=$1`,id);err!=nil{t.Fatal(err)}
+ if n,err:=m.ConvertPoints(ctx,id,100);err==nil||n!=0{t.Errorf("zero conversion cap %d %v",n,err)}
+ if n,err:=w.Grant(ctx,id,LedgerContributorReward,20,"community exemption",0);err!=nil||n!=20{t.Errorf("community exempt %d %v",n,err)}
 }

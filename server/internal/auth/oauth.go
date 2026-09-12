@@ -56,6 +56,12 @@ func (s *memoryOAuthStore) Delete(state string) {
 
 // StartOAuth returns the authorization URL and stores the PKCE state.
 func (m *Manager) StartOAuth(ctx context.Context, provider, accountID string) (string, error) {
+	if accountID != "" {
+		purpose, err := m.accountPurpose(ctx, accountID)
+		if err != nil || purpose != "player" {
+			return "", fmt.Errorf("player account required")
+		}
+	}
 	cfg, ok := m.oauthCfgs[provider]
 	if !ok {
 		return "", fmt.Errorf("unsupported provider %q", provider)

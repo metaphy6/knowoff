@@ -40,9 +40,9 @@ class ClientConfig {
         json['serverUrl'] as String? ?? 'http://localhost:8080',
       ),
       websocketUrl: _resolveHostForEmulator(
-        json['websocketUrl'] as String? ?? 'ws://localhost:8080/ws',
+        json['websocketUrl'] as String? ?? 'ws://localhost:8080/ws/v2',
       ),
-      protocolVersion: json['protocolVersion'] as int? ?? 1,
+      protocolVersion: json['protocolVersion'] as int? ?? 2,
       featureFlags: (json['featureFlags'] as Map<String, dynamic>?) ?? const {},
       supportedLocales:
           (json['supportedLocales'] as List<dynamic>?)?.cast<String>() ??
@@ -63,8 +63,8 @@ class ClientConfig {
 
   static ClientConfig defaultConfig() => ClientConfig(
         serverUrl: _resolveHostForEmulator('http://localhost:8080'),
-        websocketUrl: _resolveHostForEmulator('ws://localhost:8080/ws'),
-        protocolVersion: 1,
+        websocketUrl: _resolveHostForEmulator('ws://localhost:8080/ws/v2'),
+        protocolVersion: 2,
         featureFlags: const {},
         supportedLocales: const ['en'],
         defaultLocale: 'en',

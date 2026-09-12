@@ -24,6 +24,13 @@
 > maps source gaps, data preservation and retirement proofs. Previous roadmap
 > checkmarks remain historical evidence only.
 
+> **Implementation update — 2026-09-12.** Phase 1 is verified complete with
+> executable v2 contracts, typed closed availability, read-only inventory,
+> reviewed transaction identities and isolated migration/backfill design proofs.
+> The active wire protocol remains v1; none of the five text mode engines or
+> deployed data transitions is complete. Current proof and remaining gates
+> are tracked in the Roadmap.
+
 ## 🎲 The Game at a Glance
 
 Knowoff is an online social deduction party game for **exactly 4 or 6 players**.
@@ -289,7 +296,7 @@ A separate text contribution/community event, not a sixth gameplay mode or a sou
 * **Open to all players, in-app** — no portal role needed. One entry per player, **immutable once submitted** — no edits, no replacements. **The system accepts the first 100 entries**, then intake auto-closes; a slot reopens each time screening rejects an earlier entry.
 * **Screening before visibility:** every entry passes the automated screen plus a human check (curators or admin) before it becomes publicly visible and votable. Rejected entries never appear.
 * **Voting:** open to all players — one vote each, never for your own entry, **immutable once cast**. Tallies are public and live.
-* **Week Winner:** at the weekly close, the most-voted entry wins. Its owner holds the **Week Winner title — shown on their profile and in lobbies until the next winner is crowned** — and receives a large Noin award (`noin.challenge_winner`). Winning and standout entries may also enter the community pack, with credits.
+* **Week Winner:** at the weekly close, the most-voted entry wins. Tied vote totals are resolved by earliest accepted submission; an identical acceptance timestamp uses the immutable entry ID for deterministic ordering (owner-adopted 2026-09-12). Its owner holds the **Week Winner title — shown on their profile and in lobbies until the next winner is crowned** — and receives a large Noin award (`noin.challenge_winner`). Winning and standout entries may also enter the community pack, with credits.
 * **Consent:** submitting requires explicit acceptance of the contribution terms — the entry may be used in the system, commercially, and in modified form (perpetual, non-exclusive license). Terms version + timestamp are stored with the entry. No consent, no upload.
 
 ### 4. System Notices & Announcements
@@ -785,4 +792,3 @@ The technical transition design expands operational contracts and evidence; the
 Roadmap alone orders implementation. The business plan records assumptions and
 commercial gates. Neither historical completion rows nor this spec imply that
 the text transition has shipped.
-

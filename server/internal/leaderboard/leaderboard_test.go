@@ -4,12 +4,81 @@ import (
 	"context"
 	"database/sql"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/store"
 	_ "github.com/lib/pq"
 )
+
+func TestDailyBucketsTiedRanksAndClosedWriter(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	m := NewManager(db)
+	ctx := context.Background()
+	start := time.Date(2026, 8, 17, 0, 0, 0, 0, time.UTC)
+	week := WeekID(start)
+	if err := m.EnsureWeek(ctx, week, start, start.AddDate(0, 0, 7)); err != nil {
+		t.Fatal(err)
+	}
+	account := "dddddddd-dddd-dddd-dddd-dddddddddddd"
+	other := "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"
+	ensureAccount(t, db, account, "A")
+	ensureAccount(t, db, other, "B")
+	for day := 0; day < 2; day++ {
+		for i := 0; i < 2; i++ {
+			counted, err := m.RecordPoints(ctx, week, account, 10, start.AddDate(0, 0, day), 2)
+			if err != nil || !counted {
+				t.Fatalf("day %d counted=%v err=%v", day, counted, err)
+			}
+		}
+	}
+	var wg sync.WaitGroup
+	errs := make(chan error, 12)
+	credits := make(chan bool, 12)
+	for i := 0; i < 12; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			ok, err := m.RecordPoints(ctx, week, other, 20, start, 2)
+			credits <- ok
+			errs <- err
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	close(credits)
+	for err := range errs {
+		if err != nil {
+			t.Error(err)
+		}
+	}
+	count := 0
+	for ok := range credits {
+		if ok {
+			count++
+		}
+	}
+	if count != 2 {
+		t.Fatal("daily race counted", count)
+	}
+	top, _, err := m.Get(ctx, week, 10, account)
+	if err != nil || len(top) != 2 || top[0].Rank != 1 || top[1].Rank != 1 || top[0].Points != 40 || top[1].Points != 40 {
+		t.Fatalf("tie ranks %+v %v", top, err)
+	}
+	closed, err := m.CloseWeek(ctx, week)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.RecordPoints(ctx, week, account, 100, start.AddDate(0, 0, 2), 2); err == nil {
+		t.Fatal("closed week writer accepted")
+	}
+	again, err := m.CloseWeek(ctx, week)
+	if err != nil || len(again) != len(closed) {
+		t.Fatal(err)
+	}
+}
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/store"
 )
 
 // LedgerEventType identifies the reason for a Noin ledger entry.
@@ -83,26 +84,23 @@ func (w *Wallet) Grant(ctx context.Context, accountID string, eventType LedgerEv
 		return 0, fmt.Errorf("invalid account id: %w", err)
 	}
 
-	tx, err := w.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return 0, fmt.Errorf("begin grant tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	credited, err := w.GrantTx(ctx, tx, accountID, eventType, amount, reason, dailyCap)
-	if err != nil {
-		return 0, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return 0, fmt.Errorf("commit grant: %w", err)
-	}
-	return credited, nil
+	day := serverDay(time.Now().UTC())
+	credited := 0
+	err := store.WithValueTransaction(ctx, w.db, func(tx *sql.Tx) error {
+		var err error
+		credited, err = w.grantTxAt(ctx, tx, accountID, eventType, amount, reason, dailyCap, day)
+		return err
+	})
+	return credited, err
 }
 
 // GrantTx is the transaction-scoped implementation of Grant. Callers manage
 // the transaction lifecycle; GrantTx must be called inside an existing tx.
 func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64) (int, error) {
+	return w.grantTxAt(ctx, tx, accountID, eventType, amount, reason, dailyCap, serverDay(time.Now().UTC()))
+}
+
+func (w *Wallet) grantTxAt(ctx context.Context, tx *sql.Tx, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64, day time.Time) (int, error) {
 	if amount <= 0 {
 		return 0, nil
 	}
@@ -110,10 +108,26 @@ func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, even
 		return 0, fmt.Errorf("invalid account id: %w", err)
 	}
 
-	day := serverDay(time.Now().UTC())
+	if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+		return 0, err
+	}
+	if eventType == LedgerDailyFirstWin {
+		var claimed bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM noin_ledger WHERE account_id=$1 AND server_day=$2 AND event_type='daily_first_win') OR EXISTS(SELECT 1 FROM text_first_win_claims WHERE account_id=$1 AND server_day=$2)`, accountID, day).Scan(&claimed); err != nil {
+			return 0, err
+		}
+		if claimed {
+			return 0, nil
+		}
+	}
 	countsTowardPlayCap := eventType != LedgerContributorReward && eventType != LedgerChallengeWinner
 	cappedAmount := amount
 	if countsTowardPlayCap {
+ if dailyCap<0{return 0,fmt.Errorf("invalid daily cap")}
+ if dailyCap==0{return 0,nil}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO daily_noin_earned(account_id,server_day,earned) VALUES($1,$2,0) ON CONFLICT DO NOTHING`, accountID, day); err != nil {
+			return 0, err
+		}
 		var dailyEarned int64
 		if err := tx.QueryRowContext(ctx,
 			"SELECT COALESCE(earned,0) FROM daily_noin_earned WHERE account_id = $1 AND server_day = $2 FOR UPDATE",
@@ -180,35 +194,32 @@ func (w *Wallet) Debit(ctx context.Context, accountID string, amount int, reason
 		return fmt.Errorf("invalid account id: %w", err)
 	}
 
-	tx, err := w.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return fmt.Errorf("begin debit tx: %w", err)
-	}
-	defer tx.Rollback()
+	day := serverDay(time.Now().UTC())
+	return store.WithValueTransaction(ctx, w.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		return debitTx(ctx, tx, accountID, amount, reason, day)
+	})
+}
 
-	res, err := tx.ExecContext(ctx,
-		`UPDATE noin_wallets SET balance = balance - $2, updated_at = now()
-		 WHERE account_id = $1 AND balance >= $2`,
-		accountID, amount,
-	)
+func debitTx(ctx context.Context, tx *sql.Tx, accountID string, amount int, reason string, day time.Time) error {
+	if amount <= 0 {
+		return fmt.Errorf("amount must be positive")
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE noin_wallets SET balance=balance-$2,updated_at=now() WHERE account_id=$1 AND balance>=$2`, accountID, amount)
 	if err != nil {
 		return fmt.Errorf("debit wallet: %w", err)
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
 		return fmt.Errorf("insufficient noin")
 	}
-
-	day := serverDay(time.Now().UTC())
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO noin_ledger (account_id, event_type, amount, reason, server_day)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		accountID, string(LedgerSpend), -amount, reason, day,
-	); err != nil {
-		return fmt.Errorf("insert spend ledger: %w", err)
-	}
-
-	return tx.Commit()
+	_, err = tx.ExecContext(ctx, `INSERT INTO noin_ledger(account_id,event_type,amount,reason,server_day) VALUES($1,$2,$3,$4,$5)`, accountID, string(LedgerSpend), -amount, reason, day)
+	return err
 }
 
 // LedgerSum returns the replayable sum of ledger rows for an account. Used by

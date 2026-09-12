@@ -1,0 +1,423 @@
+{
+  "@@locale": "tr",
+  "textModeBriefing": "Toplantıyı Kaçırdım",
+  "textModeScale": "Gizli Ölçek",
+  "textModeRoom": "Yer Aç",
+  "textModeBargains": "Kötü Takaslar",
+  "textModeTop": "Üstüne Koy",
+  "textChooseMode": "Bir mod seç",
+  "textContentLanguage": "İçerik dili",
+  "textPack": "Paket",
+  "textUnavailable": "Bu mod henüz kullanılamıyor.",
+  "textWithdrawn": "Son modun kullanılamıyor. Devam etmek için kullanılabilir bir mod seç.",
+  "textConnect": "Kullanılabilir modları kontrol et",
+  "textCreate": "Oda kur",
+  "textJoin": "Odaya katıl",
+  "textConfirm": "Hamleyi onayla",
+  "textPreview": "Hamleni gözden geçir",
+  "textCancel": "İptal",
+  "textRespond": "Yanıtla",
+  "textPlace": "Yerleştir",
+  "textReplace": "Değiştir",
+  "textOffer": "Takas öner",
+  "textTop": "Üstüne koy",
+  "textAccept": "Takası kabul et",
+  "textRefuse": "Takası reddet",
+  "textReady": "Hazırım",
+  "textStart": "Maçı başlat",
+  "textLeave": "Ayrıl",
+  "textKeepWaiting": "Beklemeye devam et",
+  "textChangeMode": "Mod değiştir",
+  "textWaiting": "Tam oyuncu masası bekleniyor",
+  "textSync": "Maç geçmişi eşitleniyor…",
+  "textUpgrade": "Devam etmek için uygulamayı güncelle. Sunucu farklı bir oyun sürümü kullanıyor.",
+  "textStale": "Masa değişti. Güncel durum yüklenirken hamlen temizlendi.",
+  "textError": "İstek tamamlanamadı. Lütfen tekrar dene.",
+  "textUnknownPrompt": "Ortak ipucu rolün için gizli kalır.",
+  "textBoard": "Ortak masa",
+  "textHistory": "Ortak geçmiş",
+  "textHand": "Elindeki kartlar",
+  "textDraw": "Bir kart çek",
+  "textRating": "Puan",
+  "textSlot": "Yer",
+  "textTarget": "İstediğin açık kartı seç",
+  "textSystem": "Sistem",
+  "textSpectating": "İzleyicisin. Özel kartlar ve ipuçları temizlendi.",
+  "textRetry": "Aynı isteği yeniden dene",
+  "textRematch": "Yeni maç için ayarlara dön",
+  "textChat": "Mesaj",
+  "textSend": "Gönder",
+  "textPoke": "Dürt",
+  "textVote": "Oy ver",
+  "textAbstain": "Oy seçilmedi",
+  "textReadyHint": "Hazırım seçimi bu ayarları ve mevcut oyuncuları onaylar. Değişiklikler herkesin onayını kaldırır.",
+  "textPrivate": "Özel ipucu",
+  "textResults": "Sonuçlar",
+  "textOfferPending": "Takas, alıcısının yanıtını bekliyor.",
+  "textDeadline": "Sunucu süresi",
+  "textRoomCode": "Oda kodu",
+  "textQuickPlay": "Hızlı Oyun",
+  "textLocalRoom": "Yerel Oda",
+  "textReturnMenu": "Menüye dön",
+  "textPreviousPage": "Önceki sayfa",
+  "textNextPage": "Sonraki sayfa",
+  "textRules": "Kurallar",
+  "textPlayers": "Oyuncular",
+  "textRewardsOn": "Ödüllere uygun",
+  "textRewardsOff": "Bu maçta ödül yok",
+  "textBriefingInstruction": "Yanıt olarak bir kart oyna.",
+  "textScaleInstruction": "Bir kartı 1 ile 5 arasında bir dereceye yerleştir.",
+  "textRoomInstruction": "Çantadaki bir yuvayı değiştir. Çıkan kart açık geçmişte kalır.",
+  "textBargainsInstruction": "Başka bir oyuncunun sergilediği kart için teklif yap. Kabul edebilir veya reddedebilir.",
+  "textTopInstruction": "Mevcut en üst kartın üzerine bir kart ekle.",
+  "textRunoff": "İkinci oylama",
+  "textAutomatic": "Otomatik",
+  "textSeed": "Başlangıç kartları",
+  "textDisconnected": "Bağlantı kesildi",
+  "textCount": "Sayı",
+  "textRound": "Tur",
+  "textTurn": "Sıra",
+  "textSettlement": "Hesabına işlenen sonuç",
+  "textPoints": "Puan",
+  "textLeaderboardCounted": "Liderlik tablosuna sayıldı",
+  "textLeaderboardUncounted": "Liderlik tablosuna sayılmadı",
+  "textAcknowledge": "Tamam",
+  "textAwardVote": "Doğru oy",
+  "textAwardSurvival": "Oylamadan sağ çıktı",
+  "textAwardCompleted": "Maç tamamlandı",
+  "textAwardWin": "Takım galibiyeti",
+  "textAwardFirstWin": "Günün ilk galibiyeti",
+  "@textModeBriefing": {
+    "description": "Text mode interface: textModeBriefing"
+  },
+  "@textModeScale": {
+    "description": "Text mode interface: textModeScale"
+  },
+  "@textModeRoom": {
+    "description": "Text mode interface: textModeRoom"
+  },
+  "@textModeBargains": {
+    "description": "Text mode interface: textModeBargains"
+  },
+  "@textModeTop": {
+    "description": "Text mode interface: textModeTop"
+  },
+  "@textChooseMode": {
+    "description": "Text mode interface: textChooseMode"
+  },
+  "@textContentLanguage": {
+    "description": "Text mode interface: textContentLanguage"
+  },
+  "@textPack": {
+    "description": "Text mode interface: textPack"
+  },
+  "@textUnavailable": {
+    "description": "Text mode interface: textUnavailable"
+  },
+  "@textWithdrawn": {
+    "description": "Text mode interface: textWithdrawn"
+  },
+  "@textConnect": {
+    "description": "Text mode interface: textConnect"
+  },
+  "@textCreate": {
+    "description": "Text mode interface: textCreate"
+  },
+  "@textJoin": {
+    "description": "Text mode interface: textJoin"
+  },
+  "@textConfirm": {
+    "description": "Text mode interface: textConfirm"
+  },
+  "@textPreview": {
+    "description": "Text mode interface: textPreview"
+  },
+  "@textCancel": {
+    "description": "Text mode interface: textCancel"
+  },
+  "@textRespond": {
+    "description": "Text mode interface: textRespond"
+  },
+  "@textPlace": {
+    "description": "Text mode interface: textPlace"
+  },
+  "@textReplace": {
+    "description": "Text mode interface: textReplace"
+  },
+  "@textOffer": {
+    "description": "Text mode interface: textOffer"
+  },
+  "@textTop": {
+    "description": "Text mode interface: textTop"
+  },
+  "@textAccept": {
+    "description": "Text mode interface: textAccept"
+  },
+  "@textRefuse": {
+    "description": "Text mode interface: textRefuse"
+  },
+  "@textReady": {
+    "description": "Text mode interface: textReady"
+  },
+  "@textStart": {
+    "description": "Text mode interface: textStart"
+  },
+  "@textLeave": {
+    "description": "Text mode interface: textLeave"
+  },
+  "@textKeepWaiting": {
+    "description": "Text mode interface: textKeepWaiting"
+  },
+  "@textChangeMode": {
+    "description": "Text mode interface: textChangeMode"
+  },
+  "@textWaiting": {
+    "description": "Text mode interface: textWaiting"
+  },
+  "@textSync": {
+    "description": "Text mode interface: textSync"
+  },
+  "@textUpgrade": {
+    "description": "Text mode interface: textUpgrade"
+  },
+  "@textStale": {
+    "description": "Text mode interface: textStale"
+  },
+  "@textError": {
+    "description": "Text mode interface: textError"
+  },
+  "@textUnknownPrompt": {
+    "description": "Text mode interface: textUnknownPrompt"
+  },
+  "@textBoard": {
+    "description": "Text mode interface: textBoard"
+  },
+  "@textHistory": {
+    "description": "Text mode interface: textHistory"
+  },
+  "@textHand": {
+    "description": "Text mode interface: textHand"
+  },
+  "@textDraw": {
+    "description": "Text mode interface: textDraw"
+  },
+  "@textRating": {
+    "description": "Text mode interface: textRating"
+  },
+  "@textSlot": {
+    "description": "Text mode interface: textSlot"
+  },
+  "@textTarget": {
+    "description": "Text mode interface: textTarget"
+  },
+  "@textSystem": {
+    "description": "Text mode interface: textSystem"
+  },
+  "@textSpectating": {
+    "description": "Text mode interface: textSpectating"
+  },
+  "@textRetry": {
+    "description": "Text mode interface: textRetry"
+  },
+  "@textRematch": {
+    "description": "Text mode interface: textRematch"
+  },
+  "@textChat": {
+    "description": "Text mode interface: textChat"
+  },
+  "@textSend": {
+    "description": "Text mode interface: textSend"
+  },
+  "@textPoke": {
+    "description": "Text mode interface: textPoke"
+  },
+  "@textVote": {
+    "description": "Text mode interface: textVote"
+  },
+  "@textAbstain": {
+    "description": "Text mode interface: textAbstain"
+  },
+  "@textReadyHint": {
+    "description": "Text mode interface: textReadyHint"
+  },
+  "@textPrivate": {
+    "description": "Text mode interface: textPrivate"
+  },
+  "@textResults": {
+    "description": "Text mode interface: textResults"
+  },
+  "@textOfferPending": {
+    "description": "Text mode interface: textOfferPending"
+  },
+  "@textDeadline": {
+    "description": "Text mode interface: textDeadline"
+  },
+  "@textRoomCode": {
+    "description": "Text mode interface: textRoomCode"
+  },
+  "@textQuickPlay": {
+    "description": "Text mode interface: textQuickPlay"
+  },
+  "@textLocalRoom": {
+    "description": "Text mode interface: textLocalRoom"
+  },
+  "@textReturnMenu": {
+    "description": "Text mode interface: textReturnMenu"
+  },
+  "@textPreviousPage": {
+    "description": "Public evidence paging control."
+  },
+  "@textNextPage": {
+    "description": "Public evidence paging control."
+  },
+  "@textRules": {
+    "description": "Text match interface: textRules."
+  },
+  "@textPlayers": {
+    "description": "Text match interface: textPlayers."
+  },
+  "@textRewardsOn": {
+    "description": "Text match interface: textRewardsOn."
+  },
+  "@textRewardsOff": {
+    "description": "Text match interface: textRewardsOff."
+  },
+  "@textBriefingInstruction": {
+    "description": "Text match interface: textBriefingInstruction."
+  },
+  "@textScaleInstruction": {
+    "description": "Text match interface: textScaleInstruction."
+  },
+  "@textRoomInstruction": {
+    "description": "Text match interface: textRoomInstruction."
+  },
+  "@textBargainsInstruction": {
+    "description": "Text match interface: textBargainsInstruction."
+  },
+  "@textTopInstruction": {
+    "description": "Text match interface: textTopInstruction."
+  },
+  "@textRunoff": {
+    "description": "Text match interface: textRunoff."
+  },
+  "@textAutomatic": {
+    "description": "Text match interface: textAutomatic."
+  },
+  "@textSeed": {
+    "description": "Text match interface: textSeed."
+  },
+  "@textDisconnected": {
+    "description": "Text match interface: textDisconnected."
+  },
+  "@textCount": {
+    "description": "Text match interface: textCount."
+  },
+  "@textRound": {
+    "description": "Text match interface: textRound."
+  },
+  "@textTurn": {
+    "description": "Text match interface: textTurn."
+  },
+  "@textSettlement": {
+    "description": "Private text match receipt: textSettlement."
+  },
+  "@textPoints": {
+    "description": "Private text match receipt: textPoints."
+  },
+  "@textLeaderboardCounted": {
+    "description": "Private text match receipt: textLeaderboardCounted."
+  },
+  "@textLeaderboardUncounted": {
+    "description": "Private text match receipt: textLeaderboardUncounted."
+  },
+  "@textAcknowledge": {
+    "description": "Private text match receipt: textAcknowledge."
+  },
+  "@textAwardVote": {
+    "description": "Private text match receipt: textAwardVote."
+  },
+  "@textAwardSurvival": {
+    "description": "Private text match receipt: textAwardSurvival."
+  },
+  "@textAwardCompleted": {
+    "description": "Private text match receipt: textAwardCompleted."
+  },
+  "@textAwardWin": {
+    "description": "Private text match receipt: textAwardWin."
+  },
+  "@textAwardFirstWin": {
+    "description": "Private text match receipt: textAwardFirstWin."
+  },
+  "textAutoPass": "Otomatik Pas",
+  "@textAutoPass": {
+    "description": "Public text action evidence: textAutoPass."
+  },
+  "textReasonTimeout": "Süre doldu",
+  "@textReasonTimeout": {
+    "description": "Public text action evidence: textReasonTimeout."
+  },
+  "textReasonDisconnect": "Bağlantısı kesilen oyuncu",
+  "@textReasonDisconnect": {
+    "description": "Public text action evidence: textReasonDisconnect."
+  },
+  "textReasonNoRecipient": "Uygun alıcı yok",
+  "@textReasonNoRecipient": {
+    "description": "Public text action evidence: textReasonNoRecipient."
+  },
+  "textReasonTransition": "Aşama sona erdi",
+  "@textReasonTransition": {
+    "description": "Public text action evidence: textReasonTransition."
+  },
+  "textInterrupted": "Maç kesildi",
+  "@textInterrupted": {
+    "description": "Authoritative match verdict: textInterrupted."
+  },
+  "textLowPopulation": "Maç az oyuncuyla sona erdi",
+  "@textLowPopulation": {
+    "description": "Authoritative match verdict: textLowPopulation."
+  },
+  "textPrototype": "Prototip oturumu · ödül veya sıralama katkısı yok",
+  "@textPrototype": {
+    "description": "Text mode interface: textPrototype"
+  },
+  "textPersistencePending": "Hamleniz kaydedilmeyi bekliyor. Aynı isteği yeniden deneyin.",
+  "@textPersistencePending": {
+    "description": "Text mode interface: textPersistencePending"
+  },
+  "textRateLimited": "Çok fazla istek. Bekleyip aynı isteği yeniden deneyin.",
+  "@textRateLimited": {
+    "description": "Text mode interface: textRateLimited"
+  },
+  "textChatHidden": "Mesaj gizlendi",
+  "@textChatHidden": {
+    "description": "Text mode interface: textChatHidden"
+  },
+  "quickChatSuspect": "Şüpheli!",
+  "@quickChatSuspect": {
+    "description": "Text mode interface: quickChatSuspect"
+  },
+  "quickChatFit": "Uyuyor.",
+  "@quickChatFit": {
+    "description": "Text mode interface: quickChatFit"
+  },
+  "quickChatWeird": "Tuhaf.",
+  "@quickChatWeird": {
+    "description": "Text mode interface: quickChatWeird"
+  },
+  "quickChatTrust": "Sana güveniyorum.",
+  "@quickChatTrust": {
+    "description": "Text mode interface: quickChatTrust"
+  },
+  "quickChatNotMe": "Ben değilim!",
+  "@quickChatNotMe": {
+    "description": "Text mode interface: quickChatNotMe"
+  },
+  "quickChatLaugh": "Hahaha!",
+  "@quickChatLaugh": {
+    "description": "Text mode interface: quickChatLaugh"
+  },
+  "textPoked": "Sana dürtü gönderildi",
+  "@textPoked": {
+    "description": "Brief accessible feedback when a new live poke targets this player."
+  }
+}

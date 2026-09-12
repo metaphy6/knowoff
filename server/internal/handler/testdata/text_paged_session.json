@@ -1,0 +1,3159 @@
+{
+  "version": 1,
+  "synthetic": true,
+  "sessions": [
+    {
+      "mode": "missed_the_briefing",
+      "size": 4,
+      "frames": [
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "access_token": "229201a1-07f0-4753-81e8-d85acec56db6",
+              "client_generation": 2
+            },
+            "type": "hello",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "hello",
+            "payload": {
+              "account_id": "229201a1-07f0-4753-81e8-d85acec56db6",
+              "client_generation": 2,
+              "limits": {
+                "max_frame_bytes": 4096,
+                "max_history_events": 8192,
+                "max_history_page_events": 3,
+                "max_text_bytes": 512,
+                "max_requests_per_seat": 512
+              },
+              "prototype": true
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "availability",
+            "payload": {
+              "prototype": true,
+              "protocol_version": 2,
+              "client_generation": 2,
+              "limits": {
+                "max_frame_bytes": 4096,
+                "max_history_events": 8192,
+                "max_history_page_events": 3,
+                "max_text_bytes": 512,
+                "max_requests_per_seat": 512
+              },
+              "modes": [
+                {
+                  "mode_id": "missed_the_briefing",
+                  "available": true,
+                  "languages": [
+                    {
+                      "content_language": "en",
+                      "pack_release_id": "synthetic-text-en",
+                      "rules_version": "text-v1"
+                    }
+                  ]
+                },
+                {
+                  "mode_id": "secret_scale",
+                  "available": true,
+                  "languages": [
+                    {
+                      "content_language": "en",
+                      "pack_release_id": "synthetic-text-en",
+                      "rules_version": "text-v1"
+                    }
+                  ]
+                },
+                {
+                  "mode_id": "make_room",
+                  "available": true,
+                  "languages": [
+                    {
+                      "content_language": "en",
+                      "pack_release_id": "synthetic-text-en",
+                      "rules_version": "text-v1"
+                    }
+                  ]
+                },
+                {
+                  "mode_id": "bad_bargains",
+                  "available": true,
+                  "languages": [
+                    {
+                      "content_language": "en",
+                      "pack_release_id": "synthetic-text-en",
+                      "rules_version": "text-v1"
+                    }
+                  ]
+                },
+                {
+                  "mode_id": "top_that",
+                  "available": true,
+                  "languages": [
+                    {
+                      "content_language": "en",
+                      "pack_release_id": "synthetic-text-en",
+                      "rules_version": "text-v1"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "mode_id": "missed_the_briefing",
+              "size": 4,
+              "content_language": "en",
+              "pack_release_id": "synthetic-text-en",
+              "rules_version": "text-v1"
+            },
+            "request_id": "create",
+            "type": "room_create",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 1,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "control_ack",
+            "request_id": "create",
+            "payload": {
+              "duplicate": false,
+              "request_id": "create"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {},
+            "request_id": "sync-0",
+            "type": "resync",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 2,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 3,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "control_ack",
+            "request_id": "sync-0",
+            "payload": {
+              "duplicate": false,
+              "request_id": "sync-0"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "settings_revision": 1,
+              "membership_revision": 4
+            },
+            "request_id": "ready-0",
+            "type": "room_ready",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "control_ack",
+            "request_id": "ready-0",
+            "payload": {
+              "duplicate": false,
+              "request_id": "ready-0"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {},
+            "request_id": "start",
+            "type": "room_start",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "lobby",
+            "payload": {
+              "seat": 0,
+              "code": "FCEFB4",
+              "lobby": {
+                "protocol_version": 2,
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "settings": {
+                  "mode_id": "missed_the_briefing",
+                  "size": 4,
+                  "content_language": "en",
+                  "pack_release_id": "synthetic-text-en",
+                  "rules_version": "text-v1"
+                },
+                "settings_revision": 1,
+                "membership_revision": 4,
+                "host_seat": 0,
+                "seats": [
+                  {
+                    "seat": 0,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 1,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 2,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  },
+                  {
+                    "seat": 3,
+                    "connected": true,
+                    "ready": {
+                      "settings_revision": 1,
+                      "membership_revision": 4
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.1",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 1,
+                "evidence_seq": 0
+              },
+              "round": 1,
+              "turn": 0,
+              "phase": "round_start",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p1",
+              "server_time_ms": 1789214681646,
+              "deadline_ms": 1789214682646,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": []
+              },
+              "history": []
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "control_ack",
+            "request_id": "start",
+            "payload": {
+              "duplicate": false,
+              "request_id": "start"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.2",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 2,
+                "evidence_seq": 0
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682708,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": []
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-0",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.3",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 3,
+                "evidence_seq": 1
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682724,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-0",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-0"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-1",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.4",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 4,
+                "evidence_seq": 2
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682734,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-1",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-1"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-2",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.5",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 5,
+                "evidence_seq": 3
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682742,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 3,
+                "page_count": 1,
+                "through_evidence_seq": 3,
+                "root_sha256": "caa94dd9ca31466cd8239fdedf2a950471c06092756646d000e176e71f43efab"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.5",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-2",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-2"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-3",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.6",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 6,
+                "evidence_seq": 4
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682763,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 4,
+                "page_count": 2,
+                "through_evidence_seq": 4,
+                "root_sha256": "766ddff529b2177fea46f86457efa397f4137338fb1172293f05e4fc163438ea"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.6",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.6",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 1,
+              "from_evidence_seq": 4,
+              "through_evidence_seq": 4,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e4",
+                  "evidence_seq": 4,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682762,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "564e75acc5514eed515e5fcee0b74257d426846376bc56e323dd80aaf965d3e5"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-3",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-3"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-4",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.7",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 7,
+                "evidence_seq": 5
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682785,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 5,
+                "page_count": 2,
+                "through_evidence_seq": 5,
+                "root_sha256": "37a82654b31decbd055f42e9ad0037451e8ab44c88be1f0ffdcb55b70c486dfd"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.7",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.7",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 1,
+              "from_evidence_seq": 4,
+              "through_evidence_seq": 5,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e4",
+                  "evidence_seq": 4,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682762,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e5",
+                  "evidence_seq": 5,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682785,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "cb450acb49b739a555cd64368c53bc0c56b3adbe61db53f315f1dff7623baa00"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-4",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-4"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-5",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.8",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 8,
+                "evidence_seq": 6
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682811,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 6,
+                "page_count": 2,
+                "through_evidence_seq": 6,
+                "root_sha256": "cae40e9356cb1457a4f989dd1f7d785a0f64288d4dfd9f98e43010c6162be0eb"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.8",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.8",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 1,
+              "from_evidence_seq": 4,
+              "through_evidence_seq": 6,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e4",
+                  "evidence_seq": 4,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682762,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e5",
+                  "evidence_seq": 5,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682785,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e6",
+                  "evidence_seq": 6,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682810,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "64ca6a52334865f90a8d2489b12fc00b16ff2b8aa542be655047b8a732f55511"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-5",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-5"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-6",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.9",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 9,
+                "evidence_seq": 7
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682843,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 7,
+                "page_count": 3,
+                "through_evidence_seq": 7,
+                "root_sha256": "255b4273573ec8c30c67b18690cedcaaed477d021cc810b9906a8f5a2ba248e0"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.9",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.9",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 1,
+              "from_evidence_seq": 4,
+              "through_evidence_seq": 6,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e4",
+                  "evidence_seq": 4,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682762,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e5",
+                  "evidence_seq": 5,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682785,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e6",
+                  "evidence_seq": 6,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682810,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "64ca6a52334865f90a8d2489b12fc00b16ff2b8aa542be655047b8a732f55511"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.9",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 2,
+              "from_evidence_seq": 7,
+              "through_evidence_seq": 7,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e7",
+                  "evidence_seq": 7,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682843,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "9cfc93f22052c6c7a727401bab755021f54e1193dbcbf7f2bf4c6a52e6c3a70f"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-6",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-6"
+            }
+          }
+        },
+        {
+          "direction": "client",
+          "frame": {
+            "payload": {
+              "v": 2,
+              "request_id": "chat-7",
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "mode_id": "missed_the_briefing",
+              "round": 1,
+              "turn": 1,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "expected_board_revision": 1,
+              "action": {
+                "kind": "chat",
+                "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                "ui_locale": "en"
+              }
+            },
+            "type": "action",
+            "v": 2
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "snapshot",
+            "payload": {
+              "v": 2,
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.10",
+              "contract": {
+                "protocol_version": 2,
+                "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+                "room_id": "f987cd8a-38ad-4fcb-b9a3-31299aa8e944",
+                "original_size": 4,
+                "mode_id": "missed_the_briefing",
+                "rules_version": "text-v1",
+                "content_language": "en",
+                "pack_release_id": "synthetic-text-en",
+                "pack_sha256": "3aab8eaf7599a8d21d19314ef413684444bc9c152ac192bd8542872333671445",
+                "tuning": {
+                  "version": "text-tuning-v1",
+                  "sha256": "8c8d45270d5549d747be98e9393a1ab449512c7ea345bf2f9bbd45bdc8bab6e9"
+                },
+                "eligibility": {
+                  "admission_id": "d7eaf839-5e66-4b20-9783-e14e0ee95471",
+                  "entry_path": "local",
+                  "rewards": false,
+                  "leaderboard": false
+                }
+              },
+              "cursor": {
+                "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+                "recipient_seq": 10,
+                "evidence_seq": 8
+              },
+              "round": 1,
+              "turn": 1,
+              "current_seat": 2,
+              "phase": "play",
+              "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+              "server_time_ms": 1789214682879,
+              "deadline_ms": 1789214702702,
+              "board": {
+                "mode_id": "missed_the_briefing",
+                "revision": 1,
+                "cards": []
+              },
+              "seats": [
+                {
+                  "seat": 0,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 1,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 2,
+                  "connected": true,
+                  "eliminated": false
+                },
+                {
+                  "seat": 3,
+                  "connected": true,
+                  "eliminated": false
+                }
+              ],
+              "ready_seats": [],
+              "private": {
+                "points": 0,
+                "seat": 0,
+                "role": "nower",
+                "nown": {
+                  "content_id": "situation-2",
+                  "revision": 1,
+                  "text": "Synthetic situation number 2"
+                },
+                "hand": [
+                  {
+                    "copy_id": "9e5d3511-f560-5add-a28b-088a3e088af3",
+                    "content": {
+                      "content_id": "response-02",
+                      "revision": 1,
+                      "text": "Synthetic response 02"
+                    }
+                  },
+                  {
+                    "copy_id": "7e1fc5be-d4e9-5112-9925-ed28736f8281",
+                    "content": {
+                      "content_id": "response-04",
+                      "revision": 1,
+                      "text": "Synthetic response 04"
+                    }
+                  },
+                  {
+                    "copy_id": "3d6b7292-9c7b-5eaa-8164-9270900f5742",
+                    "content": {
+                      "content_id": "response-10",
+                      "revision": 1,
+                      "text": "Synthetic response 10"
+                    }
+                  },
+                  {
+                    "copy_id": "4f781741-346a-5147-b6a9-33765d800203",
+                    "content": {
+                      "content_id": "response-06",
+                      "revision": 1,
+                      "text": "Synthetic response 06"
+                    }
+                  },
+                  {
+                    "copy_id": "b1ac4f1f-7470-5a1a-b2c5-9b22082fd731",
+                    "content": {
+                      "content_id": "response-00",
+                      "revision": 1,
+                      "text": "Synthetic response 00"
+                    }
+                  }
+                ],
+                "reserve_count": 3,
+                "capabilities": [
+                  "chat",
+                  "poke"
+                ]
+              },
+              "history": [],
+              "history_pages": {
+                "total_events": 8,
+                "page_count": 3,
+                "through_evidence_seq": 8,
+                "root_sha256": "1698c3904ce4ce236d60c39fadac0b2a1a2593a9e23ef861834ab5bc10681eb7"
+              }
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.10",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 0,
+              "from_evidence_seq": 1,
+              "through_evidence_seq": 3,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e1",
+                  "evidence_seq": 1,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682724,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e2",
+                  "evidence_seq": 2,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682733,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e3",
+                  "evidence_seq": 3,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682742,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "266173645a1f8a090f15c9009ad17815c84f4aff05c8361b565b4895dfd37583"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.10",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 1,
+              "from_evidence_seq": 4,
+              "through_evidence_seq": 6,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e4",
+                  "evidence_seq": 4,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682762,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e5",
+                  "evidence_seq": 5,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682785,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e6",
+                  "evidence_seq": 6,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682810,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "64ca6a52334865f90a8d2489b12fc00b16ff2b8aa542be655047b8a732f55511"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "history_page",
+            "payload": {
+              "v": 2,
+              "match_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2",
+              "snapshot_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.s0.10",
+              "stream_epoch": "32460919-5f50-4b2a-b3ca-5e547a0430f5",
+              "index": 2,
+              "from_evidence_seq": 7,
+              "through_evidence_seq": 8,
+              "events": [
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e7",
+                  "evidence_seq": 7,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682843,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                },
+                {
+                  "event_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.e8",
+                  "evidence_seq": 8,
+                  "round": 1,
+                  "phase": "play",
+                  "phase_id": "2de03003-b33f-40d7-a18a-bdc288ebb1f2.p2",
+                  "actor": {
+                    "kind": "seat",
+                    "seat": 0
+                  },
+                  "kind": "chat",
+                  "cards": [],
+                  "before_revision": 1,
+                  "after_revision": 1,
+                  "reason": "player",
+                  "server_time_ms": 1789214682878,
+                  "text": "synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo synthetic echo ",
+                  "ui_locale": "en"
+                }
+              ],
+              "sha256": "d4d35e444f6ff4645ffd956e30abc4b21003122c9c2ee0063f4a3e56e1db821f"
+            }
+          }
+        },
+        {
+          "direction": "server",
+          "frame": {
+            "v": 2,
+            "type": "action_ack",
+            "request_id": "chat-7",
+            "payload": {
+              "duplicate": false,
+              "request_id": "chat-7"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

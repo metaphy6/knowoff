@@ -51,8 +51,30 @@ websocket:
   write_wait_s: 10
 
 protocol:
-  # Wire protocol version. Client and server negotiate this on connect.
+  # Active legacy wire version; pre-admission v2 negotiation is Phase 4 work.
   version: 1
+
+# Frozen v2 policy; no mode is exposed before engine/content/client release gates.
+# This is separate from the active legacy protocol above.
+text:
+  version: 2
+  rules_version: text-v1
+  default_mode: missed_the_briefing
+  compatibility:
+    protocol_version: 2
+    min_client_generation: 2
+  modes:
+    missed_the_briefing: {enabled: false, content_languages: []}
+    secret_scale: {enabled: false, content_languages: []}
+    make_room: {enabled: false, content_languages: []}
+    bad_bargains: {enabled: false, content_languages: []}
+    top_that: {enabled: false, content_languages: []}
+
+# Owner-provided legal/support material; no placeholder enables authored data.
+trust:
+  user_terms_version: ""
+  support_url: ""
+  privacy_url: ""
 
 localization:
   default_locale: en
@@ -120,6 +142,7 @@ media:
   workbench_ingest_path: ""
 
 security:
+  dev_bot_key: ""                  # optional KNOWOFF_DEV_BOT_KEY; non-production prototype only
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
   jwt_issuer: knowoff
   jwt_audience: knowoff-players

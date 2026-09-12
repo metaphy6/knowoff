@@ -38,16 +38,24 @@ human acceptance, certification and activation are separate states.
 The owner adopted **text-only Nowns/cards and five selectable modes** on
 2026-09-12: [ADR-012](../design/ADR-012-text-only-selectable-modes.md),
 [Blueprint](../../BLUEPRINT.md), [transition design](../design/DESIGN-text-transition.md),
-[business plan](../product/BUSINESS_PLAN.md). These are plans; runtime still has
-the older image/text association game. Initial text specialties and production
+[business plan](../product/BUSINESS_PLAN.md). Phase 1 contracts/config, inventory,
+wallet transaction review and isolated migration/backfill design proofs are
+verified complete. The owner states no deployment exists. Phases 2–5 now have
+substantial saved implementation, including five-mode runtime/client, durable
+value and content/trust infrastructure. The owner paused work on 2026-09-12;
+read the [end-of-day handoff](../reports/2026-09-12-text-transition-pause.md)
+before resuming. Roadmap remains 26/91 reviewed items; later changes have not
+passed the final unified gate and are not a completed commit handoff.
+Initial text specialties and production
 backfill are off. Preserve no-paid-advantage, shared caps, roles/votes, identity,
 community and the visual brand. Follow the current content source checklist;
 High/Distant/Chaos evidence does not automatically certify stateful mode actions.
 
 Existing hand privacy, history, snapshot/sequence, pack pinning, locking,
 settlement and backup proofs need repair in the active Roadmap. Applied SQL,
-ADRs and tracking remain historical records. No code/migration/asset cleanup is
-authorized by this planning pass. Do not automatically apply older image/CGO
+ADRs and tracking remain historical records. The subsequent implementation
+request supersedes the original planning-only boundary; deploy/data-retirement
+gates remain evidence-dependent. Do not automatically apply older image/CGO
 retirement advice: avatars still consume WebP.
 
 ## Project-specific conventions

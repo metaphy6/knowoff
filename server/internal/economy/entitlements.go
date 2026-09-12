@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/store"
 )
 
 // EntitlementType identifies an active entitlement.
@@ -126,153 +127,76 @@ func (e *Entitlements) List(ctx context.Context, accountID string) ([]Entitlemen
 // the entitlement. It returns the expiry time.
 func (e *Entitlements) GrantPlayPass(ctx context.Context, accountID string, t EntitlementType, price int) (time.Time, error) {
 	if _, err := uuid.Parse(accountID); err != nil {
-		return time.Time{}, fmt.Errorf("invalid account id: %w", err)
+		return time.Time{}, err
 	}
-
 	duration := playPassDuration(t)
-	if duration == 0 {
-		return time.Time{}, fmt.Errorf("invalid play pass type")
+	if duration == 0 || price <= 0 {
+		return time.Time{}, fmt.Errorf("invalid play pass purchase")
 	}
-
-	tx, err := e.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
+	now := time.Now().UTC()
+	until := now.Add(duration)
+	err := store.WithValueTransaction(ctx, e.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		if err := debitTx(ctx, tx, accountID, price, fmt.Sprintf("purchase %s", t), serverDay(now)); err != nil {
+			return err
+		}
+		return grantTimedEntitlement(ctx, tx, accountID, t, until)
+	})
 	if err != nil {
-		return time.Time{}, fmt.Errorf("begin play pass tx: %w", err)
+		return time.Time{}, err
 	}
-	defer tx.Rollback()
-
-	res, err := tx.ExecContext(ctx,
-		`UPDATE noin_wallets SET balance = balance - $2, updated_at = now()
-		 WHERE account_id = $1 AND balance >= $2`,
-		accountID, price,
-	)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("debit wallet: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return time.Time{}, fmt.Errorf("insufficient noin")
-	}
-
-	day := serverDay(time.Now().UTC())
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO noin_ledger (account_id, event_type, amount, reason, server_day)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		accountID, string(LedgerSpend), -price, fmt.Sprintf("purchase %s", t), day,
-	); err != nil {
-		return time.Time{}, fmt.Errorf("insert spend ledger: %w", err)
-	}
-
-	activeUntil := time.Now().UTC().Add(duration)
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO entitlements (account_id, entitlement_type, value, active_until, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, now(), now())
-		 ON CONFLICT (account_id, entitlement_type) DO UPDATE SET
-		   value = EXCLUDED.value,
-		   active_until = GREATEST(entitlements.active_until, EXCLUDED.active_until),
-		   updated_at = now()`,
-		accountID, string(t), string(t), activeUntil,
-	); err != nil {
-		return time.Time{}, fmt.Errorf("insert entitlement: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return time.Time{}, fmt.Errorf("commit play pass: %w", err)
-	}
-	return activeUntil, nil
+	return until, nil
 }
 
-// GrantUnlock grants a permanent unlock (custom_avatar, poke_style, theme_pack)
-// by debiting Noin. It fails if the entitlement already exists.
+// GrantUnlock atomically purchases a permanent cosmetic entitlement.
 func (e *Entitlements) GrantUnlock(ctx context.Context, accountID string, t EntitlementType, value string, price int) error {
 	if _, err := uuid.Parse(accountID); err != nil {
-		return fmt.Errorf("invalid account id: %w", err)
+		return err
 	}
-
-	tx, err := e.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return fmt.Errorf("begin unlock tx: %w", err)
+	if price <= 0 || (t != EntitlementCustomAvatar && t != EntitlementPokeStyle && t != EntitlementThemePack) {
+		return fmt.Errorf("invalid unlock purchase")
 	}
-	defer tx.Rollback()
-
-	var existing bool
-	if err := tx.QueryRowContext(ctx,
-		"SELECT true FROM entitlements WHERE account_id = $1 AND entitlement_type = $2",
-		accountID, string(t),
-	).Scan(&existing); err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("check existing entitlement: %w", err)
-	}
-	if existing {
-		return fmt.Errorf("already unlocked")
-	}
-
-	res, err := tx.ExecContext(ctx,
-		`UPDATE noin_wallets SET balance = balance - $2, updated_at = now()
-		 WHERE account_id = $1 AND balance >= $2`,
-		accountID, price,
-	)
-	if err != nil {
-		return fmt.Errorf("debit wallet: %w", err)
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return fmt.Errorf("insufficient noin")
-	}
-
 	day := serverDay(time.Now().UTC())
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO noin_ledger (account_id, event_type, amount, reason, server_day)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		accountID, string(LedgerSpend), -price, fmt.Sprintf("unlock %s", t), day,
-	); err != nil {
-		return fmt.Errorf("insert spend ledger: %w", err)
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO entitlements (account_id, entitlement_type, value, active_until, created_at, updated_at)
-		 VALUES ($1, $2, $3, NULL, now(), now())`,
-		accountID, string(t), value,
-	); err != nil {
-		return fmt.Errorf("insert entitlement: %w", err)
-	}
-
-	return tx.Commit()
+	return store.WithValueTransaction(ctx, e.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		var exists bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type=$2)`, accountID, string(t)).Scan(&exists); err != nil {
+			return err
+		}
+		if exists {
+			return fmt.Errorf("already unlocked")
+		}
+		if err := debitTx(ctx, tx, accountID, price, fmt.Sprintf("unlock %s", t), day); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx, `INSERT INTO entitlements(account_id,entitlement_type,value) VALUES($1,$2,$3)`, accountID, string(t), value)
+		return err
+	})
 }
 
-// GrantPremium records an active Premium subscription. It is used after a
-// platform billing receipt has been verified.
+// GrantPremium accepts only a server-verified subscription expiry.
 func (e *Entitlements) GrantPremium(ctx context.Context, accountID string, t EntitlementType, activeUntil time.Time) error {
 	if t != EntitlementPremiumMonthly && t != EntitlementPremiumYearly {
 		return fmt.Errorf("invalid premium type")
 	}
-	tx, err := e.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin premium tx: %w", err)
+	if !activeUntil.After(time.Now().UTC()) {
+		return fmt.Errorf("expired premium")
 	}
-	defer tx.Rollback()
-
-	// A newer premium entitlement always wins; overlapping passes are fine.
-	if _, err := tx.ExecContext(ctx,
-		`DELETE FROM entitlements
-		 WHERE account_id = $1 AND entitlement_type IN ('premium_monthly','premium_yearly')
-		   AND COALESCE(active_until, 'epoch') < now()`,
-		accountID,
-	); err != nil {
-		return fmt.Errorf("clean expired premium: %w", err)
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO entitlements (account_id, entitlement_type, value, active_until, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, now(), now())
-		 ON CONFLICT (account_id, entitlement_type) DO UPDATE SET
-		   value = EXCLUDED.value,
-		   active_until = GREATEST(entitlements.active_until, EXCLUDED.active_until),
-		   updated_at = now()`,
-		accountID, string(t), string(t), activeUntil,
-	); err != nil {
-		return fmt.Errorf("insert premium entitlement: %w", err)
-	}
-
-	return tx.Commit()
+	return store.WithValueTransaction(ctx, e.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		return grantTimedEntitlement(ctx, tx, accountID, t, activeUntil)
+	})
+}
+func grantTimedEntitlement(ctx context.Context, tx *sql.Tx, accountID string, t EntitlementType, until time.Time) error {
+	_, err := tx.ExecContext(ctx, `INSERT INTO entitlements(account_id,entitlement_type,value,active_until) VALUES($1,$2,$2,$3)
+ ON CONFLICT(account_id,entitlement_type) DO UPDATE SET value=EXCLUDED.value,active_until=GREATEST(entitlements.active_until,EXCLUDED.active_until),updated_at=now()`, accountID, string(t), until)
+	return err
 }
 
 func playPassDuration(t EntitlementType) time.Duration {

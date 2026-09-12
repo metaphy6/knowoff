@@ -2,6 +2,7 @@ package lobby
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -64,10 +65,13 @@ func TestManager_RoomByCode(t *testing.T) {
 }
 
 func TestManager_RoomNodeAffinity(t *testing.T) {
-	redisAddr := "localhost:6379"
+	redisAddr := os.Getenv("KNOWOFF_TEST_REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
 	client := store.NewRedisClient(redisAddr, "", 0)
 	if err := client.Ping(context.Background()); err != nil {
-		t.Skipf("redis not available (%v), skipping affinity test", err)
+		t.Fatalf("redis not available (%v); run python3 xops/test/tests-lints.py for disposable services", err)
 	}
 	defer client.Close()
 

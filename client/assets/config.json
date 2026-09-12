@@ -1,8 +1,11 @@
 {
   "serverUrl": "http://localhost:8080",
-  "websocketUrl": "ws://localhost:8080/ws",
-  "protocolVersion": 1,
+  "websocketUrl": "ws://localhost:8080/ws/v2",
+  "protocolVersion": 2,
   "featureFlags": {},
-  "supportedLocales": ["en", "en-XA"],
+  "supportedLocales": [
+    "en",
+    "en-XA"
+  ],
   "defaultLocale": "en"
 }

@@ -8,6 +8,7 @@ import 'core/config/client_config.dart';
 import 'core/navigation/root_navigator_key.dart';
 import 'core/navigation/room_links.dart';
 import 'core/network/websocket_transport.dart';
+import 'core/text/cache_upgrade.dart';
 import 'presentation/state/game_session_provider.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/theme/knowoff_theme.dart';
@@ -15,6 +16,7 @@ import 'presentation/theme/knowoff_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final config = await ClientConfig.load();
+  if (config.protocolVersion == 2) await retireLegacyPlayableCache();
   // Initialize services once; authentication stays lazy until it is needed.
   await AppConfig.initialize(config);
   final transport = WebSocketTransport(url: config.websocketUrl);

@@ -7,6 +7,9 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/store"
 )
 
 // Manager is the leaderboard service.
@@ -50,40 +53,49 @@ func (m *Manager) EnsureWeek(ctx context.Context, weekID string, start, end time
 // RecordPoints adds points for an account in the given week, respecting the
 // daily counted cap. It returns whether the match counted.
 func (m *Manager) RecordPoints(ctx context.Context, weekID, accountID string, points int64, day time.Time, dailyCap int) (bool, error) {
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return false, err
+	if points < 0 || dailyCap <= 0 || WeekID(day) != weekID {
+		return false, store.ErrValueConflict
 	}
-	defer tx.Rollback()
-
+	day = day.UTC()
 	dayStart := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
-	var countedToday int
-	if err := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(matches_counted), 0) FROM leaderboard_entries
-		 WHERE week_id = $1 AND account_id = $2 AND updated_at >= $3 AND updated_at < $4`,
-		weekID, accountID, dayStart, dayStart.Add(24*time.Hour),
-	).Scan(&countedToday); err != nil {
-		return false, fmt.Errorf("count today: %w", err)
-	}
-	if countedToday >= dailyCap {
-		return false, nil
-	}
-
-	_, err = tx.ExecContext(ctx,
-		`INSERT INTO leaderboard_entries (week_id, account_id, points, matches_counted) VALUES ($1, $2, $3, 1)
-		 ON CONFLICT (week_id, account_id) DO UPDATE SET
-		   points = leaderboard_entries.points + EXCLUDED.points,
-		   matches_counted = leaderboard_entries.matches_counted + 1,
-		   updated_at = now()`,
-		weekID, accountID, points,
-	)
+	counted := false
+	err := store.WithValueTransaction(ctx, m.db, func(tx *sql.Tx) error {
+		counted = false
+		var closed bool
+		var closing sql.NullTime
+		if err := tx.QueryRowContext(ctx, `SELECT closed,closing_at FROM leaderboard_weeks WHERE week_id=$1 FOR UPDATE`, weekID).Scan(&closed, &closing); err != nil {
+			return err
+		}
+		if closed || closing.Valid {
+			return store.ErrWeekClosed
+		}
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO leaderboard_daily_counts(account_id,server_day,count) VALUES($1,$2,0) ON CONFLICT DO NOTHING`, accountID, dayStart); err != nil {
+			return err
+		}
+		var today int
+		if err := tx.QueryRowContext(ctx, `SELECT count FROM leaderboard_daily_counts WHERE account_id=$1 AND server_day=$2 FOR UPDATE`, accountID, dayStart).Scan(&today); err != nil {
+			return err
+		}
+		if today >= dailyCap {
+			return nil
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE leaderboard_daily_counts SET count=count+1 WHERE account_id=$1 AND server_day=$2`, accountID, dayStart); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO leaderboard_entries(week_id,account_id,points,matches_counted) VALUES($1,$2,$3,1)
+   ON CONFLICT(week_id,account_id) DO UPDATE SET points=leaderboard_entries.points+EXCLUDED.points,matches_counted=leaderboard_entries.matches_counted+1,updated_at=now()`, weekID, accountID, points); err != nil {
+			return err
+		}
+		counted = true
+		return nil
+	})
 	if err != nil {
-		return false, fmt.Errorf("record points: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
 		return false, err
 	}
-	return true, nil
+	return counted, nil
 }
 
 // Ranking is one row in a leaderboard view.
@@ -97,7 +109,7 @@ type Ranking struct {
 func (m *Manager) Get(ctx context.Context, weekID string, topN int, viewerAccountID string) ([]Ranking, *Ranking, error) {
 	rows, err := m.db.QueryContext(ctx, `
 		SELECT account_id, points,
-		       RANK() OVER (ORDER BY points DESC, account_id ASC) AS rank
+		       RANK() OVER (ORDER BY points DESC) AS rank
 		FROM leaderboard_entries
 		WHERE week_id = $1
 		ORDER BY points DESC, account_id ASC
@@ -125,7 +137,7 @@ func (m *Manager) Get(ctx context.Context, weekID string, topN int, viewerAccoun
 	row := m.db.QueryRowContext(ctx, `
 		SELECT account_id, points, rank FROM (
 			SELECT account_id, points,
-			       RANK() OVER (ORDER BY points DESC, account_id ASC) AS rank
+			       RANK() OVER (ORDER BY points DESC) AS rank
 			FROM leaderboard_entries
 			WHERE week_id = $1
 		) ranked WHERE account_id = $2`,
@@ -142,52 +154,13 @@ func (m *Manager) Get(ctx context.Context, weekID string, topN int, viewerAccoun
 
 // CloseWeek finalizes the week, snapshots history, and returns the podium.
 func (m *Manager) CloseWeek(ctx context.Context, weekID string) ([]Ranking, error) {
-	tx, err := m.db.BeginTx(ctx, nil)
+	rows, err := store.NewTextValueStore(m.db, config.TuningConfig{}).CloseLeaderboardWeek(ctx, weekID, time.Now().UTC())
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
-
-	rows, err := tx.QueryContext(ctx, `
-		SELECT account_id, points,
-		       RANK() OVER (ORDER BY points DESC, account_id ASC) AS rank
-		FROM leaderboard_entries
-		WHERE week_id = $1`,
-		weekID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("query week: %w", err)
+	ranks := make([]Ranking, len(rows))
+	for i, r := range rows {
+		ranks[i] = Ranking{Rank: r.Rank, AccountID: r.AccountID, Points: r.Points}
 	}
-	var all []Ranking
-	for rows.Next() {
-		var r Ranking
-		if err := rows.Scan(&r.AccountID, &r.Points, &r.Rank); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scan: %w", err)
-		}
-		all = append(all, r)
-	}
-	rows.Close()
-
-	for _, r := range all {
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO leaderboard_history (week_id, account_id, rank, points) VALUES ($1, $2, $3, $4)
-			 ON CONFLICT (week_id, account_id) DO UPDATE SET rank = EXCLUDED.rank, points = EXCLUDED.points`,
-			weekID, r.AccountID, r.Rank, r.Points,
-		); err != nil {
-			return nil, fmt.Errorf("snapshot history: %w", err)
-		}
-	}
-
-	_, err = tx.ExecContext(ctx,
-		"UPDATE leaderboard_weeks SET closed = true, closed_at = now() WHERE week_id = $1",
-		weekID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("mark closed: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return all, nil
+	return ranks, nil
 }

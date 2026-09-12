@@ -10,6 +10,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -33,19 +35,21 @@ type Claims struct {
 	AccountID  string    `json:"aid"`
 	DeviceHash string    `json:"dvh"`
 	Kind       TokenKind `json:"knd"`
+	Purpose    string    `json:"purpose,omitempty"`
 }
 
 // Manager is the auth service.
 type Manager struct {
-	db         *sql.DB
-	signingKey []byte
-	issuer     string
-	audience   string
-	accessTTL  time.Duration
-	refreshTTL time.Duration
-	oauth      OAuthProviders
-	oauthStore OAuthFlowStore
-	oauthCfgs  map[string]*oauth2.Config
+	development atomic.Bool
+	db          *sql.DB
+	signingKey  []byte
+	issuer      string
+	audience    string
+	accessTTL   time.Duration
+	refreshTTL  time.Duration
+	oauth       OAuthProviders
+	oauthStore  OAuthFlowStore
+	oauthCfgs   map[string]*oauth2.Config
 }
 
 // OAuthProviderConfig holds OAuth client credentials for one provider.
@@ -98,7 +102,7 @@ func NewManager(db *sql.DB, signingKey []byte, issuer, audience string, accessTT
 // CreateAnonymousAccount creates a fresh account for a device fingerprint and
 // returns access and refresh tokens. The account has a random nickname.
 func (m *Manager) CreateAnonymousAccount(ctx context.Context, deviceHash string) (*TokenPair, error) {
-	if deviceHash == "" {
+	if deviceHash == "" || strings.HasPrefix(deviceHash, developmentDevicePrefix) || len(deviceHash) > 256 {
 		return nil, fmt.Errorf("device_hash required")
 	}
 	accountID, err := m.createAccount(ctx, randomNickname())
@@ -114,7 +118,7 @@ func (m *Manager) CreateAnonymousAccount(ctx context.Context, deviceHash string)
 // AuthenticateDevice returns tokens for an existing device-linked account, or
 // creates one if the device has not been seen before.
 func (m *Manager) AuthenticateDevice(ctx context.Context, deviceHash string) (*TokenPair, error) {
-	if deviceHash == "" {
+	if deviceHash == "" || strings.HasPrefix(deviceHash, developmentDevicePrefix) || len(deviceHash) > 256 {
 		return nil, fmt.Errorf("device_hash required")
 	}
 	accountID, err := m.findAccountByDevice(ctx, deviceHash)
@@ -139,6 +143,10 @@ type TokenPair struct {
 }
 
 func (m *Manager) issueTokens(ctx context.Context, accountID, deviceHash string) (*TokenPair, error) {
+	purpose, err := m.accountPurpose(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
 	accessClaims := Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -153,6 +161,7 @@ func (m *Manager) issueTokens(ctx context.Context, accountID, deviceHash string)
 		AccountID:  accountID,
 		DeviceHash: deviceHash,
 		Kind:       TokenAccess,
+		Purpose:    purpose,
 	}
 	refreshClaims := accessClaims
 	refreshClaims.ID = uuid.NewString()
@@ -189,13 +198,9 @@ func (m *Manager) ValidateAccessToken(ctx context.Context, token string) (string
 	if revoked {
 		return "", fmt.Errorf("token revoked")
 	}
-	// Account-level bans invalidate all tokens immediately.
-	var bannedAt sql.NullTime
-	if err := m.db.QueryRowContext(ctx, "SELECT banned_at FROM accounts WHERE id = $1", claims.AccountID).Scan(&bannedAt); err != nil && err != sql.ErrNoRows {
-		return "", fmt.Errorf("ban check: %w", err)
-	}
-	if bannedAt.Valid {
-		return "", fmt.Errorf("account banned")
+	purpose, err := m.accountPurpose(ctx, claims.AccountID)
+	if err != nil || purpose != claims.Purpose {
+		return "", fmt.Errorf("account unavailable")
 	}
 	return claims.AccountID, nil
 }
@@ -207,6 +212,10 @@ func (m *Manager) Refresh(ctx context.Context, refreshToken string) (*TokenPair,
 	if err != nil {
 		return nil, err
 	}
+	purpose, err := m.accountPurpose(ctx, claims.AccountID)
+	if err != nil || purpose != claims.Purpose {
+		return nil, fmt.Errorf("account unavailable")
+	}
 	revoked, err := m.isRevoked(ctx, claims.ID)
 	if err != nil {
 		return nil, fmt.Errorf("revocation check: %w", err)
@@ -214,8 +223,12 @@ func (m *Manager) Refresh(ctx context.Context, refreshToken string) (*TokenPair,
 	if revoked {
 		return nil, fmt.Errorf("token revoked")
 	}
-	if err := m.revokeToken(ctx, claims.ID, claims.ExpiresAt.Time); err != nil {
+	result, err := m.db.ExecContext(ctx, `INSERT INTO auth_revocations(token_id,expires_at) VALUES($1,$2) ON CONFLICT DO NOTHING`, claims.ID, claims.ExpiresAt.Time)
+	if err != nil {
 		return nil, fmt.Errorf("revoke refresh: %w", err)
+	}
+	if n, err := result.RowsAffected(); err != nil || n != 1 {
+		return nil, fmt.Errorf("token revoked")
 	}
 	return m.issueTokens(ctx, claims.AccountID, claims.DeviceHash)
 }
@@ -237,12 +250,18 @@ func (m *Manager) parseToken(token string, kind TokenKind) (*Claims, error) {
 	claims := &Claims{}
 	t, err := jwt.ParseWithClaims(token, claims, func(_ *jwt.Token) (interface{}, error) {
 		return m.signingKey, nil
-	}, jwt.WithIssuer(m.issuer), jwt.WithAudience(m.audience))
+	}, jwt.WithIssuer(m.issuer), jwt.WithAudience(m.audience), jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
 	}
 	if !t.Valid || claims.Kind != kind {
 		return nil, fmt.Errorf("invalid token")
+	}
+	if claims.Purpose == "" {
+		claims.Purpose = "player"
+	}
+	if claims.ID == "" || claims.Subject != claims.AccountID || claims.AccountID == "" || (claims.Purpose != "player" && (claims.Purpose != "development" || !m.development.Load())) {
+		return nil, fmt.Errorf("invalid token purpose or identity")
 	}
 	return claims, nil
 }

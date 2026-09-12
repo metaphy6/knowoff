@@ -8,11 +8,13 @@ import "time"
 // Config is the single merged configuration struct. Every key from
 // configs/base.yaml and gameplay/tuning.yaml is represented here.
 type Config struct {
+	Trust        TrustConfig        `yaml:"trust"`
 	App          AppConfig          `yaml:"app"`
 	Log          LogConfig          `yaml:"log"`
 	Server       ServerConfig       `yaml:"server"`
 	WebSocket    WebSocketConfig    `yaml:"websocket"`
 	Protocol     ProtocolConfig     `yaml:"protocol"`
+	Text         *TextConfig        `yaml:"text,omitempty"`
 	Localization LocalizationConfig `yaml:"localization"`
 	Moderation   ModerationConfig   `yaml:"moderation"`
 	Database     DatabaseConfig     `yaml:"database"`
@@ -143,6 +145,7 @@ type MediaConfig struct {
 
 // SecurityConfig holds JWT and crypto settings.
 type SecurityConfig struct {
+	DevBotKey         string              `yaml:"dev_bot_key"`
 	JWTSigningKey     string              `yaml:"jwt_signing_key"`
 	JWTIssuer         string              `yaml:"jwt_issuer"`
 	JWTAudience       string              `yaml:"jwt_audience"`
@@ -186,6 +189,8 @@ type BotsConfig struct {
 
 // TuningConfig is the gameplay and economy tuning loaded from gameplay/tuning.yaml.
 type TuningConfig struct {
+	TextCatalog TextCatalogTuning `yaml:"text_catalog"`
+	Contract    ContractTuning    `yaml:"contract"`
 	Seed        int               `yaml:"seed"`
 	Game        GameTuning        `yaml:"game"`
 	Timers      TimersTuning      `yaml:"timers"`
@@ -213,11 +218,14 @@ type GameTuning struct {
 
 // TimersTuning is phase timers in seconds.
 type TimersTuning struct {
+	TradeResponseS      int `yaml:"trade_response_s"`
+	RoundStartCountdown int `yaml:"round_start_countdown"`
 	PlayTurn            int `yaml:"play_turn"`
 	DiscussionPerPlayer int `yaml:"discussion_per_player"`
 	KnowoffBallot       int `yaml:"knowoff_ballot"`
 	KnowoffRunoff       int `yaml:"knowoff_runoff"`
 	VoteResultWindow    int `yaml:"vote_result_window"`
+	VoteResultFalling   int `yaml:"vote_result_falling" json:"VoteResultFalling,omitempty"`
 	RevealLockout       int `yaml:"reveal_lockout"`
 	RevealView          int `yaml:"reveal_view"`
 	ShuffleBonusSeconds int `yaml:"shuffle_bonus_seconds"`
@@ -320,4 +328,12 @@ func (c *Config) RequiredSecrets() []string {
 		"KNOWOFF_JWT_KEY",
 		"KNOWOFF_MEDIA_URL_KEY",
 	}
+}
+
+// TrustConfig names the independently versioned user terms and owner-provided
+// public support/privacy locations. Empty defaults keep dependent flows closed.
+type TrustConfig struct {
+	UserTermsVersion string `yaml:"user_terms_version"`
+	SupportURL       string `yaml:"support_url"`
+	PrivacyURL       string `yaml:"privacy_url"`
 }

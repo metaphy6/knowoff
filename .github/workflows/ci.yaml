@@ -14,14 +14,18 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: server/go.mod
-      - name: gofmt
-        run: |
-          cd server
-          test -z "$(gofmt -l .)" || (echo "gofmt issues:"; gofmt -l .; exit 1)
-      - name: go vet
-        run: cd server && go vet ./...
-      - name: go test
-        run: cd server && go test ./...
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install retained Python tooling dependency
+        run: python3 -m pip install Pillow==12.1.1
+      - name: all Go and Python checks with disposable integration services
+        run: python3 xops/test/tests-lints.py --suite go --suite python --report-json validation-server.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-server
+          path: validation-server.json
       - name: build server image
         run: cd server && docker build -t knowoffd:test .
 
@@ -36,18 +40,17 @@ jobs:
         run: cd client && flutter pub get
       - name: generate localizations
         run: cd client && flutter gen-l10n
-      - name: flutter analyze
-        run: cd client && flutter analyze
-      - name: flutter format check
-        run: cd client && dart format --output=none --set-exit-if-changed .
-      - name: flutter test
-        run: cd client && flutter test
+      - name: Flutter tests and lint with skip accounting
+        run: python3 xops/test/tests-lints.py --suite client --report-json validation-client.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-client
+          path: validation-client.json
       - name: build Android
         run: cd client && flutter build apk --debug
       - name: build Web
         run: cd client && flutter build web
-      - name: build iOS
-        run: cd client && flutter build ios --no-codesign
       - name: app size budget
         run: |
           cd client
@@ -58,6 +61,20 @@ jobs:
             echo "APK exceeds 50 MB budget"
             exit 1
           fi
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: flutter pub get
+        run: cd client && flutter pub get
+      - name: generate localizations
+        run: cd client && flutter gen-l10n
+      - name: build iOS
+        run: cd client && flutter build ios --no-codesign
 
   compose:
     runs-on: ubuntu-latest

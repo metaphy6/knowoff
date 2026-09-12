@@ -33,9 +33,10 @@ const (
 
 // Manager owns admin accounts, sessions, and the audit trail.
 type Manager struct {
-	db    *sql.DB
-	cfg   *config.Config
-	redis *store.RedisClient
+	db          *sql.DB
+	cfg         *config.Config
+	redis       *store.RedisClient
+	textContent *store.TextReleaseStore
 
 	loginMu       sync.Mutex
 	loginAttempts map[string][]time.Time
@@ -180,8 +181,9 @@ func (m *Manager) sessionDetails(ctx context.Context, sessionID string) (adminID
 	}
 	err = m.db.QueryRowContext(ctx,
 		`SELECT a.id, a.role, s.csrf_token FROM admin_sessions s
-   JOIN admin_accounts a ON a.id = s.admin_id
-   WHERE s.id = $1 AND s.expires_at > now()`, sessionID).Scan(&adminID, &role, &csrf)
+	   JOIN admin_accounts a ON a.id = s.admin_id
+	   JOIN accounts p ON p.id=a.account_id
+	   WHERE s.id = $1 AND s.expires_at > now() AND p.deleted_at IS NULL AND p.banned_at IS NULL`, sessionID).Scan(&adminID, &role, &csrf)
 	if err != nil {
 		return "", "", "", fmt.Errorf("invalid session: %w", err)
 	}

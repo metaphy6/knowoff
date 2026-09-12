@@ -3,6 +3,8 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/knowoff/knowoff/server/pkg/gamecontract"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -62,6 +64,9 @@ func Load(basePath, envFile string) (*Config, error) {
 	}
 
 	if cfg != nil {
+		if key, ok := os.LookupEnv("KNOWOFF_DEV_BOT_KEY"); ok {
+			cfg.Security.DevBotKey = key
+		}
 		if valErrs := validate(cfg); len(valErrs) > 0 {
 			problems = append(problems, valErrs...)
 		}
@@ -193,6 +198,9 @@ func validate(cfg *Config) []string {
 	if cfg.Security.JWTSigningKey == "" {
 		errs = append(errs, "security.jwt_signing_key is required")
 	}
+	if key := cfg.Security.DevBotKey; key != "" && (len(key) < 32 || len(key) > 512 || cfg.App.Env == "prod") {
+		errs = append(errs, "security.dev_bot_key requires 32–512 bytes and a non-production environment")
+	}
 	for _, lvl := range cfg.Localization.SupportedLocales {
 		if lvl == "" {
 			errs = append(errs, "localization.supported_locales must not contain empty entries")
@@ -208,6 +216,25 @@ func validate(cfg *Config) []string {
 	}
 	if screening.TimeoutS < 0 || screening.TimeoutS > 30 {
 		errs = append(errs, "moderation.content_screening.timeout_s must be between 0 and 30")
+	}
+	errs = append(errs, validateTextConfig(cfg)...)
+	errs = append(errs, validateTrustConfig(cfg.Trust)...)
+	return errs
+}
+
+func validateTrustConfig(c TrustConfig) []string {
+	var errs []string
+	if c.UserTermsVersion != "" && !gamecontract.ValidIdentifier(c.UserTermsVersion) {
+		errs = append(errs, "trust.user_terms_version must be a stable identifier")
+	}
+	for key, value := range map[string]string{"support_url": c.SupportURL, "privacy_url": c.PrivacyURL} {
+		if value == "" {
+			continue
+		}
+		u, err := url.Parse(value)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || len(value) > 2048 {
+			errs = append(errs, "trust."+key+" must be an absolute HTTPS URL without credentials")
+		}
 	}
 	return errs
 }

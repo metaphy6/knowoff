@@ -10,10 +10,12 @@ Rooms assemble the table; they are separate from gameplay mode and content
 language. Missed the Briefing is the initial default, with each mode exposed
 only after its release checks pass.
 
-**Planning adopted, implementation pending (2026-09-12).** The checked-in app
-still runs the previous association game with image/text content, specialties
-and bot backfill. This documentation change starts none of the migration or
-cleanup. [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the
+**Phase 1 verified complete (2026-09-12).** Versioned text contracts, closed
+mode-availability config, inventory and migration design proofs passed independent
+review and full validation. Catalog/dealing and mode engines are next. The app
+still runs the previous association game with image/text
+content, specialties and bot backfill; no text mode is playable yet.
+[ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the
 text pivot; the [transition design](docs/design/DESIGN-text-transition.md)
 maps source gaps, data preservation, compatibility and retirement proofs.
 The [business plan](docs/product/BUSINESS_PLAN.md) records customer, content,

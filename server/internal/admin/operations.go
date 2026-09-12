@@ -11,6 +11,7 @@ import (
 )
 
 func (m *Manager) registerOperations(mux *http.ServeMux) {
+	m.registerTextContent(mux)
 	mux.Handle("GET /admin/reports", m.requireRole("admin", false)(http.HandlerFunc(m.reportsList)))
 	mux.Handle("GET /admin/feedback", m.requireRole("admin", false)(http.HandlerFunc(m.feedbackList)))
 	mux.Handle("GET /admin/economy", m.requireRole("admin", false)(http.HandlerFunc(m.economyLookup)))

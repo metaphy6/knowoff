@@ -78,8 +78,12 @@ func (m *Manager) revokeToken(ctx context.Context, tokenID string, expiresAt tim
 // LinkOAuth links an OAuth provider subject to an account. It returns an error
 // if the subject is already linked to a different account.
 func (m *Manager) LinkOAuth(ctx context.Context, accountID, provider, subject, email string) error {
+	purpose, err := m.accountPurpose(ctx, accountID)
+	if err != nil || purpose != "player" {
+		return fmt.Errorf("player account required")
+	}
 	var existing string
-	err := m.db.QueryRowContext(ctx,
+	err = m.db.QueryRowContext(ctx,
 		"SELECT account_id FROM oauth_links WHERE provider = $1 AND provider_subject = $2",
 		provider, subject,
 	).Scan(&existing)

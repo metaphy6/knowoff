@@ -1,6 +1,7 @@
 package media
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -9,6 +10,11 @@ func TestManager_ActiveAndAssetBytes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load golden pack: %v", err)
 	}
+	// The golden bundle is text-only; attach a real synthetic static WebP
+	// to exercise the retained asset lookup without a conditional skip.
+	data := imageBytes(t, staticWebP)
+	ref := ContentHash(data)
+	pack.Assets = map[string][]byte{ref: data}
 
 	m := NewManager(pack)
 	if got := m.Active(); got == nil {
@@ -18,16 +24,8 @@ func TestManager_ActiveAndAssetBytes(t *testing.T) {
 		t.Fatalf("expected pack tag test-golden, got %q", got)
 	}
 
-	var nonexistentRef string
-	for ref := range pack.Assets {
-		nonexistentRef = ref
-		break
-	}
-	if nonexistentRef == "" {
-		t.Skip("golden pack has no assets")
-	}
-	if got := m.AssetBytes(nonexistentRef); got == nil {
-		t.Fatal("expected asset bytes")
+	if got := m.AssetBytes(ref); !bytes.Equal(got, data) {
+		t.Fatal("expected exact asset bytes")
 	}
 	if got := m.AssetBytes("missing"); got != nil {
 		t.Fatal("expected nil for missing asset")

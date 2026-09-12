@@ -20,13 +20,15 @@ import (
 // SeatBinding holds the durable seat assignment for a player. It survives
 // reconnects within the grace window.
 type SeatBinding struct {
-	Seat         int
-	AccountID    string
-	Bot          bool
-	BotName      string // reserved bot nickname for UI labeling
-	SessionToken string
-	BoundAt      time.Time
-	GraceTimer   *time.Timer
+	Seat          int
+	AccountID     string
+	Bot           bool
+	BotName       string // reserved bot nickname for UI labeling
+	SessionToken  string
+	BoundAt       time.Time
+	GraceTimer    *time.Timer
+	GraceEpoch    uint64
+	GraceDeadline time.Time
 }
 
 // RoomID returns the room identifier.
@@ -44,6 +46,9 @@ type Room struct {
 	deps    Deps
 	mu      sync.RWMutex
 	writeMu sync.Mutex
+	// Connection/grace mutations preserve their order without nesting r.mu with
+	// the match mutex. Match callbacks may safely inspect the room.
+	connectionMu sync.Mutex
 
 	match      *game.Match
 	conns      map[int]*websocket.Conn
@@ -147,34 +152,50 @@ func (r *Room) DevRoleOverride(seat int) string {
 // StartMatch initializes the authoritative match. It may be called once the
 // room is full.
 func (r *Room) StartMatch(deps game.Dependencies) error {
+	// Ordering: connectionMu -> room snapshot -> match mutation, never r.mu
+	// while entering Match. Finish callbacks run after connectionMu is released.
+	r.connectionMu.Lock()
+	deliveries := []func(){}
+	defer func() {
+		r.connectionMu.Unlock()
+		for _, deliver := range deliveries {
+			deliver()
+		}
+	}()
 	r.mu.Lock()
 	if r.match != nil {
 		r.mu.Unlock()
 		return fmt.Errorf("match already started")
 	}
+	opts := []game.MatchOption{}
+	for seat := 0; seat < r.Size; seat++ {
+		if role, ok := r.devRoleOverrides[seat]; ok {
+			opts = append(opts, game.WithDevRoleOverride(seat, role))
+		}
+	}
 	r.mu.Unlock()
-
 	r.deps.Logger.Info("creating match", "room_id", r.ID)
 	r.LoadIdentities()
-	bcast := &roomBcast{room: r}
-	var opts []game.MatchOption
-	for seat, role := range r.devRoleOverrides {
-		opts = append(opts, game.WithDevRoleOverride(seat, role))
-	}
-	m := game.NewMatch(r.Size, deps, bcast, opts...)
-	r.deps.Logger.Info("starting match engine", "room_id", r.ID)
+	m := game.NewMatch(r.Size, deps, &roomBcast{room: r}, opts...)
 	if err := m.Start(); err != nil {
+		m.Stop()
 		return err
 	}
-	r.deps.Logger.Info("match engine started", "room_id", r.ID)
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.match != nil {
-		return fmt.Errorf("match already started")
+	r.mu.RLock()
+	connected := make([]bool, r.Size)
+	for seat, b := range r.bindings {
+		connected[seat] = b.Bot || r.conns[seat] != nil
 	}
+	r.mu.RUnlock()
+	for seat, present := range connected {
+		if !present {
+			deliveries = append(deliveries, m.SetConnectedDeferred(seat, false))
+		}
+	}
+	r.mu.Lock()
 	r.match = m
 	r.startBotActorsLocked(m)
+	r.mu.Unlock()
 	return nil
 }
 
@@ -290,6 +311,8 @@ func (r *Room) ReclaimSeat(token string) (int, bool) {
 	defer r.mu.Unlock()
 	for seat, b := range r.bindings {
 		if b.SessionToken == token {
+			b.GraceEpoch++
+			b.GraceDeadline = time.Time{}
 			if b.GraceTimer != nil {
 				b.GraceTimer.Stop()
 				b.GraceTimer = nil
@@ -314,16 +337,16 @@ func (r *Room) SessionToken(seat int) string {
 // When the last seat binds and an onStart callback is registered, the match
 // is started automatically.
 func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
+	r.connectionMu.Lock()
+	deliver := func() {}
+	defer func() { r.connectionMu.Unlock(); deliver() }()
 	r.mu.Lock()
-	defer r.mu.Unlock()
+	match := r.match
 	if conn == nil {
 		if _, ok := r.conns[seat]; ok {
 			r.boundCount--
 		}
 		delete(r.conns, seat)
-		if r.match != nil {
-			r.match.SetConnected(seat, false)
-		}
 		r.scheduleGraceLocked(seat)
 	} else {
 		if _, ok := r.conns[seat]; !ok {
@@ -331,15 +354,20 @@ func (r *Room) SetConnection(seat int, conn *websocket.Conn) {
 			r.deps.Logger.Info("seat connected", "room_id", r.ID, "seat", seat, "bound_count", r.boundCount, "size", r.Size)
 		}
 		r.conns[seat] = conn
-		if b, ok := r.bindings[seat]; ok && b.GraceTimer != nil {
-			b.GraceTimer.Stop()
+		if b, ok := r.bindings[seat]; ok {
+			b.GraceEpoch++
+			b.GraceDeadline = time.Time{}
+			if b.GraceTimer != nil {
+				b.GraceTimer.Stop()
+			}
 			b.GraceTimer = nil
 		}
-		if r.match != nil {
-			r.match.SetConnected(seat, true)
-		}
 	}
-	r.maybeAutoStartLocked()
+	r.mu.Unlock()
+	if match != nil {
+		deliver = match.SetConnectedDeferred(seat, conn != nil)
+	}
+	r.tryAutoStart()
 }
 
 // maybeAutoStartLocked fires onStart once every seat is bound. The caller
@@ -377,33 +405,61 @@ func (r *Room) scheduleGraceLocked(seat int) {
 	if grace <= 0 {
 		grace = 20 * time.Second
 	}
-	b.GraceTimer = time.AfterFunc(grace, func() { r.onGraceExpired(seat) })
+	if b.GraceTimer != nil {
+		b.GraceTimer.Stop()
+	}
+	b.GraceEpoch++
+	b.GraceDeadline = time.Now().Add(grace)
+	epoch, deadline := b.GraceEpoch, b.GraceDeadline
+	b.GraceTimer = time.AfterFunc(grace, func() { r.expireGrace(seat, b, epoch, deadline) })
 }
 
 func (r *Room) onGraceExpired(seat int) {
+	r.mu.RLock()
+	b := r.bindings[seat]
+	if b == nil {
+		r.mu.RUnlock()
+		return
+	}
+	epoch, deadline := b.GraceEpoch, b.GraceDeadline
+	r.mu.RUnlock()
+	r.expireGrace(seat, b, epoch, deadline)
+}
+
+func (r *Room) expireGrace(seat int, binding *SeatBinding, epoch uint64, deadline time.Time) {
+	r.connectionMu.Lock()
+	deliver := func() {}
+	defer func() { r.connectionMu.Unlock(); deliver() }()
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	b, ok := r.bindings[seat]
-	if !ok {
+	if !ok || b != binding || b.GraceEpoch != epoch || !b.GraceDeadline.Equal(deadline) || deadline.IsZero() || time.Now().Before(deadline) || r.conns[seat] != nil {
+		r.mu.Unlock()
 		return
 	}
 	b.GraceTimer = nil
-	if r.match != nil && !b.Bot && r.match.Phase() != game.PhaseFinished {
+	b.GraceEpoch++
+	b.GraceDeadline = time.Time{}
+	match, bot, accountID := r.match, b.Bot, b.AccountID
+	r.mu.Unlock()
+	if match != nil && !bot && r.deps.Economy != nil && match.Phase() != game.PhaseFinished {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
-		if err := r.deps.Economy.RecordAbandon(ctx, b.AccountID); err != nil {
+		if err := r.deps.Economy.RecordAbandon(ctx, accountID); err != nil {
 			r.deps.Logger.Warn("record abandon failed", "error", err, "room_id", r.ID, "seat", seat)
 		}
 	}
-	if r.match != nil {
-		r.match.OnGraceExpired(seat)
+	if match != nil {
+		deliver = match.OnGraceExpiredDeferred(seat)
 	}
 	// Tear down the room once the match has finished and every seat that
 	// was ever connected has left \u2014 not merely the seat whose grace just
 	// expired, so the rest of the table can still be watching Verdict (and,
 	// with a rematch decision in progress, still resolve it) after one
 	// player disappears.
-	if r.match != nil && r.match.Phase() == game.PhaseFinished && len(r.conns) == 0 {
+	finished := match != nil && match.Phase() == game.PhaseFinished
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.match == match && finished && len(r.conns) == 0 {
 		r.finished = true
 		r.stopBotsLocked()
 		if r.onDestroy != nil {
@@ -428,8 +484,12 @@ func (r *Room) HandleRematch(seat int, mode string) error {
 		return fmt.Errorf("invalid rematch mode")
 	}
 
+	match := r.Match()
+	if match == nil || match.Phase() != game.PhaseFinished {
+		return fmt.Errorf("no finished match to rematch")
+	}
 	r.mu.Lock()
-	if r.match == nil || r.match.Phase() != game.PhaseFinished {
+	if r.match != match {
 		r.mu.Unlock()
 		return fmt.Errorf("no finished match to rematch")
 	}
@@ -476,6 +536,14 @@ func (r *Room) HandleRematch(seat int, mode string) error {
 // releaseSeatLocked frees seat \u2014 unbinding its connection if still present
 // \u2014 and marks it vacant for backfill. The caller must hold r.mu.
 func (r *Room) releaseSeatLocked(seat int) {
+	if b := r.bindings[seat]; b != nil {
+		b.GraceEpoch++
+		b.GraceDeadline = time.Time{}
+		if b.GraceTimer != nil {
+			b.GraceTimer.Stop()
+			b.GraceTimer = nil
+		}
+	}
 	if _, ok := r.conns[seat]; ok {
 		delete(r.conns, seat)
 		r.boundCount--
@@ -615,11 +683,15 @@ func (r *Room) IsFull() bool {
 // Broadcast delivers an envelope to every connected seat except exceptSeat.
 func (r *Room) Broadcast(env *transport.Envelope, exceptSeat int) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	conns := make([]*websocket.Conn, 0, len(r.conns))
 	for seat, conn := range r.conns {
 		if conn == nil || seat == exceptSeat {
 			continue
 		}
+		conns = append(conns, conn)
+	}
+	r.mu.RUnlock()
+	for _, conn := range conns {
 		_ = r.write(conn, env)
 	}
 }
@@ -627,11 +699,15 @@ func (r *Room) Broadcast(env *transport.Envelope, exceptSeat int) {
 // BroadcastPerSeat delivers a per-seat envelope generated by fn.
 func (r *Room) BroadcastPerSeat(fn func(seat int) *transport.Envelope) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	conns := make(map[int]*websocket.Conn, len(r.conns))
 	for seat, conn := range r.conns {
 		if conn == nil {
 			continue
 		}
+		conns[seat] = conn
+	}
+	r.mu.RUnlock()
+	for seat, conn := range conns {
 		_ = r.write(conn, fn(seat))
 	}
 }
@@ -639,8 +715,8 @@ func (r *Room) BroadcastPerSeat(fn func(seat int) *transport.Envelope) {
 // SendTo delivers an envelope to a single seat.
 func (r *Room) SendTo(seat int, env *transport.Envelope) {
 	r.mu.RLock()
-	defer r.mu.RUnlock()
 	conn := r.conns[seat]
+	r.mu.RUnlock()
 	if conn == nil {
 		return
 	}

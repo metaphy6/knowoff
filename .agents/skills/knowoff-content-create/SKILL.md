@@ -1,12 +1,12 @@
 ---
 name: knowoff-content-create
-description: Draft, rewrite or culturally adapt lo-fi Knowoff image and text Nowns/cards, automatically consulting High/Distant/Chaos dealing rules and server/client logic. Use for humor pilots and content batches; use the separate review or integration skill for evaluation or adding approved content to the app.
+description: Draft, rewrite or culturally adapt plain-text Knowoff Nowns and response/item cards for the five modes, consulting reviewed suitability, retained-card dealing and server/client logic. Use for humor pilots and content batches; use review or integration for evaluation or approved app content.
 ---
 
 # Create Knowoff content
 
 Produce original candidates that give players something plausible to defend.
-Use static images and plain text only; the interpretation should be speakable.
+Use plain text for every playable Nown and card; the interpretation should be speakable.
 Keep drafts useful while production tooling is incomplete.
 
 ## Read the current contract
@@ -18,7 +18,8 @@ current scope and choices, then the repository's source-of-truth order:
 - [AGENTS.md](../../../AGENTS.md) governs repository operations and handoffs.
 - [Blueprint](../../../BLUEPRINT.md): Game Rules §2–5, Media Engine §1–4,
   Contributor Portal, Product Baseline, [playable media direction](../../../BLUEPRINT.md#playable-media-direction),
-  and Visual Identity's voice rule. The UI matrix styles chrome, not pack media.
+  and Visual Identity's voice rule. Avatar, store and promotional artwork have
+  separate non-playable requirements.
   This is the normative product contract; this skill is an execution guide.
 - [Humor development](../../../content/humor-development.md),
   [tone matrix](../../../content/tone-matrix.md) and
@@ -45,7 +46,7 @@ questions to any delegated writer; a paraphrased brief alone is insufficient.
 
 1. Reuse the user's brief and existing candidates. Search `content/` before
    creating output; continue an existing editorial record where appropriate.
-   State provisional themes, audience, language, rating and media type when
+   State provisional modes, themes, audience, canonical language and rating when
    unstated. Ask only if an unresolved choice materially blocks the requested
    work. Use the guide's pilot size for a new full pilot, not every small request.
 2. Vary comic mechanisms around recognizable situations. Prefer a concise
@@ -57,10 +58,13 @@ questions to any delegated writer; a paraphrased brief alone is insufficient.
    separately. Follow the guide's freshness mix as an experiment at release
    level; it is neither a compulsory quota for a tiny draft nor a draw weight.
 4. Write cards for the shared pool. Describe plausible relationships to
-   multiple Nowns and alternative explanations, not exclusive answer keys or
-   card-to-card requirements. Label proposed high/distant/chaos relationships
-   as editorial hypotheses until measured with compatible embeddings. Tone
-   `chaos` and the chaos similarity band are independent.
+   multiple Nowns and alternative explanations, not exclusive answer keys.
+   Nowns are situations, criteria or plans as the mode requires;
+   cards belong to response or item pools. Label proposed High/Distant/Chaos
+   relationships as hypotheses until explicitly reviewed against exact revisions.
+   Optional text embeddings may assist search with a recorded evaluator version;
+   they are not mandatory evidence or an action judge. Tone `chaos` is separate
+   from a reviewed chaos relation.
 5. For topical premises, verify original sources or reliable reporting and
    retain the source, observation date, intended regions/languages, context,
    review date and expiry date. Mark unverified premises for review; never
@@ -69,31 +73,29 @@ questions to any delegated writer; a paraphrased brief alone is insufficient.
    do not treat literal translation as cultural validation.
 6. Apply the Blueprint's content boundary and quality targets. Record rights,
    attribution and provenance honestly. AI output is not evidence of rights
-   clearance. For media generation, use the documented production strategy
+   clearance. For text generation, use the documented production strategy
    and available tools within the existing authorization; record actual model,
    prompt, parameters and any supported seed. Do not invent reproducibility
    guarantees, silently substitute a model, or create extra paid/service work.
 
-## Make the media feel caught, not polished
+## Keep the text concise and arguable
 
 Follow the [playable media direction](../../../BLUEPRINT.md#playable-media-direction):
-choose a static image when a visual moment carries the joke and plain text when
-wording carries it. Count completed image/text assets separately from concepts;
-captions, translations and planning descriptions are not extra text cards.
-There is no required media ratio, per-hand format quota or type-based draw weight.
-Do not generate GIFs, animated WebP, video or animation source sheets for game content.
+write recognizable everyday situations and short lines whose interpretation
+changes with the secret context. Response cards need both plausible and awkward
+contexts; item cards need defensible placements, replacements, exchanges and
+comparison chains. Avoid universal safe answers and unique prompt clues.
 
-Brief the ordinary situation, recognizable gesture, awkward framing and source
-texture. Preserve candid roughness and a readable frozen moment. Avoid cinematic
-lighting, studio photography, glossy 3D, immaculate illustration and high-detail
-defaults; downsizing a polished render alone does not create this atmosphere.
+Normalize and validate before accepting a revision, using the configured UTF-8
+bound. Preserve language, case and legitimate script behavior; inspect actual
+small-screen and expanded-text layouts. Render inert plain text, never executable
+HTML/Markdown or an external asset fetch. Never silently rewrite accepted bytes.
 
-Start images around 360–640 px on the longest side where readable, never above
-the Blueprint's 720 px maximum, and deliver compressed static WebP. Preserve
-aspect ratio; do not upscale or enhance for a premium finish. Inspect the actual
-compressed result at card size. Record measured dimensions, bytes, encoding and
-single-frame evidence, not requested output settings. Never describe generated
-“found” texture as proof of a real capture or cleared rights.
+Count completed Nowns, response cards and item cards by mode/language separately
+from concepts and runtime copies. Preserve historic image rights/approval records;
+filenames, captions and alt-text do not become approved playable text. Do not
+generate image/GIF/video assets for playable content. Separate authorized avatar,
+store, tutorial and promotional work follows its own requirements.
 
 ## Deliver and hand off
 

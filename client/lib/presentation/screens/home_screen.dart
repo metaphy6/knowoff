@@ -9,6 +9,7 @@ import '../widgets/service_notices.dart';
 import '../widgets/device_layout.dart';
 import '../widgets/service_navigation.dart';
 import 'game_screen.dart';
+import 'text_play_screen.dart';
 import 'account_screens.dart';
 import 'community_screens.dart';
 
@@ -27,6 +28,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _busy = false;
   bool _failed = false;
   Future<void> _play() async {
+    if (AppConfig.instance.clientConfig.protocolVersion == 2) {
+      await koPush<void>(context, const TextPlayScreen());
+      return;
+    }
     if (_busy) {
       return;
     }
@@ -402,6 +407,15 @@ class _LocalRoomScreenState extends ConsumerState<LocalRoomScreen> {
 
   Future<void> _submit() async {
     if (_busy || (!widget.host && !_form.currentState!.validate())) {
+      return;
+    }
+    if (AppConfig.instance.clientConfig.protocolVersion == 2) {
+      await Navigator.of(context).pushReplacement<void, void>(PageRouteBuilder(
+          pageBuilder: (_, __, ___) => TextPlayScreen(
+              local: true,
+              initialCode:
+                  widget.host ? null : _code.text.trim().toUpperCase()),
+          transitionDuration: Duration.zero));
       return;
     }
     setState(() {
