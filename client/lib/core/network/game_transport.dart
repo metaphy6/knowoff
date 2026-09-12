@@ -17,11 +17,8 @@ abstract class GameTransport {
   /// Establish the connection.
   Future<void> connect();
 
-  /// Drop the current connection and open a brand-new one, so the next
-  /// message is treated as a fresh handshake. Needed because the server
-  /// only accepts a queue/join intent as a connection's first message —
-  /// requeuing after a match (or a dev-mode restart) requires a new socket,
-  /// not just local state reset.
+  /// Open a new socket for a fresh authenticated hello and recipient stream.
+  /// The text session reclaims its existing room only after hello succeeds.
   Future<void> reconnect();
 
   /// Send a JSON message. Completes with an error if not connected.

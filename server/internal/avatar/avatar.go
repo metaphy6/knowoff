@@ -1,19 +1,20 @@
-// Package avatar handles custom avatar uploads: decode, crop/resize to
-// 256x256, WebP re-encode, blob storage, and entitlement grant.
+// Package avatar normalizes and screens paid custom avatars before atomic activation.
 package avatar
 
 import (
 	"bytes"
 	"context"
 	"database/sql"
-	"fmt"
+	"encoding/json"
+	"errors"
 	"image"
 	"image/draw"
-	"image/jpeg"
-	"image/png"
+	_ "image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/chai2010/webp"
 	"github.com/google/uuid"
@@ -21,7 +22,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	xdraw "golang.org/x/image/draw"
-	xwebp "golang.org/x/image/webp"
+	_ "golang.org/x/image/webp"
 )
 
 const (
@@ -30,141 +31,276 @@ const (
 	avatarSize         = 256
 )
 
-// Manager owns custom avatar uploads.
+var (
+	ErrBusy        = errors.New("avatar.busy")
+	ErrInvalid     = errors.New("avatar.invalid")
+	ErrUnavailable = errors.New("avatar.unavailable")
+	ErrNotEntitled = errors.New("avatar.not_entitled")
+	ErrStale       = errors.New("avatar.stale")
+	ErrFlagged     = errors.New("avatar.flagged")
+	ErrAccount     = errors.New("avatar.account_unavailable")
+)
+
 type Manager struct {
-	db      *sql.DB
-	cfg     *config.Config
-	economy *economy.Manager
+	db         *sql.DB
+	slots      chan struct{}
+	sqlTimeout time.Duration
+	screen     func(context.Context, []byte) error
 }
 
-// NewManager returns an avatar manager.
-func NewManager(db *sql.DB, cfg *config.Config, economy *economy.Manager) *Manager {
-	return &Manager{db: db, cfg: cfg, economy: economy}
+// Purchases use the economy route. Uploads never debit or grant value.
+func NewManager(db *sql.DB, cfg *config.Config, _ *economy.Manager) *Manager {
+	slots := 2
+	if cfg != nil && cfg.Moderation.AvatarUploadSlots > 0 && cfg.Moderation.AvatarUploadSlots <= 16 {
+		slots = cfg.Moderation.AvatarUploadSlots
+	}
+	m := &Manager{db: db, slots: make(chan struct{}, slots), sqlTimeout: 3 * time.Second}
+	if cfg != nil {
+		m.screen = newImageScreen(cfg.Moderation.AvatarScreening)
+	}
+	return m
 }
-
-// Handler returns the HTTP handler for POST /api/avatar.
+func avatarError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	code := "avatar.unavailable"
+	switch {
+	case errors.Is(err, ErrBusy):
+		status = http.StatusTooManyRequests
+		code = err.Error()
+		w.Header().Set("Retry-After", "1")
+	case errors.Is(err, ErrInvalid):
+		status = http.StatusBadRequest
+		code = err.Error()
+	case errors.Is(err, ErrUnavailable):
+		status = http.StatusServiceUnavailable
+		code = err.Error()
+	case errors.Is(err, ErrNotEntitled):
+		status = http.StatusForbidden
+		code = err.Error()
+	case errors.Is(err, ErrStale):
+		status = http.StatusConflict
+		code = err.Error()
+	case errors.Is(err, ErrFlagged):
+		status = http.StatusUnprocessableEntity
+		code = err.Error()
+	case errors.Is(err, ErrAccount):
+		status = http.StatusUnauthorized
+		code = err.Error()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"code": code})
+}
 func (m *Manager) Handler(authMgr *auth.Manager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
-		accountID, ok := bearerAccount(r, authMgr)
-		if !ok {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		if err := m.acquireUpload(r.Context()); err != nil {
+			avatarError(w, err)
 			return
 		}
-
-		if err := r.ParseMultipartForm(maxAvatarBytes); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+		defer m.releaseUpload()
+		uploadCtx, uploadCancel := context.WithTimeout(r.Context(), 45*time.Second)
+		defer uploadCancel()
+		r = r.WithContext(uploadCtx)
+		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if token == r.Header.Get("Authorization") || authMgr == nil {
+			avatarError(w, ErrAccount)
 			return
 		}
-		file, header, err := r.FormFile("avatar")
+		authCtx, authCancel := context.WithTimeout(r.Context(), m.sqlTimeout)
+		account, err := authMgr.ValidateAccessToken(authCtx, token)
+		authCancel()
 		if err != nil {
-			http.Error(w, "missing avatar field", http.StatusBadRequest)
+			avatarError(w, ErrAccount)
 			return
 		}
-		defer file.Close()
-		if header.Size > maxAvatarBytes {
-			http.Error(w, "avatar too large", http.StatusBadRequest)
+		controller := http.NewResponseController(w)
+		_ = controller.SetReadDeadline(time.Now().Add(10 * time.Second))
+		defer controller.SetReadDeadline(time.Time{})
+		r.Body = http.MaxBytesReader(w, r.Body, maxAvatarBytes+65536)
+		reader, err := r.MultipartReader()
+		if err != nil {
+			avatarError(w, ErrInvalid)
 			return
 		}
-
-		ctx := r.Context()
-		if err := m.ProcessUpload(ctx, accountID, file, header.Header.Get("Content-Type")); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		part, err := reader.NextPart()
+		if err != nil {
+			avatarError(w, ErrInvalid)
+			return
+		}
+		if part.FormName() != "avatar" || part.FileName() == "" {
+			part.Close()
+			avatarError(w, ErrInvalid)
+			return
+		}
+		data, err := io.ReadAll(io.LimitReader(part, maxAvatarBytes+1))
+		part.Close()
+		if err != nil || len(data) > maxAvatarBytes {
+			avatarError(w, ErrInvalid)
+			return
+		}
+		// Reject extra fields/files and malformed or oversized trailing framing.
+		if extra, err := reader.NextPart(); err != io.EOF {
+			if extra != nil {
+				extra.Close()
+			}
+			avatarError(w, ErrInvalid)
+			return
+		}
+		authorize := func(ctx context.Context, tx *sql.Tx) error {
+			got, err := authMgr.ValidateAccessTokenTx(ctx, tx, token)
+			if err != nil || got != account {
+				return ErrAccount
+			}
+			return nil
+		}
+		if err := m.processUpload(r.Context(), account, bytes.NewReader(data), authorize); err != nil {
+			avatarError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 }
-
-// ProcessUpload decodes, crops/resizes, encodes to WebP, stores the blob, and
-// grants the custom_avatar entitlement.
-func (m *Manager) ProcessUpload(ctx context.Context, accountID string, r io.Reader, contentType string) error {
-	if _, err := uuid.Parse(accountID); err != nil {
-		return fmt.Errorf("invalid account id: %w", err)
+func (m *Manager) acquireUpload(ctx context.Context) error {
+	if ctx.Err() != nil {
+		return ErrUnavailable
 	}
-
-	data, err := io.ReadAll(io.LimitReader(r, maxAvatarBytes+1))
-	if err != nil {
-		return fmt.Errorf("read avatar: %w", err)
+	select {
+	case m.slots <- struct{}{}:
+		return nil
+	default:
+		return ErrBusy
 	}
-	if len(data) > maxAvatarBytes {
-		return fmt.Errorf("avatar too large")
+}
+func (m *Manager) releaseUpload() { <-m.slots }
+func (m *Manager) ProcessUpload(ctx context.Context, account string, r io.Reader, _ string) error {
+	if err := m.acquireUpload(ctx); err != nil {
+		return err
 	}
-
-	img, format, err := decodeImage(bytes.NewReader(data), contentType)
-	if err != nil {
-		return fmt.Errorf("decode image: %w", err)
-	}
-	if img == nil {
-		return fmt.Errorf("unsupported image format")
-	}
-	_ = format
-
-	bounds := img.Bounds()
-	if bounds.Dx() > maxAvatarDimension || bounds.Dy() > maxAvatarDimension {
-		return fmt.Errorf("image dimensions too large")
-	}
-
-	square := cropToSquare(img)
-	sized := resize(square, avatarSize)
-
-	encoded, err := webp.EncodeRGBA(sized, 80)
-	if err != nil {
-		return fmt.Errorf("encode webp: %w", err)
-	}
-
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin avatar tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO custom_avatars (account_id, blob, content_type, moderated, created_at, updated_at)
-		 VALUES ($1, $2, 'image/webp', false, now(), now())
-		 ON CONFLICT (account_id) DO UPDATE SET
-		   blob = EXCLUDED.blob,
-		   content_type = EXCLUDED.content_type,
-		   moderated = false,
-		   updated_at = now()`,
-		accountID, encoded); err != nil {
-		return fmt.Errorf("store avatar: %w", err)
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit avatar tx: %w", err)
-	}
-
-	if m.economy != nil {
-		price := m.cfg.Tuning.Economy.UnlockPrices["custom_avatar"]
-		if price <= 0 {
-			price = 1000
-		}
-		// GrantUnlock debits Noin atomically. Failures here do not rollback the
-		// stored blob; the client can retry the unlock separately.
-		_ = m.economy.Entitlements.GrantUnlock(ctx, accountID, economy.EntitlementCustomAvatar, "", price)
-	}
-	return nil
+	defer m.releaseUpload()
+	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	return m.processUpload(ctx, account, r, nil)
 }
 
-func decodeImage(r io.Reader, contentType string) (image.Image, string, error) {
-	switch {
-	case strings.Contains(contentType, "jpeg") || strings.Contains(contentType, "jpg"):
-		img, err := jpeg.Decode(r)
-		return img, "jpeg", err
-	case strings.Contains(contentType, "png"):
-		img, err := png.Decode(r)
-		return img, "png", err
-	case strings.Contains(contentType, "webp"):
-		img, err := xwebp.Decode(r)
-		return img, "webp", err
-	default:
-		// Try standard decode.
-		img, format, err := image.Decode(r)
-		return img, format, err
+// accountState holds the account lock before dependent image/entitlement rows.
+func avatarAccountState(ctx context.Context, tx *sql.Tx, account string) (revision, epoch int64, err error) {
+	if err = tx.QueryRowContext(ctx, `SELECT avatar_revision,session_epoch FROM accounts WHERE id=$1 FOR UPDATE`, account).Scan(&revision, &epoch); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, 0, ErrAccount
+		}
+		return 0, 0, ErrUnavailable
 	}
+	var allowed bool
+	if err = tx.QueryRowContext(ctx, `SELECT deleted_at IS NULL AND banned_at IS NULL AND (suspended_until IS NULL OR suspended_until<=clock_timestamp()) FROM accounts WHERE id=$1`, account).Scan(&allowed); err != nil {
+		return
+	}
+	if !allowed {
+		return 0, 0, ErrAccount
+	}
+	var owned bool
+	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type='custom_avatar' AND active_until IS NULL)`, account).Scan(&owned)
+	if err == nil && !owned {
+		err = ErrNotEntitled
+	}
+	return
+}
+func (m *Manager) processUpload(ctx context.Context, account string, r io.Reader, authorize func(context.Context, *sql.Tx) error) error {
+	if parsed, err := uuid.Parse(account); err != nil || parsed == uuid.Nil || parsed.String() != account {
+		return ErrInvalid
+	}
+	if m.screen == nil {
+		return ErrUnavailable
+	}
+	revision, epoch, err := func() (int64, int64, error) {
+		sqlCtx, cancel := context.WithTimeout(ctx, m.sqlTimeout)
+		defer cancel()
+		capture, err := m.db.BeginTx(sqlCtx, nil)
+		if err != nil {
+			return 0, 0, err
+		}
+		defer capture.Rollback()
+		revision, epoch, err := avatarAccountState(sqlCtx, capture, account)
+		if err != nil {
+			return 0, 0, err
+		}
+		if authorize != nil {
+			if err = authorize(sqlCtx, capture); err != nil {
+				return 0, 0, err
+			}
+		}
+		if err = capture.Commit(); err != nil {
+			return 0, 0, err
+		}
+		return revision, epoch, nil
+	}()
+	if err != nil {
+		return err
+	}
+	encoded, err := normalizeAvatar(r)
+	if err != nil {
+		return err
+	}
+	if err = m.screen(ctx, encoded); err != nil {
+		return err
+	}
+	sqlCtx, sqlCancel := context.WithTimeout(ctx, m.sqlTimeout)
+	defer sqlCancel()
+	ctx = sqlCtx
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	currentRevision, currentEpoch, err := avatarAccountState(ctx, tx, account)
+	if err != nil {
+		return err
+	}
+	if currentRevision != revision || currentEpoch != epoch {
+		return ErrStale
+	}
+	if authorize != nil {
+		if err = authorize(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if _, err = tx.ExecContext(ctx, `UPDATE accounts SET avatar='custom',avatar_revision=avatar_revision+1,updated_at=clock_timestamp() WHERE id=$1`, account); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO custom_avatars(account_id,blob,content_type,moderated,revision) VALUES($1,$2,'image/webp',true,$3) ON CONFLICT(account_id) DO UPDATE SET blob=EXCLUDED.blob,content_type=EXCLUDED.content_type,moderated=true,revision=EXCLUDED.revision,updated_at=clock_timestamp()`, account, encoded, revision+1); err != nil {
+		return err
+	}
+	if authorize != nil {
+		if err = authorize(ctx, tx); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+func normalizeAvatar(r io.Reader) ([]byte, error) {
+	data, err := io.ReadAll(io.LimitReader(r, maxAvatarBytes+1))
+	if err != nil || len(data) == 0 || len(data) > maxAvatarBytes {
+		return nil, ErrInvalid
+	}
+	dims, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil || (format != "jpeg" && format != "png" && format != "webp") || dims.Width < 1 || dims.Height < 1 || dims.Width > maxAvatarDimension || dims.Height > maxAvatarDimension {
+		return nil, ErrInvalid
+	}
+	// DecodeConfig precedes full raster allocation, including malicious dimensions.
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, ErrInvalid
+	}
+	encoded, err := webp.EncodeRGBA(resize(cropToSquare(img), avatarSize), 80)
+	if err != nil || len(encoded) == 0 || len(encoded) > maxAvatarBytes {
+		return nil, ErrInvalid
+	}
+	return encoded, nil
 }
 
 func cropToSquare(src image.Image) image.Image {
@@ -191,15 +327,4 @@ func resize(src image.Image, size int) image.Image {
 	dst := image.NewRGBA(image.Rect(0, 0, size, size))
 	xdraw.BiLinear.Scale(dst, dst.Bounds(), src, src.Bounds(), draw.Src, nil)
 	return dst
-}
-
-func bearerAccount(r *http.Request, authMgr *auth.Manager) (string, bool) {
-	token := r.Header.Get("Authorization")
-	if len(token) > 7 && token[:7] == "Bearer " {
-		accountID, err := authMgr.ValidateAccessToken(r.Context(), token[7:])
-		if err == nil {
-			return accountID, true
-		}
-	}
-	return "", false
 }

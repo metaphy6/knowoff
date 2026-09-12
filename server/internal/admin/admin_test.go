@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -18,21 +20,38 @@ import (
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	token := os.Getenv("KNOWOFF_TEST_DB_TOKEN")
+	u, e := url.Parse(dsn)
+	if e != nil || u == nil || !regexp.MustCompile(`^[0-9a-f]{12}$`).MatchString(token) || u.Scheme != "postgres" || u.Path != "/knowoff_test_"+token || u.Fragment != "" || (u.Hostname() != "postgres" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") {
+		t.Fatal("disposable test database required")
+	}
+	for key := range u.Query() {
+		if key != "sslmode" {
+			t.Fatal("unexpected disposable DSN parameter")
+		}
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
 	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available: %v", err)
+		t.Fatalf("disposable postgres unavailable: %v", err)
+	}
+	var actual string
+	if err := db.QueryRow(`SELECT current_database()`).Scan(&actual); err != nil || actual != "knowoff_test_"+token {
+		db.Close()
+		t.Fatal("refusing non-disposable database")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	if _, err := db.ExecContext(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
+		t.Fatalf("reset uniquely verified admin fixture: %v", err)
 	}
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	if _, err := db.Exec("TRUNCATE TABLE admin_sessions, admin_accounts, accounts, profiles, portal_terms, challenge_topics, text_archive_progress, text_content_revisions RESTART IDENTITY CASCADE"); err != nil {
-		t.Fatalf("reset admin fixtures: %v", err)
+	if _, err := db.Exec(`INSERT INTO challenge_current_winner(singleton) VALUES(true) ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
 	}
 	return db
 }

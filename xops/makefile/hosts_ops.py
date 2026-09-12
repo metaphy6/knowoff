@@ -28,7 +28,6 @@ DOMAINS = [
     "api.knowoff.local",
     "admin.knowoff.local",
     "adminer.knowoff.local",
-    "minio.knowoff.local",
 ]
 
 

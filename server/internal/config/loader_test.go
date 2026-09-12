@@ -45,9 +45,6 @@ database:
 redis:
   addr: redis:6379
   password: ${KNOWOFF_REDIS_PASSWORD}
-storage:
-  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
-  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
 localization:
@@ -89,13 +86,8 @@ database:
   password: ${KNOWOFF_DB_PASSWORD}
 redis:
   password: ${KNOWOFF_REDIS_PASSWORD}
-storage:
-  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
-  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
-media:
-  url_signing_key: ${KNOWOFF_MEDIA_URL_KEY}
 `)
 	// Clear all required secrets to ensure a single error lists every missing one.
 	for _, k := range (&Config{}).RequiredSecrets() {
@@ -128,9 +120,6 @@ database:
   password: ${KNOWOFF_DB_PASSWORD}
 redis:
   password: ${KNOWOFF_REDIS_PASSWORD}
-storage:
-  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
-  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
 `)
@@ -162,9 +151,6 @@ database:
   password: ${KNOWOFF_DB_PASSWORD}
 redis:
   password: ${KNOWOFF_REDIS_PASSWORD}
-storage:
-  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
-  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
 security:
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
 `)
@@ -191,10 +177,7 @@ func TestInterpolateEnvVars(t *testing.T) {
 }
 
 func TestContentScreeningConfigLoadsOptionalServerKey(t *testing.T) {
-	setRequiredSecrets(t)
-	for _, name := range []string{"KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID", "KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET", "KNOWOFF_OAUTH_GOOGLE_CLIENT_ID", "KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET", "KNOWOFF_SSV_CALLBACK_KEY"} {
-		t.Setenv(name, "test-only")
-	}
+	textConfigSecrets(t)
 	cfg, err := Load("../../../configs/base.yaml", "")
 	if err != nil {
 		t.Fatal(err)

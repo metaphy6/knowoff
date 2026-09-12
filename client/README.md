@@ -34,6 +34,22 @@ does not perform a wallet calculation, and a lost acknowledgement can be retried
 without showing the same receipt twice. No text catalog, reserve
 identities or future prompt schedule is downloaded or persisted.
 
+Safety & privacy is available from Home, Profile and text play. Current user
+terms come from the authenticated server; accepting them sends the displayed
+version and rereads its status. Typed chat stays closed until acceptance is
+confirmed, while canned chat and conduct reporting remain available. Private
+block lists load one bounded page at a time. Match and room seat controls resolve
+public identity through authorized server lookups, display the exact target,
+and keep pending block confirmation open until the request finishes. Returning
+from a match block attempt requests fresh role-scoped state even if its response
+was lost; only a confirmed response shows success. Votes, cards and
+scores are never filtered locally. Lobby identity lookups expire with membership
+changes, and the current Week Winner badge uses only the server's explicit flag.
+A failed token refresh preserves the saved account and offers a bounded retry;
+it never silently replaces that account with a new anonymous identity. Configured
+HTTPS support and privacy links remain reachable through the public help route
+when account restoration fails; that route carries no identity or consent data.
+
 Generation 2 removes only the three old playable-pack preference keys. The web
 bootstrap retires the app's old Flutter service worker and obsolete compiled
 code/config cache entries before loading the text entrypoint. Authentication,
@@ -50,7 +66,10 @@ locale certification and the shipped locale cohort remains unchanged.
 
 Contract fixtures, captured real-server 4/6-seat traces, reducer tests and
 widget keyboard/semantics/large-text tests provide automated evidence. Captured
-synthetic traces are server/client parity tests, not native-device journeys.
+synthetic traces are server/client parity tests, not native-device journeys. The
+terminal trace covers authenticated chat hide/restore resync, the falling/poster
+role boundary, attributed voting and authoritative terminal turn-zero scores.
+Its synthetic value hooks do not certify a production settlement or database run.
 Physical Android/iOS, installed PWA screen-reader journeys and the Blueprint
 low-end-device p95 frame budget require separately recorded measurements.
 
@@ -86,6 +105,13 @@ still needs device-level verification. Test against a reachable app/server URL
 when sharing between phones; a development loopback address stays local.
 
 ## Commands
+
+Visible Nowns and cards have an inline report confirmation in the current text
+match. It sends the immutable match/content reference and a selected reason;
+authored words and private match state are not copied into the report request.
+Reporting requires no authored-content terms acceptance. Uncertain submissions
+retry the same body, while hidden, removed or resyncing sources lose their
+controls immediately. The server rechecks visibility and exact published text.
 
 ```bash
 flutter pub get

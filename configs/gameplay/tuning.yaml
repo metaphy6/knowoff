@@ -36,22 +36,12 @@ timers:                             # seconds; which windows may fast-forward is
   knowoff_runoff: 15                # same Ready rule; casting a vote alone does not end it
   vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
   vote_result_falling: 4            # role and newly earned points stay hidden until this boundary
-  reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
-  reveal_view: 3                    # each player may view an exposed hand for this many seconds
-  shuffle_bonus_seconds: 10         # extra time granted when Shuffle is used
-  prefetch_countdown: 5             # legacy v1 key; replace at text cutover after consumer proof
 
 hand:
   size: 5
   draw_pile: 3
-  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_free_card: 0.08, shuffle: 0.05, revote: 0.05}
-  # dealing is role-blind: any specialty can land in any hand; shuffle is usable by Donowers,
-  # revote by Nowers — off-role copies are dead cards (Rules §5)
-  # unique specialties (shuffle, revote) fire once per match — later copies are dead cards
 
-dealing:                            # relevance mesh (Media Engine §2) — v1 placeholders, tuned via simulate
-  band_high: 0.55
-  band_low: 0.30
+dealing:                            # reviewed text suitability coverage (Media Engine §2)
   min_high_per_nown: 2
   min_distant_per_nown: 2
 
@@ -59,7 +49,7 @@ points:                             # match points — leaderboard, session scor
   correct_vote: 10
   nower_win_bonus: 10
   donower_team_win: 30
-  draw_penalty: 5                   # text target: every draw; current v1 specialty exemption retires
+  draw_penalty: 5                   # every drawn card, without specialty exemptions
   # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
 
 noin:                               # currency earnings — instant, kept on disconnect (Rules §6)
@@ -81,14 +71,11 @@ economy:
   unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Noin
   noin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
 
-liquidity:                          # Quick Play backfill bots (Game Modes §1)
-  backfill_enabled: true
+liquidity:                          # Shared queue and reward eligibility policy
   queue_timeout_s: 25
   min_humans: 1
   leaderboard_min_humans: 3
   noin_min_humans: 2                # team-win Noin requires this many humans
-  bot_think_min_s: 0.10              # eager but still visible to watch
-  bot_think_max_s: 0.25              # compact action window for live production tables
 
 liveops:
   leaderboard_daily_counted_matches: 10

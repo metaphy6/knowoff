@@ -97,6 +97,113 @@ func TestTextTermsVersionedAndNoImplicitAcceptance(t *testing.T) {
 	}
 }
 
+func TestTimedSuspensionFencesAdmissionAndAdminButRetainsEarnedValue(t *testing.T) {
+	db, s := textValueDB(t)
+	ctx := context.Background()
+	now := valueTime(time.Now().UTC())
+	trust := NewTextTrustStore(db)
+	m, ids := valuePreparedMatch(t, s, db, now, false)
+	until := now.Add(time.Hour)
+	if _, err := db.Exec(`UPDATE accounts SET suspended_until=$2 WHERE id=$1`, ids[0], until); err != nil {
+		t.Fatal(err)
+	}
+	if err := trust.CanMatch(ctx, ids, now); !errors.Is(err, ErrTextTrust) {
+		t.Fatal("suspension allowed reservation", err)
+	}
+	if err := s.Start(ctx, m.Contract.MatchID, m.Owner, 1, now); !errors.Is(err, ErrTextTrust) {
+		t.Fatal("suspension allowed start", err)
+	}
+	if n := valueCount(t, db, `SELECT count(*) FROM daily_quickplay_counts`); n != 0 {
+		t.Fatal("refused start consumed quota", n)
+	}
+	if err := s.Start(ctx, m.Contract.MatchID, m.Owner, 1, until); err != nil {
+		t.Fatal("expiry did not restore future admission", err)
+	}
+	if _, err := db.Exec(`UPDATE accounts SET banned_at=now(),suspended_until=$2 WHERE id=$1`, ids[0], until.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Award(ctx, TextAward{MatchID: m.Contract.MatchID, Owner: m.Owner, Epoch: 1, AccountID: ids[0], Kind: "correct_vote", Ordinal: 1, Amount: s.tuning.Noin.CorrectVote, At: until}); err != nil {
+		t.Fatal("account enforcement erased an already-earned award", err)
+	}
+	if err := trust.CanMatch(ctx, ids, until.Add(2*time.Hour)); !errors.Is(err, ErrTextTrust) {
+		t.Fatal("suspension expiry cleared independent ban", err)
+	}
+	admin, actor := releaseTestAdmin(t, db)
+	if _, err := db.Exec(`UPDATE accounts SET suspended_until=now()+interval '1 hour' WHERE id=$1`, actor); err != nil {
+		t.Fatal(err)
+	}
+	if err := trust.PublishTerms(ctx, admin, "suspended-admin-terms", "Test only", now); err == nil {
+		t.Fatal("suspended admin mutated terms")
+	}
+}
+
+func TestTextTermsPublicationAndPrivateBlockPages(t *testing.T) {
+	db, _ := textValueDB(t)
+	ctx := context.Background()
+	s := NewTextTrustStore(db)
+	admin, actor := releaseTestAdmin(t, db)
+	at := valueTime(time.Now().UTC())
+	const version = "test-user-terms"
+	const body = "Test only user terms. <script>inert</script>\nİstanbul — العربية"
+	if got, err := s.Terms(ctx, actor, version, at); err != nil || got.Available || got.Accepted || got.Body != "" {
+		t.Fatal("unpublished terms visible/accepted", got, err)
+	}
+	if err := s.PublishTerms(ctx, uuid.NewString(), version, body, at); err == nil {
+		t.Fatal("unauthorized terms publication")
+	}
+	for i := 0; i < 2; i++ {
+		if err := s.PublishTerms(ctx, admin, version, body, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.PublishTerms(ctx, admin, version, body+" changed", at); err == nil {
+		t.Fatal("published version rewritten")
+	}
+	if got, err := s.Terms(ctx, actor, version, at.Add(-time.Second)); err != nil || got.Available || got.Body != "" {
+		t.Fatal("future publication disclosed", got, err)
+	}
+	if got, err := s.Terms(ctx, actor, version, at); err != nil || !got.Available || got.Accepted || got.Body != body {
+		t.Fatal(got, err)
+	}
+	if err := s.AcceptTerms(ctx, actor, version, at); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.Terms(ctx, actor, version, at); err != nil || !got.Accepted {
+		t.Fatal(got, err)
+	}
+	if n := valueCount(t, db, `SELECT count(*) FROM admin_audit_log WHERE action='user_terms_publish'`); n != 1 {
+		t.Fatal("publication audit replay", n)
+	}
+	if n := valueCount(t, db, `SELECT count(*) FROM noin_ledger`); n != 0 {
+		t.Fatal("terms granted value", n)
+	}
+	var targets []string
+	for i := 0; i < 3; i++ {
+		id := valueAccount(t, db)
+		targets = append(targets, id)
+		if err := s.Block(ctx, actor, id, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, next, err := s.BlockPage(ctx, actor, "", 2)
+	if err != nil || len(page) != 2 || next != page[1] {
+		t.Fatal(page, next, err)
+	}
+	last, end, err := s.BlockPage(ctx, actor, next, 2)
+	if err != nil || len(last) != 1 || end != "" || last[0] <= next {
+		t.Fatal(last, end, err)
+	}
+	if got, _, err := s.BlockPage(ctx, targets[0], "", 2); err != nil || len(got) != 0 {
+		t.Fatal("incoming relation disclosed", got, err)
+	}
+	if _, err := db.Exec(`UPDATE accounts SET deleted_at=now() WHERE id=$1`, targets[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Unblock(ctx, actor, targets[0]); err != nil {
+		t.Fatal("cannot remove deleted target block", err)
+	}
+}
+
 func TestTextBlockRacingStartKeepsOneConsistentAdmission(t *testing.T) {
 	db, s := textValueDB(t)
 	ctx := context.Background()

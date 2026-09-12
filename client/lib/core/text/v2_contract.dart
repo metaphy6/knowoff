@@ -6,7 +6,7 @@ const textModes = [
   'secret_scale',
   'make_room',
   'bad_bargains',
-  'top_that'
+  'top_that',
 ];
 const textPhases = [
   'round_start',
@@ -16,7 +16,7 @@ const textPhases = [
   'knowoff',
   'runoff',
   'result',
-  'verdict'
+  'verdict',
 ];
 const textModeActions = ['respond', 'place', 'replace', 'offer', 'top'];
 const _safeInteger = 9007199254740991;
@@ -77,12 +77,13 @@ bool _language(dynamic value) {
 }
 
 class V2Limits {
-  const V2Limits(
-      {required this.maxFrameBytes,
-      required this.maxHistoryEvents,
-      required this.maxHistoryPageEvents,
-      required this.maxTextBytes,
-      required this.maxRequestsPerSeat});
+  const V2Limits({
+    required this.maxFrameBytes,
+    required this.maxHistoryEvents,
+    required this.maxHistoryPageEvents,
+    required this.maxTextBytes,
+    required this.maxRequestsPerSeat,
+  });
   final int maxFrameBytes,
       maxHistoryEvents,
       maxHistoryPageEvents,
@@ -91,47 +92,51 @@ class V2Limits {
   factory V2Limits.fromJson(Map<String, dynamic> j) {
     _shape(j, 'limits');
     final l = V2Limits(
-        maxFrameBytes: j['max_frame_bytes'],
-        maxHistoryEvents: j['max_history_events'],
-        maxHistoryPageEvents: j['max_history_page_events'],
-        maxTextBytes: j['max_text_bytes'],
-        maxRequestsPerSeat: j['max_requests_per_seat']);
+      maxFrameBytes: j['max_frame_bytes'],
+      maxHistoryEvents: j['max_history_events'],
+      maxHistoryPageEvents: j['max_history_page_events'],
+      maxTextBytes: j['max_text_bytes'],
+      maxRequestsPerSeat: j['max_requests_per_seat'],
+    );
     l.validate();
     return l;
   }
-  void validate() => _check(maxFrameBytes > 0 &&
-      maxHistoryEvents > 0 &&
-      maxHistoryPageEvents > 0 &&
-      maxHistoryPageEvents <= maxHistoryEvents &&
-      maxTextBytes > 0 &&
-      maxTextBytes <= maxFrameBytes &&
-      maxRequestsPerSeat > 0);
+  void validate() => _check(
+    maxFrameBytes > 0 &&
+        maxHistoryEvents > 0 &&
+        maxHistoryPageEvents > 0 &&
+        maxHistoryPageEvents <= maxHistoryEvents &&
+        maxTextBytes > 0 &&
+        maxTextBytes <= maxFrameBytes &&
+        maxRequestsPerSeat > 0,
+  );
 }
 
 // Closed schemas: a suffix ? marks an omitted optional member, never explicit null.
 const _schemas = <String, Map<String, String>>{
+  'systemNotice': {'refresh': 'bool'},
   'hello': {
     'prototype': 'bool',
     'client_generation': 'int',
     'account_id': 'str',
-    'limits': 'limits'
+    'limits': 'limits',
   },
   'languageOption': {
     'content_language': 'str',
     'pack_release_id': 'str',
-    'rules_version': 'str'
+    'rules_version': 'str',
   },
   'availableMode': {
     'mode_id': 'str',
     'available': 'bool',
-    'languages': '[languageOption]'
+    'languages': '[languageOption]',
   },
   'availability': {
     'prototype': 'bool',
     'protocol_version': 'int',
     'client_generation': 'int',
     'limits': 'limits',
-    'modes': '[availableMode]'
+    'modes': '[availableMode]',
   },
   'lobbyEnvelope': {'seat': 'int', 'code': 'str', 'lobby': 'lobby'},
   'queue': {
@@ -139,21 +144,21 @@ const _schemas = <String, Map<String, String>>{
     'status': 'str',
     'joined_at_ms': 'int',
     'decision_at_ms': 'int',
-    'settings': 'settings'
+    'settings': 'settings',
   },
   'action_ack': {'request_id': 'str', 'duplicate': 'bool'},
   'award': {
     'kind': 'str',
     'ordinal': 'int',
     'requested': 'int',
-    'credited': 'int'
+    'credited': 'int',
   },
   'instantAward': {
     'match_id': 'str',
     'kind': 'str',
     'ordinal': 'int',
     'requested': 'int',
-    'credited': 'int'
+    'credited': 'int',
   },
   'settlement': {
     'match_id': 'str',
@@ -161,7 +166,7 @@ const _schemas = <String, Map<String, String>>{
     'xp': 'int',
     'leaderboard_counted': 'bool',
     'interrupted?': 'bool',
-    'awards': '[award]'
+    'awards': '[award]',
   },
   'delivery': {'id': 'int', 'match_id': 'str', 'settlement': 'settlement'},
   'controlError': {'code': 'str', 'request_id?': 'str'},
@@ -170,7 +175,7 @@ const _schemas = <String, Map<String, String>>{
     'max_history_events': 'int',
     'max_history_page_events': 'int',
     'max_text_bytes': 'int',
-    'max_requests_per_seat': 'int'
+    'max_requests_per_seat': 'int',
   },
   'content': {'content_id': 'str', 'revision': 'int', 'text': 'str'},
   'card': {'copy_id': 'str', 'content': 'content'},
@@ -179,7 +184,7 @@ const _schemas = <String, Map<String, String>>{
     'admission_id': 'str',
     'entry_path': 'str',
     'rewards': 'bool',
-    'leaderboard': 'bool'
+    'leaderboard': 'bool',
   },
   'match': {
     'protocol_version': 'int',
@@ -192,14 +197,14 @@ const _schemas = <String, Map<String, String>>{
     'pack_release_id': 'str',
     'pack_sha256': 'str',
     'tuning': 'tuning',
-    'eligibility': 'eligibility'
+    'eligibility': 'eligibility',
   },
   'settings': {
     'mode_id': 'str',
     'size': 'int',
     'content_language': 'str',
     'pack_release_id': 'str',
-    'rules_version': 'str'
+    'rules_version': 'str',
   },
   'ready': {'settings_revision': 'int', 'membership_revision': 'int'},
   'lobbySeat': {'seat': 'int', 'connected': 'bool', 'ready?': 'ready'},
@@ -210,7 +215,7 @@ const _schemas = <String, Map<String, String>>{
     'settings_revision': 'int',
     'membership_revision': 'int',
     'host_seat': 'int',
-    'seats': '[lobbySeat]'
+    'seats': '[lobbySeat]',
   },
   'actionBody': {
     'kind': 'str',
@@ -224,7 +229,7 @@ const _schemas = <String, Map<String, String>>{
     'count?': 'int',
     'phrase_id?': 'str',
     'text?': 'str',
-    'ui_locale?': 'str'
+    'ui_locale?': 'str',
   },
   'action': {
     'v': 'int',
@@ -236,12 +241,12 @@ const _schemas = <String, Map<String, String>>{
     'phase': 'str',
     'phase_id': 'str',
     'expected_board_revision': 'int',
-    'action': 'actionBody'
+    'action': 'actionBody',
   },
   'cursor': {
     'stream_epoch': 'str',
     'recipient_seq': 'int',
-    'evidence_seq': 'int'
+    'evidence_seq': 'int',
   },
   'actor': {'kind': 'str', 'seat?': 'int'},
   'event': {
@@ -267,14 +272,14 @@ const _schemas = <String, Map<String, String>>{
     'phrase_id?': 'str',
     'text?': 'str',
     'ui_locale?': 'str',
-    'ballot?': 'ballot'
+    'ballot?': 'ballot',
   },
   'boardCard': {
     'card': 'card',
     'actor': 'actor',
     'rating?': 'int',
     'slot?': 'int',
-    'seat?': 'int'
+    'seat?': 'int',
   },
   'board': {'mode_id': 'str', 'revision': 'int', 'cards': '[boardCard]'},
   'offer': {
@@ -284,13 +289,13 @@ const _schemas = <String, Map<String, String>>{
     'offered_copy_id': 'str',
     'requested_copy_id': 'str',
     'board_revision': 'int',
-    'deadline_ms': 'int'
+    'deadline_ms': 'int',
   },
   'seat': {
     'seat': 'int',
     'connected': 'bool',
     'eliminated': 'bool',
-    'revealed_role?': 'str'
+    'revealed_role?': 'str',
   },
   'private': {
     'seat': 'int',
@@ -299,13 +304,13 @@ const _schemas = <String, Map<String, String>>{
     'nown?': 'content',
     'hand': '[card]',
     'reserve_count': 'int',
-    'capabilities': '[str]'
+    'capabilities': '[str]',
   },
   'manifest': {
     'total_events': 'int',
     'page_count': 'int',
     'through_evidence_seq': 'int',
-    'root_sha256': 'str'
+    'root_sha256': 'str',
   },
   'begun': {'round': 'int', 'content': 'content'},
   'vote': {'seat': 'int', 'target_seat': 'int'},
@@ -314,7 +319,7 @@ const _schemas = <String, Map<String, String>>{
     'kind': 'str',
     'candidates': '[int]',
     'votes': '[vote]',
-    'result?': 'result'
+    'result?': 'result',
   },
   'snapshot': {
     'v': 'int',
@@ -339,7 +344,7 @@ const _schemas = <String, Map<String, String>>{
     'verdict?': 'verdict',
     'history': '[event]',
     'history_pages?': 'manifest',
-    'verdict_nowns?': '[begun]'
+    'verdict_nowns?': '[begun]',
   },
   'score': {'seat': 'int', 'points': 'int'},
   'verdict': {'outcome': 'str', 'winner?': 'str'},
@@ -352,14 +357,14 @@ const _schemas = <String, Map<String, String>>{
     'from_evidence_seq': 'int',
     'through_evidence_seq': 'int',
     'events': '[event]',
-    'sha256': 'str'
+    'sha256': 'str',
   },
   'error': {
     'v': 'int',
     'cursor': 'cursor',
     'request_id': 'str',
     'code': 'str',
-    'current_board_revision?': 'int'
+    'current_board_revision?': 'int',
   },
 };
 void _shape(dynamic value, String type) {
@@ -384,8 +389,9 @@ void _shape(dynamic value, String type) {
   }
   _check(value is Map<String, dynamic>);
   final schema = _schemas[type]!;
-  _check(value.keys
-      .every((k) => schema.containsKey(k) || schema.containsKey('$k?')));
+  _check(
+    value.keys.every((k) => schema.containsKey(k) || schema.containsKey('$k?')),
+  );
   for (final e in schema.entries) {
     final optional = e.key.endsWith('?');
     final key = optional ? e.key.substring(0, e.key.length - 1) : e.key;
@@ -400,7 +406,8 @@ void _shape(dynamic value, String type) {
 dynamic _freeze(dynamic x) {
   if (x is Map<String, dynamic>) {
     return Map<String, dynamic>.unmodifiable(
-        x.map((k, v) => MapEntry(k, _freeze(v))));
+      x.map((k, v) => MapEntry(k, _freeze(v))),
+    );
   }
   if (x is List) return List<dynamic>.unmodifiable(x.map(_freeze));
   return x;
@@ -420,19 +427,23 @@ String v2Hash(dynamic x) =>
 
 void _privateAward(dynamic a) {
   const voteKinds = ['correct_vote', 'donower_vote_survived'];
-  _check([
-        ...voteKinds,
-        'match_completed',
-        'nower_win',
-        'donower_team_win',
-        'daily_first_win'
-      ].contains(a['kind']) &&
-      a['requested'] >= 0 &&
-      a['credited'] >= 0 &&
-      a['credited'] <= a['requested']);
-  _check(voteKinds.contains(a['kind'])
-      ? a['ordinal'] >= 1 && a['ordinal'] <= 3
-      : a['ordinal'] == 0);
+  _check(
+    [
+          ...voteKinds,
+          'match_completed',
+          'nower_win',
+          'donower_team_win',
+          'daily_first_win',
+        ].contains(a['kind']) &&
+        a['requested'] >= 0 &&
+        a['credited'] >= 0 &&
+        a['credited'] <= a['requested'],
+  );
+  _check(
+    voteKinds.contains(a['kind'])
+        ? a['ordinal'] >= 1 && a['ordinal'] <= 3
+        : a['ordinal'] == 0,
+  );
 }
 
 class V2Codec {
@@ -446,18 +457,24 @@ class V2Codec {
 
   static Map<String, dynamic> envelope(String raw, {int maxBytes = 1048576}) {
     final e = object(raw, maxBytes: maxBytes);
-    _check(e.keys
-        .every((k) => ['v', 'type', 'request_id', 'payload'].contains(k)));
+    _check(
+      e.keys.every((k) => ['v', 'type', 'request_id', 'payload'].contains(k)),
+    );
     _version(e['v']);
-    _check(_id(e['type']) &&
-        e['payload'] is Map<String, dynamic> &&
-        (!e.containsKey('request_id') || _id(e['request_id'])));
+    _check(
+      _id(e['type']) &&
+          e['payload'] is Map<String, dynamic> &&
+          (!e.containsKey('request_id') || _id(e['request_id'])),
+    );
     return e;
   }
 
   static Map<String, dynamic> control(String kind, Map<String, dynamic> value) {
     _shape(value, kind);
     switch (kind) {
+      case 'systemNotice':
+        _check(value['refresh'] == true);
+        break;
       case 'hello':
         _version(value['client_generation']);
         _check(_id(value['account_id']));
@@ -469,54 +486,72 @@ class V2Codec {
         V2Limits.fromJson(value['limits']);
         final modes = <String>{};
         for (final m in value['modes']) {
-          _check(textModes.contains(m['mode_id']) &&
-              modes.add(m['mode_id']) &&
-              m['available'] == m['languages'].isNotEmpty);
+          _check(
+            textModes.contains(m['mode_id']) &&
+                modes.add(m['mode_id']) &&
+                m['available'] == m['languages'].isNotEmpty,
+          );
           final tuples = <String>{};
           for (final option in m['languages']) {
-            _check(_language(option['content_language']) &&
-                _id(option['pack_release_id']) &&
-                _id(option['rules_version']) &&
-                tuples.add(v2Canonical(option)));
+            _check(
+              _language(option['content_language']) &&
+                  _id(option['pack_release_id']) &&
+                  _id(option['rules_version']) &&
+                  tuples.add(v2Canonical(option)),
+            );
           }
         }
         _check(modes.length == textModes.length);
         break;
       case 'lobbyEnvelope':
         _lobby(value['lobby']);
-        _check(RegExp(r'^[A-Z0-9]{6}$').hasMatch(value['code']) &&
-            (value['lobby']['seats'] as List)
-                .any((p) => p['seat'] == value['seat']));
+        _check(
+          RegExp(r'^[A-Z0-9]{6}$').hasMatch(value['code']) &&
+              (value['lobby']['seats'] as List).any(
+                (p) => p['seat'] == value['seat'],
+              ),
+        );
         break;
       case 'queue':
-        _check(_id(value['queue_id']) &&
-            ['waiting', 'choice_required', 'assigned', 'left']
-                .contains(value['status']) &&
-            value['joined_at_ms'] > 0 &&
-            value['decision_at_ms'] >= value['joined_at_ms']);
+        _check(
+          _id(value['queue_id']) &&
+              [
+                'waiting',
+                'choice_required',
+                'assigned',
+                'left',
+              ].contains(value['status']) &&
+              value['joined_at_ms'] > 0 &&
+              value['decision_at_ms'] >= value['joined_at_ms'],
+        );
         _settings(value['settings']);
         break;
       case 'action_ack':
         _check(_id(value['request_id']));
         break;
       case 'delivery':
-        _check(value['id'] > 0 &&
-            _id(value['match_id']) &&
-            value['match_id'] == value['settlement']['match_id']);
+        _check(
+          value['id'] > 0 &&
+              _id(value['match_id']) &&
+              value['match_id'] == value['settlement']['match_id'],
+        );
         final settlement = value['settlement'];
         _check(settlement['xp'] >= 0 && settlement['points'] >= 0);
         if (settlement.containsKey('interrupted')) {
-          _check(settlement['interrupted'] &&
-              settlement['points'] == 0 &&
-              settlement['xp'] == 0 &&
-              !settlement['leaderboard_counted']);
+          _check(
+            settlement['interrupted'] &&
+                settlement['points'] == 0 &&
+                settlement['xp'] == 0 &&
+                !settlement['leaderboard_counted'],
+          );
         }
         final keys = <String>{};
         for (final award in settlement['awards']) {
           _privateAward(award);
           if (settlement['interrupted'] == true) {
-            _check(['correct_vote', 'donower_vote_survived']
-                .contains(award['kind']));
+            _check(
+              ['correct_vote', 'donower_vote_survived'].contains(award['kind']),
+            );
           }
           _check(keys.add('${award['kind']}:${award['ordinal']}'));
         }
@@ -525,13 +560,16 @@ class V2Codec {
         _check(_id(value['match_id']));
         _privateAward(value);
         _check(
-            ['correct_vote', 'donower_vote_survived'].contains(value['kind']));
+          ['correct_vote', 'donower_vote_survived'].contains(value['kind']),
+        );
         break;
       case 'controlError':
-        _check(_id(value['code']) &&
-            (!value.containsKey('request_id') ||
-                value['request_id'] == '' ||
-                _id(value['request_id'])));
+        _check(
+          _id(value['code']) &&
+              (!value.containsKey('request_id') ||
+                  value['request_id'] == '' ||
+                  _id(value['request_id'])),
+        );
         break;
       default:
         _fail();
@@ -541,8 +579,10 @@ class V2Codec {
 
   static Map<String, dynamic> decode(String kind, String raw, V2Limits limits) {
     limits.validate();
-    _check(utf8.encode(raw).length <= limits.maxFrameBytes,
-        'protocol.frame_too_large');
+    _check(
+      utf8.encode(raw).length <= limits.maxFrameBytes,
+      'protocol.frame_too_large',
+    );
     final j = _StrictJSON(raw).parse();
     _shape(j, kind);
     switch (kind) {
@@ -593,7 +633,7 @@ const _errorCodes = [
   'stream.stale_evidence',
   'history.limit',
   'history.integrity',
-  'action.unauthorized'
+  'action.unauthorized',
 ];
 void _version(dynamic v) => _check(v == 2, 'protocol.upgrade_required');
 void _cursor(dynamic c) =>
@@ -603,52 +643,64 @@ void _content(dynamic c, V2Limits l) {
   _text(c['text'], l);
 }
 
-void _text(dynamic s, V2Limits l) => _check(s is String &&
-    s.trim().isNotEmpty &&
-    utf8.encode(s).length <= l.maxTextBytes &&
-    !RegExp('[\\x00-\\x1f\\x7f-\\x9f\uFFFD\u202a-\u202e\u2066-\u2069]')
-        .hasMatch(s));
+void _text(dynamic s, V2Limits l) => _check(
+  s is String &&
+      s.trim().isNotEmpty &&
+      utf8.encode(s).length <= l.maxTextBytes &&
+      !RegExp(
+        '[\\x00-\\x1f\\x7f-\\x9f\uFFFD\u202a-\u202e\u2066-\u2069]',
+      ).hasMatch(s),
+);
 void _card(dynamic c, V2Limits l) {
   _check(_id(c['copy_id']));
   _content(c['content'], l);
 }
 
-void _actor(dynamic a, int size) =>
-    _check(a['kind'] == 'system' && !a.containsKey('seat') ||
-        a['kind'] == 'seat' && _seat(a['seat'], size));
-void _settings(dynamic s) => _check(textModes.contains(s['mode_id']) &&
-    [4, 6].contains(s['size']) &&
-    _language(s['content_language']) &&
-    _id(s['pack_release_id']) &&
-    _id(s['rules_version']));
+void _actor(dynamic a, int size) => _check(
+  a['kind'] == 'system' && !a.containsKey('seat') ||
+      a['kind'] == 'seat' && _seat(a['seat'], size),
+);
+void _settings(dynamic s) => _check(
+  textModes.contains(s['mode_id']) &&
+      [4, 6].contains(s['size']) &&
+      _language(s['content_language']) &&
+      _id(s['pack_release_id']) &&
+      _id(s['rules_version']),
+);
 void _match(dynamic m) {
   _version(m['protocol_version']);
-  _check(_id(m['match_id']) &&
-      _id(m['room_id']) &&
-      m['match_id'] != m['room_id'] &&
-      [4, 6].contains(m['original_size']) &&
-      textModes.contains(m['mode_id']) &&
-      _id(m['rules_version']) &&
-      _language(m['content_language']) &&
-      _id(m['pack_release_id']) &&
-      _hash(m['pack_sha256']) &&
-      _id(m['tuning']['version']) &&
-      _hash(m['tuning']['sha256']));
+  _check(
+    _id(m['match_id']) &&
+        _id(m['room_id']) &&
+        m['match_id'] != m['room_id'] &&
+        [4, 6].contains(m['original_size']) &&
+        textModes.contains(m['mode_id']) &&
+        _id(m['rules_version']) &&
+        _language(m['content_language']) &&
+        _id(m['pack_release_id']) &&
+        _hash(m['pack_sha256']) &&
+        _id(m['tuning']['version']) &&
+        _hash(m['tuning']['sha256']),
+  );
   final e = m['eligibility'];
-  _check(_id(e['admission_id']) &&
-      ['quick_play', 'local'].contains(e['entry_path']) &&
-      (!e['leaderboard'] || e['rewards'] && e['entry_path'] == 'quick_play'));
+  _check(
+    _id(e['admission_id']) &&
+        ['quick_play', 'local'].contains(e['entry_path']) &&
+        (!e['leaderboard'] || e['rewards'] && e['entry_path'] == 'quick_play'),
+  );
 }
 
 void _lobby(dynamic j) {
   _version(j['protocol_version']);
   _settings(j['settings']);
   final size = j['settings']['size'] as int;
-  _check(_id(j['room_id']) &&
-      j['settings_revision'] > 0 &&
-      j['membership_revision'] > 0 &&
-      j['seats'].isNotEmpty &&
-      j['seats'].length <= size);
+  _check(
+    _id(j['room_id']) &&
+        j['settings_revision'] > 0 &&
+        j['membership_revision'] > 0 &&
+        j['seats'].isNotEmpty &&
+        j['seats'].length <= size,
+  );
   final seen = <int>{};
   var host = false;
   for (final p in j['seats']) {
@@ -657,10 +709,11 @@ void _lobby(dynamic j) {
     final r = p['ready'];
     if (r != null) {
       _check(
-          p['connected'] &&
-              r['settings_revision'] == j['settings_revision'] &&
-              r['membership_revision'] == j['membership_revision'],
-          'action.stale_revision');
+        p['connected'] &&
+            r['settings_revision'] == j['settings_revision'] &&
+            r['membership_revision'] == j['membership_revision'],
+        'action.stale_revision',
+      );
     }
   }
   _check(host);
@@ -674,23 +727,30 @@ bool _capability(String kind, String mode, String phase) {
     'draw' => phase == 'play',
     'vote' => ['knowoff', 'runoff'].contains(phase),
     'ready' => ['discussion', 'knowoff', 'runoff', 'result'].contains(phase),
-    'poke' => ['play', 'trade_response', 'discussion', 'knowoff', 'runoff']
-        .contains(phase),
+    'poke' => [
+      'play',
+      'trade_response',
+      'discussion',
+      'knowoff',
+      'runoff',
+    ].contains(phase),
     'chat' => !['round_start', 'verdict'].contains(phase),
-    _ => false
+    _ => false,
   };
 }
 
 void _request(dynamic r, V2Limits l) {
   _version(r['v']);
-  _check(_id(r['request_id']) &&
-      _id(r['match_id']) &&
-      textModes.contains(r['mode_id']) &&
-      r['round'] >= 1 &&
-      r['round'] <= 3 &&
-      r['turn'] <= 6 &&
-      textPhases.contains(r['phase']) &&
-      _id(r['phase_id']));
+  _check(
+    _id(r['request_id']) &&
+        _id(r['match_id']) &&
+        textModes.contains(r['mode_id']) &&
+        r['round'] >= 1 &&
+        r['round'] <= 3 &&
+        r['turn'] <= 6 &&
+        textPhases.contains(r['phase']) &&
+        _id(r['phase_id']),
+  );
   final a = r['action'];
   final k = a['kind'] as String;
   const code = 'action.invalid';
@@ -705,7 +765,7 @@ void _request(dynamic r, V2Limits l) {
     'draw' => ['count'],
     'vote' || 'poke' => ['target_seat'],
     'chat' => ['phrase_id', 'text', 'ui_locale'],
-    _ => <String>[]
+    _ => <String>[],
   };
   _check(a.keys.every((x) => x == 'kind' || fields.contains(x)), code);
   for (final f in fields.where((f) => k != 'chat')) {
@@ -714,22 +774,27 @@ void _request(dynamic r, V2Limits l) {
   if (fields.contains('copy_id')) _check(_id(a['copy_id']), code);
   if (fields.contains('target_copy_id')) {
     _check(
-        _id(a['target_copy_id']) && a['copy_id'] != a['target_copy_id'], code);
+      _id(a['target_copy_id']) && a['copy_id'] != a['target_copy_id'],
+      code,
+    );
   }
   if (fields.contains('target_seat')) _check(_seat(a['target_seat'], 6), code);
   if (k == 'place') _check(a['rating'] >= 1 && a['rating'] <= 5, code);
   if (k == 'replace') _check(a['slot'] < 3, code);
   if (k == 'resolve_offer') {
-    _check(_id(a['offer_id']) && ['accept', 'refuse'].contains(a['resolution']),
-        code);
+    _check(
+      _id(a['offer_id']) && ['accept', 'refuse'].contains(a['resolution']),
+      code,
+    );
   }
   if (k == 'draw') _check(a['count'] > 0, code);
   if (k == 'chat') {
     _check(
-        _language(a['ui_locale']) &&
-            ((_id(a['phrase_id']) && !a.containsKey('text')) ||
-                (!a.containsKey('phrase_id') && a.containsKey('text'))),
-        code);
+      _language(a['ui_locale']) &&
+          ((_id(a['phrase_id']) && !a.containsKey('text')) ||
+              (!a.containsKey('phrase_id') && a.containsKey('text'))),
+      code,
+    );
     if (a.containsKey('text')) {
       try {
         _text(a['text'], l);
@@ -744,19 +809,23 @@ void _request(dynamic r, V2Limits l) {
 }
 
 void _ballot(dynamic b, int size, {bool evidence = false}) {
-  _check(['knowoff', 'runoff'].contains(b['kind']) &&
-      b['candidates'].length >= 2 &&
-      b['candidates'].length <= size);
+  _check(
+    ['knowoff', 'runoff'].contains(b['kind']) &&
+        b['candidates'].length >= 2 &&
+        b['candidates'].length <= size,
+  );
   final candidates = <int>{}, voters = <int>{};
   final counts = <int, int>{};
   for (final x in b['candidates']) {
     _check(_seat(x, size) && candidates.add(x));
   }
   for (final v in b['votes']) {
-    _check(_seat(v['seat'], size) &&
-        candidates.contains(v['target_seat']) &&
-        v['seat'] != v['target_seat'] &&
-        voters.add(v['seat']));
+    _check(
+      _seat(v['seat'], size) &&
+          candidates.contains(v['target_seat']) &&
+          v['seat'] != v['target_seat'] &&
+          voters.add(v['seat']),
+    );
     counts.update(v['target_seat'], (x) => x + 1, ifAbsent: () => 1);
   }
   final r = b['result'];
@@ -772,14 +841,16 @@ void _ballot(dynamic b, int size, {bool evidence = false}) {
       _check(winners.length == 1 && r['seat'] == winners.single);
       break;
     case 'runoff':
-      _check(b['kind'] == 'knowoff' &&
-          winners.length >= 2 &&
-          !r.containsKey('seat'));
+      _check(
+        b['kind'] == 'knowoff' && winners.length >= 2 && !r.containsKey('seat'),
+      );
       break;
     case 'miss':
-      _check(!r.containsKey('seat') &&
-          winners.length != 1 &&
-          (b['kind'] != 'knowoff' || maximum == 0));
+      _check(
+        !r.containsKey('seat') &&
+            winners.length != 1 &&
+            (b['kind'] != 'knowoff' || maximum == 0),
+      );
       break;
     default:
       _fail();
@@ -787,15 +858,17 @@ void _ballot(dynamic b, int size, {bool evidence = false}) {
 }
 
 void _event(dynamic e, V2Limits l) {
-  _check(textPhases.contains(e['phase']) &&
-      _id(e['phase_id']) &&
-      _id(e['event_id']) &&
-      e['evidence_seq'] > 0 &&
-      e['round'] >= 1 &&
-      e['round'] <= 3 &&
-      e['after_revision'] >= e['before_revision'] &&
-      e['server_time_ms'] > 0 &&
-      (!e.containsKey('deadline_ms') || e['deadline_ms'] > 0));
+  _check(
+    textPhases.contains(e['phase']) &&
+        _id(e['phase_id']) &&
+        _id(e['event_id']) &&
+        e['evidence_seq'] > 0 &&
+        e['round'] >= 1 &&
+        e['round'] <= 3 &&
+        e['after_revision'] >= e['before_revision'] &&
+        e['server_time_ms'] > 0 &&
+        (!e.containsKey('deadline_ms') || e['deadline_ms'] > 0),
+  );
   _actor(e['actor'], 6);
   _check(e['cards'].length <= l.maxHistoryEvents);
   final copies = <String>{};
@@ -803,104 +876,126 @@ void _event(dynamic e, V2Limits l) {
     _card(c, l);
     _check(copies.add(c['copy_id']));
   }
-  _check([
-    'player',
-    'seed',
-    'timeout',
-    'disconnect',
-    'forced_transition',
-    'no_recipient'
-  ].contains(e['reason']));
+  _check(
+    [
+      'player',
+      'seed',
+      'timeout',
+      'disconnect',
+      'forced_transition',
+      'no_recipient',
+    ].contains(e['reason']),
+  );
   final k = e['kind'] as String;
   final count = e['cards'].length;
   final actor = e['actor'];
   final fields = <String>[];
   switch (k) {
     case 'seed':
-      _check(e['phase'] == 'round_start' &&
-          actor['kind'] == 'system' &&
-          e['reason'] == 'seed' &&
-          count > 0 &&
-          count <= 6);
+      _check(
+        e['phase'] == 'round_start' &&
+            actor['kind'] == 'system' &&
+            e['reason'] == 'seed' &&
+            count > 0 &&
+            count <= 6,
+      );
       break;
     case 'respond':
       _check(actor['kind'] == 'seat' && count == 1);
       break;
     case 'place':
       fields.add('rating');
-      _check(actor['kind'] == 'seat' &&
-          count == 1 &&
-          e['rating'] != null &&
-          e['rating'] >= 1 &&
-          e['rating'] <= 5);
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 1 &&
+            e['rating'] != null &&
+            e['rating'] >= 1 &&
+            e['rating'] <= 5,
+      );
       break;
     case 'replace':
       fields.add('slot');
-      _check(actor['kind'] == 'seat' &&
-          count == 2 &&
-          e['slot'] != null &&
-          e['slot'] < 3);
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 2 &&
+            e['slot'] != null &&
+            e['slot'] < 3,
+      );
       break;
     case 'top':
       _check(actor['kind'] == 'seat' && count == 2);
       break;
     case 'offer':
       fields.addAll(['offer_id', 'target_seat']);
-      _check(actor['kind'] == 'seat' &&
-          count == 2 &&
-          _id(e['offer_id']) &&
-          _seat(e['target_seat'], 6) &&
-          e['target_seat'] != actor['seat'] &&
-          e['deadline_ms'] != null);
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 2 &&
+            _id(e['offer_id']) &&
+            _seat(e['target_seat'], 6) &&
+            e['target_seat'] != actor['seat'] &&
+            e['deadline_ms'] != null,
+      );
       break;
     case 'resolve_offer':
       fields.addAll(['offer_id', 'resolution']);
-      _check(_id(e['offer_id']) &&
-          count == 2 &&
-          ['accept', 'refuse', 'timeout', 'cancel'].contains(e['resolution']));
+      _check(
+        _id(e['offer_id']) &&
+            count == 2 &&
+            ['accept', 'refuse', 'timeout', 'cancel'].contains(e['resolution']),
+      );
       break;
     case 'draw':
       fields.add('count');
-      _check(actor['kind'] == 'seat' &&
-          count == 0 &&
-          e['count'] != null &&
-          e['count'] > 0);
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            e['count'] != null &&
+            e['count'] > 0,
+      );
       break;
     case 'auto_pass':
-      _check(actor['kind'] == 'seat' &&
-          count <= 1 &&
-          (['timeout', 'disconnect'].contains(e['reason']) ||
-              e['reason'] == 'no_recipient' && count == 0));
+      _check(
+        actor['kind'] == 'seat' &&
+            count <= 1 &&
+            (['timeout', 'disconnect'].contains(e['reason']) ||
+                e['reason'] == 'no_recipient' && count == 0),
+      );
       break;
     case 'vote':
     case 'poke':
       fields.add('target_seat');
-      _check(actor['kind'] == 'seat' &&
-          count == 0 &&
-          _seat(e['target_seat'], 6) &&
-          e['target_seat'] != actor['seat']);
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            _seat(e['target_seat'], 6) &&
+            e['target_seat'] != actor['seat'],
+      );
       break;
     case 'ready':
       _check(actor['kind'] == 'seat' && count == 0);
       break;
     case 'chat':
       fields.addAll(['phrase_id', 'text', 'ui_locale']);
-      _check(actor['kind'] == 'seat' &&
-          count == 0 &&
-          e['reason'] == 'player' &&
-          !['round_start', 'verdict'].contains(e['phase']) &&
-          _language(e['ui_locale']) &&
-          ((_id(e['phrase_id']) && !e.containsKey('text')) ||
-              (!e.containsKey('phrase_id') && e.containsKey('text'))));
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            e['reason'] == 'player' &&
+            !['round_start', 'verdict'].contains(e['phase']) &&
+            _language(e['ui_locale']) &&
+            ((_id(e['phrase_id']) && !e.containsKey('text')) ||
+                (!e.containsKey('phrase_id') && e.containsKey('text'))),
+      );
       if (e.containsKey('text')) _text(e['text'], l);
       break;
     case 'ballot_result':
       fields.add('ballot');
-      _check(actor['kind'] == 'system' &&
-          count == 0 &&
-          e['before_revision'] == e['after_revision'] &&
-          e['ballot'] != null &&
-          e['ballot']['kind'] == e['phase']);
+      _check(
+        actor['kind'] == 'system' &&
+            count == 0 &&
+            e['before_revision'] == e['after_revision'] &&
+            e['ballot'] != null &&
+            e['ballot']['kind'] == e['phase'],
+      );
       _ballot(e['ballot'], 6, evidence: true);
       break;
     default:
@@ -916,12 +1011,19 @@ void _event(dynamic e, V2Limits l) {
     'phrase_id',
     'text',
     'ui_locale',
-    'ballot'
+    'ballot',
   ]) {
     _check(!e.containsKey(f) || fields.contains(f));
   }
-  if (['respond', 'place', 'replace', 'top', 'offer', 'draw', 'auto_pass']
-      .contains(k)) {
+  if ([
+    'respond',
+    'place',
+    'replace',
+    'top',
+    'offer',
+    'draw',
+    'auto_pass',
+  ].contains(k)) {
     _check(e['phase'] == 'play');
   }
   if (k == 'resolve_offer') _check(e['phase'] == 'trade_response');
@@ -935,14 +1037,17 @@ void _history(dynamic events, int from, V2Limits l) {
   for (var i = 0; i < events.length; i++) {
     final e = events[i];
     _event(e, l);
-    _check(e['evidence_seq'] == from + i && ids.add(e['event_id']),
-        'history.integrity');
+    _check(
+      e['evidence_seq'] == from + i && ids.add(e['event_id']),
+      'history.integrity',
+    );
     if (previous != null) {
       _check(
-          e['round'] >= previous['round'] &&
-              e['server_time_ms'] >= previous['server_time_ms'] &&
-              e['before_revision'] >= previous['after_revision'],
-          'history.integrity');
+        e['round'] >= previous['round'] &&
+            e['server_time_ms'] >= previous['server_time_ms'] &&
+            e['before_revision'] >= previous['after_revision'],
+        'history.integrity',
+      );
     }
     previous = e;
   }
@@ -951,21 +1056,23 @@ void _history(dynamic events, int from, V2Limits l) {
 void _page(dynamic p, V2Limits l) {
   _version(p['v']);
   _check(
-      _id(p['match_id']) &&
-          _id(p['snapshot_id']) &&
-          _id(p['stream_epoch']) &&
-          p['index'] < l.maxHistoryEvents &&
-          p['events'].isNotEmpty &&
-          p['events'].length <= l.maxHistoryPageEvents,
-      'history.limit');
+    _id(p['match_id']) &&
+        _id(p['snapshot_id']) &&
+        _id(p['stream_epoch']) &&
+        p['index'] < l.maxHistoryEvents &&
+        p['events'].isNotEmpty &&
+        p['events'].length <= l.maxHistoryPageEvents,
+    'history.limit',
+  );
   _history(p['events'], p['from_evidence_seq'], l);
   _check(
-      p['from_evidence_seq'] > 0 &&
-          p['through_evidence_seq'] ==
-              p['from_evidence_seq'] + p['events'].length - 1 &&
-          _hash(p['sha256']) &&
-          v2Hash(p['events']) == p['sha256'],
-      'history.integrity');
+    p['from_evidence_seq'] > 0 &&
+        p['through_evidence_seq'] ==
+            p['from_evidence_seq'] + p['events'].length - 1 &&
+        _hash(p['sha256']) &&
+        v2Hash(p['events']) == p['sha256'],
+    'history.integrity',
+  );
 }
 
 void _snapshot(dynamic s, V2Limits l) {
@@ -978,23 +1085,29 @@ void _snapshot(dynamic s, V2Limits l) {
   final board = s['board'];
   final p = s['private'];
   final seats = s['seats'] as List;
-  _check(_id(s['snapshot_id']) &&
-      s['round'] >= 1 &&
-      s['round'] <= size ~/ 2 &&
-      s['turn'] <= size &&
-      textPhases.contains(phase) &&
-      _id(s['phase_id']) &&
-      s['server_time_ms'] > 0 &&
-      s['deadline_ms'] > 0 &&
-      board['mode_id'] == mode);
+  _check(
+    _id(s['snapshot_id']) &&
+        s['round'] >= 1 &&
+        s['round'] <= size ~/ 2 &&
+        s['turn'] <= size &&
+        textPhases.contains(phase) &&
+        _id(s['phase_id']) &&
+        s['server_time_ms'] > 0 &&
+        s['deadline_ms'] > 0 &&
+        board['mode_id'] == mode,
+  );
   final reveal = s['result_reveal_at_ms'];
-  _check(phase == 'result'
-      ? reveal != null && reveal > 0 && reveal < s['deadline_ms']
-      : reveal == null);
+  _check(
+    phase == 'result'
+        ? reveal != null && reveal > 0 && reveal < s['deadline_ms']
+        : reveal == null,
+  );
   final playing = ['play', 'trade_response'].contains(phase);
-  _check(playing
-      ? s['turn'] > 0 && _seat(s['current_seat'], size)
-      : !s.containsKey('current_seat'));
+  _check(
+    playing
+        ? s['turn'] > 0 && _seat(s['current_seat'], size)
+        : !s.containsKey('current_seat'),
+  );
   _check(board['cards'].length <= l.maxHistoryEvents);
   if (mode == 'make_room') _check(board['cards'].length == 3);
   if (mode == 'top_that') _check(board['cards'].isNotEmpty);
@@ -1010,34 +1123,44 @@ void _snapshot(dynamic s, V2Limits l) {
     switch (mode) {
       case 'missed_the_briefing':
       case 'top_that':
-        _check(!c.containsKey('rating') &&
-            !c.containsKey('slot') &&
-            !c.containsKey('seat'));
+        _check(
+          !c.containsKey('rating') &&
+              !c.containsKey('slot') &&
+              !c.containsKey('seat'),
+        );
         break;
       case 'secret_scale':
-        _check(c['rating'] != null &&
-            c['rating'] >= 1 &&
-            c['rating'] <= 5 &&
-            !c.containsKey('slot') &&
-            !c.containsKey('seat'));
+        _check(
+          c['rating'] != null &&
+              c['rating'] >= 1 &&
+              c['rating'] <= 5 &&
+              !c.containsKey('slot') &&
+              !c.containsKey('seat'),
+        );
         break;
       case 'make_room':
-        _check(c['slot'] != null &&
-            c['slot'] < 3 &&
-            slots.add(c['slot']) &&
-            !c.containsKey('rating') &&
-            !c.containsKey('seat'));
+        _check(
+          c['slot'] != null &&
+              c['slot'] < 3 &&
+              slots.add(c['slot']) &&
+              !c.containsKey('rating') &&
+              !c.containsKey('seat'),
+        );
         break;
       case 'bad_bargains':
-        _check(_seat(c['seat'], size) &&
-            displays.add(c['seat']) &&
-            !c.containsKey('rating') &&
-            !c.containsKey('slot'));
+        _check(
+          _seat(c['seat'], size) &&
+              displays.add(c['seat']) &&
+              !c.containsKey('rating') &&
+              !c.containsKey('slot'),
+        );
         break;
     }
   }
-  _check(seats.length == size && _seat(p['seat'], size) && _role(p['role']),
-      'action.unauthorized');
+  _check(
+    seats.length == size && _seat(p['seat'], size) && _role(p['role']),
+    'action.unauthorized',
+  );
   _check(p['points'] >= 0);
   final scores = s['scores'] as List? ?? const [];
   final verdict = s['verdict'];
@@ -1046,27 +1169,34 @@ void _snapshot(dynamic s, V2Limits l) {
   } else {
     _check(verdict != null && scores.length == size);
     final outcome = verdict['outcome'];
-    _check(['completed', 'scored_low_population', 'interrupted']
-        .contains(outcome));
-    _check(outcome == 'completed'
-        ? _role(verdict['winner'])
-        : (verdict['winner'] == null || verdict['winner'] == ''));
+    _check(
+      ['completed', 'scored_low_population', 'interrupted'].contains(outcome),
+    );
+    _check(
+      outcome == 'completed'
+          ? _role(verdict['winner'])
+          : (verdict['winner'] == null || verdict['winner'] == ''),
+    );
     final scoreSeats = <int>{};
     for (final score in scores) {
-      _check(_seat(score['seat'], size) &&
-          scoreSeats.add(score['seat']) &&
-          score['points'] >= 0 &&
-          (outcome != 'interrupted' || score['points'] == 0));
+      _check(
+        _seat(score['seat'], size) &&
+            scoreSeats.add(score['seat']) &&
+            score['points'] >= 0 &&
+            (outcome != 'interrupted' || score['points'] == 0),
+      );
       if (score['seat'] == p['seat']) _check(score['points'] == p['points']);
     }
   }
   final bySeat = <int, dynamic>{};
   for (final seat in seats) {
-    _check(_seat(seat['seat'], size) &&
-        !bySeat.containsKey(seat['seat']) &&
-        (seat['eliminated']
-            ? _role(seat['revealed_role'])
-            : !seat.containsKey('revealed_role')));
+    _check(
+      _seat(seat['seat'], size) &&
+          !bySeat.containsKey(seat['seat']) &&
+          (seat['eliminated']
+              ? _role(seat['revealed_role'])
+              : !seat.containsKey('revealed_role')),
+    );
     bySeat[seat['seat']] = seat;
   }
   final me = bySeat[p['seat']];
@@ -1074,16 +1204,22 @@ void _snapshot(dynamic s, V2Limits l) {
     _check(me['revealed_role'] == p['role'], 'action.unauthorized');
   }
   if (playing) {
-    _check(bySeat[s['current_seat']]['connected'] &&
-        !bySeat[s['current_seat']]['eliminated']);
+    _check(
+      bySeat[s['current_seat']]['connected'] &&
+          !bySeat[s['current_seat']]['eliminated'],
+    );
   }
   if (p.containsKey('nown')) {
-    _check(!me['eliminated'] && p['role'] == 'nower' && phase != 'verdict',
-        'action.unauthorized');
+    _check(
+      !me['eliminated'] && p['role'] == 'nower' && phase != 'verdict',
+      'action.unauthorized',
+    );
     _content(p['nown'], l);
   } else {
-    _check(me['eliminated'] || p['role'] != 'nower' || phase == 'verdict',
-        'action.unauthorized');
+    _check(
+      me['eliminated'] || p['role'] != 'nower' || phase == 'verdict',
+      'action.unauthorized',
+    );
   }
   if (me['eliminated']) {
     _check(p['hand'].isEmpty && p['reserve_count'] == 0, 'action.unauthorized');
@@ -1096,21 +1232,24 @@ void _snapshot(dynamic s, V2Limits l) {
   final caps = <String>{};
   for (final a in p['capabilities']) {
     _check(
-        !me['eliminated'] &&
-            me['connected'] &&
-            _capability(a, mode, phase) &&
-            caps.add(a),
-        'action.unauthorized');
+      !me['eliminated'] &&
+          me['connected'] &&
+          _capability(a, mode, phase) &&
+          caps.add(a),
+      'action.unauthorized',
+    );
     if (textModeActions.contains(a) || a == 'draw') {
       _check(s['current_seat'] == p['seat'], 'action.unauthorized');
     }
   }
   final ready = <int>{};
   for (final n in s['ready_seats']) {
-    _check(bySeat[n] != null &&
-        !bySeat[n]['eliminated'] &&
-        ready.add(n) &&
-        ['discussion', 'knowoff', 'runoff', 'result'].contains(phase));
+    _check(
+      bySeat[n] != null &&
+          !bySeat[n]['eliminated'] &&
+          ready.add(n) &&
+          ['discussion', 'knowoff', 'runoff', 'result'].contains(phase),
+    );
   }
   final b = s['ballot'];
   final wants = ['knowoff', 'runoff', 'result'].contains(phase);
@@ -1140,9 +1279,11 @@ void _snapshot(dynamic s, V2Limits l) {
           _check(_role(result['revealed_role']), 'action.unauthorized');
         }
       } else {
-        _check(result['outcome'] == 'miss' &&
-            !result.containsKey('seat') &&
-            !result.containsKey('revealed_role'));
+        _check(
+          result['outcome'] == 'miss' &&
+              !result.containsKey('seat') &&
+              !result.containsKey('revealed_role'),
+        );
       }
     } else {
       _check(result == null);
@@ -1150,21 +1291,27 @@ void _snapshot(dynamic s, V2Limits l) {
   }
   final o = s['pending_offer'];
   if (o != null) {
-    _check(mode == 'bad_bargains' &&
-        phase == 'trade_response' &&
-        _id(o['offer_id']) &&
-        _seat(o['proposer_seat'], size) &&
-        _seat(o['recipient_seat'], size) &&
-        o['proposer_seat'] != o['recipient_seat'] &&
-        s['current_seat'] == o['proposer_seat'] &&
-        _id(o['offered_copy_id']) &&
-        _id(o['requested_copy_id']) &&
-        o['offered_copy_id'] != o['requested_copy_id'] &&
-        o['board_revision'] == board['revision'] &&
-        o['deadline_ms'] == s['deadline_ms']);
-    _check(board['cards'].any((c) =>
-        c['seat'] == o['recipient_seat'] &&
-        c['card']['copy_id'] == o['requested_copy_id']));
+    _check(
+      mode == 'bad_bargains' &&
+          phase == 'trade_response' &&
+          _id(o['offer_id']) &&
+          _seat(o['proposer_seat'], size) &&
+          _seat(o['recipient_seat'], size) &&
+          o['proposer_seat'] != o['recipient_seat'] &&
+          s['current_seat'] == o['proposer_seat'] &&
+          _id(o['offered_copy_id']) &&
+          _id(o['requested_copy_id']) &&
+          o['offered_copy_id'] != o['requested_copy_id'] &&
+          o['board_revision'] == board['revision'] &&
+          o['deadline_ms'] == s['deadline_ms'],
+    );
+    _check(
+      board['cards'].any(
+        (c) =>
+            c['seat'] == o['recipient_seat'] &&
+            c['card']['copy_id'] == o['requested_copy_id'],
+      ),
+    );
     for (final n in [o['proposer_seat'], o['recipient_seat']]) {
       _check(bySeat[n]['connected'] && !bySeat[n]['eliminated']);
     }
@@ -1180,27 +1327,31 @@ void _snapshot(dynamic s, V2Limits l) {
   final manifest = s['history_pages'];
   if (manifest != null) {
     _check(
-        s['history'].isEmpty &&
-            manifest['total_events'] > 0 &&
-            manifest['total_events'] <= l.maxHistoryEvents &&
-            manifest['page_count'] > 0 &&
-            manifest['page_count'] <= manifest['total_events'] &&
-            manifest['through_evidence_seq'] == s['cursor']['evidence_seq'] &&
-            manifest['through_evidence_seq'] == manifest['total_events'] &&
-            _hash(manifest['root_sha256']),
-        'history.integrity');
+      s['history'].isEmpty &&
+          manifest['total_events'] > 0 &&
+          manifest['total_events'] <= l.maxHistoryEvents &&
+          manifest['page_count'] > 0 &&
+          manifest['page_count'] <= manifest['total_events'] &&
+          manifest['through_evidence_seq'] == s['cursor']['evidence_seq'] &&
+          manifest['through_evidence_seq'] == manifest['total_events'] &&
+          _hash(manifest['root_sha256']),
+      'history.integrity',
+    );
   } else {
     _history(s['history'], 1, l);
-    _check(s['history'].length == s['cursor']['evidence_seq'],
-        'history.integrity');
+    _check(
+      s['history'].length == s['cursor']['evidence_seq'],
+      'history.integrity',
+    );
     for (final e in s['history']) {
       if (e['ballot'] != null) _ballot(e['ballot'], size, evidence: true);
       _check(
-          e['round'] <= s['round'] &&
-              e['after_revision'] <= board['revision'] &&
-              (e['actor']['seat'] == null || _seat(e['actor']['seat'], size)) &&
-              (e['target_seat'] == null || _seat(e['target_seat'], size)),
-          'history.integrity');
+        e['round'] <= s['round'] &&
+            e['after_revision'] <= board['revision'] &&
+            (e['actor']['seat'] == null || _seat(e['actor']['seat'], size)) &&
+            (e['target_seat'] == null || _seat(e['target_seat'], size)),
+        'history.integrity',
+      );
     }
     if (o != null) {
       final events = (s['history'] as List)
@@ -1209,15 +1360,16 @@ void _snapshot(dynamic s, V2Limits l) {
       _check(events.length == 1, 'history.integrity');
       final e = events.single;
       _check(
-          e['kind'] == 'offer' &&
-              e['round'] == s['round'] &&
-              e['actor']['seat'] == o['proposer_seat'] &&
-              e['target_seat'] == o['recipient_seat'] &&
-              e['cards'][0]['copy_id'] == o['offered_copy_id'] &&
-              e['cards'][1]['copy_id'] == o['requested_copy_id'] &&
-              e['after_revision'] == o['board_revision'] &&
-              e['deadline_ms'] == o['deadline_ms'],
-          'history.integrity');
+        e['kind'] == 'offer' &&
+            e['round'] == s['round'] &&
+            e['actor']['seat'] == o['proposer_seat'] &&
+            e['target_seat'] == o['recipient_seat'] &&
+            e['cards'][0]['copy_id'] == o['offered_copy_id'] &&
+            e['cards'][1]['copy_id'] == o['requested_copy_id'] &&
+            e['after_revision'] == o['board_revision'] &&
+            e['deadline_ms'] == o['deadline_ms'],
+        'history.integrity',
+      );
     }
   }
   final nowns = s['verdict_nowns'] ?? [];
@@ -1269,7 +1421,8 @@ class V2Snapshot {
   int get seat => json['private']['seat'];
   int get points => json['private']['points'];
   List<V2Score> get scores => List.unmodifiable(
-      (json['scores'] as List? ?? const []).map((s) => V2Score._(s)));
+    (json['scores'] as List? ?? const []).map((s) => V2Score._(s)),
+  );
   String? get outcome => json['verdict']?['outcome'];
   String? get winner => json['verdict']?['winner'];
   String get role => json['private']['role'];
@@ -1278,11 +1431,13 @@ class V2Snapshot {
   int get deadlineMS => json['deadline_ms'];
   int? get resultRevealAtMS => json['result_reveal_at_ms'];
   List<V2Card> get hand => List.unmodifiable(
-      (json['private']['hand'] as List).map((c) => V2Card._(c)));
+    (json['private']['hand'] as List).map((c) => V2Card._(c)),
+  );
   List<String> get capabilities =>
       List<String>.unmodifiable(json['private']['capabilities']);
-  bool get eliminated => (json['seats'] as List)
-      .singleWhere((p) => p['seat'] == seat)['eliminated'];
+  bool get eliminated => (json['seats'] as List).singleWhere(
+    (p) => p['seat'] == seat,
+  )['eliminated'];
   bool get paged => json['history_pages'] != null;
 }
 
@@ -1399,7 +1554,8 @@ class _StrictJSON {
           final n = units[i];
           if (n >= 0xd800 && n <= 0xdbff) {
             _check(
-                ++i < units.length && units[i] >= 0xdc00 && units[i] <= 0xdfff);
+              ++i < units.length && units[i] >= 0xdc00 && units[i] <= 0xdfff,
+            );
           } else {
             _check(n < 0xdc00 || n > 0xdfff);
           }

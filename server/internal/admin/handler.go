@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/notices"
+	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/webui"
 )
 
@@ -20,6 +21,7 @@ import (
 func (m *Manager) Handler(noticesMgr *notices.Manager) http.Handler {
 	mux := http.NewServeMux()
 	m.registerOperations(mux)
+	m.registerUserTerms(mux)
 	mux.HandleFunc("GET /admin/login", m.loginForm)
 	mux.HandleFunc("POST /admin/login", m.loginPost)
 	mux.Handle("POST /admin/logout", m.requireRole("admin", true)(http.HandlerFunc(m.logoutPost)))
@@ -59,6 +61,9 @@ func (m *Manager) requireRole(role string, _ bool) func(http.Handler) http.Handl
 			}
 			ctx := context.WithValue(r.Context(), ctxAdminIDKey{}, adminID)
 			ctx = context.WithValue(ctx, ctxCSRFKey{}, storedCSRF)
+			ctx = store.WithAdminAuthorization(ctx, adminID, func(ctx context.Context, tx *sql.Tx) (string, error) {
+				return m.AuthorizeSessionTx(ctx, tx, sessionID, csrfToken)
+			})
 			w.Header().Set("Cache-Control", "no-store")
 			w.Header().Set("Referrer-Policy", "no-referrer")
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -133,7 +138,7 @@ func (m *Manager) loginPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionID, _, _, err := m.CreateSession(r.Context(), a.ID)
+	sessionID, _, _, err := m.CreateSessionForEpoch(r.Context(), a.ID, a.SessionEpoch)
 	if err != nil {
 		http.Error(w, "session error", http.StatusInternalServerError)
 		return
@@ -268,12 +273,10 @@ func (m *Manager) noticesWithdraw(w http.ResponseWriter, r *http.Request, nm *no
 
 func (m *Manager) avatarTakedown(w http.ResponseWriter, r *http.Request) {
 	accountID := r.PathValue("account_id")
-	before := map[string]any{"account_id": accountID}
-	if err := m.TakedownAvatar(r.Context(), accountID); err != nil {
+	if err := m.TakedownAvatar(r.Context(), adminIDFromContext(r.Context()), accountID); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	_ = m.LogAction(r.Context(), adminIDFromContext(r.Context()), "avatar_takedown", "custom_avatar", accountID, before, map[string]any{"status": "removed"})
 	http.Redirect(w, r, "/admin/", http.StatusSeeOther)
 }
 

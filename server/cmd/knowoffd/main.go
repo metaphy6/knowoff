@@ -1,25 +1,20 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/admin"
-	"github.com/knowoff/knowoff/server/internal/audit"
 	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/avatar"
-	"github.com/knowoff/knowoff/server/internal/bots"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/handler"
@@ -33,8 +28,6 @@ import (
 	"github.com/knowoff/knowoff/server/internal/reports"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/internal/transport"
-	"github.com/knowoff/knowoff/server/internal/workbench"
-	"github.com/knowoff/knowoff/server/pkg/media"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -48,7 +41,13 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (runErr error) {
+	if len(os.Args) > 1 && os.Args[1] == "release-manifest" {
+		if len(os.Args) != 2 {
+			return fmt.Errorf("usage: knowoffd release-manifest")
+		}
+		return writeReleaseManifest(os.Stdout)
+	}
 	cfgPath := os.Getenv("KNOWOFF_CONFIG")
 	if cfgPath == "" {
 		cfgPath = "configs/local.yaml"
@@ -77,7 +76,7 @@ func run() error {
 	registry.MustRegister(collectors.NewGoCollector())
 	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
-	// Connection gauge placeholder; incremented/decremented by transport layer.
+	// Only successfully upgraded text sockets contribute to the connection gauge.
 	connections := prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "knowoff_websocket_connections",
 		Help: "Current number of open WebSocket connections.",
@@ -105,7 +104,11 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("initialize text runtime: %w", err)
 	}
+	lifecycleManaged := false
 	defer func() {
+		if lifecycleManaged {
+			return
+		}
 		cleanup, cancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace())
 		defer cancel()
 		if err := textService.Close(cleanup); err != nil {
@@ -126,69 +129,32 @@ func run() error {
 				ClientID:     cfg.Security.OAuth.Facebook.ClientID,
 				ClientSecret: cfg.Security.OAuth.Facebook.ClientSecret,
 				RedirectURL:  cfg.Security.OAuth.Facebook.RedirectURL,
+				GraphVersion: cfg.Security.OAuth.Facebook.GraphVersion,
 			},
-			})
+		})
 	if err := authManager.ConfigureDevelopment(cfg.App.Env, textService.Lobby.Prototype()); err != nil {
 		return fmt.Errorf("configure development authentication: %w", err)
 	}
-	profileManager := profile.NewManager(db, cfg.Tuning.Progression)
-	auditLogger := audit.NewLogger(db)
+	profileManager := profile.NewManager(db)
 	leaderboardManager := leaderboard.NewManager(db)
 	economyManager := economy.NewManager(db, cfg)
+	verifiedPurchases, err := economy.NewPlatformPurchases(db, cfg)
+	if err != nil {
+		return fmt.Errorf("initialize billing: %w", err)
+	}
+	economyManager.Purchases = verifiedPurchases
 
-	mediaManager := media.NewManager(nil)
-
-	issuer := media.NewSignedURLIssuer([]byte(cfg.Media.URLSigningKey), time.Duration(cfg.Media.SignedURLTTLS)*time.Second)
 	redisClient := store.NewRedisClient(cfg.Redis.Addr, cfg.Redis.Password, cfg.Redis.DB)
-	lobbyManager := lobby.NewManager(lobby.Deps{
-		Config:       cfg,
-		Logger:       logger,
-		Pack:         mediaManager.Active(),
-		Manager:      mediaManager,
-		Issuer:       issuer,
-		AssetBaseURL: cfg.Storage.AssetsURL,
-		Redis:        redisClient,
-		NodeID:       cfg.App.Name + "-" + cfg.App.Version + "-" + fmt.Sprintf("%d", time.Now().Unix()),
-		Auth:         authManager,
-		Profile:      profileManager,
-		Audit:        auditLogger,
-		Leaderboard:  leaderboardManager,
-		Economy:      economyManager,
-	})
-
+	defer redisClient.Close()
 	deps := transport.Deps{
-		Config:      cfg,
-		Logger:      logger,
-		DB:          db,
-		RedisPing:   redisPingFunc(cfg),
-		StoragePing: storagePingFunc(cfg),
-		Connections: connections,
-		Media:       mediaManager,
+		Config: cfg, Logger: logger, DB: db,
+		RedisPing:    redisClient.Ping,
+		RuntimeReady: textService.Lobby.RuntimeReady,
 	}
-
-	handlerDeps := handler.HandlerDeps{
-		Config:                cfg,
-		Logger:                logger,
-		Lobby:                 lobbyManager,
-		Connections:           connections,
-		Auth:                  authManager,
-		Profile:               profileManager,
-		Audit:                 auditLogger,
-		Leaderboard:           leaderboardManager,
-		Economy:               economyManager,
-		Redis:                 redisClient,
-		ConnLimiter:           connLimiter,
-		ConnLimiterRejections: connLimiterRejections,
-	}
-
-	backfillManager := bots.NewBackfillManager(bots.Deps{
-		Config: cfg,
-		Logger: logger,
-		Lobby:  lobbyManager,
-	})
 
 	adminManager := admin.NewManager(db, cfg, redisClient)
-	noticesManager := notices.NewManager(db, cfg, lobbyManager)
+	noticesManager := notices.NewManager(db, cfg, textService.Lobby)
+	noticesManager.SetChangeNotifier(textService.Lobby.NotifyNotices)
 	reportsManager := reports.NewManager(db)
 	avatarManager := avatar.NewManager(db, cfg, economyManager)
 	portalManager := portal.NewManager(portal.Deps{
@@ -198,37 +164,30 @@ func run() error {
 		Profile:  profileManager,
 		Economy:  economyManager,
 		Admin:    adminManager,
-		Media:    mediaManager,
 		Screener: portal.NewTextScreener(cfg.Moderation.ContentScreening),
 	})
-	if err := portalManager.EnsureActiveTermsVersion(context.Background()); err != nil {
-		logger.Error("failed to ensure active portal terms", "error", err)
-		return err
-	}
-	_ = portalManager.ExpireFreezes(context.Background())
+	textService.bindModeration(portalManager, authManager)
+	// Contribution intake stays closed until an admin publishes real terms.
 
 	publicMux := http.NewServeMux()
-	publicMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
-	publicMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
-	publicMux.HandleFunc("/ws", handler.RealtimeHandler(handlerDeps))
-	textHandlerDeps := handler.TextHandlerDeps{Config: cfg, Lobby: textService.Lobby, Auth: authManager, ConnLimiter: connLimiter, Deliveries: textService.Values, DeliveryWorker: textService.Lobby.Owner()}
-	publicMux.HandleFunc("/ws/v2", handler.TextRealtimeHandler(textHandlerDeps))
-	publicMux.HandleFunc("/api/text/availability", handler.TextAvailabilityHandler(textHandlerDeps))
-	publicBaseURL := fmt.Sprintf("http://%s:%d", cfg.Server.BindAddr, cfg.Server.Port)
-	publicMux.HandleFunc("/join/", handler.RoomJoinHandler(lobbyManager, publicBaseURL))
-	publicMux.HandleFunc("/rooms/create", handler.RoomCreateHandler(lobbyManager))
-	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager, DevBotKey: cfg.Security.DevBotKey})
+	lifecycle := newRuntimeLifecycle()
+	textHandlerDeps := handler.TextHandlerDeps{Config: cfg, Lobby: textService.Lobby, Auth: authManager, ConnLimiter: connLimiter, Deliveries: textService.Values, DeliveryWorker: textService.Lobby.Owner(), Connections: connections, ConnectionRejections: connLimiterRejections}
+	handler.RegisterTextRealtimeRoutes(publicMux, textHandlerDeps)
+	handler.RegisterAuthRoutes(publicMux, handler.AuthDeps{Auth: authManager, DevBotKey: cfg.Security.DevBotKey, OAuthTrustedProxyCIDRs: cfg.Security.OAuth.TrustedProxyCIDRs})
+	handler.RegisterSafetyRoutes(publicMux, handler.SafetyDeps{Auth: authManager, Trust: textService.Trust, Config: cfg.Trust, RoomAccount: textService.Lobby.RoomAccount})
 	handler.RegisterProfileRoutes(publicMux, handler.ProfileDeps{Profile: profileManager, Leaderboard: leaderboardManager}, authManager)
 	handler.RegisterPublicRoutes(publicMux, handler.PublicRouteDeps{
-		Auth:    authManager,
-		Notices: noticesManager,
-		Reports: reportsManager,
-		Avatar:  avatarManager,
+		VisibleText: textService.Lobby.VisibleText,
+		Auth:        authManager,
+		Notices:     noticesManager,
+		Reports:     reportsManager,
+		Avatar:      avatarManager,
 	})
 	handler.RegisterEconomyRoutes(publicMux, handler.EconomyDeps{
-		Config:  cfg,
-		Auth:    authManager,
-		Economy: economyManager,
+		WalletAccess: textService.Lobby.WithWalletAccess,
+		Config:       cfg,
+		Auth:         authManager,
+		Economy:      economyManager,
 	})
 	publicMux.Handle("/portal/", portalManager.Handler())
 	publicMux.Handle("POST /api/portal/connect", portalManager.ConnectHandler())
@@ -238,20 +197,9 @@ func run() error {
 	})
 
 	adminMux := http.NewServeMux()
-	adminMux.HandleFunc("/healthz", transport.HealthzHandler(deps))
-	adminMux.HandleFunc("/readyz", transport.ReadyzHandler(deps))
+	adminMux.Handle("/admin/runtime/", adminManager.RuntimeHandler(textService.adminRuntimeHooks()))
 	adminMux.Handle("/admin/portal/", adminManager.PortalHandler(portalManager))
 	adminMux.Handle("/admin/", adminManager.Handler(noticesManager))
-	if cfg.App.Env != "prod" {
-		ingestPath := cfg.Media.WorkbenchIngestPath
-		if ingestPath == "" {
-			ingestPath = "content/ingest"
-		}
-		wb := workbench.New(deps.Media, ingestPath)
-		defer wb.Close()
-		wb.Register(adminMux)
-		logger.Info("media workbench mounted", "env", cfg.App.Env, "ingest", ingestPath)
-	}
 
 	metricsMux := http.NewServeMux()
 	metricsMux.Handle("/metrics", promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
@@ -259,7 +207,7 @@ func run() error {
 	publicServer := &http.Server{
 		Addr: fmt.Sprintf("%s:%d", cfg.Server.BindAddr, cfg.Server.Port),
 		Handler: transport.CORS(
-			transport.RecoverPanic(publicMux, logger),
+			transport.RecoverPanic(lifecycle.Handler(publicMux, deps), logger),
 			cfg.Server.AllowedOrigins,
 		),
 		ReadTimeout:  time.Duration(cfg.Server.ReadTimeoutS) * time.Second,
@@ -273,7 +221,7 @@ func run() error {
 	}
 	adminServer := &http.Server{
 		Addr:    adminAddr,
-		Handler: transport.RecoverPanic(adminMux, logger),
+		Handler: transport.RecoverPanic(lifecycle.Handler(adminMux, deps), logger),
 	}
 
 	metricsServer := &http.Server{
@@ -281,33 +229,42 @@ func run() error {
 		Handler: metricsMux,
 	}
 
-	errCh := make(chan error, 3)
-	go func() { errCh <- publicServer.ListenAndServe() }()
-	go func() { errCh <- adminServer.ListenAndServe() }()
-	go func() { errCh <- metricsServer.ListenAndServe() }()
-
-	// A ready server must be able to create a room immediately. Loading this
-	// synchronously keeps /readyz false until gameplay media is available.
-	if cfg.Media.LocalBundlePath != "" {
-		pack, err := media.LoadPack(cfg.Media.LocalBundlePath, dealingTuningFromConfig(cfg))
-		if err != nil {
-			return fmt.Errorf("load media pack %q: %w", cfg.Media.LocalBundlePath, err)
+	refreshRuntimeHealth(context.Background(), deps, textService.Lobby, noticesManager.MarkMaintenanceDrain, logger)
+	shutdownGrace := cfg.ShutdownGrace()
+	lifecycleManaged = true
+	defer func() {
+		runErr = errors.Join(runErr, lifecycle.Shutdown(shutdownGrace, textService.Close, publicServer, adminServer, metricsServer))
+		if runErr == nil {
+			logger.Info("server stopped")
 		}
-		mediaManager.Load(pack)
-		logger.Info("media pack loaded", "tag", pack.Manifest.PackTag)
+	}()
+	// The worker gate owns child cancellation so grace never cancels Tick early.
+	runCtx := context.Background()
+
+	errCh := make(chan error, 3)
+	for _, server := range []*http.Server{publicServer, adminServer, metricsServer} {
+		lifecycle.Workers.Go(runCtx, func(context.Context) { errCh <- server.ListenAndServe() })
 	}
 
-	if mediaManager.Active() == nil {
-		return fmt.Errorf("no media pack configured")
-	}
 	transport.SetReady(true)
-	runCtx, runCancel := context.WithCancel(context.Background())
-	defer runCancel()
-	go runHealthWatcher(runCtx, deps, lobbyManager, logger)
-	go textService.Lobby.Run(runCtx, func(err error) { logger.Error("text match tick failed", "error", err) })
-	go textService.Lobby.RunDeliveries(runCtx, textService.Values, func(err error) { logger.Error("text delivery retry pending", "error", err) })
-	backfillManager.Start(runCtx)
-	defer backfillManager.Stop()
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		runHealthWatcher(ctx, deps, textService.Lobby, noticesManager.MarkMaintenanceDrain, logger)
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		noticesManager.Run(ctx, func(err error) { logger.Error("notice refresh pending", "error", err) })
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		verifiedPurchases.RunProviderTasks(ctx, func(err error) { logger.Error("billing reconciliation pending", "error", err) })
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		portalManager.RunCommunity(ctx, func(err error) { logger.Error("community maintenance pending", "error", err) })
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		textService.Lobby.Run(ctx, func(err error) { logger.Error("text match tick failed", "error", err) })
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		textService.Lobby.RunDeliveries(ctx, textService.Values, func(err error) { logger.Error("text delivery retry pending", "error", err) })
+	})
 
 	logger.Info("server started",
 		"public", publicServer.Addr,
@@ -318,6 +275,7 @@ func run() error {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+	defer signal.Stop(sigCh)
 
 	select {
 	case err := <-errCh:
@@ -325,41 +283,12 @@ func run() error {
 			return fmt.Errorf("server error: %w", err)
 		}
 	case <-textService.Owner.Done():
-		runCancel()
-		transport.SetReady(false)
-		lobbyManager.SetReady(false)
+		shutdownGrace = 0 // Lost authority cannot progress gameplay grace.
 		return fmt.Errorf("text match ownership lost")
 	case sig := <-sigCh:
 		logger.Info("shutdown signal received", "signal", sig.String())
 	}
 
-	// Flip readiness off before draining so load balancers stop sending traffic.
-	transport.SetReady(false)
-	lobbyManager.SetReady(false)
-	textDrain, textDrainCancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace())
-	if err := textService.Close(textDrain); err != nil {
-		logger.Error("text drain failed", "error", err)
-	}
-	textDrainCancel()
-	runCancel()
-	logger.Info("readiness disabled, draining connections")
-	// Brief pause so a probe can observe the 503 before listeners close.
-	time.Sleep(1 * time.Second)
-
-	ctx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownGrace())
-	defer cancel()
-
-	if err := publicServer.Shutdown(ctx); err != nil {
-		logger.Error("public server shutdown error", "error", err)
-	}
-	if err := adminServer.Shutdown(ctx); err != nil {
-		logger.Error("admin server shutdown error", "error", err)
-	}
-	if err := metricsServer.Shutdown(ctx); err != nil {
-		logger.Error("metrics server shutdown error", "error", err)
-	}
-
-	logger.Info("server stopped")
 	return nil
 }
 
@@ -491,75 +420,34 @@ func openDB(cfg *config.Config) (*sql.DB, error) {
 	return db, nil
 }
 
-func dealingTuningFromConfig(cfg *config.Config) media.DealingTuning {
-	return media.DealingTuning{
-		BandHigh:          cfg.Tuning.Dealing.BandHigh,
-		BandLow:           cfg.Tuning.Dealing.BandLow,
-		MinHighPerNown:    cfg.Tuning.Dealing.MinHighPerNown,
-		MinDistantPerNown: cfg.Tuning.Dealing.MinDistantPerNown,
+// refreshRuntimeHealth changes dependency and maintenance admission fences only.
+// Process shutdown readiness and permanent owner loss cannot be undone by a probe.
+func refreshRuntimeHealth(ctx context.Context, deps transport.Deps, manager *lobby.TextManager, maintenance func(context.Context) error, logger *slog.Logger) {
+	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	ok := true
+	if deps.DB != nil {
+		if err := deps.DB.PingContext(checkCtx); err != nil {
+			logger.Warn("dependency degraded", "dependency", "postgres", "error", err)
+			ok = false
+		}
+	}
+	if ok && deps.RedisPing != nil {
+		if err := deps.RedisPing(checkCtx); err != nil {
+			logger.Warn("dependency degraded", "dependency", "redis", "error", err)
+			ok = false
+		}
+	}
+	manager.SetDependencyReady(ok)
+	if maintenance != nil {
+		if err := maintenance(checkCtx); err != nil {
+			manager.SetReady(false)
+			logger.Warn("maintenance status unavailable", "error", err)
+		}
 	}
 }
 
-func redisPingFunc(cfg *config.Config) func(context.Context) error {
-	return func(ctx context.Context) error {
-		d := net.Dialer{}
-		conn, err := d.DialContext(ctx, "tcp", cfg.Redis.Addr)
-		if err != nil {
-			return err
-		}
-		defer conn.Close()
-
-		br := bufio.NewReader(conn)
-		if cfg.Redis.Password != "" {
-			if _, err := fmt.Fprintf(conn, "AUTH %s\r\n", cfg.Redis.Password); err != nil {
-				return err
-			}
-			line, err := br.ReadString('\n')
-			if err != nil {
-				return err
-			}
-			if !strings.HasPrefix(line, "+OK") {
-				return fmt.Errorf("redis auth failed: %s", strings.TrimSpace(line))
-			}
-		}
-		if _, err := fmt.Fprint(conn, "PING\r\n"); err != nil {
-			return err
-		}
-		line, err := br.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		if !strings.HasPrefix(line, "+PONG") {
-			return fmt.Errorf("redis ping failed: %s", strings.TrimSpace(line))
-		}
-		return nil
-	}
-}
-
-func storagePingFunc(cfg *config.Config) func(context.Context) error {
-	return func(ctx context.Context) error {
-		url := cfg.Storage.Endpoint
-		if !strings.HasSuffix(url, "/") {
-			url += "/"
-		}
-		url += "minio/health/live"
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			return err
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return err
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode >= 500 {
-			return fmt.Errorf("storage unhealthy: %d", resp.StatusCode)
-		}
-		return nil
-	}
-}
-
-func runHealthWatcher(ctx context.Context, deps transport.Deps, lobby *lobby.Manager, logger *slog.Logger) {
+func runHealthWatcher(ctx context.Context, deps transport.Deps, manager *lobby.TextManager, maintenance func(context.Context) error, logger *slog.Logger) {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -567,30 +455,8 @@ func runHealthWatcher(ctx context.Context, deps transport.Deps, lobby *lobby.Man
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			refreshRuntimeHealth(ctx, deps, manager, maintenance, logger)
 		}
-		checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-		ok := true
-		if deps.DB != nil {
-			if err := deps.DB.PingContext(checkCtx); err != nil {
-				logger.Warn("dependency degraded", "dependency", "postgres", "error", err)
-				ok = false
-			}
-		}
-		if ok && deps.RedisPing != nil {
-			if err := deps.RedisPing(checkCtx); err != nil {
-				logger.Warn("dependency degraded", "dependency", "redis", "error", err)
-				ok = false
-			}
-		}
-		if ok && deps.StoragePing != nil {
-			if err := deps.StoragePing(checkCtx); err != nil {
-				logger.Warn("dependency degraded", "dependency", "storage", "error", err)
-				ok = false
-			}
-		}
-		cancel()
-		transport.SetReady(ok)
-		lobby.SetReady(ok)
 	}
 }
 

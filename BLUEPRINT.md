@@ -15,21 +15,18 @@
 > per the lockstep rule in `ROADMAP.md`'s Appendix A and `AGENTS.md` §1.
 > Need a fast, high-level orientation first? → [`README.md`](README.md).
 
-> **Text transition adopted for planning — 2026-09-12.** The owner selected
-> text-only Knowoff with five selectable gameplay modes. This document now
-> specifies the target; the checked-in runtime still implements the older
-> association game. No mode, migration, content release or cleanup is claimed
-> implemented by this documentation change. [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md)
+> **Text transition adopted — 2026-09-12.** The owner selected text-only
+> Knowoff with five selectable modes. [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md)
 > records the decision; the [transition design](docs/design/DESIGN-text-transition.md)
-> maps source gaps, data preservation and retirement proofs. Previous roadmap
-> checkmarks remain historical evidence only.
-
-> **Implementation update — 2026-09-12.** Phase 1 is verified complete with
-> executable v2 contracts, typed closed availability, read-only inventory,
-> reviewed transaction identities and isolated migration/backfill design proofs.
-> The active wire protocol remains v1; none of the five text mode engines or
-> deployed data transitions is complete. Current proof and remaining gates
-> are tracked in the Roadmap.
+> retains the historical source audit and preservation/retirement boundaries.
+>
+> **Implementation update — 2026-09-12.** The checked-in runtime now uses v2
+> contracts, five text engines, compatible lobbies and role-scoped client views.
+> Durable value, trust, content and operational work has scoped test evidence;
+> the [Roadmap](docs/planning/ROADMAP.md) and
+> [resumption record](docs/reports/2026-09-12-text-transition-resumption.md)
+> identify remaining gates. Configured production availability remains closed
+> pending certified content and human release evidence. No deployment exists.
 
 ## 🎲 The Game at a Glance
 
@@ -77,9 +74,9 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 Retain server authority (ADR-001), Flutter (ADR-002) and the public shared Go
 content-library boundary in `server/pkg/media` (ADR-004). The historical package
 name may remain: a name is not dead code; unused image/specialty behavior is.
-The current Compose stack still includes MinIO. Retire its mandatory readiness,
-credentials, routes and volume only after the transition inventory proves no
-retained consumer needs them. Keep authorized historical backups separately.
+The core Compose stack no longer requires MinIO. Preserve authorized historical
+object archives through the separately verified retention/restore path; do not
+delete them as a side effect of removing playable delivery.
 Hosting cost and availability require current operator quotes and measurements;
 old zero-cost, VPS-price and CDN-free-tier examples are not business evidence.
 
@@ -156,7 +153,7 @@ play; no card means pass with no invented copy. The mode board stays unchanged.
 Disconnected human turns use the same evidence/penalty path immediately.
 
 **Bad Bargains resolution.** Only one offer can be pending. Its server-owned
-10-second response window is a planned `timers.trade_response_s` addition;
+10-second response window uses `timers.trade_response_s`;
 normal turn time limits submission only. No further action/draw by the proposer.
 The recipient's response does not consume their later scheduled turn.
 
@@ -253,7 +250,7 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
   Leave queue. Keep waiting retains FIFO position. Change atomically leaves the
   old queue before joining the new one at its tail. Never charge a second
   allowance or reserve two seats during retry/change/disconnect races.
-* Text production backfill is **off**, even though current tuning enables it.
+* Text production backfill is **off**; retired backfill configuration is rejected.
   Require full human tables. Release modes/languages in measured cohorts so
   selection does not fragment queues beyond viable fill times. All five remain
   the intended offering; unreleased modes never enter matchmaking.
@@ -460,12 +457,12 @@ filenames here (some former blueprint paths were aspirational).
 | `client/lib/core/` | Config, transport, logging and shared services retained; v2 network handling added. |
 | `client/lib/data/` | API/auth and DTOs retained/adapted to copy IDs, contract and sequence snapshots. |
 | `client/lib/presentation/` | Shared theme/screens/state retained; five mode controls added, specialty/image gameplay views retired. |
-| `client/lib/media/` | Existing catalog/cache/prefetch path audited for removal; do not download secret prompt catalogs. |
+| `client/lib/media/` | Playable catalog/cache/prefetch implementation retired; retain only the selective cache-upgrade boundary. |
 | `server/cmd/knowoffd/` | Wiring, health, graceful drain and config, with obsolete storage/bot entry points removed. |
 | `server/internal/{game,lobby,handler,transport}/` | One authoritative shared engine, compatible queues/readiness, role-scoped v2 protocol. |
 | `server/pkg/media/` | Shared versioned text catalog/dealing/certification library (ADR-004); no client dealer. |
-| `server/internal/{economy,profiles,leaderboard,store}/` | Durable value, stable match/admission/settlement identity and shared caps. |
-| `server/internal/{portal,admin,workbench}/` | Text contribution/review/activation and secure operations; retire obsolete image-only workbench code. |
+| `server/internal/{economy,profile,leaderboard,store}/` | Durable value, stable match/admission/settlement identity and shared caps. |
+| `server/internal/{portal,admin}/` | Text contribution/review/activation and secure operations; obsolete image workbench removed. |
 | `server/internal/{avatar,reports,notices}/` | Retained non-playable imagery, conduct/content cases and truthful drain notices. |
 | `server/migrations/` | Applied history preserved; additive migration/backfill before contract cleanup. |
 | `tools/mediapack/`, `tools/gamebot/` | Existing command surfaces adapted to text releases and v2 scripted test matches. |
@@ -486,11 +483,11 @@ receive only authorized instances through role-scoped events.
 ### 1. Text bundle and release contract
 
 Retain immutable manifest + `media.jsonl` (Nowns) + `cards.jsonl` conventions
-unless a versioned migration requires a rename. The planned new format declares
+unless a versioned migration requires a rename. Format 2 declares
 schema version, release ID, mode suitability, canonical BCP 47 language, rules
 compatibility, per-file hashes, license/attribution, age policy and certification
 artifact hashes. Nowns distinguish situation/plan/criterion; cards distinguish
-response/item pool. These are target fields, not current loader capabilities.
+response/item pool. The shared text loader validates these fields.
 Reject unknown types, blank/oversized text, invalid Unicode, missing coverage,
 duplicate IDs or incompatible versions before activation. Never reinterpret an
 old image alt-text/filename as approved playable text.
@@ -531,12 +528,14 @@ from testing only first-Nown band counts.
 
 ### 3. Text pipeline and content production
 
-Current `tools/mediapack` has `build`, `certify`, `simulate`, `publish`;
-`build` makes synthetic fixtures and `publish` copies directories. They do not
-yet implement the production workflow below. New commands must be documented
-only once actually implemented; the Roadmap orders the work.
+Current `tools/mediapack` provides `text-prepare`, `text-build-fixture`,
+`text-certify`, `text-simulate`, `text-publish` and `text-duplicates`. The old
+command names explicitly refuse. The durable release store separately binds
+accepted sources, publication, activation and takedown. Technical success does
+not supply the required human editorial/action/pilot evidence; see
+[tool usage](tools/README.md) and the Roadmap for remaining release gates.
 
-Target workflow: draft → normalize/validate → automated text screen → human
+Required workflow: draft → normalize/validate → automated text screen → human
 editorial/rights/locale review → versioned bundle → technical/action certification
 → human full-match pilot → approved activation. Capture exact accepted text,
 source/terms version, editor and consent provenance. Approving a submission is
@@ -559,7 +558,7 @@ rights and automated-plus-human screening. Avatars/store art are separate assets
 Start with a bounded mode/language pilot; all five intended modes need their own
 4/6-player proof. At least three themes and two cultural/language pilots test
 transferability, without promising both languages at public launch. The old
-150-Nown/1,500-card aggregate goal and current 150/5,400 synthetic fixture are
+150-Nown/1,500-card aggregate goal and historical 150/5,400 synthetic fixture are
 not release capacity proofs; publish sufficient certified content based on
 full-schedule viability and repeat-exposure measurements. Record recognition,
 laughter, defensible alternatives, comprehension and reference explanations.
@@ -589,7 +588,7 @@ change does not edit it. Resolve its comments and add typed validation in Phase 
 | Concern | Current value / key | Text target |
 |---|---|---|
 | Turn | `timers.play_turn: 20` | Retain; measured by mode |
-| Discussion | `timers.discussion_per_player: 5` | Target × original configured table size, Ready shortcut; current code uses active-connected count and must change explicitly |
+| Discussion | `timers.discussion_per_player: 5` | Original configured table size multiplier, with the unanimous active-connected Ready shortcut |
 | Ballot/runoff/result | 20 / 15 / 8 seconds | Retain; unanimous active-connected Ready may end early |
 | Grace | `game.reconnect_grace_s: 20` | Retain; reconnect never resets it |
 | Inter-round countdown | `timers.prefetch_countdown: 5` | Replace with neutral round-start countdown in versioned config; no asset prefetch dependency |
@@ -643,6 +642,13 @@ Nown text, moderated chat, localized operator notices and consented user content
 are explicitly permitted display data; “no display text” must not prohibit
 text gameplay. Content language is pinned separately from interface locale.
 
+Protocol v2 delivers public notice invalidation as `system_notice` with exactly
+`{"refresh":true}`. Clients fetch the localized inbox after that signal, on
+connection/resume and periodically while foregrounded. Operator text and
+reminder stages come from that inbox; the invalidation carries no match or
+account content. Failed refreshes remain retryable, and widget disposal cancels
+its refresh timers.
+
 There is no durable live-match recovery claim. On process loss, fail cleanly to
 menu; terminate pending offers and mark interrupted match. Already durable
 Noin grants survive; no fabricated completion, result or replacement hand.
@@ -681,10 +687,9 @@ identities/overrides through authenticated environment policy, not a client flag
 
 ### 1. Containerization Principles
 
-Keep Go/Flutter build boundaries, Docker Compose, PostgreSQL and Redis. Current
-images and tooling still depend on the older content path; Phase 6 removes
-playable-image-only native libraries, storage clients and readiness checks after
-consumer proof. The avatar WebP encoder remains a legitimate native consumer;
+Keep Go/Flutter build boundaries, Docker Compose, PostgreSQL and Redis.
+Playable-image tooling and core storage/readiness dependencies are retired after
+consumer proof; retained archives and final cutover have separate Phase 6 gates. The avatar WebP encoder remains a legitimate native consumer;
 text-only gameplay does not by itself remove CGO/compiler needs. Build each
 supported artifact in a verified toolchain; do not claim static/distroless or
 multi-arch success without build/runtime evidence.

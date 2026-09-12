@@ -1,9 +1,17 @@
 package handler
 
 import (
+	"bytes"
+	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/auth"
@@ -16,8 +24,9 @@ import (
 
 // AuthDeps bundles auth-related handlers.
 type AuthDeps struct {
-	Auth      *auth.Manager
-	DevBotKey string
+	Auth                   *auth.Manager
+	DevBotKey              string
+	OAuthTrustedProxyCIDRs []string
 }
 
 // ProfileDeps bundles profile and leaderboard API handlers.
@@ -69,38 +78,7 @@ func RegisterAuthRoutes(mux *http.ServeMux, deps AuthDeps) {
 		writeJSON(w, pair)
 	})
 
-	mux.HandleFunc("/api/auth/oauth/start", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		accountID, _ := bearerAccount(r, deps.Auth)
-		var req struct {
-			Provider string `json:"provider"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-		url, err := deps.Auth.StartOAuth(r.Context(), req.Provider, accountID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		writeJSON(w, map[string]string{"url": url})
-	})
-
-	mux.HandleFunc("/api/auth/oauth/callback", func(w http.ResponseWriter, r *http.Request) {
-		provider := r.URL.Query().Get("provider")
-		state := r.URL.Query().Get("state")
-		code := r.URL.Query().Get("code")
-		pair, err := deps.Auth.CompleteOAuth(r.Context(), provider, state, code)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
-			return
-		}
-		writeJSON(w, pair)
-	})
+	registerOAuthRoutes(mux, deps)
 }
 
 // RegisterProfileRoutes mounts profile and leaderboard read endpoints.
@@ -152,6 +130,10 @@ func RegisterProfileRoutes(mux *http.ServeMux, deps ProfileDeps, authMgr *auth.M
 	})
 
 	mux.HandleFunc("/api/profile/avatar", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		r = r.WithContext(ctx)
 		if r.Method != http.MethodPatch {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -164,12 +146,38 @@ func RegisterProfileRoutes(mux *http.ServeMux, deps ProfileDeps, authMgr *auth.M
 		var req struct {
 			Avatar string `json:"avatar"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		if err := deps.Profile.UpdateAvatar(r.Context(), accountID, req.Avatar); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		var extra any
+		if err := decoder.Decode(&extra); err != io.EOF {
+			purchaseError(w, http.StatusBadRequest, "avatar.invalid")
+			return
+		}
+		token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		authorize := func(ctx context.Context, tx *sql.Tx) error {
+			id, err := authMgr.ValidateAccessTokenTx(ctx, tx, token)
+			if err != nil || id != accountID {
+				return fmt.Errorf("avatar.account_unavailable")
+			}
+			return nil
+		}
+		if err := deps.Profile.UpdateAvatarAuthorized(r.Context(), accountID, req.Avatar, authorize); err != nil {
+			status := http.StatusInternalServerError
+			code := "avatar.unavailable"
+			if err.Error() == "avatar.invalid" {
+				status = http.StatusBadRequest
+				code = err.Error()
+			}
+			if err.Error() == "avatar.account_unavailable" {
+				status = http.StatusUnauthorized
+				code = err.Error()
+			}
+			purchaseError(w, status, code)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -232,10 +240,11 @@ func RegisterProfileRoutes(mux *http.ServeMux, deps ProfileDeps, authMgr *auth.M
 
 // PublicRouteDeps bundles the public HTTP surface introduced in Phase 5.
 type PublicRouteDeps struct {
-	Auth    *auth.Manager
-	Notices *notices.Manager
-	Reports *reports.Manager
-	Avatar  *avatar.Manager
+	VisibleText reports.VisibleText
+	Auth        *auth.Manager
+	Notices     *notices.Manager
+	Reports     *reports.Manager
+	Avatar      *avatar.Manager
 }
 
 // RegisterPublicRoutes mounts player-facing endpoints for notices, reports,
@@ -254,18 +263,29 @@ func RegisterPublicRoutes(mux *http.ServeMux, deps PublicRouteDeps) {
 			return
 		}
 		var req struct {
-			ReportType      string `json:"report_type"`
-			TargetAccountID string `json:"target_account_id"`
-			TargetMediaID   string `json:"target_media_id"`
-			Reason          string `json:"reason"`
-			Description     string `json:"description"`
+			ReportType      string                     `json:"report_type"`
+			TargetAccountID string                     `json:"target_account_id"`
+			TargetMediaID   string                     `json:"target_media_id"`
+			TargetText      *reports.TextTargetRequest `json:"target_text"`
+			Reason          string                     `json:"reason"`
+			Description     string                     `json:"description"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeReportBody(w, r, &req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		if err := deps.Reports.CreateReport(r.Context(), accountID, reports.ReportType(req.ReportType), req.TargetAccountID, req.TargetMediaID, req.Reason, req.Description); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		var err error
+		if req.TargetText != nil {
+			if req.ReportType != string(reports.ReportMedia) || req.TargetAccountID != "" || req.TargetMediaID != "" {
+				err = reports.ErrInvalid
+			} else {
+				err = deps.Reports.CreateTextReport(r.Context(), accountID, *req.TargetText, req.Reason, req.Description, deps.VisibleText)
+			}
+		} else {
+			err = deps.Reports.CreateReport(r.Context(), accountID, reports.ReportType(req.ReportType), req.TargetAccountID, req.TargetMediaID, req.Reason, req.Description)
+		}
+		if err != nil {
+			reportHTTPError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -287,18 +307,19 @@ func RegisterPublicRoutes(mux *http.ServeMux, deps PublicRouteDeps) {
 			Message         string         `json:"message"`
 			ContextSnapshot map[string]any `json:"context_snapshot"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := decodeReportBody(w, r, &req); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 		if err := deps.Reports.CreateFeedback(r.Context(), accountID, req.Type, req.Title, req.Message, req.ContextSnapshot); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			reportHTTPError(w, err)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 
 	mux.Handle("/api/avatar", deps.Avatar.Handler(deps.Auth))
+	mux.Handle("/api/avatar/{account_id}", deps.Avatar.ImageHandler(deps.Auth))
 }
 
 func bearerAccount(r *http.Request, authMgr *auth.Manager) (string, bool) {
@@ -315,4 +336,34 @@ func bearerAccount(r *http.Request, authMgr *auth.Manager) (string, bool) {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func decodeReportBody(w http.ResponseWriter, r *http.Request, out any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, reports.MaxBodyBytes)
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	if !utf8.Valid(raw) {
+		return reports.ErrInvalid
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.DisallowUnknownFields()
+	if err = d.Decode(out); err != nil {
+		return err
+	}
+	if err = d.Decode(new(any)); !errors.Is(err, io.EOF) {
+		return reports.ErrInvalid
+	}
+	return nil
+}
+func reportHTTPError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, reports.ErrRateLimited):
+		http.Error(w, reports.ErrRateLimited.Error(), 429)
+	case errors.Is(err, reports.ErrTargetUnavailable):
+		http.Error(w, reports.ErrTargetUnavailable.Error(), 400)
+	default:
+		http.Error(w, reports.ErrInvalid.Error(), 400)
+	}
 }

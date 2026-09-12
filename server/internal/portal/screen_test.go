@@ -220,7 +220,9 @@ func TestChallengeScreeningChecksExactPublishedText(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
-		if _, err := db.Exec(`ALTER TABLE portal_submissions ENABLE TRIGGER text_review_identity; ALTER TABLE challenge_entries ENABLE TRIGGER text_review_identity`); err != nil {t.Error(err)}
+		if _, err := db.Exec(`ALTER TABLE portal_submissions ENABLE TRIGGER text_review_identity; ALTER TABLE challenge_entries ENABLE TRIGGER text_review_identity`); err != nil {
+			t.Error(err)
+		}
 	}()
 	m := newTestManager(t, db)
 	admin := newAdmin(t, db)

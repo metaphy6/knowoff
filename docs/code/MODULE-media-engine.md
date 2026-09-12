@@ -1,246 +1,131 @@
 # Module: Server content and dealing
 
-> **Current-runtime audit, not the text target.** The source observations below
-> were recorded on 2026-09-11 and cross-checked for transition planning on
-> 2026-09-12. The [Blueprint](../../BLUEPRINT.md) now specifies five text-only
-> modes under [ADR-012](../design/ADR-012-text-only-selectable-modes.md).
-> Image delivery, specialties and association-game dealing described here
-> remain in the checked-in runtime; this documentation change fixes none of
-> those paths. Use the [transition design](../design/DESIGN-text-transition.md)
-> and current [Roadmap](../planning/ROADMAP.md) for replacement work.
+This describes the implemented text path as of 2026-09-12. The
+[Blueprint](../../BLUEPRINT.md) defines the five modes; the
+[Roadmap](../planning/ROADMAP.md) and
+[resumption evidence](../reports/2026-09-12-text-transition-resumption.md)
+record which engineering and release gates have passed. Local proofs do not
+certify a production pack, human playtest or deployment.
 
-## Purpose
+## Responsibilities
 
-Explain the current path from a content pack to Nowns and player hands before
-authoring real content. This is a source audit dated 2026-09-11, not a replacement
-for the target rules in [Blueprint](../../BLUEPRINT.md). Editorial standards
-live in [Humor development](../../content/humor-development.md) and the
-[Curator Guide](../../content/curator-guide.md).
-
-## Public surface
-
-| Component | Responsibility |
+| Boundary | Responsibility |
 |---|---|
-| [`server/pkg/media`](../../server/pkg/media/) | Pack format, checksum validation, relevance bands, dealing, certification, signed URLs and active pack manager. |
-| [`tools/mediapack`](../../tools/mediapack/cmd/mediapack/main.go) | Current commands: `build`, `certify`, `simulate`, `publish`. |
-| [`game.Match`](../../server/internal/game/match.go) | Secret roles/Nown schedule, hands, draws, specialties, rounds and votes. |
-| [`PayloadRenderer`](../../server/internal/game/payload.go) | Per-recipient Nown/decoy and media payloads. |
-| [Contributor Studio](../guides/COMMUNITY_OPERATIONS.md) | Text drafts, submission and review; acceptance is separate from pack release. |
+| [`server/pkg/media`](../../server/pkg/media/) | Strict text bundles, reviewed suitability, retained-card dealing, certification, duplicate candidates and immutable snapshots. |
+| [`tools/mediapack`](../../tools/mediapack/cmd/mediapack/main.go) | Text preparation, fixture generation, sampled certification/simulation, duplicate review input and publication validation. |
+| [`TextReleaseStore`](../../server/internal/store/text_release.go) | Accepted-source capture, durable publication, explicit activation and takedown with immutable lineage and audit. |
+| [`game.TextMatch`](../../server/internal/game/text_match.go) | Copy ownership, all five actions, secret schedule, turn/vote state and outcomes. |
+| [Snapshot projection](../../server/internal/game/text_snapshot.go) | Detached per-recipient text, hand, board and whole-match evidence from the pinned match. |
+| [Client session](../../client/lib/core/text/v2_session.dart) | Authorized v2 events, sequencing, history assembly and account-bound recovery. |
+| [Contributor Studio](../guides/COMMUNITY_OPERATIONS.md) | Private drafts, explicit consent, screening and human acceptance; acceptance alone never publishes a pack. |
 
-## Internals
+## Bundle and immutable release
 
-```mermaid
-flowchart LR
-    P[Versioned pack files] --> L[Validate and load]
-    L --> B[Compute Nown-to-card bands]
-    B --> M[Active pack in server memory]
-    M --> N[Secret Nown schedule]
-    N --> H[Five cards plus three reserve per player]
-    H --> R[Role-scoped game events]
-```
+Format 2 retains `manifest.json`, `media.jsonl` for Nowns, `cards.jsonl` and
+`suitability.jsonl`. Records carry immutable content revisions, language, mode
+and pool compatibility, accepted-source provenance and exact wording. The
+manifest binds member hashes and separate certification artifacts. The shared
+[validator](../../server/pkg/media/text_validation.go) and
+[loader](../../server/pkg/media/text_loader.go) reject nontext records, invalid
+Unicode/control characters, missing or incompatible metadata, tampered members,
+unsafe paths and unbounded input. No image URL, embedding or asset decoder is
+part of playable delivery.
 
-### Content storage and loading
+A `TextSnapshot` owns validated bytes and returns detached views. A match pins
+its release, rules, tuning, full Nown schedule and dealt cards once. New
+activation and takedown affect future resolution; existing hands, board,
+history, reconnect and begun-round verdict retain their original wording.
+Caller mutation cannot rewrite the snapshot. Failed activation preserves the
+previous active release.
 
-`manifest.json` identifies the pack, language, embedding model/version and
-checksums; `media.jsonl` contains Nowns; `cards.jsonl` contains playable prompts.
-Text lives in the item data; static images use asset references. These are the
-only playable media formats in the current loader under the historical
-[ADR-011](../design/ADR-011-static-image-and-text-content.md) contract. MinIO is
-still configured in the current stack; the text target uses server-local
-versioned bundles and retires playable object-storage delivery.
+`TextReleaseStore` binds curation input to the original accepted submission or
+challenge identity, consent version/time, editor and text hash. Publishing does
+not activate. Repeated capture/publication/activation does not rerun approvals,
+contributor credits or rewards. Durable lineage survives a reconstructed
+service. Takedown remains a separately audited action.
 
-The candidate preparation tool accepts static PNG/JPEG/WebP inputs and writes
-static WebP. Pack validation accepts only image/text item types and fully
-decoded static WebP assets within the 720 px longest-side limit; a GIF, an
-animated WebP/APNG or another format renamed as an image is not a valid pack
-asset. `ValidatePackContent` runs during loading, certification and bundle
-writing. This format validation does not complete the moderation, embedding
-or production activation pipeline below.
+## Reviewed suitability and retained dealing
 
-Startup loads `media.local_bundle_path` synchronously and refuses to start
-without a usable pack. `LoadPack` validates the bundle and computes band lists
-in memory. New matches receive the active pack from the lobby manager. Match
-state is in memory; PostgreSQL stores contribution workflow and durable player
-data, rather than supplying a fresh database query for every card draw.
-See [startup](../../server/cmd/knowoffd/main.go),
-[loader](../../server/pkg/media/loader.go) and
-[lobby manager](../../server/internal/lobby/manager.go).
+High/Distant/Chaos describe a reviewed, versioned Nown/card/mode relationship.
+They are not answers, player roles, item prices, rating targets or humor scores.
+The live configuration has retained-coverage minima, with no cosine-band
+thresholds. Historical tuning snapshots preserve their old serialized fields
+only for hash verification and durable replay. Optional evaluator metadata may
+assist editorial work; it cannot replace a recorded suitability decision.
 
-The checked-in [development pack](../../content/packs/core-2026.10/manifest.json)
-has **150 text Nowns and 5,400 text cards**, with manifest tag
-`synthetic-20260820` despite its directory name `core-2026.10`. Its
-`synthetic-deterministic` embeddings are two-dimensional fixture vectors;
-they do not establish semantic relevance or comic quality for real text.
-[ADR-005](../design/ADR-005-synthetic-seed-pack.md) explains why a synthetic
-development pack exists.
+The [dealer](../../server/pkg/media/text_dealing.go) chooses a distinct full
+2/3-round schedule for 4/6 players and checks each seat's actual five-card hand
+plus three-card reserve against every scheduled Nown. Infeasible input refuses
+before consuming match access; there is no repeat-last-Nown rescue. Schedule,
+hand and system selection use separate randomness, independent of role
+assignment. Public system cards come from the compatible item pool outside
+player budgets. Equal wording may appear on separately owned physical copies.
 
-### Relationships and chances
+The [engine](../../server/internal/game/text_actions.go) assigns unique copy
+identities and tracks hand, reserve, board, discard and pending-offer locations.
+Draws are current-turn-only, private to their owner and charged once per drawn
+card; the public evidence announces who/how many. Bad Bargains reserves and
+transfers a specific copy atomically. History retains refused offers, removed
+bag items and earlier chain targets. No specialty or semantic judge participates.
 
-For content tasks, automatically follow the
-[server and client source map](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
-before proposing High/Distant/Chaos relationships. It identifies the dealer,
-match actions, payload privacy, client state and rendering paths; the client
-displays server-owned outcomes rather than calculating relevance bands.
+The sampled [certifier](../../server/pkg/media/text_certify.go) proves the
+schedules and retained coverage it actually exercises. It does not prove
+funniness, every reachable action state, cultural clarity or a release decision.
+Keep action/property proofs and human full-match pilots distinct from sampled
+certification. Follow the [curator source map](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
+for each content task.
 
-The [mesh](../../server/pkg/media/dealing.go) compares each Nown vector with
-every card vector using cosine similarity. Current defaults in
-[tuning.yaml](../../configs/gameplay/tuning.yaml) are:
+## Commands and release evidence
 
-| Similarity to a particular Nown | Band |
-|---|---|
-| At least 0.55 | High |
-| At least 0.30, below 0.55 | Distant |
-| Below 0.30 | Chaos |
+The current CLI commands are `text-prepare`, `text-build-fixture`,
+`text-certify`, `text-simulate`, `text-publish` and `text-duplicates`.
+Consult [tool usage](../../tools/README.md) for actual arguments. The old
+`build`, `certify`, `simulate` and `publish` commands reject before input/output
+work. `prepare_candidates.py` also refuses the retired playable-image workflow
+without opening files or loading image dependencies. The authenticated old
+portal simulator returns 410 and no longer appears in navigation.
 
-A card can occupy different bands for different Nowns. There is no explicit
-card-to-card dependency graph, exclusive deck per Nown or automatic chain of
-callbacks. Tags, tone buckets, editorial shelf life and popularity do not
-weight current draws. In particular, the chaos tone bucket is independent of
-the chaos similarity band, and the editorial 70/20/10 mix is not a draw rule.
-Similarity is neither a funniness rating nor a correct-answer score: a player
-can legally play an unrelated card and argue for it; voting decides outcomes.
+The checked-in `text-en`, `text-tr` and `text-ar` fixtures are explicitly
+synthetic engineering data. They cannot enable production through a successful
+simulation. A real candidate needs accepted immutable input, compatible reviewed
+suitability, exact technical/replay/action/screening/editorial artifacts and a
+human release decision for each intended mode/language and both sizes. Private
+replay seeds are not general player output. Publication and activation remain
+separate operations, with configured availability closed until all gates pass.
 
-At match start, the server shuffles the pack's Nowns and takes **two at four
-players, three at six players**. The schedule is secret and the match may end
-before all scheduled rounds. With the current 150-Nown pack, each Nown has a
-**1/150 chance of first position**, and **2/150 or 3/150 chance of selection
-somewhere in the schedule**. Undersized packs repeat the last available Nown.
-Ordinary match startup seeds the RNG from the current time and logs that seed;
-it does not pass the tuning file's example seed into each live match.
+## Privacy and retained assets
 
-### Actual hands and personal reserves
+Clients receive authorized inline instances through `/ws/v2`, never a bulk
+prompt catalog. Active Nowers receive the current private Nown; Donowers and
+eliminated seats receive the permitted concealed view. Only begun Nowns appear
+at verdict. Public history is complete and bounded into checked cursor/hash
+pages; other hands, reserves, future prompts and suitability bands stay private.
+Client reducers reject stale/invalid streams and clear private state across
+elimination, account and match changes.
 
-The current dealer samples **two high and two distant cards against the first
-Nown**, then fills the fifth slot from all remaining bands. That filler may
-also be high or distant: it is not guaranteed chaos. The next Nown contributes
-only the first three selected cards (two high, one distant) to the personal
-reserve. Once all eight slots are full, selections for later Nowns are not
-retained, although sampling those bands can still fail.
+The old association/image/specialty loaders, signed playable URLs, workbench,
+backfill and client catalog/prefetch implementation have been removed. Historical
+fixtures, applied SQL and licensed contribution/value references remain retained
+and tested as unsupported active input. The pre-transition findings remain in
+[transition design](../design/DESIGN-text-transition.md) and the
+[archived roadmap](../planning/ROADMAP-pre-text-20260912.md).
 
-Cards are sampled without duplication within one player's eight cards.
-Different players may receive the same card: there is no table-wide stock
-being depleted. Chances for an individual card depend on its candidate bands,
-their sizes and earlier selections; there is no single rarity percentage.
-The same process applies to Nowers and Donowers.
-
-Playing or timing out removes a card from the hand. New rounds do not refill
-ordinary cards or recycle discards. A draw takes the next card(s) from the
-front of that player's reserve; the configured default penalty is five points
-per card, except the draw covered by One More Free Card. See
-[match actions](../../server/internal/game/match.go).
-
-Each player receives one specialty at match start, selected separately and
-role-blind. Held specialties carry over between rounds; spent specialties are
-not refreshed. Its defaults are normalized weights, not independent drop chances:
-
-| Specialty | Weight | Chance when selected |
-|---|---:|---:|
-| Pass | 0.10 | 31.25% |
-| Reveal | 0.04 | 12.5% |
-| One More Free Card | 0.08 | 25% |
-| Shuffle | 0.05 | 15.625% |
-| Revote | 0.05 | 15.625% |
-
-### What currently gets into the app
-
-The CLI's `build` command invokes `SyntheticPack`; `certify` and `simulate`
-check that format/dealing implementation; `publish` copies a directory.
-They do not provide the adopted text production workflow or the previous
-image/text production pipeline. The current
-Admin submission-publish operation returns HTTP 501. Editing or approving a
-text submission therefore does not add it to the active game pack.
-
-The current loader requires embeddings, including for text. Under the adopted
-target, reviewed mode suitability and full-schedule/action viability replace
-mandatory multimodal geometry as the production requirement; optional text
-embeddings must be versioned and validated when used. Editorial review, bundle
-validation, human playtests and verified activation remain separate gates.
-A synthetic build is not a production pilot. The original
-[content readiness audit](../planning/ROADMAP-pre-text-20260912.md#content-readiness-audit--2026-09-11)
-is retained as historical evidence.
-
-## Invariants and current gaps
-
-Initial hands/reserves are private. During a round, active Nowers receive Nown
-and Donowers/eliminated players receive `{decoy: true}`; text is inline and
-static-image media uses signed URLs. The final verdict reveals Nowns from rounds
-actually begun.
-
-The following gaps were found against the earlier contract; the transition
-must resolve or retire them with replacement proofs:
-
-- **All-Nown balance:** the eight retained cards are not checked for the
-  required coverage against every scheduled Nown. Certification checks band
-  availability and repeated deal success, not final retained-hand coverage.
-- **Shuffle preservation (historical):** Shuffle replaces the whole
-  `PlayerHand`, including the reserve, and clears specialties. The earlier
-  contract required reserves to remain untouched. The text target removes
-  Shuffle and all other specialties rather than completing this old mechanic.
-- **Draw timing and privacy:** the draw handler accepts active connected
-  players during the play phase without requiring their turn, and broadcasts
-  actual drawn cards to everyone. The intended announcement is who/how many,
-  with card identities private. An existing test explicitly expects out-of-turn
-  drawing; this is a spec/implementation conflict to resolve, not missing coverage alone.
-- **Pack isolation:** the match retains its original pack for dealing, but
-  payload rendering resolves IDs through the global active manager. A hot swap
-  can therefore break rendering in a running match.
-- **Production pipeline:** complete reviewed text ingestion, mode suitability,
-  action certification and activation remain open. Replacing fixture text while
-  retaining synthetic vectors is insufficient production evidence.
-
-These are pending engineering work, not new game rules. A passing current
-test suite or simulator does not prove the missing guarantees. Human playtests
-must also judge recognition, laughter and plausible alternative explanations.
+Non-playable [avatars](../../server/internal/avatar/avatar.go), fonts and UI art
+remain supported. Avatar WebP still requires the verified CGO/native toolchain.
+The core stack no longer requires MinIO for startup/readiness; historical object
+archives have a separate preservation/restore path. Full cutover and production
+recovery acceptance remain tracked in Phase 6.
 
 ## Tests
 
-- [Media tests](../../server/pkg/media/media_test.go) cover bands, certification,
-  integrity and dealing; the current deal-constraints test checks sizes rather
-  than retained-hand coverage for every Nown.
-- [Fixture tests](../../server/pkg/media/fixture_test.go) exercise golden and
-  band-starved packs; [manager tests](../../server/pkg/media/manager_test.go)
-  exercise active pack management.
-- [Payload tests](../../server/internal/game/payload_test.go) and
-  [match tests](../../server/internal/game/match_test.go) cover role scoping,
-  draws, specialties and turns, subject to the gaps above.
+Run `python3 xops/test/tests-lints.py` from the repository root. It discovers
+all retained Go/Python tool modules, provisions guarded disposable PostgreSQL
+and Redis, and fails required skips. Do not point fixture tests at an existing
+deployment or infer provider/device readiness from mocked local tests.
 
-Run the repository gate with `python3 xops/test/tests-lints.py`. Its current
-coverage does not include the separate `tools/mediapack` Go module, candidate
-preparation Python tests or `tools/gamebot` module. Required PostgreSQL suites
-can skip if their disposable database is unavailable. Record those limits;
-the transition gate must include every retained module and required integration
-proof, with no missing service mistaken for success.
-
-## Dependencies
-
-The game and CLI share `server/pkg/media` ([ADR-004](../design/ADR-004-media-package-in-server-pkg.md)).
-Gameplay values come from `configs/gameplay/tuning.yaml`; source records and
-editorial decisions accompany content curation; role and contribution review
-state remains in the existing Portal/Admin workflow.
-
-## Additional transition boundaries — 2026-09-12
-
-- **Pinned text:** the match renderer must resolve content through the same
-  immutable pack snapshot as its dealer. New activation cannot change earlier
-  wording, current hands, system seeds, history or reconnect payloads.
-- **No bulk prompt metadata:** the existing
-  [pack sync service](../../client/lib/media/pack_sync_service.dart) fetches and
-  persists `media.jsonl`, which contains literal text Nowns and metadata. Its
-  parsing/format-version check is not checksum verification. Do not connect
-  this service to text gameplay; authorized inline text replaces the playable
-  metadata/prefetch route. Retire the three `media.*` preference keys and old
-  asset caches while preserving account credentials.
-- **Distinct copies and evidence:** current string card IDs and per-round
-  seat-to-card plays cannot express reserved trades, replacement destinations
-  or complete match history. Separate content revision from instance identity;
-  certify conservation, atomic actions, role-scoped history and bounded frames.
-- **Storage and builds:** current startup only loads `media.local_bundle_path`,
-  while readiness still probes MinIO. A storage configuration is not an
-  implemented S3 publisher. Remove game-only storage prerequisites after
-  dependency proof. Preserve avatar encoding in
-  [avatar.go](../../server/internal/avatar/avatar.go), which still requires
-  native WebP/CGO; text gameplay does not eliminate that build prerequisite.
-- **Safe retirement:** applied SQL, licensed historical material, consent,
-  reports and entitlement references remain auditable. Remove obsolete image,
-  specialty and backfill execution paths through the transition inventory;
-  replacing a current regression test requires equivalent new-contract proof.
+Relevant proofs include text validation/dealing/certification and manager tests,
+all five engine modes and copy conservation, exact v2 privacy/history fixtures,
+real WebSocket mode/size journeys and
+[accepted contribution through release](../../server/internal/portal/text_release_journey_test.go).
+Retired image fixture/test files remain, with supported text invariants and
+explicit unsupported-input proofs replacing their old behavior assertions.

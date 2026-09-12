@@ -4,12 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
-	"math"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -20,22 +19,33 @@ import (
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/profile"
 	"github.com/knowoff/knowoff/server/internal/store"
-	"github.com/knowoff/knowoff/server/pkg/media"
 	"github.com/lib/pq"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	token := os.Getenv("KNOWOFF_TEST_DB_TOKEN")
+	u, parseErr := url.Parse(dsn)
+	if parseErr != nil || !regexp.MustCompile(`^[0-9a-f]{12}$`).MatchString(token) || u == nil || u.Scheme != "postgres" || u.Path != "/knowoff_test_"+token || (u.Hostname() != "postgres" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") || u.Fragment != "" {
+		t.Fatal("disposable runner PostgreSQL target required")
+	}
+	for key := range u.Query() {
+		if key != "sslmode" {
+			t.Fatal("unexpected disposable DSN parameter")
+		}
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
 	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available: %v", err)
+		t.Fatalf("disposable postgres unavailable: %v", err)
+	}
+	var actual string
+	if err := db.QueryRow(`SELECT current_database()`).Scan(&actual); err != nil || actual != "knowoff_test_"+token {
+		db.Close()
+		t.Fatal("refusing non-disposable database")
 	}
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
@@ -45,6 +55,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 		 portal_submission_counts, portal_submissions, portal_terms, portal_role_applications,
 		 portal_roles, guard_freezes RESTART IDENTITY CASCADE`); err != nil {
 		t.Fatalf("truncate portal tables: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO challenge_current_winner(singleton) VALUES(true) ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
 	}
 	if _, err := db.ExecContext(context.Background(),
 		`INSERT INTO portal_terms (version, title, body, active_from) VALUES ('v1', 'Terms', 'Terms body', now())
@@ -104,6 +117,12 @@ func newAccount(t *testing.T, db *sql.DB) string {
 	); err != nil {
 		t.Fatalf("create profile: %v", err)
 	}
+	if _, err := db.Exec(`INSERT INTO user_terms_versions(version,body,active_from) VALUES('synthetic-user-terms-v1','Synthetic fixture user terms',now()-interval '1 day') ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO user_terms_acceptances(account_id,version,accepted_at) VALUES($1,'synthetic-user-terms-v1',now())`, id); err != nil {
+		t.Fatal(err)
+	}
 	return id
 }
 
@@ -134,11 +153,20 @@ func (fakeAuth) ValidateAccessToken(ctx context.Context, token string) (string, 
 }
 func (fakeAuth) RevokeAccount(ctx context.Context, accountID string) error { return nil }
 
+func (fakeAuth) ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token string) (string, error) {
+	if err := lockPortalAccounts(ctx, tx, token); err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
 var _ AuthClient = fakeAuth{}
 
 func testConfig() *config.Config {
 	return &config.Config{
+		Trust: config.TrustConfig{UserTermsVersion: "synthetic-user-terms-v1"},
 		Tuning: config.TuningConfig{
+			Contract: config.ContractTuning{MaxTextBytes: 2000},
 			Portal: config.PortalTuning{
 				MinAccountLevelToApply:          1,
 				SubmissionsPerContributorPerDay: 10,
@@ -151,8 +179,6 @@ func testConfig() *config.Config {
 				DrawPile: 3,
 			},
 			Dealing: config.DealingTuning{
-				BandHigh:          0.55,
-				BandLow:           0.30,
 				MinHighPerNown:    2,
 				MinDistantPerNown: 2,
 			},
@@ -175,9 +201,9 @@ func testConfig() *config.Config {
 func newTestManager(t *testing.T, db *sql.DB) *Manager {
 	t.Helper()
 	cfg := testConfig()
-	pm := profile.NewManager(db, cfg.Tuning.Progression)
+	pm := profile.NewManager(db)
 	em := economy.NewManager(db, cfg)
-	return NewManager(Deps{
+	m := NewManager(Deps{
 		Screener: acceptingTextScreener{},
 		DB:       db,
 		Config:   cfg,
@@ -186,6 +212,8 @@ func newTestManager(t *testing.T, db *sql.DB) *Manager {
 		Economy:  em,
 		Admin:    fakeAudit{},
 	})
+	m.SetAccountDisconnect(func(context.Context, string) error { return nil })
+	return m
 }
 
 func TestApplyForRole_RequiresLevel(t *testing.T) {
@@ -388,8 +416,8 @@ func TestFreezeLifecycle(t *testing.T) {
 	defer db.Close()
 	mgr := newTestManager(t, db)
 	target := newAccount(t, db)
-	guardID := newAdmin(t, db)
 	adminID := newAdmin(t, db)
+	guardID := guardAccount(t, mgr, db, adminID)
 
 	ctx := context.Background()
 	if err := mgr.FreezeAccount(ctx, guardID, target, "spam"); err != nil {
@@ -420,18 +448,15 @@ func TestFreeze_AutoExpiry(t *testing.T) {
 	defer db.Close()
 	mgr := newTestManager(t, db)
 	target := newAccount(t, db)
-	guardID := newAdmin(t, db)
+	guardID := guardAccount(t, mgr, db, newAdmin(t, db))
 
 	ctx := context.Background()
 	if err := mgr.FreezeAccount(ctx, guardID, target, "spam"); err != nil {
 		t.Fatalf("freeze: %v", err)
 	}
 
-	// Move freeze into the past.
-	if _, err := db.ExecContext(ctx,
-		`UPDATE guard_freezes SET expires_at = now() - interval '1 second'`); err != nil {
-		t.Fatalf("update expiry: %v", err)
-	}
+	future := time.Now().Add(49 * time.Hour)
+	mgr.nowFn = func() time.Time { return future }
 
 	if err := mgr.ExpireFreezes(ctx); err != nil {
 		t.Fatalf("expire: %v", err)
@@ -645,125 +670,71 @@ func TestChallenge_CloseIdempotent(t *testing.T) {
 	}
 }
 
-func TestDealSimulatorHandler(t *testing.T) {
+type retiredSimulatorBody struct {
+	*strings.Reader
+	reads int
+}
+
+func (b *retiredSimulatorBody) Read(p []byte) (int, error) {
+	b.reads++
+	return b.Reader.Read(p)
+}
+
+func TestDealSimulatorHandlerRetiredBeforeContentWork(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	mgr := newTestManager(t, db)
-	mgr.media = media.NewManager(makeTestPack())
 	account := newAccount(t, db)
 	adminID := newAdmin(t, db)
 	ctx := context.Background()
 	if err := mgr.GrantRole(ctx, adminID, account, RoleCurator); err != nil {
 		t.Fatalf("grant curator: %v", err)
 	}
+	ordinary := newAccount(t, db)
+	var submissionsBefore, entriesBefore int
+	if err := db.QueryRow(`SELECT (SELECT count(*) FROM portal_submissions),(SELECT count(*) FROM noin_ledger)`).Scan(&submissionsBefore, &entriesBefore); err != nil {
+		t.Fatal(err)
+	}
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method+"_non_curator", func(t *testing.T) {
+			body := &retiredSimulatorBody{Reader: strings.NewReader("untrusted=body")}
+			req := httptest.NewRequest(method, "/portal/simulate", body)
+			req.Header.Set("Authorization", "Bearer "+ordinary)
+			rr := httptest.NewRecorder()
+			mgr.Handler().ServeHTTP(rr, req)
+			if rr.Code != http.StatusForbidden || body.reads != 0 {
+				t.Fatal("retired route lost its live role guard", rr.Code, body.reads)
+			}
+		})
+	}
 
-	form := "table_size=6&nown_id=nown-sim&seed=1"
-	req := httptest.NewRequest(http.MethodPost, "/portal/simulate", strings.NewReader(form))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method, func(t *testing.T) {
+			body := &retiredSimulatorBody{Reader: strings.NewReader("table_size=6&nown_id=nown-sim&seed=1")}
+			req := httptest.NewRequest(method, "/portal/simulate", body)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			req.Header.Set("Authorization", "Bearer "+account)
+			rr := httptest.NewRecorder()
+			mgr.Handler().ServeHTTP(rr, req)
+			if rr.Code != http.StatusGone || !strings.Contains(rr.Body.String(), "retired") {
+				t.Errorf("expected explicit retired410, got %d: %s", rr.Code, rr.Body.String())
+			}
+			if body.reads != 0 || strings.Contains(rr.Body.String(), "card-h-") {
+				t.Error("retired simulator read form or returned legacy content")
+			}
+		})
+	}
+	req := httptest.NewRequest(http.MethodGet, "/portal/", nil)
 	req.Header.Set("Authorization", "Bearer "+account)
 	rr := httptest.NewRecorder()
 	mgr.Handler().ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusOK || strings.Contains(rr.Body.String(), `href="/portal/simulate"`) {
+		t.Fatal("current portal still advertises retired simulator", rr.Code)
 	}
-	body := rr.Body.String()
-	if !strings.Contains(body, "<h1>Deal simulator result</h1>") {
-		t.Fatalf("expected result heading, got %s", body)
+	var submissions, entries int
+	if err := db.QueryRow(`SELECT (SELECT count(*) FROM portal_submissions),(SELECT count(*) FROM noin_ledger)`).Scan(&submissions, &entries); err != nil || submissions != submissionsBefore || entries != entriesBefore {
+		t.Fatal("retired simulator changed content or value", submissionsBefore, entriesBefore, submissions, entries, err)
 	}
-	if !strings.Contains(body, "card-h-") {
-		t.Fatal("expected dealt cards in output")
-	}
-}
-
-func makeTestPack() *media.Pack {
-	const dim = 8
-	n := &media.MediaItem{
-		ID:         "nown-sim",
-		Type:       media.MediaTypeText,
-		Content:    "test nown",
-		Embedding:  normalizeVector([]float32{1, 0, 0, 0, 0, 0, 0, 0}),
-		Tags:       []string{"text"},
-		ToneBucket: "millennial-cope",
-		Rating:     media.RatingEveryone,
-		License:    "CC0-1.0",
-	}
-	var cards []*media.CardItem
-	for i := 0; i < 20; i++ {
-		cards = append(cards, &media.CardItem{
-			ID:         fmt.Sprintf("card-h-%d", i),
-			Type:       media.MediaTypeText,
-			Content:    "high",
-			Embedding:  normalizeVector([]float32{1, 0, 0, 0, 0, 0, 0, 0}),
-			Tags:       []string{"text"},
-			ToneBucket: "millennial-cope",
-		})
-	}
-	for i := 0; i < 20; i++ {
-		cards = append(cards, &media.CardItem{
-			ID:         fmt.Sprintf("card-d-%d", i),
-			Type:       media.MediaTypeText,
-			Content:    "distant",
-			Embedding:  distantVector(dim),
-			Tags:       []string{"text"},
-			ToneBucket: "gen-z-absurdism",
-		})
-	}
-	for i := 0; i < 30; i++ {
-		cards = append(cards, &media.CardItem{
-			ID:         fmt.Sprintf("card-c-%d", i),
-			Type:       media.MediaTypeText,
-			Content:    "chaos",
-			Embedding:  randomUnitVector(i + 1000),
-			Tags:       []string{"text"},
-			ToneBucket: "chaos",
-		})
-	}
-	pack := &media.Pack{
-		Manifest: media.Manifest{PackTag: "test-portal"},
-		Media:    []*media.MediaItem{n},
-		Cards:    cards,
-	}
-	pack.Candidates = media.BuildCandidates(pack.Media, pack.Cards, media.DealingTuning{
-		BandHigh:          0.55,
-		BandLow:           0.30,
-		MinHighPerNown:    2,
-		MinDistantPerNown: 2,
-	})
-	return pack
-}
-
-func normalizeVector(v []float32) []float32 {
-	var sum float64
-	for _, x := range v {
-		sum += float64(x) * float64(x)
-	}
-	if sum == 0 {
-		return v
-	}
-	n := float32(math.Sqrt(sum))
-	out := make([]float32, len(v))
-	for i, x := range v {
-		out[i] = x / n
-	}
-	return out
-}
-
-func distantVector(dim int) []float32 {
-	v := make([]float32, dim)
-	v[0] = 0.58
-	for i := 1; i < dim; i++ {
-		v[i] = 0.30
-	}
-	return normalizeVector(v)
-}
-
-func randomUnitVector(seed int) []float32 {
-	rng := rand.New(rand.NewSource(int64(seed)))
-	v := make([]float32, 8)
-	for i := range v {
-		v[i] = rng.Float32()*2 - 1
-	}
-	return normalizeVector(v)
 }
 
 func TestEnsureActiveTermsVersion(t *testing.T) {
@@ -776,12 +747,24 @@ func TestEnsureActiveTermsVersion(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `DELETE FROM portal_terms WHERE version = 'v1'`); err != nil {
 		t.Fatalf("delete terms: %v", err)
 	}
-	if err := mgr.EnsureActiveTermsVersion(ctx); err != nil {
-		t.Fatalf("ensure: %v", err)
+	if err := mgr.EnsureActiveTermsVersion(ctx); err == nil {
+		t.Fatal("missing owner-authored terms were silently manufactured")
 	}
-	var version string
-	if err := db.QueryRowContext(ctx, `SELECT version FROM portal_terms WHERE version = 'v1'`).Scan(&version); err != nil {
-		t.Fatalf("missing terms row: %v", err)
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT count(*) FROM portal_terms`).Scan(&count); err != nil || count != 0 {
+		t.Fatal("terms check created legal text", count, err)
+	}
+	if _, err := db.Exec(`INSERT INTO portal_terms(version,title,body,active_from) VALUES('v1','Fixture terms','Owner supplied fixture text',now()-interval '1 minute')`); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := mgr.EnsureActiveTermsVersion(ctx); err != nil {
+			t.Fatal("published terms unavailable", err)
+		}
+	}
+	var body string
+	if err := db.QueryRow(`SELECT body FROM portal_terms WHERE version='v1'`).Scan(&body); err != nil || body != "Owner supplied fixture text" {
+		t.Fatal("terms changed", body, err)
 	}
 }
 

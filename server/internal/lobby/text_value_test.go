@@ -3,6 +3,7 @@ package lobby
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"net/url"
 	"os"
 	"strings"
@@ -42,6 +43,9 @@ func textAdapterDB(t *testing.T) *sql.DB {
 	var name string
 	if e = db.QueryRowContext(ctx, `SELECT current_database()`).Scan(&name); e != nil || name != "knowoff_test_"+token {
 		t.Fatal("disposable database identity mismatch")
+	}
+	if _, e = db.ExecContext(ctx, `DROP SCHEMA public CASCADE; CREATE SCHEMA public`); e != nil {
+		t.Fatal(e)
 	}
 	if e = store.MigrateUp(db, "../../migrations"); e != nil {
 		t.Fatal(e)
@@ -141,5 +145,106 @@ func TestTextValueAdapterRealLowPopulationAndInterruption(t *testing.T) {
 	}
 	if e := db.QueryRowContext(ctx, `SELECT count(*) FROM text_outbox WHERE match_id=$1`, lostID).Scan(&deliveries); e != nil || deliveries != 4 {
 		t.Fatal("interruption delivery missing or duplicated", e)
+	}
+}
+
+func TestTextWalletCancelledRequestPreservesLiveOwner(t *testing.T) {
+	db := textAdapterDB(t)
+	ctx := t.Context()
+	owner, err := store.AcquireTextOwner(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = owner.Release(context.Background())
+	})
+	m, _, _, settings := textManagerFixture(t)
+	m.deps.Authority = owner
+	peers, _ := textReadyRoom(t, m, settings)
+	if err = m.Start(ctx, peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	request, cancel := context.WithCancel(ctx)
+	cancel()
+	if err = m.WithWalletAccess(request, peers[0].AccountID, func() error { t.Fatal("cancelled wallet callback ran"); return nil }); !errors.Is(err, context.Canceled) {
+		t.Fatal("cancelled wallet", err)
+	}
+	if err = owner.Check(ctx); err != nil {
+		t.Fatal("wallet cancellation lost PG owner", err)
+	}
+	if m.lost.Load() {
+		t.Fatal("wallet cancellation lost runtime")
+	}
+	for _, peer := range peers {
+		select {
+		case <-peer.Done:
+			t.Fatal("wallet cancellation closed active peer")
+		default:
+		}
+	}
+	if err = m.WithWalletAccess(ctx, peers[0].AccountID, func() error { t.Fatal("live wallet exposed"); return nil }); !errors.Is(err, ErrTextWalletHidden) {
+		t.Fatal(err)
+	}
+}
+
+func TestTextAvailabilityCancelledRequestPreservesLiveOwner(t *testing.T) {
+	db := textAdapterDB(t)
+	ctx := t.Context()
+	owner, err := store.AcquireTextOwner(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = owner.Release(context.Background())
+	})
+	m, _, _, settings := textManagerFixture(t)
+	m.deps.Authority = owner
+	peers, _ := textReadyRoom(t, m, settings)
+	if err = m.Start(ctx, peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	request, cancel := context.WithCancel(ctx)
+	cancel()
+	unavailable := m.Availability(request)
+	for _, mode := range unavailable.Modes {
+		if mode.Available {
+			t.Fatal("cancelled availability advertised admission")
+		}
+	}
+	if err = owner.Check(ctx); err != nil {
+		t.Fatal("availability cancellation lost PG owner", err)
+	}
+	if m.lost.Load() {
+		t.Fatal("availability cancellation lost runtime")
+	}
+	for _, peer := range peers {
+		select {
+		case <-peer.Done:
+			t.Fatal("availability cancellation closed active peer")
+		default:
+		}
+	}
+	for _, mode := range m.Availability(ctx).Modes {
+		if !mode.Available {
+			t.Fatal("healthy availability did not recover", mode.ModeID)
+		}
+	}
+	if err = owner.Release(ctx); err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range m.Availability(ctx).Modes {
+		if mode.Available {
+			t.Fatal("lost authority advertised admission")
+		}
+	}
+	if !m.lost.Load() {
+		t.Fatal("actual authority loss did not fence runtime")
+	}
+	for _, peer := range peers {
+		select {
+		case <-peer.Done:
+		default:
+			t.Fatal("actual authority loss left active peer open")
+		}
 	}
 }

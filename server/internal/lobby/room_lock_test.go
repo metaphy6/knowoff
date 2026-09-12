@@ -2,241 +2,458 @@ package lobby
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"log/slog"
-	"net/http"
-	"net/http/httptest"
-	"strings"
-	"sync/atomic"
+	"errors"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/knowoff/knowoff/server/internal/config"
-	"github.com/knowoff/knowoff/server/internal/game"
-	"github.com/knowoff/knowoff/server/internal/transport"
-	"github.com/knowoff/knowoff/server/pkg/media"
+	v2 "github.com/knowoff/knowoff/server/internal/transport/v2"
 )
 
-func TestRoomCurrentTurnDisconnectBroadcast(t *testing.T) {
-	for _, size := range []int{4, 6} {
-		t.Run(fmt.Sprint(size), func(t *testing.T) {
-			deps := testDeps()
-			deps.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-			deps.Config.Tuning.Timers = config.TimersTuning{PlayTurn: 20, DiscussionPerPlayer: 5, KnowoffBallot: 20, KnowoffRunoff: 15, VoteResultWindow: 8}
-			deps.Config.Tuning.Hand = config.HandTuning{Size: 5, DrawPile: 3}
-			deps.Config.Tuning.Dealing = config.DealingTuning{BandHigh: .55, BandLow: .30, MinHighPerNown: 2, MinDistantPerNown: 2}
-			deps.Config.Tuning.Game.ReconnectGraceS = 20
-			pack, err := media.LoadPack("../../pkg/media/testdata/golden-pack", media.DefaultDealingTuning())
-			if err != nil {
-				t.Fatal(err)
-			}
-			manager := media.NewManager(pack)
-			room := NewRoom("lock-regression", "LOCK", size, 0, false, deps)
-			accepted := make(chan *websocket.Conn, size)
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
-				if err == nil {
-					accepted <- conn
-				}
-			}))
-			t.Cleanup(server.Close)
-			clients := make([]*websocket.Conn, size)
-			for seat := 0; seat < size; seat++ {
-				room.ClaimSeat("", false)
-				client, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http"), nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				conn := <-accepted
-				t.Cleanup(func() { client.Close(); conn.Close() })
-				clients[seat] = client
-				room.SetConnection(seat, conn)
-			}
-			renderer := game.NewPayloadRenderer(manager, media.NewSignedURLIssuer([]byte("test-only"), time.Minute), "")
-			if err := room.StartMatch(game.Dependencies{Config: deps.Config, Pack: pack, Renderer: renderer}); err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(func() {
-				room.Match().Stop()
-				room.mu.Lock()
-				for _, binding := range room.bindings {
-					if binding.GraceTimer != nil {
-						binding.GraceTimer.Stop()
-					}
-				}
-				room.mu.Unlock()
-			})
-			clients[0].SetReadDeadline(time.Now().Add(2 * time.Second))
-			current := -1
-			for current < 0 {
-				var event transport.Envelope
-				if err := clients[0].ReadJSON(&event); err != nil {
-					t.Fatal(err)
-				}
-				if event.Kind == transport.EventTurnStarted {
-					value, ok := event.Payload["turn_seat"].(float64)
-					if !ok || value < 0 || value >= float64(size) {
-						t.Fatal("invalid current seat")
-					}
-					current = int(value)
-				}
-			}
-			done := make(chan struct{})
-			go func() { room.SetConnection(current, nil); close(done) }()
+func TestIndependentRoomActionAndResyncProgressDuringBlockedRoom(t *testing.T) {
+	m, _, now, settings := textManagerFixture(t)
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	defer once.Do(func() { close(release) })
+	var blockedAccount string
+	m.deps.ModerateChat = func(ctx context.Context, account string, action v2.Action) (v2.Action, error) {
+		if account == blockedAccount {
+			close(entered)
 			select {
-			case <-done:
-			case <-time.After(time.Second):
-				t.Fatal("current-turn disconnect deadlocked during actual room broadcast")
+			case <-release:
+			case <-ctx.Done():
+				return v2.Action{}, ctx.Err()
 			}
-			observer := (current + 1) % size
-			clients[observer].SetReadDeadline(time.Now().Add(time.Second))
-			for {
-				var event transport.Envelope
-				if err := clients[observer].ReadJSON(&event); err != nil {
-					t.Fatal(err)
+		}
+		return action, nil
+	}
+	first, firstRoom := textReadyRoom(t, m, settings)
+	second, secondRoom := textReadyRoom(t, m, settings)
+	blockedAccount = first[0].AccountID
+	for _, peers := range [][]*TextPeer{first, second} {
+		if err := m.Start(t.Context(), peers[0]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, deadline := firstRoom.match.Clock()
+	*now = deadline
+	if err := m.Tick(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	request := func(room *textRoom, seat int, id string, action v2.Action) v2.ActionRequest {
+		s, err := room.match.Snapshot(seat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v2.ActionRequest{Version: 2, RequestID: id, MatchID: s.Contract.MatchID, ModeID: s.Contract.ModeID, Round: s.Round, Turn: s.Turn, Phase: s.Phase, PhaseID: s.PhaseID, ExpectedBoardRevision: s.Board.Revision, Action: action}
+	}
+	blocked := request(firstRoom, 0, "blocked-chat", v2.Action{Kind: v2.ActionChat, Text: "bounded fixture", UILocale: "en"})
+	s, err := secondRoom.match.Snapshot(0)
+	if err != nil || s.CurrentSeat == nil {
+		t.Fatal("missing current turn", err)
+	}
+	seat := *s.CurrentSeat
+	one := 1
+	independent := request(secondRoom, seat, "independent-draw", v2.Action{Kind: v2.ActionDraw, Count: &one})
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	blockedDone := make(chan error, 1)
+	go func() { blockedDone <- m.Action(ctx, first[0], blocked) }()
+	select {
+	case <-entered:
+	case <-ctx.Done():
+		t.Fatal("blocked hook did not enter")
+	}
+	otherDone := make(chan error, 1)
+	go func() {
+		if err := m.Action(ctx, second[seat], independent); err != nil {
+			otherDone <- err
+			return
+		}
+		otherDone <- m.Resync(ctx, second[seat])
+	}()
+	select {
+	case err := <-otherDone:
+		if err != nil {
+			t.Error(err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Error("unrelated room action/resync stalled behind another room")
+	}
+	sameCtx, sameCancel := context.WithTimeout(ctx, 20*time.Millisecond)
+	defer sameCancel()
+	sameDone := make(chan error, 1)
+	go func() { sameDone <- m.Resync(sameCtx, first[1]) }()
+	select {
+	case err := <-sameDone:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error("same room did not honor queued cancellation", err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Error("same-room lock wait ignored cancellation")
+	}
+	once.Do(func() { close(release) })
+	if err := <-blockedDone; err != nil {
+		t.Error(err)
+	}
+}
+
+func TestRuntimeReadWaitHonorsCancellationBehindManagerWriter(t *testing.T) {
+	m, _, _, settings := textManagerFixture(t)
+	peers, _ := textReadyRoom(t, m, settings)
+	m.mu.Lock()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- m.Resync(ctx, peers[0]) }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Error("manager read wait ignored cancellation")
+	}
+	m.mu.Unlock()
+}
+
+func TestQueuedTickDoesNotExcludeUnrelatedRoomReaders(t *testing.T) {
+	m, _, _, settings := textManagerFixture(t)
+	peers, _ := textReadyRoom(t, m, settings)
+	// Model the manager read protection retained by slow room-specific work.
+	m.mu.RLock()
+	held := true
+	defer func() {
+		if held {
+			m.mu.RUnlock()
+		}
+	}()
+	tickCtx, tickCancel := context.WithCancel(t.Context())
+	defer tickCancel()
+	entered, done := make(chan struct{}), make(chan error, 1)
+	go func() { close(entered); done <- m.Tick(tickCtx) }()
+	<-entered
+	time.Sleep(20 * time.Millisecond)
+	readCtx, readCancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer readCancel()
+	if err := m.Resync(readCtx, peers[0]); err != nil {
+		t.Errorf("queued ticker excluded unrelated reader: %v", err)
+	}
+	tickCancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Error("queued tick cancellation", err)
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Error("queued tick ignored cancellation")
+		m.mu.RUnlock()
+		held = false
+		<-done
+	}
+}
+
+func TestCancelledMembershipWriterDoesNotWaitForUnrelatedRoomWork(t *testing.T) {
+	m, _, _, settings := textManagerFixture(t)
+	peer := textPeer(t, m)
+	m.mu.RLock()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { _, err := m.Create(ctx, peer, settings); done <- err }()
+	completed := false
+	select {
+	case err := <-done:
+		completed = true
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Error("cancelled room writer remained queued")
+	}
+	m.mu.RUnlock()
+	if !completed {
+		<-done
+	}
+	if len(m.rooms) != 0 || len(m.members) != 0 {
+		t.Fatal("cancelled acquisition created room membership")
+	}
+}
+
+func TestTextRateWaitCancellationDoesNotConsumeBudget(t *testing.T) {
+	for _, rateLock := range []bool{false, true} {
+		t.Run(map[bool]string{false: "manager", true: "rate"}[rateLock], func(t *testing.T) {
+			m, _, _, _ := textManagerFixture(t)
+			m.deps.Config.RateLimit.Enabled = true
+			m.deps.Config.RateLimit.MaxIntentsBurst = 1
+			m.deps.Config.RateLimit.MaxIntentsPerSecond = 1
+			p := textPeer(t, m)
+			if rateLock {
+				m.rateMu.Lock()
+			} else {
+				m.mu.Lock()
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+			defer cancel()
+			done := make(chan bool, 1)
+			go func() { done <- m.AllowRequest(ctx, p) }()
+			select {
+			case allowed := <-done:
+				if allowed {
+					t.Error("cancelled request consumed rate budget")
 				}
-				if event.Kind == transport.EventTurnStarted && int(event.Payload["turn_seat"].(float64)) != current {
-					break
-				}
+			case <-time.After(300 * time.Millisecond):
+				t.Error("rate admission ignored cancellation")
+			}
+			if rateLock {
+				m.rateMu.Unlock()
+			} else {
+				m.mu.Unlock()
+			}
+			if !m.AllowRequest(t.Context(), p) || m.AllowRequest(t.Context(), p) {
+				t.Error("cancellation changed one-token budget")
 			}
 		})
 	}
 }
 
-func roomLockFixture(t *testing.T) (*Room, game.Dependencies) {
-	t.Helper()
-	deps := testDeps()
-	deps.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	deps.Config.Tuning.Timers = config.TimersTuning{PlayTurn: 20, DiscussionPerPlayer: 5, KnowoffBallot: 20, KnowoffRunoff: 15, VoteResultWindow: 8, PrefetchCountdown: 60}
-	deps.Config.Tuning.Hand = config.HandTuning{Size: 5, DrawPile: 3}
-	deps.Config.Tuning.Dealing = config.DealingTuning{BandHigh: .55, BandLow: .30, MinHighPerNown: 2, MinDistantPerNown: 2}
-	deps.Config.Tuning.Game.ReconnectGraceS = 20
-	pack, e := media.LoadPack("../../pkg/media/testdata/golden-pack", media.DefaultDealingTuning())
-	if e != nil {
-		t.Fatal(e)
-	}
-	r := NewRoom("room-lock", "LOCK", 4, 0, false, deps)
-	for seat := 0; seat < 4; seat++ {
-		r.ClaimSeat("", false)
-	}
-	t.Cleanup(func() {
-		if m := r.Match(); m != nil {
-			m.Stop()
-		}
-		r.mu.Lock()
-		for _, b := range r.bindings {
-			if b.GraceTimer != nil {
-				b.GraceTimer.Stop()
-			}
-		}
-		r.mu.Unlock()
-	})
-	return r, game.Dependencies{Config: deps.Config, Pack: pack, Renderer: game.NewPayloadRenderer(media.NewManager(pack), media.NewSignedURLIssuer([]byte("test"), time.Minute), "")}
+type blockedFramePayload struct{ entered, release chan struct{} }
+
+func (p blockedFramePayload) MarshalJSON() ([]byte, error) {
+	close(p.entered)
+	<-p.release
+	return []byte(`{"private":"never enqueue after closure"}`), nil
 }
-func TestRoomGraceCallbackMayReenterConnection(t *testing.T) {
-	r, deps := roomLockFixture(t)
-	seat := 0
-	called := false
-	deps.OnFinish = func(_ game.Role, _ game.MatchResult) {
-		_ = r.Match().Phase()
-		_ = r.SeatIdentity(seat)
-		r.SetConnection(seat, nil)
-		called = true
+
+func TestTextFrameClosureDuringSerializationRefusesEnqueue(t *testing.T) {
+	for _, ownerLost := range []bool{false, true} {
+		t.Run(map[bool]string{false: "peer", true: "owner"}[ownerLost], func(t *testing.T) {
+			m, _, _, _ := textManagerFixture(t)
+			p, other := textPeer(t, m), textPeer(t, m)
+			payload := blockedFramePayload{make(chan struct{}), make(chan struct{})}
+			done := make(chan error, 1)
+			go func() { m.mu.RLock(); defer m.mu.RUnlock(); done <- m.emit(p, "snapshot", "", payload) }()
+			<-payload.entered
+			m.mu.RLock()
+			if ownerLost {
+				m.loseAuthority()
+			} else {
+				m.closePeer(p)
+			}
+			m.mu.RUnlock()
+			close(payload.release)
+			if err := <-done; err == nil {
+				t.Error("closed peer received newly serialized frame")
+			}
+			if len(p.frames) != 0 {
+				t.Error("private frame enqueued after closure")
+			}
+			if other.closed.Load() != ownerLost {
+				t.Error("peer-only closure escaped its scope")
+			}
+			var group sync.WaitGroup
+			for i := 0; i < 16; i++ {
+				group.Add(1)
+				go func() { defer group.Done(); m.mu.RLock(); defer m.mu.RUnlock(); m.closePeer(p) }()
+			}
+			group.Wait()
+		})
 	}
-	m := game.NewMatch(4, deps, &roomBcast{room: r}, game.WithReplay(true), game.WithSeed(42))
-	if e := m.Start(); e != nil {
-		t.Fatal(e)
+}
+
+func TestRoomConcurrentStartPublishesOneMatch(t *testing.T) {
+	m, values, _, settings := textManagerFixture(t)
+	peers, r := textReadyRoom(t, m, settings)
+	t.Cleanup(func() {
+		if err := m.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	start := make(chan struct{})
+	done := make(chan error, 16)
+	for i := 0; i < 16; i++ {
+		go func() { <-start; done <- m.Start(context.Background(), peers[0]) }()
 	}
-	r.match = m
-	for i, role := range m.Roles() {
-		if role == game.RoleDonower {
-			seat = i
+	close(start)
+	succeeded := 0
+	for i := 0; i < 16; i++ {
+		select {
+		case err := <-done:
+			if err == nil {
+				succeeded++
+			}
+		case <-time.After(3 * time.Second):
+			t.Fatal("parallel start deadlocked")
 		}
 	}
+	if succeeded != 1 || values.starts != 1 || r.match == nil {
+		t.Fatal("start created duplicate match or lost publication")
+	}
+}
+
+func TestRoomCurrentTurnDisconnectAdvancesWithoutLockInversion(t *testing.T) {
+	m, _, now, settings := textManagerFixture(t)
+	peers, r := textReadyRoom(t, m, settings)
+	t.Cleanup(func() {
+		if err := m.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := m.Start(context.Background(), peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	_, deadline := r.match.Clock()
+	*now = deadline
+	if err := m.Tick(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	before, err := r.match.Snapshot(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.CurrentSeat == nil {
+		t.Fatal("fixture has no current turn")
+	}
+	seat := *before.CurrentSeat
+	done := make(chan error, 1)
+	go func() { done <- m.Disconnect(context.Background(), peers[seat]) }()
+	select {
+	case err = <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("disconnect deadlocked with snapshot broadcast")
+	}
+	after, err := r.match.Snapshot(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Seats[seat].Connected || after.Turn <= before.Turn {
+		t.Fatal("current disconnected seat did not auto-pass")
+	}
+}
+
+func TestRoomStaleDisconnectCannotExpireReboundSeat(t *testing.T) {
+	m, _, now, settings := textManagerFixture(t)
+	peers, r := textReadyRoom(t, m, settings)
+	t.Cleanup(func() {
+		if err := m.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	if err := m.Start(context.Background(), peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	old := peers[1]
+	if err := m.Disconnect(context.Background(), old); err != nil {
+		t.Fatal(err)
+	}
+	*now = now.Add(time.Second)
+	replacement, err := m.Open(context.Background(), old.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Join(context.Background(), replacement, r.code); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Disconnect(context.Background(), old); err != nil {
+		t.Fatal(err)
+	}
+	*now = now.Add(21 * time.Second)
+	if err = m.Tick(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	s, err := r.match.Snapshot(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !s.Seats[1].Connected {
+		t.Fatal("stale generation expired current binding")
+	}
+}
+
+func TestRoomConcurrentBindingAndStartSettleBeforeTeardown(t *testing.T) {
+	m, values, _, settings := textManagerFixture(t)
+	peers, r := textReadyRoom(t, m, settings)
+	t.Cleanup(func() {
+		if err := m.Close(context.Background()); err != nil {
+			t.Error(err)
+		}
+	})
+	var wg sync.WaitGroup
+	var startErr, disconnectErr error
+	wg.Add(2)
+	go func() { defer wg.Done(); startErr = m.Start(context.Background(), peers[0]) }()
+	go func() { defer wg.Done(); disconnectErr = m.Disconnect(context.Background(), peers[1]) }()
 	done := make(chan struct{})
-	r.mu.Lock()
-	r.bindings[seat].GraceDeadline = time.Now().Add(-time.Second)
-	r.mu.Unlock()
-	go func() { r.onGraceExpired(seat); close(done) }()
+	go func() { wg.Wait(); close(done) }()
 	select {
 	case <-done:
-	case <-time.After(time.Second):
-		t.Fatal("finish callback deadlocked reentering room connection")
+	case <-time.After(3 * time.Second):
+		t.Fatal("start/connection boundary deadlocked")
 	}
-	if !called {
-		t.Fatal("finish callback omitted")
+	if disconnectErr != nil {
+		t.Fatal(disconnectErr)
 	}
-}
-
-type roomStartBarrier struct {
-	slog.Handler
-	count   atomic.Int32
-	entered chan struct{}
-	second  chan struct{}
-	release chan struct{}
-}
-
-func (h *roomStartBarrier) Handle(ctx context.Context, r slog.Record) error {
-	if r.Message == "creating match" {
-		n := h.count.Add(1)
-		if n == 1 {
-			close(h.entered)
-			<-h.release
-		} else if n == 2 {
-			close(h.second)
+	if startErr != nil && !errors.Is(startErr, ErrTextReady) {
+		t.Fatal("unexpected serialized start failure", startErr)
+	}
+	if (startErr == nil) != (r.match != nil) {
+		t.Fatal("start return and committed match disagree")
+	}
+	if values.starts > 1 {
+		t.Fatal("duplicate durable start")
+	}
+	if r.match != nil {
+		s, err := r.match.Snapshot(1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if s.Seats[1].Connected {
+			t.Fatal("disconnect lost across publication")
 		}
 	}
-	return h.Handler.Handle(ctx, r)
-}
-func TestRoomConcurrentStartInitializesOnce(t *testing.T) {
-	r, deps := roomLockFixture(t)
-	h := &roomStartBarrier{Handler: slog.NewTextHandler(io.Discard, nil), entered: make(chan struct{}), second: make(chan struct{}), release: make(chan struct{})}
-	r.deps.Logger = slog.New(h)
-	done := make(chan error, 2)
-	go func() { done <- r.StartMatch(deps) }()
-	<-h.entered
-	go func() { done <- r.StartMatch(deps) }()
-	select {
-	case <-h.second:
-	case <-time.After(100 * time.Millisecond):
-	}
-	close(h.release)
-	a, b := <-done, <-done
-	if (a == nil) == (b == nil) || h.count.Load() != 1 {
-		t.Fatal("concurrent starts initialized more than one engine")
-	}
 }
 
-func TestRoomStaleGraceDoesNotExpireNewBinding(t *testing.T) {
-	for _, kind := range []string{"reconnect", "reuse"} {
-		t.Run(kind, func(t *testing.T) {
-			r, _ := roomLockFixture(t)
-			r.mu.Lock()
-			r.scheduleGraceLocked(0)
-			old := r.bindings[0]
-			epoch, deadline := old.GraceEpoch, old.GraceDeadline
-			r.mu.Unlock()
-			if kind == "reconnect" {
-				r.ReclaimSeat(old.SessionToken)
-			} else {
-				r.mu.Lock()
-				r.releaseSeatLocked(0)
-				r.bindings[0] = &SeatBinding{Seat: 0, SessionToken: "replacement"}
-				r.mu.Unlock()
-			}
-			r.mu.Lock()
-			r.scheduleGraceLocked(0)
-			current := r.bindings[0]
-			timer := current.GraceTimer
-			r.mu.Unlock()
-			r.expireGrace(0, old, epoch, deadline)
-			r.mu.RLock()
-			defer r.mu.RUnlock()
-			if current.GraceTimer != timer {
-				t.Fatal("stale callback expired new grace generation")
-			}
-		})
+func TestRejectedActionWaitsOnlyForItsRoomAndHonorsCancellation(t *testing.T) {
+	m, _, _, settings := textManagerFixture(t)
+	peers, room := textReadyRoom(t, m, settings)
+	if err := m.Start(t.Context(), peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	other, otherRoom := textReadyRoom(t, m, settings)
+	if err := m.Start(t.Context(), other[0]); err != nil {
+		t.Fatal(err)
+	}
+	room.runtimeMu.Lock()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- m.RejectAction(ctx, peers[0], "cancelled-error", v2.ErrStalePhase) }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	case <-time.After(200 * time.Millisecond):
+		t.Error("error response ignored its room lock deadline")
+	}
+	room.runtimeMu.Unlock()
+	before, err := otherRoom.match.SnapshotProjection(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.mu.RLock()
+	if err = m.RejectAction(t.Context(), other[0], "independent-error", v2.ErrStalePhase); err != nil {
+		t.Error(err)
+	}
+	m.mu.RUnlock()
+	after, err := otherRoom.match.SnapshotProjection(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Board.Revision != before.Board.Revision || after.PhaseID != before.PhaseID {
+		t.Fatal("error mutated game state")
 	}
 }

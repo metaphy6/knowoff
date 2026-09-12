@@ -6,6 +6,9 @@ extend it without breaking invariants.
 
 ## Files
 
+- [`MODULE-billing.md`](MODULE-billing.md) — verified platform receipt API,
+  durable value/entitlement identities, retry/refund behavior and remaining
+  platform evidence.
 - [`MODULE-media-engine.md`](MODULE-media-engine.md) — dated current-runtime
   audit of content/dealing, plus text-transition compatibility and retirement
   boundaries; its legacy behavior is not the adopted product contract.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -91,6 +92,64 @@ type networkFixture struct {
 	values      *store.TextValueStore
 	now         atomic.Int64
 	drawPenalty int64
+	connections networkConnectionGauge
+}
+
+type networkConnectionGauge struct{ atomic.Int64 }
+
+func (g *networkConnectionGauge) Inc() { g.Add(1) }
+func (g *networkConnectionGauge) Dec() { g.Add(-1) }
+
+func TestTextNetworkCommandAuthenticatesAndSavesInterruptedTrace(t *testing.T) {
+	f := newNetworkFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	path := filepath.Join(t.TempDir(), "interrupted-network.json")
+	result := make(chan error, 1)
+	go func() {
+		result <- runTextNetwork(ctx, "ws"+strings.TrimPrefix(f.server.URL, "http")+"/ws/v2", gamecontract.ModeMissedTheBriefing, 4, 42, path, "disposable-network-fixture-key-for-local-tests")
+	}()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case err := <-result:
+			t.Fatalf("command never admitted an authenticated prototype match: %v", err)
+		case <-ctx.Done():
+			t.Fatal("command did not reach an authenticated match before its deadline")
+		case <-ticker.C:
+			var started int
+			if err := f.db.QueryRowContext(ctx, `SELECT count(*) FROM text_matches WHERE state='started'`).Scan(&started); err != nil {
+				t.Fatal(err)
+			}
+			if started == 0 {
+				continue
+			}
+			if started != 1 {
+				t.Fatal("command created duplicate matches")
+			}
+			cancel()
+			if err := <-result; !errors.Is(err, context.Canceled) {
+				t.Fatalf("command cancellation did not preserve its cause: %v", err)
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal("failed command did not save its private trace", err)
+			}
+			info, err := os.Stat(path)
+			if err != nil || info.Mode().Perm() != 0600 {
+				t.Fatal("interrupted trace permissions", err)
+			}
+			if strings.Contains(string(raw), "access_token") || strings.Contains(string(raw), "disposable-network-fixture-key-for-local-tests") {
+				t.Fatal("interrupted trace exposed credentials")
+			}
+			var accounts int
+			if err := f.db.QueryRow(`SELECT count(*) FROM accounts WHERE auth_purpose='development'`).Scan(&accounts); err != nil || accounts != 4 {
+				t.Fatal("first authenticated account was not reused for its seat", accounts, err)
+			}
+			return
+		}
+	}
 }
 
 func TestTextNetworkDevelopmentAuthenticationAndAvailabilityGate(t *testing.T) {
@@ -98,6 +157,11 @@ func TestTextNetworkDevelopmentAuthenticationAndAvailabilityGate(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/text/availability":
+			if r.Header.Get("Authorization") != "Bearer disposable-token" {
+				t.Error("availability omitted authenticated development identity")
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
 			json.NewEncoder(w).Encode(lobby.TextAvailability{ProtocolVersion: 2, ClientGeneration: 2})
 		case "/api/auth/development":
 			authCalls.Add(1)
@@ -118,22 +182,33 @@ func TestTextNetworkDevelopmentAuthenticationAndAvailabilityGate(t *testing.T) {
 	if err := runTextNetwork(ctx, endpoint, gamecontract.ModeMissedTheBriefing, 4, 1, filepath.Join(t.TempDir(), "private.json"), "disposable-unit-test-key"); err == nil {
 		t.Fatal("entrypoint accepted nonprototype availability")
 	}
-	if authCalls.Load() != 0 {
-		t.Fatal("entrypoint authenticated before prototype availability")
+	if authCalls.Load() != 1 {
+		t.Fatal("entrypoint must authenticate once before availability and refuse remaining seats")
 	}
 	if _, err := networkDevelopmentAuth(ctx, endpoint, ""); err == nil {
 		t.Fatal("development secret optional")
 	}
 	token, err := networkDevelopmentAuth(ctx, endpoint, "disposable-unit-test-key")
-	if err != nil || token != "disposable-token" || authCalls.Load() != 1 {
+	if err != nil || token != "disposable-token" || authCalls.Load() != 2 {
 		t.Fatal("authenticated development endpoint failed", err)
 	}
 }
 
 func TestTextNetworkTraceRejectsTokenAndExistingArtifacts(t *testing.T) {
 	peer := &textNetworkBot{token: "never-persist-access-token"}
-	if err := peer.record("server", lobby.TextEnvelope{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"never-persist-access-token"}`)}); err == nil {
-		t.Fatal("trace accepted reflected credential")
+	for _, frame := range []lobby.TextEnvelope{
+		{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"never-persist-access-token"}`)},
+		{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"prefix-\u006eever-persist-access-token-suffix"}`)},
+		{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"\u006eever-persist-access-token","code":"safe"}`)},
+		{Version: 2, Type: "prefix-never-persist-access-token-suffix", Payload: json.RawMessage(`{}`)},
+		{Version: 2, Type: "error", RequestID: "prefix-never-persist-access-token-suffix", Payload: json.RawMessage(`{}`)},
+	} {
+		if err := peer.record("server", frame); err == nil {
+			t.Error("trace accepted a plain, escaped or embedded credential")
+		}
+	}
+	if len(peer.trace) != 0 || peer.traceBytes != 0 {
+		t.Fatal("credential refusal retained sensitive frames")
 	}
 	path := filepath.Join(t.TempDir(), "trace.json")
 	if err := writeTextNetworkTrace(path, []*textNetworkBot{peer}); err != nil {
@@ -149,6 +224,28 @@ func TestTextNetworkTraceRejectsTokenAndExistingArtifacts(t *testing.T) {
 	after, err := os.ReadFile(path)
 	if err != nil || string(before) != string(after) {
 		t.Fatal("existing artifact changed", err)
+	}
+}
+
+func TestTextNetworkTraceRejectsCredentialsAcrossRecipients(t *testing.T) {
+	for _, frame := range []lobby.TextEnvelope{
+		{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"peer-one-private-token"}`)},
+		{Version: 2, Type: "error", Payload: json.RawMessage(`{"code":"prefix-\u0070eer-one-private-token-suffix","code":"safe"}`)},
+		{Version: 2, Type: "prefix-peer-one-private-token-suffix", Payload: json.RawMessage(`{}`)},
+		{Version: 2, Type: "error", RequestID: "prefix-peer-one-private-token-suffix", Payload: json.RawMessage(`{}`)},
+	} {
+		first := &textNetworkBot{token: "peer-one-private-token"}
+		second := &textNetworkBot{token: "peer-two-private-token"}
+		if err := second.record("server", frame); err != nil {
+			t.Fatal("recipient cannot know the other credential", err)
+		}
+		path := filepath.Join(t.TempDir(), "rejected-trace.json")
+		if err := writeTextNetworkTrace(path, []*textNetworkBot{first, second}); err == nil {
+			t.Fatal("aggregate trace retained another recipient's credential")
+		}
+		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatal("credential-bearing output was created", err)
+		}
 	}
 }
 
@@ -174,6 +271,10 @@ func (v networkValues) Finish(ctx context.Context, o store.TextOutcome) error {
 }
 
 func newNetworkFixture(t *testing.T) *networkFixture {
+	return newNetworkFixtureWithObserver(t, nil)
+}
+
+func newNetworkFixtureWithObserver(t *testing.T, observe func(gamecontract.ModeID, time.Duration)) *networkFixture {
 	t.Helper()
 	ctx := context.Background()
 	dsn, token := os.Getenv("KNOWOFF_TEST_DSN"), os.Getenv("KNOWOFF_TEST_DB_TOKEN")
@@ -237,7 +338,9 @@ func newNetworkFixture(t *testing.T) *networkFixture {
 		t.Fatal(recovery, err)
 	}
 	f := &networkFixture{db: db, values: values, drawPenalty: int64(cfg.Tuning.Points.DrawPenalty)}
-	f.now.Store(time.Now().UTC().UnixMilli())
+	// Deliberately separate the gameplay clock from PostgreSQL's wall clock so
+	// delivery tests cannot pass only because an uninstrumented match runs fast.
+	f.now.Store(time.Now().UTC().Add(-time.Hour).UnixMilli())
 	manager, err := lobby.NewTextManager(lobby.TextDeps{Owner: owner.Token().IncarnationID, Authority: owner, Config: cfg, Values: networkValues{values, t}, Prototype: pack, Now: func() time.Time { return time.UnixMilli(f.now.Load()) }})
 	if err != nil {
 		t.Fatal(err)
@@ -249,7 +352,7 @@ func newNetworkFixture(t *testing.T) *networkFixture {
 	}
 	mux := http.NewServeMux()
 	handler.RegisterAuthRoutes(mux, handler.AuthDeps{Auth: authManager, DevBotKey: "disposable-network-fixture-key-for-local-tests"})
-	deps := handler.TextHandlerDeps{Config: cfg, Lobby: manager, Auth: authManager, Deliveries: values, DeliveryWorker: manager.Owner()}
+	deps := handler.TextHandlerDeps{Config: cfg, Lobby: manager, Auth: authManager, Deliveries: values, DeliveryWorker: manager.Owner(), Connections: &f.connections, ObserveAcceptedAction: observe}
 	mux.HandleFunc("/ws/v2", handler.TextRealtimeHandler(deps))
 	mux.HandleFunc("/api/text/availability", handler.TextAvailabilityHandler(deps))
 	f.server = httptest.NewServer(mux)
@@ -273,7 +376,9 @@ func networkZero(t *testing.T, db *sql.DB, query string) {
 
 func TestTextNetworkAuthenticatedFiveModesAndSizes(t *testing.T) {
 	f := newNetworkFixture(t)
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	// The complete ten-match matrix also runs with race instrumentation and
+	// validates every full recipient history; retain a bounded CI work budget.
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
 	defer cancel()
 	pages := 0
 	for _, mode := range gamecontract.AllModes() {
@@ -390,6 +495,24 @@ func TestTextNetworkAuthenticatedFiveModesAndSizes(t *testing.T) {
 						if err := f.advance(ctx, first.DeadlineMS); err != nil {
 							t.Fatal(err)
 						}
+					}
+				}
+				// Gameplay uses a manually advanced clock, but PostgreSQL creates
+				// outbox availability with wall time. Race instrumentation can let
+				// wall time overtake the fixture. Synchronize only after the verdict,
+				// using the persisted availability rather than sleeping or changing
+				// any gameplay deadline.
+				var available time.Time
+				if err := f.db.QueryRowContext(ctx, `SELECT max(available_at) FROM text_outbox WHERE match_id=$1`, peers[0].snapshot.Contract.MatchID).Scan(&available); err != nil {
+					t.Fatal(err)
+				}
+				if at := available.UnixMilli() + 1; at > f.now.Load() {
+					clockInput, _ := json.Marshal(map[string]int64{"at_ms": at})
+					if err := peers[0].record("fixture_clock", lobby.TextEnvelope{Version: 2, Type: "advance", Payload: clockInput}); err != nil {
+						t.Fatal(err)
+					}
+					if err := f.advance(ctx, at); err != nil {
+						t.Fatal(err)
 					}
 				}
 				if err := f.manager.PumpDeliveries(ctx, f.values); err != nil {

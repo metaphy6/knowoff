@@ -9,7 +9,9 @@ import (
 )
 
 func (m *TextManager) Create(ctx context.Context, p *TextPeer, s v2.LobbySettings) (string, error) {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return "", err
+	}
 	defer m.mu.Unlock()
 	if !m.current(p) || m.members[p.AccountID] != nil || m.queues[p.AccountID] != nil {
 		return "", ErrTextMembership
@@ -32,7 +34,9 @@ func (m *TextManager) Create(ctx context.Context, p *TextPeer, s v2.LobbySetting
 	return r.code, nil
 }
 func (m *TextManager) Join(ctx context.Context, p *TextPeer, code string) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if e := m.checkAuthority(ctx); e != nil {
 		return e
@@ -43,6 +47,9 @@ func (m *TextManager) Join(ctx context.Context, p *TextPeer, code string) error 
 	r := m.rooms[strings.ToUpper(code)]
 	if r == nil {
 		return ErrTextMembership
+	}
+	if r.pendingOperator != nil || r.excludedAccounts[p.AccountID] {
+		return ErrTextUnavailable
 	}
 	if existing := m.members[p.AccountID]; existing != nil {
 		if existing != r {
@@ -64,7 +71,7 @@ func (m *TextManager) Join(ctx context.Context, p *TextPeer, code string) error 
 		}
 		return m.lobby(r, p)
 	}
-	if m.draining || r.pendingAbort != "" {
+	if m.admissionPaused() || r.pendingAbort != "" || r.pendingOperator != nil {
 		return ErrTextUnavailable
 	}
 	if r.match != nil || r.path != "local" || len(r.seats) >= r.settings.Size {
@@ -98,12 +105,34 @@ func (m *TextManager) member(r *textRoom, account string) (int, *textMember) {
 	}
 	return -1, nil
 }
+
+// RoomAccount resolves the current seat for authenticated safety/profile lookup.
+// It exposes no private game state and is invalid once the viewer leaves.
+func (m *TextManager) RoomAccount(ctx context.Context, account, roomID string, seat int) (string, error) {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return "", err
+	}
+	defer m.mu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return "", err
+	}
+	r := m.members[account]
+	if r == nil || r.id != roomID || seat < 0 || seat >= r.settings.Size || r.seats[seat] == nil {
+		return "", ErrTextMembership
+	}
+	return r.seats[seat].account, nil
+}
 func (m *TextManager) Settings(ctx context.Context, p *TextPeer, revision uint64, s v2.LobbySettings) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	r := m.members[p.AccountID]
 	if !m.current(p) || r == nil || r.match != nil {
 		return ErrTextMembership
+	}
+	if r.pendingOperator != nil {
+		return ErrTextUnavailable
 	}
 	seat, _ := m.member(r, p.AccountID)
 	if seat != r.host {
@@ -152,13 +181,15 @@ func (m *TextManager) Settings(ctx context.Context, p *TextPeer, revision uint64
 	return m.matchQueues(ctx)
 }
 func (m *TextManager) Ready(ctx context.Context, p *TextPeer, ack v2.ReadyAcknowledgement) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	r := m.members[p.AccountID]
 	if !m.current(p) || r == nil || r.match != nil {
 		return ErrTextMembership
 	}
-	if m.draining || r.pendingAbort != "" {
+	if m.admissionPaused() || r.pendingAbort != "" || r.pendingOperator != nil {
 		return ErrTextUnavailable
 	}
 	if ack.SettingsRevision != r.settingsRevision || ack.MembershipRevision != r.membershipRevision {
@@ -179,7 +210,7 @@ func (m *TextManager) Ready(ctx context.Context, p *TextPeer, ack v2.ReadyAcknow
 func (m *TextManager) elect(r *textRoom) {
 	seats := []int{}
 	for seat, s := range r.seats {
-		if s.peer != nil && !s.peer.closed {
+		if s.peer != nil && !s.peer.closed.Load() {
 			seats = append(seats, seat)
 		}
 	}
@@ -195,7 +226,9 @@ func (m *TextManager) elect(r *textRoom) {
 	}
 }
 func (m *TextManager) Leave(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if !m.current(p) {
 		return ErrTextMembership
@@ -206,6 +239,9 @@ func (m *TextManager) leave(ctx context.Context, p *TextPeer, disconnect bool) e
 	r := m.members[p.AccountID]
 	if r == nil {
 		return m.leaveQueue(ctx, p)
+	}
+	if r.pendingOperator != nil {
+		return ErrTextUnavailable
 	}
 	seat, member := m.member(r, p.AccountID)
 	if member.peer != p {
@@ -250,9 +286,33 @@ func (m *TextManager) leave(ctx context.Context, p *TextPeer, disconnect bool) e
 	return m.matchQueues(ctx)
 }
 func (m *TextManager) Disconnect(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	return m.disconnect(ctx, p)
+}
+
+// EnforceAccount serializes the canonical sanction/session revocation check with
+// Open. The callback must commit before returning and must not reenter the lobby.
+// A cleared or expired sanction never closes a replacement session. A failed
+// durable leave still closes the socket and retains cleanup for Tick to retry.
+func (m *TextManager) EnforceAccount(ctx context.Context, account string, active func(context.Context, string) (bool, error)) error {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
+	defer m.mu.Unlock()
+	if active == nil {
+		return ErrTextUnavailable
+	}
+	enforced, err := active(ctx, account)
+	if err != nil {
+		return err
+	}
+	if !enforced {
+		return nil
+	}
+	return m.disconnect(ctx, m.peers[account])
 }
 func (m *TextManager) disconnect(ctx context.Context, p *TextPeer) error {
 	if p == nil || m.peers[p.AccountID] != p {
@@ -269,13 +329,15 @@ func (m *TextManager) disconnect(ctx context.Context, p *TextPeer) error {
 	return nil
 }
 func (m *TextManager) Rematch(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	r := m.members[p.AccountID]
 	if !m.current(p) || r == nil {
 		return ErrTextMembership
 	}
-	if m.draining {
+	if m.admissionPaused() || r.pendingOperator != nil || r.excludedAccounts[p.AccountID] {
 		return ErrTextUnavailable
 	}
 	if r.match == nil {
@@ -289,7 +351,7 @@ func (m *TextManager) Rematch(ctx context.Context, p *TextPeer) error {
 		member.originalSeat = seat
 		member.admission = ""
 		member.ready = nil
-		if member.peer == nil || member.peer.closed {
+		if member.peer == nil || member.peer.closed.Load() {
 			delete(m.members, member.account)
 			delete(r.seats, seat)
 		}
@@ -310,4 +372,26 @@ func (m *TextManager) Rematch(ctx context.Context, p *TextPeer) error {
 	}
 	m.broadcastLobby(r)
 	return m.matchQueues(ctx)
+}
+
+// VisibleText authorizes an exact text revision without revealing another
+// participant's prompt/hand or retaining private state outside the live match.
+func (m *TextManager) VisibleText(ctx context.Context, account, matchID string, ref v2.ContentRef) (v2.MatchContract, v2.TextContent, error) {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return v2.MatchContract{}, v2.TextContent{}, err
+	}
+	defer m.mu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return v2.MatchContract{}, v2.TextContent{}, err
+	}
+	r := m.members[account]
+	if r == nil || r.match == nil {
+		return v2.MatchContract{}, v2.TextContent{}, ErrTextMembership
+	}
+	seat, _ := m.member(r, account)
+	contract, content, err := r.match.VisibleText(seat, ref)
+	if err != nil || contract.MatchID != matchID {
+		return v2.MatchContract{}, v2.TextContent{}, ErrTextMembership
+	}
+	return contract, content, nil
 }

@@ -19,6 +19,7 @@ humans on **the project's design and history**.
 | [`reports/2026-09-12-text-transition-doc-audit.md`](reports/2026-09-12-text-transition-doc-audit.md) | Complete documentation coverage and retained historical exceptions. | Reviewers. |
 | [`reports/2026-09-12-text-phase1-validation.md`](reports/2026-09-12-text-phase1-validation.md) | Contract/config, validation and migration foundation evidence; remaining Phase 1 gates. | Engineering + reviewers. |
 | [`reports/2026-09-12-text-phase1-continuation.md`](reports/2026-09-12-text-phase1-continuation.md) | Deployment attestation, wallet transaction review and additive migration/backfill continuation proofs. | Engineering + operators. |
+| [`reports/2026-09-12-text-transition-resumption.md`](reports/2026-09-12-text-transition-resumption.md) | Active implementation, independent reviews, real-service tests and remaining release evidence. | Engineering + resuming agents. |
 | [`reports/2026-09-12-text-transition-pause.md`](reports/2026-09-12-text-transition-pause.md) | End-of-day implementation checkpoint, targeted test evidence and unfinished validation/work. | Resuming agents + owner. |
 | [`reports/2026-09-12-text-phase1-reproductions.md`](reports/2026-09-12-text-phase1-reproductions.md) | Replayable legacy draw, pack, reconnect, sequence and lock defect evidence. | Engine + protocol implementers. |
 | [`launch/`](launch/) | Release-gated copy, clip brief and migration runbook. | Launch operators. |

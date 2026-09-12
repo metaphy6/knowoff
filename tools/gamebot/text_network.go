@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -76,11 +77,18 @@ func runTextNetwork(ctx context.Context, endpoint string, mode gamecontract.Mode
 	} else if !os.IsNotExist(err) {
 		return err
 	}
+	// Availability is authenticated. The dedicated development endpoint already
+	// enforces server-side prototype policy; reuse this first identity for seat 0.
+	firstToken, err := networkDevelopmentAuth(ctx, endpoint, key)
+	if err != nil {
+		return err
+	}
 	u, _ := url.Parse(endpoint)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+u.Host+"/api/text/availability", nil)
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Authorization", "Bearer "+firstToken)
 	response, err := textNetworkHTTP.Do(req)
 	if err != nil {
 		return errors.New("prototype availability request failed")
@@ -113,9 +121,12 @@ func runTextNetwork(ctx context.Context, endpoint string, mode gamecontract.Mode
 		}
 	}()
 	for i := 0; i < size; i++ {
-		token, err := networkDevelopmentAuth(ctx, endpoint, key)
-		if err != nil {
-			return err
+		token := firstToken
+		if i > 0 {
+			token, err = networkDevelopmentAuth(ctx, endpoint, key)
+			if err != nil {
+				return err
+			}
 		}
 		peer, err := connectTextNetwork(ctx, endpoint, token, seed+int64(i))
 		if err != nil {
@@ -328,7 +339,7 @@ func networkDecode(raw []byte, value any) error {
 }
 
 func (b *textNetworkBot) record(direction string, frame lobby.TextEnvelope) error {
-	if b.token != "" && (bytes.Contains(frame.Payload, []byte(b.token)) || frame.RequestID == b.token || frame.Type == b.token) {
+	if b.token != "" && (textJSONContainsCredential(frame.Payload, b.token) || strings.Contains(frame.RequestID, b.token) || strings.Contains(frame.Type, b.token)) {
 		return errors.New("network frame unexpectedly contained an authentication credential")
 	}
 	n := len(frame.Payload) + len(frame.Type) + len(frame.RequestID) + 100
@@ -338,6 +349,30 @@ func (b *textNetworkBot) record(direction string, frame lobby.TextEnvelope) erro
 	b.traceBytes += n
 	b.trace = append(b.trace, textNetworkFrame{Order: textNetworkObservationOrder.Add(1), Direction: direction, AtMS: time.Now().UnixMilli(), Frame: frame})
 	return nil
+}
+
+func textJSONContainsCredential(raw []byte, token string) bool {
+	if token == "" {
+		return false
+	}
+	if bytes.Contains(raw, []byte(token)) {
+		return true
+	}
+	if bytes.IndexByte(raw, '\\') >= 0 {
+		// Inspect decoded strings too: a reflected token may use JSON escapes.
+		// Token scanning retains duplicate keys, unlike decoding into a map.
+		decoder := json.NewDecoder(bytes.NewReader(raw))
+		for {
+			value, err := decoder.Token()
+			if err != nil {
+				break
+			}
+			if value, ok := value.(string); ok && strings.Contains(value, token) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (b *textNetworkBot) write(ctx context.Context, kind, id string, payload any, record bool) error {
@@ -578,11 +613,22 @@ func writeTextNetworkTrace(path string, peers []*textNetworkBot) error {
 	for _, peer := range peers {
 		trace.Recipients = append(trace.Recipients, recipient{peer.seed, peer.trace})
 	}
+	encoded, err := json.Marshal(trace)
+	if err != nil {
+		return err
+	}
+	// A recipient knows only its own credential while recording. Before any
+	// file is created, inspect the aggregate against every known credential.
+	for _, peer := range peers {
+		if textJSONContainsCredential(encoded, peer.token) {
+			return errors.New("network trace unexpectedly contained an authentication credential")
+		}
+	}
 	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		return err
 	}
-	err = json.NewEncoder(f).Encode(trace)
+	_, err = f.Write(append(encoded, '\n'))
 	if err == nil {
 		err = f.Sync()
 	}

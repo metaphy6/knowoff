@@ -152,7 +152,7 @@ func accessKind(ctx context.Context, tx *sql.Tx, account, path string, prototype
 		return "local", nil
 	}
 	var premium, pass bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type IN ('premium_monthly','premium_yearly') AND active_until>$2),EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type IN ('play_pass_1d','play_pass_3d','play_pass_7d') AND active_until>$2)`, account, at).Scan(&premium, &pass)
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type IN ('premium_monthly','premium_yearly') AND (active_until IS NULL OR active_until>$2)),EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type IN ('play_pass_1d','play_pass_3d','play_pass_7d') AND active_until>$2)`, account, at).Scan(&premium, &pass)
 	if err != nil {
 		return "", err
 	}
@@ -211,6 +211,9 @@ func (s *TextValueStore) Reserve(ctx context.Context, a TextReservation) error {
 		if exists {
 			return ErrValueConflict
 		}
+		if err = checkTextCooldown(ctx, tx, a.AccountID, a.EntryPath, a.Prototype, a.At); err != nil {
+			return err
+		}
 		kind, err := accessKind(ctx, tx, a.AccountID, a.EntryPath, a.Prototype, a.At)
 		if err != nil {
 			return err
@@ -229,27 +232,29 @@ func (s *TextValueStore) CancelReservation(ctx context.Context, id, account stri
 	if !valueUUID(id) || !valueUUID(account) {
 		return ErrValueConflict
 	}
-	return s.ownerTransaction(ctx, func(tx *sql.Tx) error {
-		if err := valueAccountLock(ctx, tx, account); err != nil {
-			return err
-		}
-		var state string
-		var match, processOwner sql.NullString
-		if err := tx.QueryRowContext(ctx, `SELECT state,match_id,process_owner_id FROM text_admissions WHERE id=$1 AND account_id=$2 FOR UPDATE`, id, account).Scan(&state, &match, &processOwner); err != nil {
-			return err
-		}
-		if s.owner != nil && processOwner.String != s.owner.token.IncarnationID {
-			return ErrValueFence
-		}
-		if state == "released" {
-			return nil
-		}
-		if state != "reserved" || match.Valid {
-			return ErrValueConflict
-		}
-		_, err := tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE id=$1`, id)
+	return s.ownerTransaction(ctx, func(tx *sql.Tx) error { return s.cancelReservationTx(ctx, tx, id, account) })
+}
+
+func (s *TextValueStore) cancelReservationTx(ctx context.Context, tx *sql.Tx, id, account string) error {
+	if err := valueAccountLock(ctx, tx, account); err != nil {
 		return err
-	})
+	}
+	var state string
+	var match, processOwner sql.NullString
+	if err := tx.QueryRowContext(ctx, `SELECT state,match_id,process_owner_id FROM text_admissions WHERE id=$1 AND account_id=$2 FOR UPDATE`, id, account).Scan(&state, &match, &processOwner); err != nil {
+		return err
+	}
+	if s.owner != nil && processOwner.String != s.owner.token.IncarnationID {
+		return ErrValueFence
+	}
+	if state == "released" {
+		return nil
+	}
+	if state != "reserved" || match.Valid {
+		return ErrValueConflict
+	}
+	_, err := tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE id=$1`, id)
+	return err
 }
 func (s *TextValueStore) Prepare(ctx context.Context, m TextMatchRecord, at time.Time) error {
 	if err := s.validateProcessOwner(m.Owner); err != nil {
@@ -464,6 +469,9 @@ func (s *TextValueStore) Start(ctx context.Context, id, owner string, epoch int6
 		for _, a := range admissions {
 			if a.state != "reserved" {
 				return ErrValueConflict
+			}
+			if err = checkTextCooldown(ctx, tx, a.account, a.path, a.prototype, at); err != nil {
+				return err
 			}
 			kind, err := accessKind(ctx, tx, a.account, a.path, a.prototype, at)
 			if err != nil {

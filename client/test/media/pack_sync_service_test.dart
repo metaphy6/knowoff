@@ -1,154 +1,68 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
-import 'package:knowoff_client/media/media_models.dart';
-import 'package:knowoff_client/media/pack_sync_service.dart';
+import 'package:knowoff_client/core/text/cache_upgrade.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  const manifest = '''
-{
-  "pack_tag": "core-2026.10",
-  "format_version": 1,
-  "language": "en",
-  "embedding_model": "synthetic-deterministic",
-  "embedding_version": "1.0",
-  "age_rating": "everyone",
-  "checksums": {}
+class _NoPlayableNetwork extends HttpOverrides {
+  int attempts = 0;
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    attempts++;
+    throw StateError('retired playable cache must never refresh from network');
+  }
 }
-'''; // DO NOT split literal; keep raw string intact.
 
-  const mediaJsonl = '''
-{"id":"nown-0001","type":"text","content":"Hello","asset_ref":"","tags":[],"tone_bucket":"chaos","rating":"everyone"}
-'''; // DO NOT split literal; keep raw string intact.
-
-  group('PackSyncService', () {
-    setUp(() {
+// Each old pack-sync case transfers to selective retirement. No invalid or old
+// pack is reparsed, restored or refreshed into the five-mode text runtime.
+void main() {
+  for (final value in <Object>[
+    '{"type":"text","content":"old catalog"}',
+    '{"type":"image","asset_ref":"old-image"}',
+    '{"type":"gif","asset_ref":"old-gif"}',
+    '{"format_version":99,"signed_url":"https://invalid.example/private"}',
+    '{broken-json',
+    42,
+  ]) {
+    test(
+      'retires obsolete playable metadata without fetching: $value',
+      () async {
+        const preserved = <String, Object>{
+          'knowoff_account_id': 'existing-account',
+          'knowoff_access_token': 'saved-access',
+          'knowoff_refresh_token': 'saved-refresh',
+          'avatar_choice': 'owl',
+          'locale': 'ar',
+          'knowoff_text_last_mode': 'bad_bargains',
+          'media.unrelated_preference': 'preserve-exact-key-boundary',
+        };
+        SharedPreferences.setMockInitialValues({
+          ...preserved,
+          'media.active_tag': value,
+          'media.manifest': value,
+          'media.media_jsonl': value,
+        });
+        final network = _NoPlayableNetwork();
+        await HttpOverrides.runZoned(() async {
+          await retireLegacyPlayableCache();
+          await retireLegacyPlayableCache();
+        }, createHttpClient: network.createHttpClient);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getKeys(), preserved.keys.toSet());
+        for (final entry in preserved.entries) {
+          expect(prefs.get(entry.key), entry.value);
+        }
+        expect(network.attempts, 0);
+      },
+    );
+  }
+  test(
+    'fresh install retirement is idempotent and creates no catalog or identity',
+    () async {
       SharedPreferences.setMockInitialValues({});
-    });
-
-    test('accepts only explicit image and text media types', () {
-      for (final type in ['image', 'text']) {
-        expect(MediaItem.fromJson({'id': type, 'type': type}).type.name, type);
-      }
-      for (final type in ['gif', 'video', '', null, 42]) {
-        expect(() => MediaItem.fromJson({'id': 'bad', 'type': type}),
-            throwsFormatException,
-            reason: '$type must not become text');
-      }
-    });
-
-    test('rejects GIF metadata without replacing a working pack', () async {
-      var unsupported = false;
-      final service = PackSyncService(
-        client: MockClient((request) async => http.Response(
-            request.url.path.endsWith('manifest.json')
-                ? manifest
-                : unsupported
-                    ? mediaJsonl.replaceFirst('"text"', '"gif"')
-                    : mediaJsonl,
-            200)),
-        baseUrl: 'https://x/',
-      );
-      expect(await service.sync('core-2026.10'), isTrue);
-      unsupported = true;
-      expect(await service.sync('unsupported'), isFalse);
-      expect(service.manifest?.packTag, 'core-2026.10');
-      expect(service.mediaById?['nown-0001']?.type, MediaType.text);
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('media.active_tag'), 'core-2026.10');
-      expect(prefs.getString('media.media_jsonl'), mediaJsonl);
-    });
-
-    test('evicts legacy GIF metadata and recovers from the network', () async {
-      SharedPreferences.setMockInitialValues({
-        'media.active_tag': 'core-2026.10',
-        'media.manifest': manifest,
-        'media.media_jsonl': mediaJsonl.replaceFirst('"text"', '"gif"'),
-      });
-      var requests = 0;
-      final service = PackSyncService(
-        client: MockClient((request) async {
-          requests++;
-          return http.Response(
-              request.url.path.endsWith('manifest.json')
-                  ? manifest
-                  : mediaJsonl,
-              200);
-        }),
-        baseUrl: 'https://x/',
-      );
-      expect(await service.sync('core-2026.10'), isTrue);
-      expect(requests, 2);
-      expect(service.mediaById?['nown-0001']?.type, MediaType.text);
-    });
-
-    test('invalid cached media stays unavailable when refresh fails', () async {
-      SharedPreferences.setMockInitialValues({
-        'media.active_tag': 'core-2026.10',
-        'media.manifest': manifest,
-        'media.media_jsonl': mediaJsonl.replaceFirst('"text"', '"gif"'),
-      });
-      final service = PackSyncService(
-        client: MockClient((_) async => http.Response('', 503)),
-        baseUrl: 'https://x/',
-      );
-      expect(await service.sync('core-2026.10'), isFalse);
-      expect(service.manifest, isNull);
-      expect(service.mediaById, isNull);
-      final prefs = await SharedPreferences.getInstance();
-      expect(prefs.containsKey('media.active_tag'), isFalse);
-      expect(prefs.containsKey('media.manifest'), isFalse);
-      expect(prefs.containsKey('media.media_jsonl'), isFalse);
-    });
-
-    test('fetches unrecognized tag and persists metadata', () async {
-      http.Client client = MockClient((request) async {
-        if (request.url.path.endsWith('manifest.json')) {
-          return http.Response(manifest, 200);
-        }
-        if (request.url.path.endsWith('media.jsonl')) {
-          return http.Response(mediaJsonl, 200);
-        }
-        return http.Response('not found', 404);
-      });
-
-      final service = PackSyncService(client: client, baseUrl: 'https://x/');
-      final ok = await service.sync('core-2026.10');
-      expect(ok, isTrue);
-      expect(service.manifest?.packTag, 'core-2026.10');
-      expect(service.mediaById?['nown-0001']?.content, 'Hello');
-    });
-
-    test('loads already-persisted tag without network', () async {
-      SharedPreferences.setMockInitialValues({
-        'media.active_tag': 'core-2026.10',
-        'media.manifest': manifest,
-        'media.media_jsonl': mediaJsonl,
-      });
-
-      final service = PackSyncService(
-        client: MockClient((_) async => http.Response('', 500)),
-        baseUrl: 'https://x/',
-      );
-      final ok = await service.sync('core-2026.10');
-      expect(ok, isTrue);
-      expect(service.manifest?.packTag, 'core-2026.10');
-    });
-
-    test('rejects unsupported format version', () async {
-      const badManifest = '''
-{"pack_tag":"bad","format_version":99,"language":"en","embedding_model":"x","embedding_version":"1","age_rating":"everyone","checksums":{}}
-'''; // DO NOT split literal.
-      final client = MockClient((request) async {
-        if (request.url.path.endsWith('manifest.json')) {
-          return http.Response(badManifest, 200);
-        }
-        return http.Response('not found', 404);
-      });
-      final service = PackSyncService(client: client, baseUrl: 'https://x/');
-      final ok = await service.sync('bad');
-      expect(ok, isFalse);
-    });
-  });
+      await retireLegacyPlayableCache();
+      await retireLegacyPlayableCache();
+      expect((await SharedPreferences.getInstance()).getKeys(), isEmpty);
+    },
+  );
 }

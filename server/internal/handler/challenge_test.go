@@ -28,10 +28,21 @@ func TestChallengeHTTPJourney(t *testing.T) {
 	if _, err := db.Exec(`TRUNCATE challenge_votes,challenge_entries,challenge_winners,challenge_topics,portal_submissions,portal_terms CASCADE`); err != nil {
 		t.Fatal(err)
 	}
-	cfg := &config.Config{Tuning: config.TuningConfig{Portal: config.PortalTuning{TermsVersion: "v1", MaxTextSubmissionLength: 100, SubmissionsPerContributorPerDay: 10}, LiveOps: config.LiveOpsTuning{ChallengeMaxEntries: 2}, Noin: config.NoinTuning{ChallengeWinner: 100}}}
-	pm := portal.NewManager(portal.Deps{DB: db, Config: cfg, Auth: authMgr, Profile: profile.NewManager(db, cfg.Tuning.Progression), Economy: econ, Screener: challengeTestScreen{}})
+	cfg := &config.Config{Trust: config.TrustConfig{UserTermsVersion: "synthetic-challenge-user-v1"}, Tuning: config.TuningConfig{Contract: config.ContractTuning{MaxTextBytes: 100}, Portal: config.PortalTuning{TermsVersion: "v1", MaxTextSubmissionLength: 100, SubmissionsPerContributorPerDay: 10}, LiveOps: config.LiveOpsTuning{ChallengeMaxEntries: 2}, Noin: config.NoinTuning{ChallengeWinner: 100}}}
+	pm := portal.NewManager(portal.Deps{DB: db, Config: cfg, Auth: authMgr, Profile: profile.NewManager(db), Economy: econ, Screener: challengeTestScreen{}})
 	owner, ownerToken := seedAccountForEconomy(t, ctx, db, authMgr)
 	viewer, viewerToken := seedAccountForEconomy(t, ctx, db, authMgr)
+	if _, err := db.Exec(`INSERT INTO challenge_current_winner(singleton) VALUES(true) ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO user_terms_versions(version,body,active_from) VALUES('synthetic-challenge-user-v1','Synthetic test user terms',now()-interval '1 hour') ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{owner, viewer} {
+		if _, err := db.Exec(`INSERT INTO user_terms_acceptances(account_id,version,accepted_at) VALUES($1,'synthetic-challenge-user-v1',now())`, id); err != nil {
+			t.Fatal(err)
+		}
+	}
 	_ = viewer
 	admin := uuid.NewString()
 	if _, err := db.Exec(`INSERT INTO admin_accounts(id,account_id,email,password_hash,totp_secret) VALUES($1,$2,$3,'test','test')`, admin, owner, admin+"@test.local"); err != nil {
@@ -163,7 +174,7 @@ func TestChallengeHTTPRechecksAccountEligibility(t *testing.T) {
 		denied       int
 	}{
 		{"banned after token issuance", `UPDATE accounts SET banned_at=now() WHERE id=$1`, 401},
-		{"deleted after token issuance", `UPDATE accounts SET deleted_at=now() WHERE id=$1`, 403},
+		{"deleted after token issuance", `UPDATE accounts SET deleted_at=now() WHERE id=$1`, 401},
 		{"active freeze", `INSERT INTO guard_freezes(account_id,frozen_by,reason,expires_at) VALUES($1,$2,'test',now()+interval '1 hour')`, 403},
 		{"expired freeze", `INSERT INTO guard_freezes(account_id,frozen_by,reason,expires_at) VALUES($1,$2,'test',now()-interval '1 hour')`, 0},
 		{"dismissed freeze", `INSERT INTO guard_freezes(account_id,frozen_by,reason,expires_at,dismissed_at) VALUES($1,$2,'test',now()+interval '1 hour',now())`, 0},

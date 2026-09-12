@@ -15,6 +15,63 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Runtime retirement and operational proofs — 2026-09-12
+
+- Remove the association engine, specialty/dev-grant APIs, production bot
+  manager and v1 transport implementations; transfer their behavioral tests to
+  the five-mode engine and explicit unsupported-input checks.
+- Record genuine Quick Play abandonment once after reconnect grace, using the
+  match's pinned escalating cooldown policy; exclude local/prototype play and
+  confirmed server interruptions, and reject queue/start during cooldown.
+- Protect retained ledger, award, first-win, settlement, outbox and weekly
+  history against populated TRUNCATE, including cascading and hidden-row cases;
+  migration rollback requires empty retained history.
+- Block obsolete client protocol routes and carry the selected four/six-seat
+  size, API and normalized room code into explicit text admission.
+- Load active configuration with only PostgreSQL, Redis and JWT core secrets;
+  reject legacy playable storage/media/specialty/backfill keys before resolving
+  secret values. Remove MinIO and playable pack/ingest wiring from the active
+  Compose/proxy stack while retaining historical backup fixtures.
+- Add bounded authenticated runtime drain/status, real WebSocket connection
+  metrics and a compiled migration manifest with strict startup schema checks.
+- Enforce exact admin session authority after domain/audit lock waits, including
+  idempotent actions, notices and contribution publication.
+- Replace unsafe snapshot operations with isolated capture/restore proofs that
+  preserve database values, metadata and retained object history. Ordinary live
+  capture remains closed pending an all-writer quiescence boundary.
+
+### Five-mode integration and account safety — 2026-09-12
+
+- Add native purchase/restore integration with configured store products and
+  native prices, account-bound receipt retries and durable server grants before
+  store completion. Actual Android/iOS store-device verification remains open.
+- Add paid custom-avatar upload with bounded WebP normalization, screening,
+  revision/account fences and private authorized image delivery; takedown keeps
+  the paid unlock and returns the profile to its preset.
+- Add explicit user terms, private block/report/help journeys, same-table player
+  identity lookup and the current Weekly Challenge winner badge.
+- Separate Guard freezes from admin bans and timed suspensions. Final decisions
+  revoke JWT/browser/admin sessions and close live peers with durable retry;
+  lifting a sanction does not revive old credentials.
+- Schedule reviewed weekly topics and transfer the current title with one payout;
+  ties use earliest accepted submission, then immutable entry ID. Private blocks
+  hide optional authored entries without changing recorded votes or scores.
+- Preserve original contributor credit when an accepted input is captured again
+  after a nickname change. Fix concurrent socket replies and redact all peer
+  credentials before writing network replay traces.
+- Complete Google/Facebook link and account restoration with explicit account
+  switching, private completion proof and cancellation-safe session storage.
+- Add exact-revision text reports, audited report cases, live notice refresh and
+  wallet privacy through disconnect, interruption and restart.
+- Verify platform receipt signatures and transaction/account identity, durable
+  acknowledgement, named entitlements and source-specific refund handling;
+  provider sandbox/device evidence and subscription continuation remain open.
+- Require an explicitly published contribution agreement; startup no longer
+  manufactures placeholder terms.
+- Verify 489 Flutter tests, two PWA cache tests, web build and targeted real
+  PostgreSQL/Redis race suites. Full transition validation, remaining account,
+  billing, retirement and external release evidence are still in progress.
+
 ### Five-mode implementation checkpoint — 2026-09-12
 
 - Save the unfinished five-mode text catalog, engine, lobby/protocol, Flutter

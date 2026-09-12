@@ -1,196 +1,257 @@
-import 'dart:async';
+import 'dart:convert';
 
-import 'package:flutter/widgets.dart';
-import 'package:knowoff_client/l10n/app_localizations.dart';
-import 'package:knowoff_client/domain/entities/quick_chat_phrases.dart';
-
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:knowoff_client/core/network/game_transport.dart' as gt;
-import 'package:knowoff_client/data/models/game_state_dto.dart';
-import 'package:knowoff_client/domain/entities/game_session.dart';
-import 'package:knowoff_client/domain/entities/player_identity.dart';
-import 'package:knowoff_client/presentation/state/game_actions.dart';
-import 'package:knowoff_client/presentation/state/game_session_provider.dart';
+import 'package:knowoff_client/core/text/v2_contract.dart';
+import 'package:knowoff_client/core/text/v2_reducer.dart';
+import 'package:knowoff_client/domain/entities/quick_chat_phrases.dart';
+import 'package:knowoff_client/l10n/app_localizations.dart';
+import 'package:knowoff_client/presentation/screens/text_match_screen.dart';
+import 'package:knowoff_client/presentation/widgets/ko_ui.dart';
 
-class _Transport implements gt.GameTransport {
-  final events = StreamController<Map<String, dynamic>>.broadcast();
-  final sent = <Map<String, dynamic>>[];
-  @override
-  Stream<Map<String, dynamic>> get messages => events.stream;
-  @override
-  Stream<gt.ConnectionState> get state => const Stream.empty();
-  @override
-  bool get isConnected => true;
-  @override
-  Future<void> connect() async {}
-  @override
-  Future<void> reconnect() async {}
-  @override
-  Future<void> close() async => events.close();
-  @override
-  Future<void> send(Map<String, dynamic> message) async => sent.add(message);
+import '../core/network/text_reducer_test.dart' show fixture, limits;
+
+Future<(ValueNotifier<V2Snapshot>, List<Map<String, dynamic>>)> _pump(
+  WidgetTester t,
+  Map<String, dynamic> wire,
+) async {
+  final state = ValueNotifier(V2Snapshot.decode(jsonEncode(wire), limits));
+  final actions = <Map<String, dynamic>>[];
+  addTearDown(state.dispose);
+  await t.pumpWidget(
+    MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      theme: knowoffTheme(),
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: ValueListenableBuilder(
+            valueListenable: state,
+            builder: (_, value, _) => TextMatchView(
+              snapshot: value,
+              onAction: actions.add,
+              onRematch: () {},
+              serverNowMS: 0,
+              historyPageSize: 8,
+              maxTextBytes: 512,
+              authoredChatAllowed: true,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await t.pumpAndSettle();
+  return (state, actions);
 }
 
-GameSession _session({String role = 'nower', int turn = 0}) => GameSession(
-      myRole: role,
-      dto: GameStateDto(
-        phase: 'play',
-        seat: 0,
-        turnSeat: turn,
-        players: const [
-          PlayerDto(seat: 0, name: 'Me', connected: true, eliminated: false),
-          PlayerDto(seat: 1, name: 'Other', connected: true, eliminated: false),
-          PlayerDto(seat: 2, name: 'Out', connected: true, eliminated: true),
-        ],
-        revealLockoutSeconds: 5,
-        hand: const HandDto(cards: [], drawPile: [], specialty: 'reveal'),
-      ),
-    );
+Future<void> _tap(WidgetTester t, Finder finder) async {
+  await t.ensureVisible(finder);
+  await t.tap(finder);
+  await t.pumpAndSettle();
+}
 
 void main() {
-  test('bot flag and legacy nickname remain recognizable', () {
-    const legacy =
-        PlayerDto(seat: 2, name: 'Bot_old', connected: true, eliminated: false);
-    const flagged = PlayerDto(
-        seat: 3, name: 'Name', connected: true, eliminated: false, bot: true);
-    const human =
-        PlayerDto(seat: 1, name: 'Beta', connected: true, eliminated: false);
-    expect(isBotSeat(legacy), isTrue);
-    expect(isBotSeat(flagged), isTrue);
-    expect(isBotSeat(human), isFalse);
-    expect(seatDisplayName(legacy), 'Bot 2');
-    expect(seatDisplayName(flagged), 'Bot 3');
-    expect(seatDisplayName(human), 'Beta');
-  });
-
-  test('reveal lockout prevents send and targets exclude local/eliminated',
-      () async {
-    final transport = _Transport();
-    final notifier =
-        GameSessionNotifier(transport: transport, initialState: _session());
-    addTearDown(notifier.dispose);
-    final actions = GameActions(notifier, readSession: () => notifier.state);
-    expect(actions.revealTargets.map((p) => p.seat), [1]);
-    await actions.useSpecialtyFromHand('reveal',
-        remainingSeconds: 5, targetSeat: 1);
-    await actions.useSpecialtyFromHand('reveal',
-        remainingSeconds: 6, targetSeat: 0);
-    await actions.useSpecialtyFromHand('reveal',
-        remainingSeconds: 6, targetSeat: 2);
-    expect(transport.sent, isEmpty);
-    await actions.useSpecialtyFromHand('reveal',
-        remainingSeconds: 6, targetSeat: 1);
-    expect(transport.sent.single['payload'],
-        {'specialty': 'reveal', 'target_seat': 1});
-  });
-
-  test('shuffle is donower-only and works outside own turn', () async {
-    for (final role in ['nower', 'donower']) {
-      final transport = _Transport();
-      final notifier = GameSessionNotifier(
-          transport: transport, initialState: _session(role: role, turn: 1));
-      addTearDown(notifier.dispose);
-      await GameActions(notifier, readSession: () => notifier.state)
-          .useSpecialtyFromHand('shuffle', remainingSeconds: 20);
-      expect(transport.sent.length, role == 'donower' ? 1 : 0);
-    }
-  });
-
-  test('poke suppresses repeats per phase; chat trims and rejects empty',
-      () async {
-    final transport = _Transport();
-    final notifier =
-        GameSessionNotifier(transport: transport, initialState: _session());
-    addTearDown(notifier.dispose);
-    final actions = GameActions(notifier, readSession: () => notifier.state);
-    await actions.poke(0);
-    await actions.poke(2);
-    await actions.poke(1);
-    await actions.poke(1);
-    expect(transport.sent.length, 1);
-    await actions.sendFreeChat('  ', 'en');
-    await actions.sendFreeChat('  hello  ', 'en');
-    expect(transport.sent.last['payload'], {'text': 'hello', 'language': 'en'});
-  });
-
-  test('selection confirms immediately or locks and cancels an early move',
-      () async {
-    for (final turn in [0, 1]) {
-      final transport = _Transport();
-      final notifier = GameSessionNotifier(
-          transport: transport, initialState: _session(turn: turn));
-      addTearDown(notifier.dispose);
-      final actions = GameActions(notifier, readSession: () => notifier.state);
-      await actions.confirmSelection('c1');
-      if (turn == 0) {
-        expect(transport.sent.single['kind'], 'play_card');
-        expect(transport.sent.single['payload'], {'card_id': 'c1'});
-      } else {
-        expect(notifier.state.moveLocked, isTrue);
-        expect(notifier.state.selectedCardId, 'c1');
-        expect(transport.sent, isEmpty);
-        await actions.confirmSelection('c1');
-        expect(notifier.state.moveLocked, isFalse);
-        expect(notifier.state.selectedCardId, isNull);
+  test(
+    'wire seat identity never infers a bot or grants authority from a nickname',
+    () {
+      for (final name in ['Bot_old', 'Human', 'Admin']) {
+        final wire = fixture('snapshot-nower');
+        wire['seats'][1]['name'] = name;
+        expect(
+          () => V2Snapshot.decode(jsonEncode(wire), limits),
+          throwsA(isA<V2Failure>()),
+        );
       }
-    }
-  });
+      final s = V2Snapshot.decode(
+        jsonEncode(fixture('snapshot-nower')),
+        limits,
+      );
+      expect(s.json['seats'][1], {
+        'seat': 1,
+        'connected': true,
+        'eliminated': false,
+      });
+    },
+  );
 
-  test('poke allowance resets on a new round even if phase name repeats',
-      () async {
-    final transport = _Transport();
-    final notifier =
-        GameSessionNotifier(transport: transport, initialState: _session());
-    addTearDown(notifier.dispose);
-    var session = _session();
-    final actions = GameActions(notifier, readSession: () => session);
-    await actions.poke(1);
-    await actions.poke(1);
-    session = session.copyWith(dto: session.dto.copyWith(round: 2));
-    await actions.poke(1);
-    expect(transport.sent.where((m) => m['kind'] == 'poke'), hasLength(2));
-  });
-
-  test('ballot ignores local, eliminated, and unchanged targets', () async {
-    final transport = _Transport();
-    final notifier =
-        GameSessionNotifier(transport: transport, initialState: _session());
-    addTearDown(notifier.dispose);
-    var session = _session();
-    session = session.copyWith(dto: session.dto.copyWith(phase: 'knowoff'));
-    final actions = GameActions(notifier, readSession: () => session);
-    await actions.castVote(0);
-    await actions.castVote(2);
-    await actions.castVote(1);
-    session = session.copyWith(dto: session.dto.copyWith(voteTarget: 1));
-    await actions.castVote(1);
-    expect(transport.sent.single['payload'], {'target_seat': 1});
-  });
-
-  test('quick chat retains protocol ids, localized labels and fallback',
-      () async {
-    final l10n = await AppLocalizations.delegate.load(const Locale('en'));
-    expect(quickChatPhrases(l10n).map((p) => p.$1),
-        ['suspect', 'fit', 'weird', 'trust', 'not_me', 'laugh']);
-    expect(kTargetedQuickChatIds, ['suspect', 'trust']);
-    expect(quickChatPhraseLabel(l10n, 'trust'), l10n.quickChatTrust);
-    expect(quickChatPhraseLabel(l10n, 'unknown'), 'unknown');
-    expect(quickChatPhraseLabel(l10n, null), '');
-  });
-
-  test('a role picked before join re-fires once the seat exists', () async {
-    final transport = _Transport();
-    final notifier = GameSessionNotifier(transport: transport);
-    addTearDown(notifier.dispose);
-    await notifier.devForceRole('donower');
-    expect(notifier.state.devForcedRole, 'donower');
-    transport.sent.clear();
-    transport.events.add({
-      'kind': 'joined',
-      'payload': {'seat': 2, 'code': 'ABCDEF', 'session_token': 'tok'}
+  for (final role in ['nower', 'donower']) {
+    test('retired Reveal and Shuffle cannot reveal another hand for $role', () {
+      final r = V2Reducer(limits)..snapshot(fixture('snapshot-$role'));
+      final before = jsonEncode(r.current!.json);
+      for (final kind in [
+        'reveal',
+        'shuffle',
+        'revote',
+        'one_more_free_card',
+      ]) {
+        expect(
+          () => r.confirm({'kind': kind, 'target_seat': 1}, kind, 0),
+          throwsA(isA<V2Failure>()),
+        );
+        expect(r.pendingRequest, isNull);
+        expect(jsonEncode(r.current!.json), before);
+      }
     });
-    await Future<void>.delayed(Duration.zero);
-    expect(transport.sent.single['kind'], 'dev_force_role');
-    expect(transport.sent.single['payload'], {'role': 'donower'});
-  });
+  }
+
+  testWidgets(
+    'poke excludes self, eliminated and disconnected; chat trims and ignores empty',
+    (t) async {
+      final wire = fixture('snapshot-nower');
+      wire['seats'][2]['eliminated'] = true;
+      wire['seats'][2]['revealed_role'] = 'donower';
+      wire['phase'] = 'discussion';
+      wire.remove('current_seat');
+      wire['private']['capabilities'] = ['ready', 'poke', 'chat'];
+      wire['seats'][3]['connected'] = false;
+      final (_, actions) = await _pump(t, wire);
+      for (final seat in [0, 2, 3]) {
+        expect(find.byKey(Key('text-poke-$seat')), findsNothing);
+      }
+      await _tap(t, find.byKey(const Key('text-poke-1')));
+      expect(actions, [
+        {'kind': 'poke', 'target_seat': 1},
+      ]);
+      final l = AppLocalizations.of(t.element(find.byType(TextMatchView)));
+      final send = find.widgetWithText(KoButton, l.textSend);
+      await t.enterText(find.byKey(const Key('text-authored-chat')), '   ');
+      await _tap(t, send);
+      expect(actions, hasLength(1));
+      await t.enterText(
+        find.byKey(const Key('text-authored-chat')),
+        '  hello  ',
+      );
+      await _tap(t, send);
+      expect(actions.last, {
+        'kind': 'chat',
+        'text': 'hello',
+        'ui_locale': 'en',
+      });
+    },
+  );
+
+  testWidgets(
+    'selection stays local until explicit confirmation and cancellation sends nothing',
+    (t) async {
+      final (state, actions) = await _pump(t, fixture('snapshot-nower'));
+      final l = AppLocalizations.of(t.element(find.byType(TextMatchView)));
+      await _tap(t, find.byKey(const Key('text-hand-copy-1')));
+      expect(actions, isEmpty);
+      await _tap(t, find.widgetWithText(KoButton, l.textCancel));
+      expect(find.byKey(const Key('text-confirm')), findsNothing);
+      expect(actions, isEmpty);
+      final early = fixture('snapshot-nower');
+      early['current_seat'] = 1;
+      early['private']['capabilities'] = ['poke', 'chat'];
+      state.value = V2Snapshot.decode(jsonEncode(early), limits);
+      await t.pumpAndSettle();
+      expect(
+        t.widget<KoButton>(find.byKey(const Key('text-hand-copy-1'))).onPressed,
+        isNull,
+      );
+      state.value = V2Snapshot.decode(
+        jsonEncode(fixture('snapshot-nower')),
+        limits,
+      );
+      await t.pumpAndSettle();
+      expect(
+        actions,
+        isEmpty,
+        reason: 'turn change cannot auto-play an earlier selection',
+      );
+      await _tap(t, find.byKey(const Key('text-hand-copy-1')));
+      await _tap(t, find.byKey(const Key('text-confirm')));
+      expect(actions, [
+        {'kind': 'respond', 'copy_id': 'copy-1'},
+      ]);
+      expect(state.value.hand.single.copyID, 'copy-1');
+    },
+  );
+
+  testWidgets(
+    'accepted poke suppresses the same phase group and resets on a new round',
+    (t) async {
+      final wire = fixture('snapshot-nower');
+      wire['phase'] = 'discussion';
+      wire.remove('current_seat');
+      wire['private']['capabilities'] = ['ready', 'poke', 'chat'];
+      final event = fixture('public-history-page')['events'][0];
+      event['phase'] = 'discussion';
+      event.remove('count');
+      event['kind'] = 'poke';
+      event['target_seat'] = 1;
+      event['after_revision'] = 0;
+      wire['history'] = [event];
+      wire['cursor']['evidence_seq'] = 1;
+      final (state, actions) = await _pump(t, wire);
+      expect(find.byKey(const Key('text-poke-1')), findsNothing);
+      wire['round'] = 2;
+      state.value = V2Snapshot.decode(jsonEncode(wire), limits);
+      await t.pumpAndSettle();
+      await _tap(t, find.byKey(const Key('text-poke-1')));
+      expect(actions, [
+        {'kind': 'poke', 'target_seat': 1},
+      ]);
+    },
+  );
+
+  testWidgets(
+    'ballot uses server runoff candidates, disables self and emits exact target',
+    (t) async {
+      final (_, actions) = await _pump(t, fixture('snapshot-runoff'));
+      final l = AppLocalizations.of(t.element(find.byType(TextMatchView)));
+      final ballots = find.widgetWithText(KoButton, l.textVote);
+      expect(ballots, findsNWidgets(2));
+      await _tap(t, ballots.last);
+      expect(actions, [
+        {'kind': 'vote', 'target_seat': 2},
+      ]);
+    },
+  );
+
+  test(
+    'quick chat retains protocol IDs, localized labels and fallback',
+    () async {
+      for (final locale in [
+        const Locale('en'),
+        const Locale('tr'),
+        const Locale('ar'),
+        const Locale('en', 'XA'),
+      ]) {
+        final l = await AppLocalizations.delegate.load(locale);
+        expect(quickChatPhrases(l).map((p) => p.$1), [
+          'suspect',
+          'fit',
+          'weird',
+          'trust',
+          'not_me',
+          'laugh',
+        ]);
+        expect(kTargetedQuickChatIds, ['suspect', 'trust']);
+        expect(quickChatPhraseLabel(l, 'trust'), l.quickChatTrust);
+        expect(quickChatPhraseLabel(l, 'unknown'), 'unknown');
+        expect(quickChatPhraseLabel(l, null), '');
+      }
+    },
+  );
+
+  test(
+    'role override and foreign-copy intent never cross current admission authority',
+    () {
+      final r = V2Reducer(limits)..snapshot(fixture('snapshot-nower'));
+      for (final action in [
+        {'kind': 'dev_force_role', 'role': 'donower'},
+        {'kind': 'respond', 'copy_id': 'foreign-private-copy'},
+        {'kind': 'respond', 'copy_id': 'copy-1', 'role': 'donower'},
+      ]) {
+        expect(
+          () => r.confirm(action, 'request', 0),
+          throwsA(isA<V2Failure>()),
+        );
+        expect(r.pendingRequest, isNull);
+        expect(r.current!.role, 'nower');
+      }
+    },
+  );
 }

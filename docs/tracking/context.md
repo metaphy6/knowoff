@@ -12,7 +12,7 @@
 - **Name**: Knowoff
 - **One-liner**: Online social deduction party game — 4/6 players; Donowers infer a hidden text situation/criterion through five selectable modes.
 - **Primary languages**: Go (authoritative game server), Dart/Flutter (client — Android, iOS, Web PWA)
-- **Data**: PostgreSQL + Redis retained; current MinIO gameplay path scheduled for consumer-verified retirement; Compose/Cloudflare → public host
+- **Data**: PostgreSQL + Redis retained; MinIO removed from active Compose/proxy; owned historical restore fixtures retained; Compose/Cloudflare → public host
 
 ## Key paths
 
@@ -42,17 +42,20 @@ The owner adopted **text-only Nowns/cards and five selectable modes** on
 wallet transaction review and isolated migration/backfill design proofs are
 verified complete. The owner states no deployment exists. Phases 2–5 now have
 substantial saved implementation, including five-mode runtime/client, durable
-value and content/trust infrastructure. The owner paused work on 2026-09-12;
-read the [end-of-day handoff](../reports/2026-09-12-text-transition-pause.md)
-before resuming. Roadmap remains 26/91 reviewed items; later changes have not
-passed the final unified gate and are not a completed commit handoff.
+value and content/trust infrastructure. The owner committed checkpoint
+`bd5e13e` and resumed all remaining phases on 2026-09-12; the earlier pause is
+superseded. Read the [resumption evidence](../reports/2026-09-12-text-transition-resumption.md)
+and current checkpoint. Later integration has not passed the final unified gate
+and is not yet a completed commit handoff.
 Initial text specialties and production
 backfill are off. Preserve no-paid-advantage, shared caps, roles/votes, identity,
 community and the visual brand. Follow the current content source checklist;
 High/Distant/Chaos evidence does not automatically certify stateful mode actions.
 
-Existing hand privacy, history, snapshot/sequence, pack pinning, locking,
-settlement and backup proofs need repair in the active Roadmap. Applied SQL,
+Hand privacy, history, snapshot/sequence, pack pinning, locking and settlement
+have targeted regression evidence in the resumption report. Final combined
+validation, all-writer backup quiescence and complete source retirement remain
+open in the active Roadmap. Applied SQL,
 ADRs and tracking remain historical records. The subsequent implementation
 request supersedes the original planning-only boundary; deploy/data-retirement
 gates remain evidence-dependent. Do not automatically apply older image/CGO

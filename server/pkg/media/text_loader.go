@@ -162,8 +162,8 @@ func (s *TextSnapshot) Card(id string) (TextCard, bool) {
 	return textClone(s.bundle.Cards[i]), true
 }
 
-// LoadTextPack reads only bounded regular files within a confined root. The
-// active v1 loader remains separate until its callers explicitly migrate.
+// LoadTextPack reads only bounded regular files within a confined root.
+// Historical playable-image and format-v1 bundles are rejected.
 func LoadTextPack(path string, limits TextLimits) (*TextSnapshot, error) {
 	if limits.MaxFileBytes < 1 || limits.MaxBundleBytes < limits.MaxFileBytes || limits.MaxRecords < 1 || limits.MaxTextBytes < 1 {
 		return nil, fmt.Errorf("text limits must be configured")

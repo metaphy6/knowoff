@@ -1,1502 +1,553 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowoff_client/core/config/app_config.dart';
 import 'package:knowoff_client/core/config/client_config.dart';
-import 'package:knowoff_client/core/network/game_transport.dart' as gt;
+import 'package:knowoff_client/core/text/v2_contract.dart';
+import 'package:knowoff_client/core/text/v2_session.dart';
+import 'package:knowoff_client/core/text/v2_reducer.dart';
 import 'package:knowoff_client/data/auth_service.dart';
-import 'package:knowoff_client/data/models/game_state_dto.dart';
-import 'package:knowoff_client/domain/entities/game_session.dart';
-import 'package:knowoff_client/presentation/state/game_session_provider.dart';
 
-class _StubAuthService extends AuthService {
-  _StubAuthService() : super(baseUrl: 'http://test');
+import '../core/network/text_reducer_test.dart' show fixture;
+import '../core/network/text_session_test.dart'
+    show FakeTextTransport, hello, admit;
 
-  int ensureCalls = 0;
-  int invalidateCalls = 0;
-  String? _token = 'expired-token';
+const _modes = <String, Map<String, dynamic>>{
+  'nower': {'kind': 'respond', 'copy_id': 'copy-1'},
+  'secret_scale': {'kind': 'place', 'copy_id': 'copy-1', 'rating': 3},
+  'make_room': {'kind': 'replace', 'copy_id': 'copy-1', 'slot': 0},
+  'bad_bargains': {
+    'kind': 'offer',
+    'copy_id': 'copy-1',
+    'target_copy_id': 'seed-1',
+    'target_seat': 1,
+  },
+  'top_that': {'kind': 'top', 'copy_id': 'copy-1', 'target_copy_id': 'seed-0'},
+};
 
-  @override
-  String? get accessToken => _token;
-
-  @override
-  Future<void> ensureSession() async {
-    ensureCalls++;
-    _token = 'fresh-token';
-  }
-
-  @override
-  Future<void> invalidateSession() async {
-    invalidateCalls++;
-    _token = 'reissued-token';
-  }
+Future<(TextSession, FakeTextTransport)> _started([
+  String name = 'nower',
+  DateTime Function()? now,
+]) async {
+  final transport = FakeTextTransport();
+  final session = TextSession(
+    transport: transport,
+    tokenLoader: () async => 'fixture-token',
+    now: now ?? () => DateTime.fromMillisecondsSinceEpoch(0),
+  );
+  addTearDown(session.dispose);
+  await session.connect();
+  await Future<void>.delayed(Duration.zero);
+  transport.emit('hello', hello());
+  await session.control('room_create', {});
+  admit(transport);
+  transport.emit('snapshot', fixture('snapshot-$name'));
+  expect(session.snapshot, isNotNull);
+  return (session, transport);
 }
 
-class _UnavailableAuthService extends AuthService {
-  _UnavailableAuthService() : super(baseUrl: 'http://test');
+void _ack(FakeTextTransport t, String id) => t.frames.add({
+  'v': 2,
+  'type': 'action_ack',
+  'request_id': id,
+  'payload': {'request_id': id, 'duplicate': false},
+});
+void _error(
+  TextSession s,
+  FakeTextTransport t,
+  String id,
+  String code, {
+  int seq = 2,
+}) => t.frames.add({
+  'v': 2,
+  'type': 'error',
+  'request_id': id,
+  'payload': {
+    'v': 2,
+    'request_id': id,
+    'code': code,
+    'cursor': {...s.snapshot!.json['cursor'], 'recipient_seq': seq},
+    'current_board_revision': s.snapshot!.boardRevision,
+  },
+});
 
-  @override
-  Future<void> ensureSession() async {
-    throw StateError('backend unavailable');
-  }
-}
-
-class _FakeTransport implements gt.GameTransport {
-  final StreamController<Map<String, dynamic>> _controller =
-      StreamController<Map<String, dynamic>>.broadcast();
-  final StreamController<gt.ConnectionState> _stateController =
-      StreamController<gt.ConnectionState>.broadcast();
-  final List<Map<String, dynamic>> sent = <Map<String, dynamic>>[];
-  bool failNextSend = false;
-
-  void emit(String kind, Map<String, dynamic> payload) {
-    _controller.add(<String, dynamic>{'kind': kind, 'payload': payload});
-  }
-
-  void emitState(gt.ConnectionState state) => _stateController.add(state);
-
-  @override
-  Stream<Map<String, dynamic>> get messages => _controller.stream;
-
-  @override
-  Stream<gt.ConnectionState> get state => _stateController.stream;
-
-  @override
-  bool get isConnected => true;
-
-  int reconnectCount = 0;
-
-  @override
-  Future<void> close() async {
-    await _controller.close();
-    await _stateController.close();
-  }
-
-  @override
-  Future<void> connect() async {}
-
-  @override
-  Future<void> reconnect() async => reconnectCount++;
-
-  @override
-  Future<void> send(Map<String, dynamic> message) async {
-    if (failNextSend) {
-      failNextSend = false;
-      throw StateError('send failed');
-    }
-    sent.add(message);
-  }
-}
-
-Future<void> _settle() => Future<void>.delayed(Duration.zero);
-
+// Original notifier cases transfer to the actual recipient-scoped session.
+// Retired powers are rejection proofs; local selection lives in TextMatchView.
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  late _FakeTransport transport;
-  late GameSessionNotifier notifier;
-
-  setUp(() {
-    transport = _FakeTransport();
-    notifier = GameSessionNotifier(transport: transport);
-  });
-
-  tearDown(() {
-    notifier.dispose();
-    transport.close();
-  });
-
-  testWidgets('revealed hand expires without a mounted overlay',
-      (tester) async {
-    final transport = _FakeTransport();
-    final notifier = GameSessionNotifier(transport: transport);
-    addTearDown(notifier.dispose);
-    transport.emit('hand_reveal_viewed', {
-      'target_seat': 2,
-      'cards': <dynamic>[],
-      'draw_pile': <dynamic>[],
-      'view_seconds': 3,
-    });
-    await tester.pump();
-    expect(notifier.state.revealedHand?.targetSeat, 2);
-    await tester.pump(const Duration(seconds: 2));
-    expect(notifier.state.revealedHand, isNotNull);
-    await tester.pump(const Duration(seconds: 1));
-    expect(notifier.state.revealedHand, isNull);
-    expect(notifier.state.handRevealViewed, isTrue);
-  });
-
-  testWidgets('a new revealed hand replaces the prior expiry timer',
-      (tester) async {
-    final transport = _FakeTransport();
-    final notifier = GameSessionNotifier(transport: transport);
-    addTearDown(notifier.dispose);
-    transport.emit('hand_reveal_viewed', {
-      'target_seat': 2,
-      'view_seconds': 3,
-    });
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 2));
-    transport.emit('hand_reveal_viewed', {
-      'target_seat': 3,
-      'view_seconds': 3,
-    });
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(notifier.state.revealedHand?.targetSeat, 3);
-    await tester.pump(const Duration(seconds: 2));
-    expect(notifier.state.revealedHand, isNull);
-  });
-
-  test('freezing buffers incoming events instead of applying them', () async {
-    notifier.setFrozen(true);
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'discussion',
-      'window_seconds': 40,
-    });
-    await _settle();
-
-    expect(notifier.state.frozen, isTrue);
-    expect(notifier.state.dto.phase, equals('waiting'));
-  });
-
-  test('public specialty use is retained for announcement surfaces', () async {
-    transport.emit('specialty_used', <String, dynamic>{
-      'seat': 2,
-      'specialty': 'reveal',
-    });
-    await _settle();
-
-    expect(notifier.state.specialtyAnnouncementSeat, equals(2));
-    expect(notifier.state.specialtyAnnouncement, equals('reveal'));
-  });
-
-  test('using the local Revote clears it from the hand', () async {
-    final revoteTransport = _FakeTransport();
-    final revoteNotifier = GameSessionNotifier(
-      transport: revoteTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          hand: HandDto(
-            cards: [],
-            drawPile: [],
-            specialty: 'revote',
-          ),
-        ),
-      ),
-    );
-
-    revoteTransport.emit('specialty_used', <String, dynamic>{
-      'seat': 0,
-      'specialty': 'revote',
-    });
-    await _settle();
-
-    expect(revoteNotifier.state.dto.hand.specialty, isNull);
-    revoteNotifier.dispose();
-    await revoteTransport.close();
-  });
-
-  test('Reveal availability is round-scoped and viewable through one intent',
+  for (final entry in _modes.entries) {
+    test(
+      '${entry.key}: atomic move carries exact evidence and never spends optimistically',
       () async {
-    transport.emit('hand_reveal_available', <String, dynamic>{
-      'seat': 0,
-      'target_seat': 2,
-      'round': 3,
-    });
-    await _settle();
-
-    expect(notifier.state.handRevealActorSeat, 0);
-    expect(notifier.state.handRevealTargetSeat, 2);
-    expect(notifier.state.handRevealRound, 3);
-    expect(notifier.state.handRevealViewed, isFalse);
-
-    await notifier.viewRevealedHand(2);
-    expect(transport.sent.last['kind'], 'view_revealed_hand');
-    expect(transport.sent.last['payload'], <String, dynamic>{'target_seat': 2});
-    expect(notifier.state.handRevealViewed, isTrue);
-
-    await notifier.viewRevealedHand(2);
-    expect(
-      transport.sent
-          .where((message) => message['kind'] == 'view_revealed_hand'),
-      hasLength(1),
-    );
-
-    transport.emit('hand_reveal_viewed', <String, dynamic>{
-      'target_seat': 2,
-      'round': 3,
-      'view_seconds': 3,
-      'cards': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'secret', 'type': 'text', 'content': 'Secret'},
-      ],
-      'draw_pile': <Map<String, dynamic>>[],
-      'specialty_held': 'pass',
-    });
-    await _settle();
-
-    expect(notifier.state.handRevealViewed, isTrue);
-    expect(notifier.state.revealedHand?.cards.single.id, 'secret');
-    expect(notifier.state.revealedHand?.viewSeconds, 3);
-    expect(notifier.state.revealedHand?.specialty, 'pass');
-
-    transport.emit('round_started', <String, dynamic>{'round': 4});
-    await _settle();
-    expect(notifier.state.handRevealTargetSeat, isNull);
-    expect(notifier.state.revealedHand, isNull);
-  });
-
-  test('public Ready events retain every ready seat for the current phase',
-      () async {
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    transport.emit('ready_state', <String, dynamic>{
-      'phase': 'discussion',
-      'seat': 2,
-    });
-    await _settle();
-
-    expect(notifier.state.dto.readySeats, equals(<int>[2]));
-  });
-
-  test('a ready_state with ready:false takes a seat back out of readySeats',
-      () async {
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    transport.emit('ready_state', <String, dynamic>{
-      'phase': 'discussion',
-      'seat': 2,
-      'ready': true,
-    });
-    transport.emit('ready_state', <String, dynamic>{
-      'phase': 'discussion',
-      'seat': 2,
-      'ready': false,
-    });
-    await _settle();
-
-    expect(notifier.state.dto.readySeats, isEmpty);
-  });
-
-  test(
-      'discussionReady resets when the next round opens a fresh discussion '
-      'phase, instead of carrying over a stale Ready from last round',
-      () async {
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    transport.emit('ready_ack', <String, dynamic>{'discussion_ready': true});
-    await _settle();
-    expect(notifier.state.dto.discussionReady, isTrue);
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    await _settle();
-
-    expect(notifier.state.dto.discussionReady, isFalse);
-  });
-
-  test(
-      'a new Play phase clears the prior round play so the new hand is tappable',
-      () async {
-    final roundTransport = _FakeTransport();
-    final roundNotifier = GameSessionNotifier(
-      transport: roundTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          phase: 'discussion',
-          round: 1,
-          seat: 0,
-          hand: HandDto(
-            cards: [CardDto(id: 'new-card', type: 'text')],
-            drawPile: [],
-            specialty: 'reveal',
-          ),
-          plays: {'0': CardDto(id: 'prior-round-card', type: 'text')},
-        ),
-      ),
-    );
-
-    roundTransport.emit('phase_started', <String, dynamic>{
-      'phase': 'play',
-      'round': 2,
-      'turn_seat': 1,
-    });
-    await _settle();
-
-    expect(roundNotifier.state.dto.plays, isEmpty);
-    expect(roundNotifier.state.canPickCard, isTrue);
-
-    roundNotifier.dispose();
-    await roundTransport.close();
-  });
-
-  test(
-      'a newer turn event drops a prior round auto-play lock when round events '
-      'were missed', () async {
-    final turnTransport = _FakeTransport();
-    final turnNotifier = GameSessionNotifier(
-      transport: turnTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          phase: 'play',
-          round: 1,
-          seat: 0,
-          hand: HandDto(
-            cards: [CardDto(id: 'stale-card', type: 'text')],
-            drawPile: [],
-            specialty: null,
-          ),
-          plays: {'0': CardDto(id: 'prior-round-card', type: 'text')},
-        ),
-        selectedCardId: 'stale-card',
-        moveLocked: true,
-      ),
-    );
-
-    turnTransport.emit('turn_started', <String, dynamic>{
-      'round': 2,
-      'turn_seat': 0,
-      'timeout': 15,
-    });
-    await _settle();
-
-    expect(turnNotifier.state.selectedCardId, isNull);
-    expect(turnNotifier.state.moveLocked, isFalse);
-    expect(turnNotifier.state.dto.plays, isEmpty);
-    expect(turnTransport.sent, isEmpty);
-
-    turnNotifier.dispose();
-    await turnTransport.close();
-  });
-
-  test('rematch sends the chosen mode and rematch_state accumulates choices',
-      () async {
-    await notifier.rematch('same_table');
-    expect(transport.sent.last['kind'], 'rematch');
-    expect(transport.sent.last['payload'], <String, dynamic>{
-      'mode': 'same_table',
-    });
-
-    transport.emit('rematch_state', <String, dynamic>{
-      'seat': 0,
-      'mode': 'same_table',
-    });
-    transport.emit('rematch_state', <String, dynamic>{
-      'seat': 3,
-      'mode': 'new_table',
-    });
-    await _settle();
-
-    expect(notifier.state.dto.rematchChoices, <int, String>{
-      0: 'same_table',
-      3: 'new_table',
-    });
-  });
-
-  test('rematch resumes a frozen session before sending the choice', () async {
-    notifier.setFrozen(true);
-
-    await notifier.rematch('same_table');
-
-    expect(notifier.state.frozen, isFalse);
-    expect(transport.sent.single['kind'], 'rematch');
-    expect(transport.sent.single['payload'], <String, dynamic>{
-      'mode': 'same_table',
-    });
-  });
-
-  test('new table rematch resets the finished session and queues Quick Play',
-      () async {
-    await AppConfig.initialize(
-        ClientConfig.defaultConfig(), _StubAuthService());
-    transport.emit('joined', <String, dynamic>{
-      'seat': 0,
-      'code': 'OLD1',
-      'session_token': 'old-session',
-    });
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'finished',
-      'winner': 'nower',
-      'match_points': 42,
-      'round': 3,
-      'plays': <String, dynamic>{
-        '0': <String, dynamic>{'id': 'old-card', 'type': 'text'},
+        final (s, t) = await _started(entry.key);
+        final before = jsonEncode(s.snapshot!.json);
+        await s.act(entry.value);
+        final sent = t.sent.last;
+        expect(sent['v'], 2);
+        expect(sent['type'], 'action');
+        final request = sent['payload'];
+        expect(request['action'], entry.value);
+        expect(request['match_id'], s.snapshot!.matchID);
+        expect(request['mode_id'], s.snapshot!.mode);
+        expect(request['phase_id'], s.snapshot!.phaseID);
+        expect(request['expected_board_revision'], s.snapshot!.boardRevision);
+        expect(jsonEncode(s.snapshot!.json), before);
+        expect(() => s.act(entry.value), throwsA(isA<V2Failure>()));
+        expect(t.sent.last, same(sent));
+        await s.retry();
+        expect(t.sent.last['payload'], same(request));
+        expect(jsonEncode(s.snapshot!.json), before);
       },
-      'nowns': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'old-nown', 'type': 'text'},
-      ],
-      'players': <Map<String, dynamic>>[
-        <String, dynamic>{'seat': 0, 'name': 'Me'},
-        <String, dynamic>{'seat': 1, 'name': 'Player 1'},
-        <String, dynamic>{'seat': 2, 'name': 'Player 2'},
-        <String, dynamic>{'seat': 3, 'name': 'Player 3'},
-      ],
-    });
-    await _settle();
-
-    await notifier.rematch('new_table');
-    transport.emit('rematch_state', <String, dynamic>{
-      'seat': 0,
-      'mode': 'new_table',
-    });
-    await _settle();
-
-    expect(notifier.state.dto.phase, 'waiting');
-    expect(notifier.state.dto.roomCode, isEmpty);
-    expect(notifier.state.dto.matchPoints, 0);
-    expect(notifier.state.dto.nowns, isEmpty);
-    expect(notifier.state.dto.plays, isEmpty);
-    expect(transport.reconnectCount, 1);
-
-    transport.emitState(gt.ConnectionState.connected);
-    await _settle();
-    await _settle();
-
-    expect(transport.sent.map((message) => message['kind']), <String>[
-      'rematch',
-      'queue_quickplay',
-    ]);
-    expect(transport.sent.last['payload'], <String, dynamic>{
-      'size': 4,
-      'access_token': 'fresh-token',
-    });
-  });
-
-  test('rematchChoices resets once a fresh match phase starts', () async {
-    transport.emit('rematch_state', <String, dynamic>{
-      'seat': 0,
-      'mode': 'same_table',
-    });
-    await _settle();
-    expect(notifier.state.dto.rematchChoices, isNotEmpty);
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'prefetch'});
-    await _settle();
-
-    expect(notifier.state.dto.rematchChoices, isEmpty);
-  });
-
-  test('a rematch restart clears the finished match state', () async {
-    // Play the old match to its verdict, accumulating every kind of stale
-    // state the bug report showed bleeding into round 0 of the new match.
-    transport.emit('role_assigned', <String, dynamic>{'role': 'donower'});
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'finished',
-      'winner': 'donower',
-      'match_points': 42,
-      'round': 0,
-      'plays': <String, dynamic>{
-        '0': <String, dynamic>{'id': 'old-card', 'type': 'text'},
-      },
-      'nowns': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'old-nown', 'type': 'text'},
-      ],
-      'donower_seats': <int>[1],
-    });
-    await _settle();
-    expect(notifier.state.isOver, isTrue);
-    expect(notifier.state.myRole, 'donower');
-    expect(notifier.state.dto.matchPoints, 42);
-
-    // The rematch resolves server-side and the same room's fresh match opens
-    // with prefetch — no new `joined` fires, so the client must reset here.
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'prefetch',
-      'round': 0,
-      'window_seconds': 3,
-    });
-    await _settle();
-
-    final dto = notifier.state.dto;
-    expect(dto.winner, isNull);
-    expect(dto.nowns, isEmpty);
-    expect(dto.donowerSeats, isEmpty);
-    expect(dto.matchPoints, 0);
-    expect(dto.plays, isEmpty);
-    expect(dto.result, isNull);
-    expect(notifier.state.myRole, isNull);
-    expect(notifier.state.specialtyAnnouncement, isNull);
-  });
-
-  test('a rematch keeps the new role assigned before its prefetch phase',
-      () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'finished',
-      'winner': 'nower',
-    });
-    await _settle();
-    expect(notifier.state.isOver, isTrue);
-
-    // Match.Start sends role_assigned before its prefetch phase broadcast.
-    transport.emit('role_assigned', <String, dynamic>{'role': 'donower'});
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'prefetch',
-      'round': 0,
-    });
-    await _settle();
-
-    expect(notifier.state.myRole, 'donower');
-  });
-
-  test('draw events add cards to the local hand without recording a play',
-      () async {
-    final drawTransport = _FakeTransport();
-    final drawNotifier = GameSessionNotifier(
-      transport: drawTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          hand: HandDto(
-            cards: [CardDto(id: 'existing', type: 'text')],
-            drawPile: [CardDto(id: 'drawn-card', type: 'text')],
-            specialty: null,
-          ),
-        ),
-      ),
     );
-    drawTransport.emit('play_revealed', <String, dynamic>{
-      'seat': 0,
-      'draw': 1,
-      'cards': <Map<String, dynamic>>[
-        <String, dynamic>{
-          'id': 'drawn-card',
-          'type': 'text',
-          'content': 'Drawn'
+    test(
+      '${entry.key}: deadline is server-owned and expiry never emits an auto-play',
+      () async {
+        var now = DateTime.fromMillisecondsSinceEpoch(0);
+        final (s, t) = await _started(entry.key, () => now);
+        final before = t.sent.length;
+        final deadline = s.snapshot!.deadlineMS;
+        now = now.add(const Duration(seconds: 25));
+        expect(s.snapshot!.deadlineMS, deadline);
+        expect(
+          () => s.act(entry.value),
+          throwsA(
+            isA<V2Failure>().having(
+              (e) => e.code,
+              'code',
+              'action.deadline_expired',
+            ),
+          ),
+        );
+        expect(t.sent.length, before);
+        expect(s.snapshot!.hand.single.copyID, 'copy-1');
+      },
+    );
+    test(
+      '${entry.key}: background erases private state and resume reclaims same seat without retrying move',
+      () async {
+        final (s, t) = await _started(entry.key);
+        await s.act(entry.value);
+        final before = t.sent.where((f) => f['type'] == 'action').length;
+        s.background();
+        expect(s.snapshot, isNull);
+        expect(s.reducer!.pendingRequest, isNull);
+        expect(s.awards, isEmpty);
+        expect(s.settlements, isEmpty);
+        t.emit('snapshot', fixture('snapshot-${entry.key}'));
+        expect(s.snapshot, isNull);
+        await s.resume();
+        await Future<void>.delayed(Duration.zero);
+        t.emit('hello', hello());
+        expect(t.sent.last['type'], 'room_join');
+        expect(t.sent.last['payload'], {'code': 'ABC123'});
+        final next = fixture('snapshot-${entry.key}');
+        next['cursor']['stream_epoch'] = 'resumed';
+        t.emit('snapshot', next);
+        expect(s.snapshot!.seat, 0);
+        expect(s.snapshot!.hand.single.copyID, 'copy-1');
+        expect(s.snapshot!.deadlineMS, 21000);
+        expect(t.sent.where((f) => f['type'] == 'action').length, before);
+      },
+    );
+  }
+
+  for (final type in [
+    'hand_reveal_viewed',
+    'hand_reveal_available',
+    'specialty_used',
+    'shuffle',
+    'hand_dealt',
+    'free_draw',
+    'draw_result',
+    'phase_started',
+    'turn_started',
+    'dev_force_role',
+    'dev_grant_specialty',
+    'prefetch',
+    'play_revealed',
+    'vote_cast',
+    'ready_ack',
+    'rematch_state',
+  ]) {
+    test(
+      'retired $type cannot install private fields, buffer a replay or grant authority',
+      () async {
+        final (s, t) = await _started();
+        final count = t.sent.length;
+        t.emit(type, {
+          'target_seat': 2,
+          'role': 'donower',
+          'cards': ['OTHER SECRET'],
+          'draw_pile': ['PRIVATE RESERVE'],
+          'specialty': 'reveal',
+          'free_draws': 1,
+        });
+        expect(s.snapshot, isNull);
+        expect(s.ready, isFalse);
+        expect(s.reducer!.pendingRequest, isNull);
+        expect(t.sent.length, count);
+        expect(
+          () => s.act({'kind': 'draw', 'count': 1}),
+          throwsA(isA<V2Failure>()),
+        );
+        expect(t.sent.length, count);
+      },
+    );
+  }
+
+  test(
+    'legacy envelope is refused rather than becoming a new role baseline',
+    () async {
+      final (s, t) = await _started();
+      t.frames.add({
+        'kind': 'hand_dealt',
+        'payload': {
+          'cards': ['secret'],
         },
-      ],
-    });
-    await _settle();
+      });
+      expect(s.ready, isFalse);
+      expect(s.snapshot, isNull);
+    },
+  );
 
-    expect(
-      drawNotifier.state.dto.hand.cards.any((card) => card.id == 'drawn-card'),
-      isTrue,
-    );
-    expect(drawNotifier.state.dto.plays.containsKey('0'), isFalse);
-    drawNotifier.dispose();
-    await drawTransport.close();
-  });
+  test(
+    'Ready acknowledgement alone never fabricates readiness or a phase change',
+    () async {
+      final (s, t) = await _started('knowoff');
+      final before = jsonEncode(s.snapshot!.json);
+      await s.act({'kind': 'ready'});
+      final id = s.reducer!.pendingRequest!['request_id'] as String;
+      _ack(t, id);
+      expect(jsonEncode(s.snapshot!.json), before);
+      expect(s.reducer!.pendingRequest, isNotNull);
+      final next = fixture('snapshot-knowoff');
+      next['cursor']['recipient_seq'] = 2;
+      next['ready_seats'] = [0, 1, 2];
+      t.emit('snapshot', next);
+      expect(s.snapshot!.json['ready_seats'], [0, 1, 2]);
+      expect(s.reducer!.pendingRequest, isNull);
+      next['cursor']['recipient_seq'] = 3;
+      next['ready_seats'] = [1, 2];
+      t.emit('snapshot', next);
+      expect(s.snapshot!.json['ready_seats'], [1, 2]);
+    },
+  );
 
-  test('draw events retain a public drawer and count announcement', () async {
-    final drawTransport = _FakeTransport();
-    final drawNotifier = GameSessionNotifier(
-      transport: drawTransport,
-      initialState: const GameSession(dto: GameStateDto(seat: 0)),
-    );
+  test(
+    'new round atomically replaces hand, prior ballot, Ready and phase deadline',
+    () async {
+      final (s, t) = await _started('result');
+      final next = fixture('snapshot-nower');
+      next['round'] = 2;
+      next['phase_id'] = 'round-two';
+      next['cursor']['recipient_seq'] = 2;
+      next['deadline_ms'] = 35000;
+      next['private']['hand'][0]['copy_id'] = 'retained-copy';
+      t.emit('snapshot', next);
+      expect(s.snapshot!.round, 2);
+      expect(s.snapshot!.json.containsKey('ballot'), isFalse);
+      expect(s.snapshot!.json['ready_seats'], isEmpty);
+      expect(s.snapshot!.hand.single.copyID, 'retained-copy');
+      expect(s.snapshot!.deadlineMS, 35000);
+      expect(t.sent.where((f) => f['type'] == 'action'), isEmpty);
+    },
+  );
 
-    drawTransport.emit('play_revealed', <String, dynamic>{
-      'seat': 2,
-      'draw': 2,
-      'cards': <Map<String, dynamic>>[],
-    });
-    await _settle();
-
-    expect(drawNotifier.state.drawAnnouncementSeat, equals(2));
-    expect(drawNotifier.state.drawAnnouncementCount, equals(2));
-    expect(drawNotifier.state.drawAnnouncementId, equals(1));
-
-    drawNotifier.dispose();
-    await drawTransport.close();
-  });
-
-  test('shuffle events retain an anonymous table announcement', () async {
-    final shuffleTransport = _FakeTransport();
-    final shuffleNotifier = GameSessionNotifier(
-      transport: shuffleTransport,
-      initialState: const GameSession(dto: GameStateDto(seat: 0)),
-    );
-
-    shuffleTransport.emit('shuffle_occurred', <String, dynamic>{'round': 2});
-    await _settle();
-
-    expect(shuffleNotifier.state.shuffleAnnouncementId, equals(1));
-
-    shuffleNotifier.dispose();
-    await shuffleTransport.close();
-  });
-
-  test('shuffle sweeps the table plays and any locked move', () async {
-    final transport = _FakeTransport();
-    final notifier = GameSessionNotifier(
-      transport: transport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          plays: {'1': CardDto(id: 'c3', type: 'text', content: 'c3')},
-        ),
-        selectedCardId: 'c1',
-        moveLocked: true,
-      ),
-    );
-
-    transport.emit('shuffle_occurred', <String, dynamic>{'round': 2});
-    await _settle();
-
-    expect(notifier.state.dto.plays, isEmpty);
-    expect(notifier.state.selectedCardId, isNull);
-    expect(notifier.state.moveLocked, isFalse);
-
-    notifier.dispose();
-    await transport.close();
-  });
-
-  // The server zeroes a spent specialty to "" before the hand re-sync; the
-  // DTO must treat that as "no card", or the hand renders a nameless,
-  // unusable specialty slot.
-  test('hand_dealt with an empty specialty clears the slot', () async {
-    final handTransport = _FakeTransport();
-    final handNotifier = GameSessionNotifier(
-      transport: handTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          hand: HandDto(
-            cards: [],
-            drawPile: [],
-            specialty: 'shuffle',
-          ),
-        ),
-      ),
-    );
-
-    handTransport.emit('hand_dealt', <String, dynamic>{
-      'cards': <Map<String, dynamic>>[],
-      'draw_pile': <Map<String, dynamic>>[],
-      'specialty': '',
-      'free_draws': 0,
-    });
-    await _settle();
-
-    expect(handNotifier.state.dto.hand.specialty, isNull);
-
-    handNotifier.dispose();
-    await handTransport.close();
-  });
-
-  test('One More Free Card banks a round-scoped free draw on the pile',
+  for (final kind in ['draw', 'respond', 'timeout']) {
+    test(
+      '$kind changes the hand only when the authoritative complete snapshot arrives',
       () async {
-    final freeTransport = _FakeTransport();
-    final freeNotifier = GameSessionNotifier(
-      transport: freeTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          hand: HandDto(
-            cards: [CardDto(id: 'kept', type: 'text')],
-            drawPile: [
-              CardDto(id: 'pile-1', type: 'text'),
-              CardDto(id: 'pile-2', type: 'text'),
-            ],
-            specialty: 'one_more_free_card',
-          ),
-        ),
-      ),
+        final (s, t) = await _started();
+        if (kind == 'draw') await s.act({'kind': 'draw', 'count': 1});
+        if (kind == 'respond') {
+          await s.act({'kind': 'respond', 'copy_id': 'copy-1'});
+        }
+        expect(s.snapshot!.hand.single.copyID, 'copy-1');
+        final next = fixture('snapshot-nower');
+        next['cursor']['recipient_seq'] = 2;
+        if (kind == 'draw') {
+          next['private']['hand'].add({
+            'copy_id': 'drawn-copy',
+            'content': {'content_id': 'new', 'revision': 1, 'text': 'New card'},
+          });
+          next['private']['reserve_count'] = 2;
+          final event = fixture('public-history-page')['events'][0];
+          next['history'] = [event];
+          next['cursor']['evidence_seq'] = 1;
+          next['board']['revision'] = 1;
+        } else {
+          next['private']['hand'] = [];
+          next['turn'] = 2;
+          next['current_seat'] = 1;
+          next['private']['capabilities'] = ['poke', 'chat'];
+        }
+        t.emit('snapshot', next);
+        if (kind == 'draw') {
+          expect(s.snapshot!.hand.map((c) => c.copyID), [
+            'copy-1',
+            'drawn-copy',
+          ]);
+          expect(s.snapshot!.reserveCount, 2);
+          expect(s.snapshot!.json['history'][0]['actor'], {
+            'kind': 'seat',
+            'seat': 0,
+          });
+          expect(s.snapshot!.json['history'][0]['count'], 1);
+          expect(s.snapshot!.json['history'][0]['cards'], isEmpty);
+        } else {
+          expect(s.snapshot!.hand, isEmpty);
+          expect(s.snapshot!.json['current_seat'], 1);
+        }
+      },
     );
+  }
 
-    // Using the specialty clears the card, banks the token, and pops the
-    // pile counter — the price chip now reads FREE and the face counts the
-    // covered card-to-be (0 → 1 in this hand's pile).
-    freeTransport.emit('play_revealed', <String, dynamic>{
-      'seat': 0,
-      'specialty': 'one_more_free_card',
-      'free': true,
-    });
-    await _settle();
-    expect(freeNotifier.state.dto.hand.specialty, isNull);
-    expect(freeNotifier.state.dto.hand.freeDraws, 1);
-    expect(freeNotifier.state.dto.hand.drawPile, hasLength(2));
-    expect(freeNotifier.state.freeDrawPopTick, 1);
-
-    // The free draw itself consumes the token instead of costing points.
-    freeTransport.emit('play_revealed', <String, dynamic>{
-      'seat': 0,
-      'draw': 1,
-      'free': 1,
-      'cards': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'pile-1', 'type': 'text'},
-      ],
-    });
-    await _settle();
-    expect(freeNotifier.state.dto.hand.freeDraws, 0);
-    expect(freeNotifier.state.dto.hand.drawPile.single.id, 'pile-2');
-    expect(
-      freeNotifier.state.dto.hand.cards.any((card) => card.id == 'pile-1'),
-      isTrue,
-    );
-
-    freeNotifier.dispose();
-    await freeTransport.close();
-  });
-
-  test('a fresh round clears an unspent free draw token', () async {
-    final freeTransport = _FakeTransport();
-    final freeNotifier = GameSessionNotifier(
-      transport: freeTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(
-          seat: 0,
-          hand: HandDto(
-            cards: [CardDto(id: 'kept', type: 'text')],
-            drawPile: [CardDto(id: 'pile-1', type: 'text')],
-            specialty: null,
-            freeDraws: 1,
-          ),
-        ),
-      ),
-    );
-
-    freeTransport.emit('hand_dealt', <String, dynamic>{
-      'cards': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'kept', 'type': 'text'},
-      ],
-      'draw_pile': <Map<String, dynamic>>[
-        <String, dynamic>{'id': 'pile-1', 'type': 'text'},
-      ],
-      'specialty': null,
-      'free_draws': 0,
-    });
-    await _settle();
-
-    expect(freeNotifier.state.dto.hand.freeDraws, 0);
-
-    freeNotifier.dispose();
-    await freeTransport.close();
-  });
-
-  test('drawing cancels a pending auto-play selection', () async {
-    final drawTransport = _FakeTransport();
-    final drawNotifier = GameSessionNotifier(
-      transport: drawTransport,
-      initialState: const GameSession(
-        dto: GameStateDto(seat: 0),
-      ),
-    );
-    drawNotifier.lockMove('stale-card');
-
-    await drawNotifier.drawCards(1);
-
-    expect(drawNotifier.state.selectedCardId, isNull);
-    expect(drawNotifier.state.moveLocked, isFalse);
-    expect(drawTransport.sent.single['kind'], equals('draw_cards'));
-
-    drawNotifier.dispose();
-    await drawTransport.close();
-  });
-
-  test('drawing removes a queued auto-play request', () async {
-    final drawTransport = _FakeTransport()..failNextSend = true;
-    final drawNotifier = GameSessionNotifier(
-      transport: drawTransport,
-      initialState: const GameSession(dto: GameStateDto(seat: 0)),
-    );
-    drawTransport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-    drawNotifier.lockMove('stale-card');
-
-    drawTransport.emit('turn_started', <String, dynamic>{
-      'turn_seat': 0,
-      'round': 1,
-      'timeout': 20,
-    });
-    await _settle();
-    await drawNotifier.drawCards(1);
-
-    drawTransport.emitState(gt.ConnectionState.connected);
-    await Future<void>.delayed(const Duration(milliseconds: 250));
-
-    expect(
-      drawTransport.sent.map((message) => message['kind']),
-      equals(<String>['draw_cards']),
-    );
-
-    drawNotifier.dispose();
-    await drawTransport.close();
-  });
-
-  test('unfreezing replays buffered events in order', () async {
-    notifier.setFrozen(true);
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'knowoff'});
-    await _settle();
-    expect(notifier.state.dto.phase, equals('waiting'));
-
-    notifier.setFrozen(false);
-    await _settle();
-
-    expect(notifier.state.frozen, isFalse);
-    expect(notifier.state.dto.phase, equals('knowoff'));
-  });
-
-  test('restarting resets state to initial and drops buffered events',
+  for (final code in [
+    'action.persistence_pending',
+    'request.rate_limited',
+    'action.unauthorized',
+    'action.stale_revision',
+  ]) {
+    test(
+      'correlated $code preserves or clears only its exact pending ballot',
       () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'play',
-      'round': 3,
-    });
-    await _settle();
-    expect(notifier.state.dto.phase, equals('play'));
-
-    notifier.setFrozen(true);
-    transport.emit('phase_started', <String, dynamic>{'phase': 'discussion'});
-    await _settle();
-
-    notifier.restart();
-
-    expect(notifier.state.frozen, isFalse);
-    expect(notifier.state.dto.phase, equals('waiting'));
-    expect(notifier.state.dto.round, equals(0));
-
-    // The server only accepts a queue/join intent as a connection's first
-    // message, so the next queue attempt needs a fresh handshake.
-    await _settle();
-    expect(transport.reconnectCount, equals(1));
-
-    // The buffered 'discussion' event must not resurface after a restart.
-    notifier.setFrozen(true);
-    notifier.setFrozen(false);
-    await _settle();
-    expect(notifier.state.dto.phase, equals('waiting'));
-  });
-
-  test('a fresh ballot clears the previous result and vote', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'result',
-      'result': <String, dynamic>{
-        'eliminated_seat': 1,
-        'role': 'nower',
-        'tally': <String, dynamic>{'1': 2},
+        final (s, t) = await _started('knowoff');
+        await s.act({'kind': 'vote', 'target_seat': 2});
+        final pending = s.reducer!.pendingRequest!;
+        final id = pending['request_id'] as String;
+        _error(s, t, 'unrelated-request', code);
+        expect(s.reducer!.pendingRequest, same(pending));
+        _error(s, t, id, code, seq: 3);
+        if (code == 'action.persistence_pending' ||
+            code == 'request.rate_limited') {
+          expect(s.reducer!.pendingRequest, same(pending));
+          await s.retry();
+          expect(t.sent.last['payload'], same(pending));
+          expect(s.snapshot!.json['ballot']['votes'], [
+            {'seat': 0, 'target_seat': 1},
+          ]);
+        } else {
+          expect(s.reducer!.pendingRequest, isNull);
+          expect(s.snapshot == null, code == 'action.stale_revision');
+        }
       },
-    });
-    transport.emit('knowoff_resolved', <String, dynamic>{'vote_target': 1});
-    await _settle();
-
-    expect(notifier.state.dto.result, isNotNull);
-    expect(notifier.state.dto.voteTarget, equals(1));
-
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-
-    // Regression: a stale result made every later ballot render as an
-    // already-resolved result window and refuse votes.
-    expect(notifier.state.dto.result, isNull);
-    expect(notifier.state.dto.voteTarget, equals(-1));
-  });
-
-  test('a next-round phase clears the finalized result snapshot', () async {
-    transport.emit('knowoff_resolved', <String, dynamic>{
-      'result': <String, dynamic>{
-        'eliminated_seat': 1,
-        'tally': <String, dynamic>{'1': 2},
-      },
-    });
-    await _settle();
-    expect(notifier.state.dto.result, isNotNull);
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-
-    expect(notifier.state.dto.phase, equals('play'));
-    expect(notifier.state.dto.result, isNull);
-  });
-
-  test('a ready_ack flips the local resultReady flag', () async {
-    transport.emit('knowoff_resolved', <String, dynamic>{
-      'result': <String, dynamic>{
-        'eliminated_seat': 1,
-        'tally': <String, dynamic>{'1': 2},
-      },
-    });
-    await _settle();
-    expect(notifier.state.dto.resultReady, isFalse);
-
-    await notifier.ready();
-    transport.emit('ready_ack', <String, dynamic>{'result_ready': true});
-    await _settle();
-
-    expect(notifier.state.dto.resultReady, isTrue);
-  });
-
-  test('a resolved ballot retains each voter target', () async {
-    transport.emit('knowoff_resolved', <String, dynamic>{
-      'votes': <String, dynamic>{'0': 1, '1': 2, '2': -1},
-      'result': <String, dynamic>{
-        'eliminated_seat': 1,
-        'tally': <String, dynamic>{'1': 1, '2': 1},
-      },
-    });
-    await _settle();
-
-    expect(
-        notifier.state.dto.result?.votes,
-        equals(<String, int>{
-          '0': 1,
-          '1': 2,
-          '2': -1,
-        }));
-  });
-
-  test('a fresh result window clears a stale resultReady', () async {
-    transport.emit('knowoff_resolved', <String, dynamic>{
-      'result': <String, dynamic>{
-        'eliminated_seat': 1,
-        'tally': <String, dynamic>{'1': 2},
-      },
-    });
-    transport.emit('ready_ack', <String, dynamic>{'result_ready': true});
-    await _settle();
-    expect(notifier.state.dto.resultReady, isTrue);
-
-    // Regression: a stale resultReady would let a single seat's earlier
-    // Ready silently finalize the very next round's result window too.
-    transport.emit('knowoff_resolved', <String, dynamic>{
-      'result': <String, dynamic>{
-        'eliminated_seat': 2,
-        'tally': <String, dynamic>{'2': 2},
-      },
-    });
-    await _settle();
-
-    expect(notifier.state.dto.resultReady, isFalse);
-  });
-
-  test('a finalized elimination stores the revealed role for announcement',
-      () async {
-    transport.emit('elimination_finalized', <String, dynamic>{
-      'eliminated_seat': 1,
-      'role': 'donower',
-    });
-    await _settle();
-
-    expect(notifier.state.finalEliminatedSeat, equals(1));
-    expect(notifier.state.finalEliminatedRole, equals('donower'));
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-
-    expect(notifier.state.dto.phase, equals('play'));
-    expect(notifier.state.finalEliminatedSeat, equals(1));
-    expect(notifier.state.finalEliminatedRole, equals('donower'));
-  });
-
-  test('a phase window starts a display-only countdown', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-
-    final dto = notifier.state.dto;
-    expect(dto.phaseWindow, equals(20));
-    expect(dto.turnDeadline, isNotNull);
-    expect(
-      dto.turnDeadline!.difference(DateTime.now()).inSeconds,
-      inInclusiveRange(18, 20),
     );
-  });
+  }
 
-  test('a phase with no window clears the countdown', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-    expect(notifier.state.dto.turnDeadline, isNotNull);
+  test(
+    'resolved ballot and revealed role arrive only from the server result',
+    () async {
+      final (s, t) = await _started('knowoff');
+      final runoff = fixture('snapshot-runoff');
+      runoff['cursor']['recipient_seq'] = 2;
+      t.emit('snapshot', runoff);
+      expect(s.snapshot!.json['ballot']['candidates'], [1, 2]);
+      expect(s.snapshot!.json['ballot'].containsKey('result'), isFalse);
+      final result = fixture('snapshot-result');
+      result['cursor']['recipient_seq'] = 3;
+      t.emit('snapshot', result);
+      expect(s.snapshot!.json['ballot']['result']['revealed_role'], 'donower');
+      expect(s.snapshot!.json['ballot']['votes'], [
+        {'seat': 0, 'target_seat': 1},
+      ]);
+    },
+  );
 
-    transport.emit('phase_started', <String, dynamic>{'phase': 'verdict'});
-    await _settle();
-
-    expect(notifier.state.dto.turnDeadline, isNull);
-    expect(notifier.state.dto.phaseWindow, equals(0));
-  });
-
-  test('merging a phase payload keeps the chat feed and the countdown',
+  for (final phase in ['discussion', 'knowoff', 'result']) {
+    test(
+      '$phase retains original deadline and history through unrelated seat updates',
       () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'discussion',
-      'window_seconds': 40,
-    });
-    transport.emit('quick_chat', <String, dynamic>{
-      'from_seat': 2,
-      'kind': 'chat',
-      'phrase_id': 'suspect',
-    });
-    await _settle();
-    expect(notifier.state.dto.chatEvents, hasLength(1));
-
-    transport.emit('round_resolved', <String, dynamic>{'round': 2});
-    await _settle();
-
-    // Regression: _mergeState rebuilt the DTO from scratch and dropped every
-    // locally-owned field.
-    expect(notifier.state.dto.chatEvents, hasLength(1));
-    expect(notifier.state.dto.turnDeadline, isNotNull);
-    expect(notifier.state.dto.phaseWindow, equals(40));
-  });
-
-  test('the vote budget survives phases that omit it', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'remaining_votes': 2,
-    });
-    await _settle();
-    expect(notifier.state.dto.remainingVotes, equals(2));
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'result'});
-    await _settle();
-    expect(notifier.state.dto.remainingVotes, equals(2));
-  });
-
-  test('copyWith can explicitly clear the result and the deadline', () {
-    final dto = GameStateDto(
-      result: const VoteResultDto(
-        eliminatedSeat: 1,
-        role: 'nower',
-        tally: <String, int>{},
-      ),
-      turnDeadline: DateTime.now(),
+        final (s, t) = await _started(phase == 'discussion' ? 'nower' : phase);
+        final next = fixture(
+          'snapshot-${phase == 'discussion' ? 'nower' : phase}',
+        );
+        next['phase'] = phase;
+        if (phase == 'discussion') {
+          next.remove('current_seat');
+          next['private']['capabilities'] = ['ready', 'chat'];
+        }
+        next['cursor']['recipient_seq'] = 2;
+        next['seats'][2]['connected'] = false;
+        t.emit('snapshot', next);
+        expect(s.snapshot!.deadlineMS, 21000);
+        expect(s.snapshot!.json['seats'][2]['connected'], isFalse);
+        expect(s.snapshot!.json['history'], isEmpty);
+        expect(t.sent.where((f) => f['type'] == 'action'), isEmpty);
+      },
     );
+  }
 
-    expect(dto.copyWith().result, isNotNull);
-    expect(dto.copyWith(clearResult: true).result, isNull);
-    expect(dto.copyWith(clearTurnDeadline: true).turnDeadline, isNull);
-  });
-
-  test('casting a vote locks the ballot locally and sends target_seat',
+  for (final mode in ['same_table', 'new_table']) {
+    test(
+      'verdict $mode choice is explicit and leave erases match before new admission',
       () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
+        final (s, t) = await _started('verdict-begun-only');
+        final before = jsonEncode(s.snapshot!.json);
+        if (mode == 'same_table') {
+          await s.control('rematch', {});
+          expect(t.sent.last['type'], 'rematch');
+          expect(t.sent.last['payload'], isEmpty);
+          expect(jsonEncode(s.snapshot!.json), before);
+        }
+        await s.leave();
+        expect(s.snapshot, isNull);
+        expect(s.roomCode, isNull);
+        expect(s.seat, isNull);
+        expect(s.reducer!.pendingRequest, isNull);
+        t.emit('snapshot', fixture('snapshot-nower'));
+        expect(s.snapshot, isNull);
+        if (mode == 'new_table') {
+          const tuple = {
+            'mode_id': 'missed_the_briefing',
+            'size': 4,
+            'content_language': 'tr',
+            'pack_release_id': 'release-1',
+            'rules_version': 'text-1',
+          };
+          await s.control('queue_join', tuple);
+          expect(t.sent.last['type'], 'queue_join');
+          expect(t.sent.last['payload'], tuple);
+          expect(s.snapshot, isNull);
+        }
+      },
+    );
+  }
 
-    await notifier.castVote(2);
+  test(
+    'handshake waits for credentials and sends no role override or queue implicitly',
+    () async {
+      final token = Completer<String>();
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () => token.future);
+      addTearDown(s.dispose);
+      await s.connect();
+      expect(t.sent, isEmpty);
+      token.complete('refreshed-token');
+      await Future<void>.delayed(Duration.zero);
+      expect(t.sent.single, {
+        'v': 2,
+        'type': 'hello',
+        'payload': {'client_generation': 2, 'access_token': 'refreshed-token'},
+      });
+      t.emit('hello', hello());
+      expect(t.sent, hasLength(1));
+      expect(s.ready, isTrue);
+      expect(s.seat, isNull);
+    },
+  );
 
-    expect(notifier.state.dto.voteTarget, equals(2));
-    expect(transport.sent.single['kind'], equals('cast_vote'));
+  test(
+    'rejected handshake requires explicit retry without creating or queuing an identity',
+    () async {
+      final t = FakeTextTransport();
+      var calls = 0;
+      final s = TextSession(
+        transport: t,
+        tokenLoader: () async {
+          calls++;
+          return 'token-$calls';
+        },
+      );
+      addTearDown(s.dispose);
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('error', {'code': 'auth.required'});
+      expect(s.ready, isFalse);
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 1);
+      expect(t.sent, hasLength(1));
+      await s.resume();
+      await Future<void>.delayed(Duration.zero);
+      expect(calls, 2);
+      expect(t.sent.last['payload']['access_token'], 'token-2');
+      t.emit('hello', hello());
+      expect(s.ready, isTrue);
+      expect(t.sent.where((f) => f['type'] == 'queue_join'), isEmpty);
+    },
+  );
+
+  test(
+    'unavailable credentials clear authority and public AppConfig still initializes',
+    () async {
+      final t = FakeTextTransport();
+      final s = TextSession(
+        transport: t,
+        tokenLoader: () async => throw StateError('offline'),
+      );
+      addTearDown(s.dispose);
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      expect(t.sent, isEmpty);
+      expect(s.errorCode, 'auth.required');
+      expect(s.ready, isFalse);
+      final app = await AppConfig.initialize(
+        ClientConfig.defaultConfig(),
+        AuthService(baseUrl: 'https://offline.invalid'),
+      );
+      expect(app.clientConfig.protocolVersion, 2);
+    },
+  );
+
+  test('negotiated mutation budget survives phase changes and reconnect', () {
+    const bounded = V2Limits(
+      maxFrameBytes: 65536,
+      maxHistoryEvents: 8192,
+      maxHistoryPageEvents: 8,
+      maxTextBytes: 512,
+      maxRequestsPerSeat: 1,
+    );
+    final r = V2Reducer(bounded)..snapshot(fixture('snapshot-nower'));
+    r.confirm({'kind': 'draw', 'count': 1}, 'first', 0);
+    r.acknowledge('first');
+    final ballot = fixture('snapshot-knowoff');
+    ballot['cursor']['recipient_seq'] = 2;
+    r.snapshot(ballot);
+    expect(r.pendingRequest, isNull);
+    r.disconnect();
+    ballot['cursor']['stream_epoch'] = 'new-budget-stream';
+    ballot['cursor']['recipient_seq'] = 1;
+    r.snapshot(ballot);
     expect(
-      (transport.sent.single['payload'] as Map<String, dynamic>)['target_seat'],
-      equals(2),
+      () => r.confirm({'kind': 'vote', 'target_seat': 2}, 'second', 0),
+      throwsA(isA<V2Failure>().having((e) => e.code, 'code', 'request.limit')),
     );
-  });
-
-  test('a live vote_cast event updates the live ballots map', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-
-    transport.emit('vote_cast', <String, dynamic>{'seat': 0, 'target_seat': 2});
-    await _settle();
-    expect(notifier.state.dto.liveBallots, equals(<String, int>{'0': 2}));
-
-    // Changing a mind overwrites the seat's live target.
-    transport.emit('vote_cast', <String, dynamic>{'seat': 0, 'target_seat': 3});
-    await _settle();
-    expect(notifier.state.dto.liveBallots, equals(<String, int>{'0': 3}));
-
-    // A fresh ballot window wipes the live view clean.
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'runoff',
-      'window_seconds': 15,
-    });
-    await _settle();
-    expect(notifier.state.dto.liveBallots, isEmpty);
-  });
-
-  test('a rejected cast_vote releases the local lock', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-    await notifier.castVote(2);
-    expect(notifier.state.dto.voteTarget, equals(2));
-
-    transport.emit('error', <String, dynamic>{
-      'code': 'rejected',
-      'params': <String, dynamic>{'reply_to': 'cast_vote'},
-    });
-    await _settle();
-
-    expect(notifier.state.dto.voteTarget, equals(-1));
-    expect(notifier.state.lastError, equals('rejected'));
-  });
-
-  test('an error outside the voting phases leaves the ballot alone', () async {
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-    await notifier.castVote(2);
-
-    transport.emit('phase_started', <String, dynamic>{'phase': 'result'});
-    await _settle();
-    transport.emit('error', <String, dynamic>{'code': 'poke_cap'});
-    await _settle();
-
-    expect(notifier.state.dto.voteTarget, equals(2));
+    expect(r.pendingRequest, isNull);
+    expect(r.current!.json['ballot']['votes'], [
+      {'seat': 0, 'target_seat': 1},
+    ]);
   });
 
   test(
-      'a rejection of an unrelated intent during the voting phase does not '
-      'unlock an already-cast ballot', () async {
-    // Regression test: a stale/queued request (e.g. a "ready" that only
-    // reaches the server after Knowoff opens) can come back rejected while
-    // the player is sitting on a ballot that was already accepted. Only a
-    // rejection replying to cast_vote itself may release the local lock —
-    // otherwise the row flips back to unlocked and the player has to tap
-    // Vote a second time even though their first vote already landed.
-    transport.emit('phase_started', <String, dynamic>{
-      'phase': 'knowoff',
-      'window_seconds': 20,
-    });
-    await _settle();
-    await notifier.castVote(2);
-    expect(notifier.state.dto.voteTarget, equals(2));
+    'a phase missing its mandatory deadline cannot preserve an old countdown',
+    () async {
+      final (s, t) = await _started();
+      final missing = fixture('snapshot-nower');
+      missing['cursor']['recipient_seq'] = 2;
+      missing.remove('deadline_ms');
+      t.emit('snapshot', missing);
+      expect(s.snapshot, isNull);
+      expect(s.ready, isFalse);
+      expect(
+        () => s.act({'kind': 'draw', 'count': 1}),
+        throwsA(isA<V2Failure>()),
+      );
+    },
+  );
 
-    transport.emit('error', <String, dynamic>{
-      'code': 'rejected',
-      'params': <String, dynamic>{'reply_to': 'ready'},
-    });
-    await _settle();
-
-    expect(notifier.state.dto.voteTarget, equals(2));
-  });
-
-  test('the queue handshake refreshes the session before sending its token',
-      () async {
-    // Regression: the socket sent whatever token was in memory, so an idle
-    // tab handshaked with an expired one. The server then dropped the
-    // connection to an anonymous account and rejected the join as a
-    // quickplay-limit failure.
-    final auth = _StubAuthService();
-    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
-    final before = auth.ensureCalls;
-
-    await notifier.queueQuickPlay(4);
-
-    expect(auth.ensureCalls, equals(before + 1));
-    expect(transport.sent.single['kind'], equals('queue_quickplay'));
-    expect(
-      (transport.sent.single['payload']
-          as Map<String, dynamic>)['access_token'],
-      equals('fresh-token'),
-    );
-  });
-
-  test('new game request includes the selected dev role', () async {
-    final roleNotifier = GameSessionNotifier(
-      transport: transport,
-      initialState: const GameSession(
-        dto: GameStateDto(),
-        devForcedRole: 'donower',
-      ),
-    );
-    addTearDown(roleNotifier.dispose);
-
-    await AppConfig.initialize(
-        ClientConfig.defaultConfig(), _StubAuthService());
-    await roleNotifier.queueQuickPlay(4);
-
-    expect(transport.sent.single['payload'], <String, dynamic>{
-      'size': 4,
-      'access_token': 'fresh-token',
-      'dev': true,
-      'dev_role': 'donower',
-    });
-  });
-
-  test('prejoin dev role stays local until the queue handshake', () async {
-    await AppConfig.initialize(
-        ClientConfig.defaultConfig(), _StubAuthService());
-    await notifier.devForceRole('nower');
-    expect(transport.sent, isEmpty);
-    await notifier.queueQuickPlay(4);
-    expect(transport.sent.single['kind'], 'queue_quickplay');
-    expect(transport.sent.single['payload']['dev_role'], 'nower');
-  });
-
-  test('local-room handshake carries the preselected dev role', () async {
-    await AppConfig.initialize(
-        ClientConfig.defaultConfig(), _StubAuthService());
-    await notifier.devForceRole('donower');
-    transport.sent.clear();
-    await notifier.joinRoom('ABCDEF');
-    expect(transport.sent.single['kind'], 'join_room');
-    expect(transport.sent.single['payload'], {
-      'code': 'ABCDEF',
-      'access_token': 'fresh-token',
-      'dev': true,
-      'dev_role': 'donower',
-    });
-  });
-
-  test('Random clears the dev role across restart and the next join', () async {
-    await AppConfig.initialize(
-        ClientConfig.defaultConfig(), _StubAuthService());
-    await notifier.devForceRole('donower');
-    await notifier.devForceRole('');
-    expect(notifier.state.devForcedRole, isNull);
-    notifier.restart();
-    transport.sent.clear();
-    await notifier.queueQuickPlay(4);
-    expect(transport.sent.single['payload'], {
-      'size': 4,
-      'access_token': 'fresh-token',
-    });
-  });
-
-  test('Random clears the server override when already joined', () async {
-    transport.emit('joined', {'seat': 0, 'code': 'ABCDEF'});
-    await _settle();
-    await notifier.devForceRole('donower');
-    transport.sent.clear();
-    await notifier.devForceRole('');
-    expect(notifier.state.devForcedRole, isNull);
-    expect(transport.sent.single['payload'], {'role': ''});
-  });
-
-  test('app configuration initializes when the backend is unavailable',
-      () async {
-    await expectLater(
-      AppConfig.initialize(
-        ClientConfig.defaultConfig(),
-        _UnavailableAuthService(),
-      ),
-      completes,
-    );
-  });
-
-  test('does not retry quickplay after a handshake rejection', () async {
-    final auth = _StubAuthService();
-    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
-    transport.emitState(gt.ConnectionState.connected);
-    await _settle();
-    await notifier.queueQuickPlay(4);
-    await _settle();
-    await _settle();
-    expect(transport.sent, hasLength(1));
-
-    transport.emit('error', <String, dynamic>{
-      'code': 'join_failed',
-      'params': <String, dynamic>{'message': 'cooldown active'},
-    });
-    await _settle();
-    expect(notifier.state.lastError, equals('join_failed'));
-    transport.emitState(gt.ConnectionState.disconnected);
-    transport.emitState(gt.ConnectionState.connected);
-    await _settle();
-    await _settle();
-
-    expect(transport.sent, hasLength(1));
-    expect(notifier.state.lastError, equals('join_failed'));
-  });
-
-  test('reclaims the room after a dropped authenticated socket', () async {
-    final auth = _StubAuthService();
-    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
-    transport.emit('joined', <String, dynamic>{
-      'seat': 0,
-      'code': 'ABC123',
-      'session_token': 'reclaim-token',
-    });
-    await _settle();
-
-    transport.emitState(gt.ConnectionState.disconnected);
-    transport.emitState(gt.ConnectionState.connected);
-    await _settle();
-    await _settle();
-
-    expect(transport.sent, hasLength(1));
-    expect(transport.sent.single['kind'], 'join_room');
-    expect(transport.sent.single['payload'], <String, dynamic>{
-      'code': 'ABC123',
-      'session_token': 'reclaim-token',
-      'access_token': 'fresh-token',
-    });
-  });
-
-  // Regression: a server restart (new signing key) or a revoked token made
-  // every rejoin fail with the same dead credentials, leaving the match screen
-  // frozen with taps that silently queued forever.
-  test('a rejected access token reissues credentials instead of wedging',
-      () async {
-    final auth = _StubAuthService();
-    await AppConfig.initialize(ClientConfig.defaultConfig(), auth);
-    transport.emit('joined', <String, dynamic>{
-      'seat': 0,
-      'code': 'ABC123',
-      'session_token': 'reclaim-token',
-    });
-    await _settle();
-
-    transport.emit('error', <String, dynamic>{
-      'code': 'join_failed',
-      'params': <String, dynamic>{'message': 'invalid access token'},
-    });
-    await _settle();
-
-    expect(auth.invalidateCalls, equals(1));
-    expect(notifier.state.dto.roomCode, isEmpty);
-    expect(notifier.state.dto.seat, equals(-1));
-  });
-
-  test('lockMove marks the pending card locked without sending anything',
-      () async {
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-
-    notifier.lockMove('card-1');
-
-    expect(notifier.state.selectedCardId, equals('card-1'));
-    expect(notifier.state.moveLocked, isTrue);
-    expect(transport.sent, isEmpty);
-  });
-
-  test('clearSelection drops the pending card and its lock without sending',
-      () async {
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-    notifier.lockMove('card-1');
-
-    notifier.clearSelection();
-
-    expect(notifier.state.selectedCardId, isNull);
-    expect(notifier.state.moveLocked, isFalse);
-    expect(transport.sent, isEmpty);
-  });
-
-  test("a locked move auto-plays the instant this seat's turn starts",
-      () async {
-    // Regression: picking a card during someone else's turn used to require
-    // sitting through the wait and re-confirming once your turn arrived.
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-    notifier.lockMove('card-1');
-
-    transport.emit('turn_started', <String, dynamic>{
-      'turn_seat': 0,
-      'round': 1,
-      'timeout': 7,
-    });
-    await _settle();
-
-    expect(notifier.state.moveLocked, isFalse);
-    expect(transport.sent.single['kind'], equals('play_card'));
-    expect(
-      (transport.sent.single['payload'] as Map<String, dynamic>)['card_id'],
-      equals('card-1'),
-    );
-  });
-
-  test('turn_started for another seat does not fire a locked move', () async {
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-    notifier.lockMove('card-1');
-
-    transport.emit('turn_started', <String, dynamic>{
-      'turn_seat': 1,
-      'round': 1,
-      'timeout': 7,
-    });
-    await _settle();
-
-    expect(notifier.state.moveLocked, isTrue);
-    expect(transport.sent, isEmpty);
-  });
-
-  test('playing a card removes it from my own hand', () async {
-    // Regression: a normally-played (non-timeout) card only landed in
-    // `plays`, never in `hand.cards` — the card stayed selectable for the
-    // rest of the match and reappeared as playable once the next round
-    // cleared `plays`, even though the server had already discarded it.
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    transport.emit('hand_dealt', <String, dynamic>{
-      'cards': <String>['card-1', 'card-2'],
-      'draw_pile': <String>[],
-      'specialty': null,
-    });
-    await _settle();
-
-    transport.emit('play_revealed', <String, dynamic>{
-      'seat': 0,
-      'card_id': 'card-1',
-      'card': <String, dynamic>{'id': 'card-1', 'type': 'text'},
-    });
-    await _settle();
-
-    expect(
-      notifier.state.dto.hand.cards.map((c) => c.id),
-      equals(<String>['card-2']),
-    );
-  });
-
-  test('a turn timeout removes the auto-discarded card from my own hand',
-      () async {
-    // Regression: play_revealed for a timeout carries no card_id (the seat
-    // never played), so the old merge silently ignored it — the seat's play
-    // never landed in `plays` and the auto-discarded card stayed visible in
-    // the local hand even though the server had already removed it.
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    transport.emit('hand_dealt', <String, dynamic>{
-      'cards': <String>['card-1', 'card-2'],
-      'draw_pile': <String>[],
-      'specialty': null,
-    });
-    await _settle();
-
-    transport.emit('play_revealed', <String, dynamic>{
-      'seat': 0,
-      'timeout': true,
-      'lost': <String, dynamic>{'id': 'card-1', 'type': 'text'},
-    });
-    await _settle();
-
-    expect(
-      notifier.state.dto.hand.cards.map((c) => c.id),
-      equals(<String>['card-2']),
-    );
-    final play = notifier.state.dto.plays['0'];
-    expect(play, isNotNull);
-    expect(play!.timedOut, isTrue);
-    expect(play.id, equals('card-1'));
-  });
-
-  test('a turn timeout for another seat still marks that seat as played',
-      () async {
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-
-    transport.emit('play_revealed', <String, dynamic>{
-      'seat': 1,
-      'timeout': true,
-    });
-    await _settle();
-
-    expect(notifier.state.dto.plays['1'], isNotNull);
-  });
-
-  test('a new round clears a stale pre-selection', () async {
-    transport.emit('joined', <String, dynamic>{'seat': 0});
-    transport.emit('phase_started', <String, dynamic>{'phase': 'play'});
-    await _settle();
-    notifier.lockMove('card-1');
-
-    transport.emit('round_started', <String, dynamic>{
-      'round': 2,
-      'turn_order': <int>[1, 0],
-    });
-    await _settle();
-
-    expect(notifier.state.moveLocked, isFalse);
-    expect(notifier.state.selectedCardId, isNull);
-  });
+  test(
+    'late token after background cannot send hello or revive hidden private state',
+    () async {
+      final token = Completer<String>();
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () => token.future);
+      addTearDown(s.dispose);
+      await s.connect();
+      s.background();
+      token.complete('late-token');
+      await Future<void>.delayed(Duration.zero);
+      expect(t.sent, isEmpty);
+      expect(s.snapshot, isNull);
+      expect(s.ready, isFalse);
+    },
+  );
 }

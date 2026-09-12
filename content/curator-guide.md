@@ -6,13 +6,14 @@ It follows the [Blueprint](../BLUEPRINT.md) and the text-only five-mode decision
 adopted on 2026-09-12 in
 [ADR-012](../docs/design/ADR-012-text-only-selectable-modes.md).
 
-This is the target curation/release workflow. The current Contributor Studio
-supports text submission and review; mode-aware Nown/pool authoring, editorial
-planning fields and production pack activation remain transition work.
+Contributor Studio supports text submission and review. The text CLI and
+durable release store implement preparation, certification, publication, explicit
+activation and takedown. Editorial planning fields remain outside the Studio;
+real candidate approval and human pilots remain separate release gates.
 Accepted text is curation input, not a certified or deployed game pack.
 See [Community operations](../docs/guides/COMMUNITY_OPERATIONS.md) for available
 operations and the [transition design](../docs/design/DESIGN-text-transition.md)
-for implementation dependencies. No pack or runtime changes in this guide edit.
+for implementation dependencies and current proof.
 
 ## What a Curator does
 
@@ -34,18 +35,14 @@ several Nowns; writing against one prompt does not give it exclusive ownership
 of that card. Tone buckets, tags, callbacks and the `chaos` humor bucket remain
 separate from relevance bands.
 
-The **current association runtime** computes cosine bands from embeddings:
-
-- **High** ≥ `dealing.band_high`.
-- **Distant** in [`dealing.band_low`, `dealing.band_high`).
-- **Chaos** < `dealing.band_low`.
-
-Read actual values in [tuning](../configs/gameplay/tuning.yaml). Those definitions
-explain the existing dealer; they are not a sufficient text-mode release gate.
-The target retires mandatory multimodal embeddings and synthetic geometry as
-production evidence. Optional text embeddings may assist search; when used,
-record compatible model/evaluator versions and thresholds. Never manufacture
-vectors or alter thresholds to make a weak batch appear playable.
+The text runtime consumes explicit reviewed pair bands keyed to immutable
+Nown/card revisions and mode. [Tuning](../configs/gameplay/tuning.yaml) sets the
+minimum retained High/Distant coverage across the whole scheduled match.
+Mandatory embeddings, cosine thresholds and synthetic geometry have retired
+from live configuration. Frozen historical policy bytes retain their old fields
+only for replay and preservation. Optional text embeddings may assist search;
+record compatible evaluator versions and thresholds as evidence. Never
+manufacture vectors or alter coverage to make a weak batch appear playable.
 
 Reviewed mode suitability, legal-action simulation and human full-match pilots
 must establish that the actual retained 5+3 budget remains usable through every
@@ -59,37 +56,29 @@ For every Nown/card creation, review or integration task, automatically consult
 this map before making High/Distant/Chaos or gameplay-readiness claims. Reuse a
 reading only while sources remain unchanged; record revisions and open checks.
 Use CodeGraph first for indexed source. These are **audited starting paths**;
-the additive text implementation is under review and integration. A source path
+inspect the current implementation and its recorded proof. A source path
 alone does not establish that a mode, human-reviewed pack or deployment is ready.
 
 | Source | What to inspect |
 |---|---|
 | [Blueprint Game Rules §§2–5 and Media Engine §2](../BLUEPRINT.md) | Five mode actions, provisional 5+3, full-schedule viability, copy ownership, ordinary draws and role secrecy; specialties absent from the first text release. |
-| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current hand/dealing/timer/point values, disabled-until-ready availability and remaining legacy settings; inspect the current typed validation boundary. |
+| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current hand/dealing/timer/point values and disabled-until-ready availability; inspect the current typed validation boundary. |
 | [Text records](../server/pkg/media/text_types.go), [validation](../server/pkg/media/text_validation.go) and [loader](../server/pkg/media/text_loader.go) | `TextSnapshot` pins exact schema/release/language/rules/wording/provenance, configured bounds and member hashes; reviewed suitability replaces mandatory vectors. |
 | [Text dealer](../server/pkg/media/text_dealing.go), [certifier](../server/pkg/media/text_certify.go) and [manager](../server/pkg/media/text_manager.go) | Inspect complete schedule/actual retained coverage, separate system randomness, sampled certificate scope and failed activation. Confirm replay/action evidence and durable lifecycle separately; an in-memory lineage map is insufficient after restart. |
-| [Server mesh and dealer](../server/pkg/media/dealing.go) | `Cosine`, `BandFor`, `BuildCandidates`, `Dealer.Deal`, `DealFeasible`: existing vector bands, sampled versus retained cards, and actual simulation coverage. |
-| [Legacy loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack`/`Certify` validate the old image/text schema and embeddings; their successes do not certify the additive text path. |
-| [Server match](../server/internal/game/match.go) | `buildNownSchedule`, `dealHands`, `handleDrawCards`, `sendHandDealt`, `viewFor`, `playedNowns`: schedule, mutation, recipient scopes and verdict. `useShuffle` is a legacy retirement surface, not a required text action. |
-| [Payload renderer](../server/internal/game/payload.go) and [active manager](../server/pkg/media/manager.go) | Nown/decoy and inline-text projections; current signed-image branch retires. Ensure existing matches resolve pinned bytes instead of looking up the newest active pack. |
-| [Client DTOs](../client/lib/data/models/game_state_dto.dart) and [session state](../client/lib/presentation/state/game_session_provider.dart) | Instance-aware hand/board/history consumption, duplicate request/event handling and snapshot restore. Current content-ID plays maps cannot model all five modes. |
-| [Role view](../client/lib/domain/entities/game_session.dart), [game screen](../client/lib/presentation/screens/game_screen.dart) and [surfaces](../client/lib/presentation/widgets/game_surfaces.dart) | Authorized prompt visibility, plain-text readability and five confirmed action controls. Visual hiding does not establish wire secrecy; elimination must clear stale private state. |
-| [Client media engine](../client/lib/media/media_engine.dart) | Legacy metadata/prefetch/cache path to inventory and retire. Its constructor had only a test caller in the 2026-09-12 CodeGraph audit; do not claim it is the live text renderer. |
+| [Text match](../server/internal/game/text_match.go) and [actions](../server/internal/game/text_actions.go) | Unique physical copies, full secret schedule, private draws, evolving board/trades and consumed-card history; no specialty or semantic judge. |
+| [Snapshot projection](../server/internal/game/text_snapshot.go) and [v2 contract](../server/internal/transport/v2/) | Recipient-scoped current Nown/hand, public evidence and bounded checked pages; resolve pinned bytes for every view. |
+| [Release store](../server/internal/store/text_release.go) | Exact accepted text/consent capture, immutable durable lineage, separate publish/activate/takedown and retry without contributor reward duplication. |
+| [Client contract](../client/lib/core/text/v2_contract.dart), [reducer](../client/lib/core/text/v2_reducer.dart) and [session](../client/lib/core/text/v2_session.dart) | Copy-aware board/history, duplicate and stale stream handling, account-bound restore and private-state clearing. |
+| [Match screen](../client/lib/presentation/screens/text_match_screen.dart) and [play screen](../client/lib/presentation/screens/text_play_screen.dart) | Authorized prompt visibility, plain-text readability, five confirmed actions and explicit lobby/mode choices; no downloaded prompt catalog. |
 | [Current mechanics](../docs/code/MODULE-media-engine.md), [transition design](../docs/design/DESIGN-text-transition.md) and [Roadmap](../docs/planning/ROADMAP.md) | Reconcile target contracts with actual capability and required proofs before declaring any gap closed. |
 
-The 2026-09-11 dealer audit found first-Nown hand retention and partial later-Nown
-reserve retention, not verification of the final eight cards against the complete
-schedule. Per-player content-ID uniqueness does not prevent the same content
-appearing in different hands. The target explicitly permits equal wording on
-separate copies; fairness/certification must inspect those cases rather than
-assume global uniqueness or use duplicate text as duplicate ownership.
-
-The 2026-09-12 runtime audit also found out-of-turn draws and public drawn-card
-payloads, current-round-only plays, incomplete pack pinning, and no authoritative
-snapshot path in the observed rejoin handler. Existing scope tests do show
-Nower/decoy routing and started-Nowns-only verdict behavior; those partial proofs
-do not close the other gaps. Recheck source/tests during implementation. Content
-planning does not authorize repairing runtime, changing packs or activating data.
+The historical dealer, draw-privacy, pack-drift and reconnect findings are
+retained in the transition design. Current replacement tests exercise actual
+retained hands, private current-turn draws and role-scoped pinned snapshots.
+Equal wording may appear in different hands on separate physical copies;
+inspect those cases rather than assume global text uniqueness. A passing
+engineering test never supplies missing human content evidence or authorizes
+activation outside the requested scope.
 
 ## Coverage checklist
 
@@ -127,8 +116,8 @@ Before certifying a candidate release:
 Simulation addresses the cases it actually checks; exhaustive small fixtures and
 property tests complement sampled production schedules. Monte Carlo cannot alone
 prove every reachable state, and human playtests cannot prove wire secrecy.
-The legacy synthetic builder and the additive sampled retained-card certifier
-do not establish this complete contract. Require distinct reachable-action,
+The synthetic fixture builder and sampled retained-card certifier do not
+establish this complete contract. Require distinct reachable-action,
 human/editorial and activation evidence before calling a release ready.
 
 ## Text review and evidence
@@ -217,8 +206,8 @@ Optional embedding checks carry evaluator versions but cannot replace these.
 
 Record separate states: prepared, screened, human-reviewed, playtested,
 technically certified, published and activated. Missing evidence remains **not
-run** or pending. The checked-in synthetic fixture and directory-copy publish
-command do not complete the production workflow. Prototype matches receive no
+run** or pending. The checked-in synthetic fixtures and successful technical CLI checks do not
+complete the human release workflow. Prototype matches receive no
 live rewards/progression/leaderboard credit. Release readiness follows the
 [Roadmap](../docs/planning/ROADMAP.md), not an aggregate content-count target.
 

@@ -2,18 +2,13 @@ package economy
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/store"
 )
 
@@ -23,20 +18,20 @@ type PurchasePlatform string
 const (
 	PlatformGooglePlay PurchasePlatform = "google_play"
 	PlatformAppStore   PurchasePlatform = "app_store"
-	PlatformSSV        PurchasePlatform = "ssv"
 )
 
-// Purchases manages verified store receipts and SSV callbacks.
+// Purchases manages server-verified store receipts and retained purchase history.
 type Purchases struct {
-	db        *sql.DB
-	wallet    *Wallet
-	ssvKey    []byte
-	ssvSender string
+	billing           config.BillingConfig
+	verifiers         map[PurchasePlatform]ReceiptVerifier
+	verificationSlots chan struct{}
+	db                *sql.DB
+	wallet            *Wallet
 }
 
 // NewPurchases returns a purchase manager.
-func NewPurchases(db *sql.DB, wallet *Wallet, ssvKey []byte, ssvSender string) *Purchases {
-	return &Purchases{db: db, wallet: wallet, ssvKey: ssvKey, ssvSender: ssvSender}
+func NewPurchases(db *sql.DB, wallet *Wallet) *Purchases {
+	return &Purchases{db: db, wallet: wallet}
 }
 
 // RecordReceipt stores a platform receipt before verification. It returns the
@@ -72,144 +67,15 @@ func (p *Purchases) RecordReceipt(ctx context.Context, accountID string, platfor
 	return existing, existing != id, nil
 }
 
-// VerifyGooglePlay marks a Google Play receipt as verified and grants Noin.
-// In production this checks the Play Developer API; the v1 stub trusts the
-// signed payload from the client and records it for later reconciliation.
-func (p *Purchases) VerifyGooglePlay(ctx context.Context, transactionID string, amount int) error {
-	return p.verifyAndGrant(ctx, transactionID, amount)
-}
-
-// VerifyAppStore marks an App Store receipt as verified and grants Noin.
-// In production this checks with Apple's /verifyReceipt endpoint.
-func (p *Purchases) VerifyAppStore(ctx context.Context, transactionID string, amount int) error {
-	return p.verifyAndGrant(ctx, transactionID, amount)
-}
-
-// VerifySSV validates a rewarded-ad Server-Side Verification callback URL and
-// grants the doubled Noin for the referenced match. It is idempotent by
-// transaction_id.
-func (p *Purchases) VerifySSV(ctx context.Context, callbackURL string) error {
-	if !p.verifySSVSignature(callbackURL) {
-		return fmt.Errorf("invalid ssv signature")
-	}
-	u, err := url.Parse(callbackURL)
-	if err != nil {
-		return fmt.Errorf("parse ssv url: %w", err)
-	}
-	q := u.Query()
-	txn := q.Get("transaction_id")
-	if txn == "" {
-		return fmt.Errorf("missing transaction_id")
-	}
-	amountStr := q.Get("reward_amount")
-	amount, _ := strconv.Atoi(amountStr)
-	if amount <= 0 {
-		return fmt.Errorf("invalid reward_amount")
-	}
-	accountID := q.Get("custom_data")
-	if accountID == "" {
-		return fmt.Errorf("missing custom_data")
-	}
-
-	id := uuid.NewString()
-	var existing string
-	if err := p.db.QueryRowContext(ctx,
-		"SELECT id FROM store_purchases WHERE transaction_id = $1",
-		txn,
-	).Scan(&existing); err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("lookup ssv purchase: %w", err)
-	}
-	if existing != "" {
-		// Already recorded; grant only if not yet verified.
-		var verified sql.NullTime
-		if err := p.db.QueryRowContext(ctx,
-			"SELECT verified_at FROM store_purchases WHERE id = $1",
-			existing,
-		).Scan(&verified); err != nil {
-			return fmt.Errorf("load ssv verified: %w", err)
-		}
-		if verified.Valid {
-			return nil
-		}
-		id = existing
-	} else {
-		_, err := p.db.ExecContext(ctx,
-			`INSERT INTO store_purchases (id, account_id, platform, product_id, transaction_id, amount, raw_receipt)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			id, accountID, string(PlatformSSV), "ssv_doubler", txn, amount, map[string]any{"url": callbackURL},
-		)
-		if err != nil {
-			return fmt.Errorf("record ssv purchase: %w", err)
-		}
-	}
-
-	return p.verifyAndGrantByID(ctx, id, amount)
-}
-
-func (p *Purchases) verifyAndGrant(ctx context.Context, transactionID string, amount int) error {
-	var id string
-	if err := p.db.QueryRowContext(ctx,
-		"SELECT id FROM store_purchases WHERE transaction_id = $1",
-		transactionID,
-	).Scan(&id); err != nil {
-		return fmt.Errorf("lookup purchase: %w", err)
-	}
-	return p.verifyAndGrantByID(ctx, id, amount)
-}
-
-func (p *Purchases) verifyAndGrantByID(ctx context.Context, id string, amount int) error {
-	day := serverDay(time.Now().UTC())
-	return store.WithValueTransaction(ctx, p.db, func(tx *sql.Tx) error {
-		var accountID string
-		var verified sql.NullTime
-		if err := tx.QueryRowContext(ctx,
-			"SELECT account_id, verified_at FROM store_purchases WHERE id = $1 FOR UPDATE",
-			id,
-		).Scan(&accountID, &verified); err != nil {
-			return fmt.Errorf("lock purchase: %w", err)
-		}
-		if verified.Valid {
-			return nil
-		}
-		if amount <= 0 {
-			return fmt.Errorf("invalid purchase amount")
-		}
-		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
-			return err
-		}
-
-		if _, err := tx.ExecContext(ctx,
-			"UPDATE store_purchases SET verified_at = now(), amount = $2 WHERE id = $1",
-			id, amount,
-		); err != nil {
-			return fmt.Errorf("mark verified: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO noin_wallets (account_id, balance, updated_at)
-		 VALUES ($1, $2, now())
-		 ON CONFLICT (account_id) DO UPDATE SET
-		   balance = noin_wallets.balance + EXCLUDED.balance,
-		   updated_at = now()`,
-			accountID, amount,
-		); err != nil {
-			return fmt.Errorf("credit wallet: %w", err)
-		}
-
-		if _, err := tx.ExecContext(ctx,
-			`INSERT INTO noin_ledger (account_id, event_type, amount, reason, server_day)
-		 VALUES ($1, $2, $3, $4, $5)`,
-			accountID, string(LedgerPurchase), amount, fmt.Sprintf("store_purchase %s", id), day,
-		); err != nil {
-			return fmt.Errorf("insert purchase ledger: %w", err)
-		}
-
-		return nil
-	})
-}
-
 // Refund revokes a verified purchase via an explicit audited admin action.
 func (p *Purchases) Refund(ctx context.Context, purchaseID string) error {
+	var providerSource bool
+	if err := p.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_transactions WHERE purchase_id=$1 UNION ALL SELECT 1 FROM billing_subscription_sources WHERE initial_purchase_id=$1)`, purchaseID).Scan(&providerSource); err != nil {
+		return err
+	}
+	if providerSource {
+		return ErrBillingConflict
+	}
 	day := serverDay(time.Now().UTC())
 	return store.WithValueTransaction(ctx, p.db, func(tx *sql.Tx) error {
 		var accountID string
@@ -263,42 +129,4 @@ func (p *Purchases) Refund(ctx context.Context, purchaseID string) error {
 
 		return nil
 	})
-}
-
-// verifySSVSignature checks the HMAC-SHA256 signature on an SSV callback URL.
-// It returns true when the signature matches the configured key and, if a
-// sender list is configured, the callback host is allowed.
-func (p *Purchases) verifySSVSignature(callbackURL string) bool {
-	if len(p.ssvKey) == 0 {
-		return false
-	}
-	u, err := url.Parse(callbackURL)
-	if err != nil {
-		return false
-	}
-	q := u.Query()
-	sig := q.Get("signature")
-	if sig == "" {
-		return false
-	}
-	q.Del("signature")
-	u.RawQuery = q.Encode()
-	mac := hmac.New(sha256.New, p.ssvKey)
-	mac.Write([]byte(u.String()))
-	expected := base64.URLEncoding.EncodeToString(mac.Sum(nil))
-	if !hmac.Equal([]byte(expected), []byte(sig)) {
-		return false
-	}
-	if p.ssvSender != "" {
-		host := u.Hostname()
-		allowed := false
-		for _, h := range strings.Split(p.ssvSender, ",") {
-			if strings.EqualFold(strings.TrimSpace(h), host) {
-				allowed = true
-				break
-			}
-		}
-		return allowed
-	}
-	return true
 }

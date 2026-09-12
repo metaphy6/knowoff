@@ -53,6 +53,10 @@ func Load(basePath, envFile string) (*Config, error) {
 
 	var problems []string
 
+	if err := ValidateTextCutover([]byte(merged)); err != nil {
+		return nil, err
+	}
+
 	interpolated, missing := interpolateEnvVars(merged)
 	if len(missing) > 0 {
 		problems = append(problems, fmt.Sprintf("missing secret environment variables: %s", strings.Join(missing, ", ")))
@@ -189,12 +193,6 @@ func validate(cfg *Config) []string {
 	if cfg.Redis.Password == "" {
 		errs = append(errs, "redis.password is required")
 	}
-	if cfg.Storage.AccessKeyID == "" {
-		errs = append(errs, "storage.access_key_id is required")
-	}
-	if cfg.Storage.SecretAccessKey == "" {
-		errs = append(errs, "storage.secret_access_key is required")
-	}
 	if cfg.Security.JWTSigningKey == "" {
 		errs = append(errs, "security.jwt_signing_key is required")
 	}
@@ -217,8 +215,20 @@ func validate(cfg *Config) []string {
 	if screening.TimeoutS < 0 || screening.TimeoutS > 30 {
 		errs = append(errs, "moderation.content_screening.timeout_s must be between 0 and 30")
 	}
+	errs = append(errs, validateAvatarScreening(cfg.Moderation.AvatarScreening)...)
+	if cfg.Moderation.AvatarUploadSlots < 0 || cfg.Moderation.AvatarUploadSlots > 16 {
+		errs = append(errs, "moderation.avatar_upload_slots must be between 0 and 16 (0 uses 2)")
+	}
 	errs = append(errs, validateTextConfig(cfg)...)
 	errs = append(errs, validateTrustConfig(cfg.Trust)...)
+	errs = append(errs, validateOAuthConfig(cfg.Security.OAuth)...)
+	errs = append(errs, validateBilling(cfg.Billing, cfg.Tuning.Economy)...)
+	if err := cfg.Rewarded.Validate(); err != nil {
+		errs = append(errs, err.Error())
+	}
+	if (cfg.App.Env == "prod" || cfg.App.Env == "production") && (cfg.Billing.Google.AllowTestPurchases || cfg.Billing.Apple.Environment == "Sandbox") {
+		errs = append(errs, "billing sandbox verification is forbidden in production")
+	}
 	return errs
 }
 

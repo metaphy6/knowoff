@@ -5,17 +5,18 @@ description: "Neo-brutalism UI design. The Knowoff client UI (or any new screen/
 
 # Neo-brutalism UI design (Knowoff)
 
-## Scope: interface around playable media
+## Scope: interface around text gameplay
 
 This skill styles UI chrome, controls and decorative interface art. Playable
-Nowns/cards follow the Blueprint's [lo-fi image-and-text media direction](../../../BLUEPRINT.md#playable-media-direction):
-candid rough static images, modest detail and concise text. Its
-anti-rawness, zero-blur, sparse-doodle and UI motion restrictions apply to the
-interface, not the imagery inside media packs. Preserve media
-readability and loading performance without polishing it into matching pastel
-illustrations or static brand scenes. Use the [content creation](../knowoff-content-create/SKILL.md),
+Nowns and response/item cards follow the Blueprint's
+[text-only direction](../../../BLUEPRINT.md#playable-media-direction): plain
+text, readable at enlarged sizes and delivered only to authorized roles.
+Preserve wording, attribution, chronological evidence and private reveal
+semantics. Avatars, icons, fonts, QR codes and decorative artwork are separate
+non-playable consumers; never turn them into a downloaded gameplay catalog.
+Use the [content creation](../knowoff-content-create/SKILL.md),
 [review](../knowoff-content-review/SKILL.md) and
-[integration](../knowoff-content-integrate/SKILL.md) skills for that pipeline.
+[integration](../knowoff-content-integrate/SKILL.md) skills for Nown/card work.
 
 ## When to use
 
@@ -24,7 +25,7 @@ illustrations or static brand scenes. Use the [content creation](../knowoff-cont
 - Building a **new** screen or widget under `client/lib/presentation/`.
 - Reviewing a diff that touches `presentation/theme/`, `presentation/widgets/`, or
   `presentation/screens/` against the [🎨 Visual Identity chapter](../../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
-  of the roadmap.
+  of the Blueprint.
 - Any task that would otherwise reach for a stock `Card`, `Chip`, `MaterialBanner`,
   `AppBar`, or default `ThemeData` widget without a design-system-approved reason.
 

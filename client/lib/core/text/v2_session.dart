@@ -7,8 +7,11 @@ import 'v2_contract.dart';
 import 'v2_reducer.dart';
 
 class TextModeAvailability {
-  TextModeAvailability(
-      {required this.mode, required this.available, required this.languages});
+  TextModeAvailability({
+    required this.mode,
+    required this.available,
+    required this.languages,
+  });
   final String mode;
   final bool available;
   final List<Map<String, dynamic>> languages;
@@ -17,13 +20,15 @@ class TextModeAvailability {
 /// One foreground text connection. The server supplies availability and all
 /// gameplay limits; authentication and stale async callbacks are generation fenced.
 class TextSession extends ChangeNotifier {
-  TextSession(
-      {required this.transport,
-      required this.tokenLoader,
-      DateTime Function()? now})
-      : now = now ?? DateTime.now {
-    _messages = transport.messages
-        .listen(receive, onError: (_) => _failure('protocol.malformed'));
+  TextSession({
+    required this.transport,
+    required this.tokenLoader,
+    DateTime Function()? now,
+  }) : now = now ?? DateTime.now {
+    _messages = transport.messages.listen(
+      receive,
+      onError: (_) => _failure('protocol.malformed'),
+    );
     _connection = transport.state.listen((state) {
       if (_disposed || !_foreground) return;
       if (state == ConnectionState.connected) {
@@ -46,6 +51,7 @@ class TextSession extends ChangeNotifier {
   bool _disposed = false, ready = false;
   bool _foreground = true, _helloPending = false, _admitted = false;
   final _controls = <String, String>{};
+  final noticeChanges = ChangeNotifier();
   String? _limitsHash;
   bool? _prototype;
   bool get prototype => _prototype == true;
@@ -68,7 +74,9 @@ class TextSession extends ChangeNotifier {
   int _serverOffset = 0;
   int get serverNowMS => now().millisecondsSinceEpoch + _serverOffset;
   String nextRequestID() => List.generate(
-      16, (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+    16,
+    (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+  ).join();
   Future<void> connect() {
     _foreground = true;
     return transport.connect();
@@ -83,7 +91,7 @@ class TextSession extends ChangeNotifier {
       await transport.send({
         'v': 2,
         'type': 'hello',
-        'payload': {'client_generation': 2, 'access_token': token}
+        'payload': {'client_generation': 2, 'access_token': token},
       });
     } catch (_) {
       if (!_disposed && generation == _generation) _failure('auth.required');
@@ -174,12 +182,17 @@ class TextSession extends ChangeNotifier {
         reducer ??= V2Reducer(limits!);
         ready = true;
         errorCode = null;
+        noticeChanges.notifyListeners();
         if (roomCode != null) {
           unawaited(control('room_join', {'code': roomCode}));
         }
       } else {
         if (!ready) throw const V2Failure('protocol.upgrade_required');
         switch (type) {
+          case 'system_notice':
+            V2Codec.control('systemNotice', p);
+            noticeChanges.notifyListeners();
+            break;
           case 'availability':
             V2Codec.control('availability', p);
             if (v2Hash(p['limits']) != _limitsHash ||
@@ -206,8 +219,9 @@ class TextSession extends ChangeNotifier {
               _deliveryHashes[id] = hash;
               _deliveries[id] = p;
               while (_deliveryHashes.length > limits!.maxRequestsPerSeat) {
-                final removable = _deliveryHashes.keys
-                    .where((key) => !_deliveries.containsKey(key));
+                final removable = _deliveryHashes.keys.where(
+                  (key) => !_deliveries.containsKey(key),
+                );
                 if (removable.isEmpty) break;
                 _deliveryHashes.remove(removable.first);
               }
@@ -240,8 +254,11 @@ class TextSession extends ChangeNotifier {
           case 'lobby':
             if (!_admitted) return;
             V2Codec.control('lobbyEnvelope', p);
-            final next =
-                V2Codec.decode('lobby', jsonEncode(p['lobby']), limits!);
+            final next = V2Codec.decode(
+              'lobby',
+              jsonEncode(p['lobby']),
+              limits!,
+            );
             if (p['seat'] is! int ||
                 !(next['seats'] as List).any((s) => s['seat'] == p['seat']) ||
                 p['code'] is! String ||
@@ -274,8 +291,12 @@ class TextSession extends ChangeNotifier {
           case 'queue':
             if (!_admitted) return;
             V2Codec.control('queue', p);
-            if (!['waiting', 'choice_required', 'assigned', 'left']
-                    .contains(p['status']) ||
+            if (![
+                  'waiting',
+                  'choice_required',
+                  'assigned',
+                  'left',
+                ].contains(p['status']) ||
                 p['joined_at_ms'] is! int ||
                 p['decision_at_ms'] is! int) {
               throw const V2Failure('protocol.malformed');
@@ -323,8 +344,11 @@ class TextSession extends ChangeNotifier {
       }
       reducer?.disconnect();
       if (ready &&
-          ['stream.gap', 'stream.stale_evidence', 'history.integrity']
-              .contains(e.code)) {
+          [
+            'stream.gap',
+            'stream.stale_evidence',
+            'history.integrity',
+          ].contains(e.code)) {
         unawaited(control('resync', {}));
       } else {
         ready = false;
@@ -366,10 +390,13 @@ class TextSession extends ChangeNotifier {
       if (m['available'] != languages.isNotEmpty) {
         throw const V2Failure('protocol.malformed');
       }
-      result.add(TextModeAvailability(
+      result.add(
+        TextModeAvailability(
           mode: m['mode_id'],
           available: m['available'],
-          languages: List.unmodifiable(languages)));
+          languages: List.unmodifiable(languages),
+        ),
+      );
     }
     if (seen.length != textModes.length) {
       throw const V2Failure('protocol.malformed');
@@ -384,14 +411,21 @@ class TextSession extends ChangeNotifier {
     if (_controls.length >= limits!.maxRequestsPerSeat) {
       throw const V2Failure('request.limit');
     }
-    if (type == 'resync' && reducer?.current != null) reducer!.disconnect();
+    if (type == 'resync' && reducer?.current != null) {
+      reducer!.disconnect();
+      notifyListeners();
+    }
     if (['queue_join', 'room_create', 'room_join', 'rematch'].contains(type)) {
       _admitted = true;
     }
     final requestID = nextRequestID();
     _controls[requestID] = type;
-    return transport.send(
-        {'v': 2, 'type': type, 'request_id': requestID, 'payload': payload});
+    return transport.send({
+      'v': 2,
+      'type': type,
+      'request_id': requestID,
+      'payload': payload,
+    });
   }
 
   Future<void> act(Map<String, dynamic> action) {
@@ -473,6 +507,7 @@ class TextSession extends ChangeNotifier {
     unawaited(_messages.cancel());
     unawaited(_connection.cancel());
     unawaited(transport.close());
+    noticeChanges.dispose();
     super.dispose();
   }
 }

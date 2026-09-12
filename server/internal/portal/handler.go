@@ -2,13 +2,9 @@ package portal
 
 import (
 	"context"
-	"fmt"
-	"math/rand"
 	"net/http"
-	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
 // Handler returns the public contributor portal HTTP handler mounted at /portal/.
@@ -25,9 +21,11 @@ func (m *Manager) Handler() http.Handler {
 	mux.HandleFunc("POST /portal/submissions", m.requireAuth(m.submissionCreate))
 	mux.HandleFunc("POST /portal/submissions/{id}/submit", m.requireAuth(m.submissionSubmit))
 	mux.HandleFunc("POST /portal/submissions/{id}/withdraw", m.requireAuth(m.submissionWithdraw))
-	mux.HandleFunc("GET /portal/simulate", m.requireRole(RoleCurator, m.simulateForm))
-	mux.HandleFunc("POST /portal/simulate", m.requireRole(RoleCurator, m.simulateRun))
+	mux.HandleFunc("GET /portal/simulate", m.requireRole(RoleCurator, m.simulateRetired))
+	mux.HandleFunc("POST /portal/simulate", m.requireRole(RoleCurator, m.simulateRetired))
 	mux.HandleFunc("GET /portal/challenge", m.requireAuth(m.challengeView))
+	mux.HandleFunc("GET /portal/guard", m.requireRole(RoleGuard, m.guardForm))
+	mux.HandleFunc("POST /portal/guard/freeze", m.requireRole(RoleGuard, m.guardFreezePost))
 	mux.HandleFunc("POST /portal/challenge/entry", m.requireAuth(m.challengeEntryPost))
 	mux.HandleFunc("POST /portal/challenge/vote", m.requireAuth(m.challengeVotePost))
 	return mux
@@ -66,12 +64,7 @@ func (m *Manager) index(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Studio unavailable. Please try again.", 500)
 		return
 	}
-	canSimulate, err := m.HasRole(r.Context(), id, RoleCurator)
-	if err != nil {
-		http.Error(w, "Roles unavailable.", 500)
-		return
-	}
-	portalPage(w, r, "Contributor studio", "Your ideas, a little editorial discipline, and a suspicious amount of personality.", overviewBody, map[string]any{"Role": role, "Submissions": len(subs), "CanSimulate": canSimulate})
+	portalPage(w, r, "Contributor studio", "Your ideas, a little editorial discipline, and a suspicious amount of personality.", overviewBody, map[string]any{"Role": role, "Submissions": len(subs)})
 }
 
 func (m *Manager) applyForm(w http.ResponseWriter, r *http.Request) {
@@ -160,80 +153,10 @@ func (m *Manager) submissionWithdraw(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/portal/submissions", http.StatusSeeOther)
 }
 
-func (m *Manager) simulateForm(w http.ResponseWriter, r *http.Request) {
-	portalPage(w, r, "Deal simulator", "Test a Nown with the same dealer the game uses.", simulatorBody, nil)
-}
-
-func (m *Manager) simulateRun(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
-	tableSize, err := strconv.Atoi(r.FormValue("table_size"))
-	if err != nil || (tableSize != 4 && tableSize != 6) {
-		http.Error(w, "invalid table size", http.StatusBadRequest)
-		return
-	}
-	nownID := r.FormValue("nown_id")
-	if nownID == "" {
-		http.Error(w, "nown id required", http.StatusBadRequest)
-		return
-	}
-	seed, err := strconv.ParseInt(r.FormValue("seed"), 10, 64)
-	if err != nil {
-		seed = 42
-	}
-
-	if m.media == nil {
-		http.Error(w, "The media pack is not available yet.", http.StatusServiceUnavailable)
-		return
-	}
-	pack := m.media.Active()
-	if pack == nil {
-		http.Error(w, "no media pack loaded", http.StatusServiceUnavailable)
-		return
-	}
-	if pack.MediaByID(nownID) == nil {
-		http.Error(w, "nown not found in active pack", http.StatusNotFound)
-		return
-	}
-
-	dealing := media.DealingTuning{
-		BandHigh:          m.cfg.Tuning.Dealing.BandHigh,
-		BandLow:           m.cfg.Tuning.Dealing.BandLow,
-		MinHighPerNown:    m.cfg.Tuning.Dealing.MinHighPerNown,
-		MinDistantPerNown: m.cfg.Tuning.Dealing.MinDistantPerNown,
-	}
-	dealer := media.NewDealer(pack, dealing)
-	dealer.Hand = media.HandTuning{Size: m.cfg.Tuning.Hand.Size, DrawPile: m.cfg.Tuning.Hand.DrawPile}
-	rng := rand.New(rand.NewSource(seed))
-	result, err := dealer.Deal(tableSize, []string{nownID}, rng)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("deal failed: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	type seatHand struct {
-		Seat        int
-		Cards, Draw string
-	}
-	var hands []seatHand
-	for i, hand := range result.Hands {
-		hands = append(hands, seatHand{i + 1, joinIDs(hand.Cards), joinIDs(hand.DrawPile)})
-	}
-	portalPage(w, r, "Deal simulator result", "A deterministic deal from the active pack.", `<p>Pack <code>{{.Data.Pack}}</code> · Nown <code>{{.Data.Nown}}</code> · Seed {{.Data.Seed}}</p><div class="table-scroll"><table><thead><tr><th>Seat</th><th>Hand card IDs</th><th>Draw pile IDs</th></tr></thead><tbody>{{range .Data.Hands}}<tr><td>{{.Seat}}</td><td><code>{{.Cards}}</code></td><td><code>{{.Draw}}</code></td></tr>{{end}}</tbody></table></div><a class="button secondary" href="/portal/simulate">Deal another hand</a>`, map[string]any{"Pack": pack.Manifest.PackTag, "Nown": nownID, "Seed": seed, "Hands": hands})
-
-}
-
-func joinIDs(ids []string) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	out := ids[0]
-	for _, id := range ids[1:] {
-		out += ", " + id
-	}
-	return out
+// simulateRetired preserves authentication, role and browser CSRF guards while
+// refusing the obsolete dealer before parsing any simulation input.
+func (m *Manager) simulateRetired(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "The legacy deal simulator is retired. Use the reviewed text tooling.", http.StatusGone)
 }
 
 func (m *Manager) challengeView(w http.ResponseWriter, r *http.Request) {

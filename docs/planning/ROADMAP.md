@@ -1,7 +1,7 @@
 # 🗺 Knowoff — Text Transition Roadmap
 
-**Status: Paused at owner request — 2026-09-12. Phase 1 complete; Phases 2–5 implementation and integration remain in progress.**
-See the [end-of-day handoff](../reports/2026-09-12-text-transition-pause.md) for saved changes, test evidence and exact resumption work.
+**Status: Resumed at owner request — 2026-09-12. Phase 1 complete; Phases 2–5 implementation and integration in progress.**
+See the [resumption evidence](../reports/2026-09-12-text-transition-resumption.md) for current validation and remaining work; the earlier pause is historical.
 Read [Blueprint](../../BLUEPRINT.md) for normative requirements, then the
 [technical transition design](../design/DESIGN-text-transition.md) for audited
 source gaps, data contracts and retirement inventory, and the
@@ -30,11 +30,11 @@ All five modes remain intended; stagger exposure according to evidence.
 | Phase | Items | Done | Status |
 |---|---|---|---|
 | 1 — Contract, baseline and migration preflight | 12 | 12 | Complete; independent review and full validation passed |
-| 2 — Text catalog, dealing and content certification | 10 | 3 | Catalog/dealing verified; client/lifecycle/human gates open |
-| 3 — Shared match state and five mode engines | 14 | 11 | Core engines independently verified; output/client and full gate open |
-| 4 — Lobbies, protocol and client integration | 12 | 0 | Server/client implementation in progress |
-| 5 — Durable value, community and trust | 20 | 0 | Durable core verified; recovery/trust integration in progress |
-| 6 — Retirement, compatibility and operations | 11 | 0 | Planned |
+| 2 — Text catalog, dealing and content certification | 10 | 5 | Catalog, Unicode, dealing and contribution lifecycle verified; action/pinning audit and human gates open |
+| 3 — Shared match state and five mode engines | 14 | 13 | Engine, authenticated network matrix and lock repair verified; final combined gate open |
+| 4 — Lobbies, protocol and client integration | 12 | 10 | Technical integration independently verified; physical-device journeys/performance and final gate open |
+| 5 — Durable value, community and trust | 20 | 5 | Guard, weekly lifecycle, OAuth and curation/report integration verified; remaining value/trust gates open |
+| 6 — Retirement, compatibility and operations | 11 | 0 | Drain and isolated restore proofs in progress; full retirement gates open |
 | 7 — Playtests, business validation and release | 12 | 0 | Planned |
 
 Counts reflect actual task boxes, not inherited phase completion. Run
@@ -44,7 +44,10 @@ old `phase-N` tracking IDs refer to the archived roadmap.
 
 ## Source-backed readiness correction
 
-The audit is based on repository source, not production inspection. Open risks:
+The following findings describe the pre-transition baseline, not production inspection.
+Engine, queue, replay, client and session repairs now have scoped evidence in
+the [resumption record](../reports/2026-09-12-text-transition-resumption.md);
+retirement and the final unified gate remain open. Original findings:
 
 - Draw handler permits out-of-turn draw and publicly reveals new card identities.
 - Per-round play/lost-card maps reset; content IDs conflate copy ownership.
@@ -66,7 +69,7 @@ Exact symbols, table dispositions and acceptance evidence belong to the
 transition design. Preserve existing failing-test evidence until resolved and
 record fixes with their regression proof. The unified-runner/compiler issues
 above are addressed by the [Phase 1 foundation](../reports/2026-09-12-text-phase1-validation.md);
-the listed runtime defects remain open.
+current checkbox status and the resumption record identify the remaining runtime proof.
 
 ## Execution discipline and dependency order
 
@@ -254,13 +257,13 @@ normalization damaging language, treating a synthetic pass as humor proof.
 pack refusal, immutable activation and deterministic fixture replay.
 
 - [x] Implement versioned text-only manifest/records with mode/pool/language/rules suitability, provenance, hashes and stable content revisions; reject nontext active data.
-- [ ] Implement bounded Unicode text validation/rendering contract, safe normalization and duplicate review; malicious markup/control characters and Turkish/RTL fixtures.
-- [ ] Pin complete validated text snapshots per match; failed activation leaves prior release active, and mid-match activation never changes wording or evidence.
+- [x] Implement bounded Unicode text validation/rendering contract, safe normalization and duplicate review; malicious markup/control characters and Turkish/RTL fixtures.
+- [x] Pin complete validated text snapshots per match; failed activation leaves prior release active, and mid-match activation never changes wording or evidence.
 - [x] Replace required multimodal assumptions with reviewed versioned text suitability; record optional evaluator/model data without leaking candidate bands to clients.
 - [x] Deal role-blind 5+3 against every scheduled Nown and reject infeasible setup; test retained hand/reserve coverage instead of discarded intermediate selections.
 - [ ] Certify distinct neutral system seeds independent of roles/prompts, unique copy identities and mode-specific reachable action/depletion viability.
 - [ ] Build isolated synthetic fixtures for five modes, small exhaustive ownership/state tests and reproducible production-candidate schedule simulations.
-- [ ] Connect accepted immutable contributions to reviewed bundle/certify/publish/activate lifecycle; preserve consent/credits and forbid duplicate publication rewards.
+- [x] Connect accepted immutable contributions to reviewed bundle/certify/publish/activate lifecycle; preserve consent/credits and forbid duplicate publication rewards.
 - [ ] Run editorial pilots in three themes/two cultures at 4/6 sizes; retain comprehension/ambiguity/first-seat/draw/repetition evidence per mode and language.
 - [ ] Gate: technical certification and human release decision both present for each candidate mode/language; old seed volume counts never constitute production readiness.
 
@@ -268,8 +271,9 @@ pack refusal, immutable activation and deterministic fixture replay.
 reviewed mode suitability and role-blind retained 5+3 dealing passed independent
 source review and cold tests: 35 media top-level tests (123 terminal cases) and
 9 CLI tests, zero failures/skips. Run `text-transition-rest-20260912` records
-exact logs. Unicode/client rendering, runtime pinning/lifecycle integration and
-actual editorial/release evidence remain separately open; synthetic fixtures
+exact logs. Unicode/client rendering and accepted-source lifecycle now have independent
+proof in the resumption record. Final pinning/action audit and actual
+editorial/release evidence remain separately open; synthetic fixtures
 never authorize production activation.
 
 #### Phase 2 execution detail — 2026-09-12
@@ -280,9 +284,9 @@ exercise implementation with zero live value; they never satisfy human review.
 These numbered children decompose the ten parent items without changing counts.
 
 **Ownership/API.** Content owns `server/pkg/media/`, `tools/mediapack/` and their
-fixtures; the parent coordinates `portal`/`workbench` adapters and config. Reuse
-`Manifest`, `Pack`, `LoadPack`, `Certify`, `Dealer.Deal` and `Manager` boundaries
-where compatible; version incompatible records explicitly. Agree an immutable
+fixtures; the parent coordinates `portal`/`workbench` adapters and config. Use the implemented
+`TextSnapshot`, `TextDeal`, `LoadTextPack`, `CertifyText` and `TextReleaseStore`
+boundaries; the original image/association counterparts are retired. Agree an immutable
 validated release snapshot, complete secret schedule and role-blind deal result
 with the engine owner before either changes the shared call boundary. The result
 carries content revisions and extra system seeds; the engine allocates distinct
@@ -301,7 +305,7 @@ omitted metadata may masquerade as whole-schedule suitability.
 | 2a — Text boundary | Freeze configurable UTF-8 byte bounds and normalization rules shared with client validation, with grapheme-aware layout; reject invalid Unicode, blanks, excess length and spoofing controls while preserving Turkish casing, accents and legitimate RTL. |
 | 2b — Duplicate/render proof | Separate canonical duplicate candidates from human near-duplicate decisions; hostile markup remains inert plain text, with expansion/line-overflow fixtures and no URL fetch. |
 | 3a — Immutable lookup | Add release-bound lookup that cannot expose mutable manager storage; attempted caller mutation and failed activation leave existing snapshots unchanged. |
-| 3b — Match pin adapter | Replace global active lookups in match rendering with pinned release bytes; replay the Phase 1 same-ID wording-drift reproduction and prove history/reconnect/verdict retain original wording. Parent coordinates `game/payload.go` with engine work. |
+| 3b — Match pin adapter | Replace global active lookups in match rendering with pinned release bytes; replay the Phase 1 same-ID wording-drift reproduction and prove history/reconnect/verdict retain original wording. Parent coordinates `game/text_snapshot.go` with engine work. |
 | 4 — Suitability | Version reviewed mode/prompt/card relations and optional evaluator metadata; validate pool/rules/language coverage without mandatory synthetic vectors. Negative projections prove candidates/model/thresholds never enter player DTOs. |
 | 5a — Schedule/retention | Select distinct full 2/3-round schedules and retain each seat's actual 5+3 against every scheduled prompt; deterministic infeasible fixtures reject before admission. |
 | 5b — Fairness | Same schedule/RNG inputs produce identical deals independent of later role assignment; both-size tests inspect retained hand/reserve coverage, depletion and absence of fallback/refill. |
@@ -334,7 +338,7 @@ response/timeout races, result callbacks firing twice.
 **Proof tests.** Conserved instance multiset, exact one transition/action,
 state-machine/property/race tests, full no-leak event scanning.
 
-- [ ] Repair Room/Match lock/callback ordering with real disconnect broadcasts and concurrent completion; no socket I/O under nested state locks.
+- [x] Repair Room/Match lock/callback ordering with real disconnect broadcasts and concurrent completion; no socket I/O under nested state locks.
 - [x] Add stable match/round/action/copy identity and one-owner location registry for hand/reserve/board/discard/pending; copied wording never conflates copies.
 - [x] Implement whole-match ordered public evidence and private per-seat state, round reset and bounded snapshots using the pinned pack/rules.
 - [x] Fix draws to current-turn-only, private owner delivery/public count and exactly-once penalty; reject eliminated/disconnected/pending-offer draws.
@@ -346,7 +350,7 @@ state-machine/property/race tests, full no-leak event scanning.
 - [x] Implement Bad Bargains response deadline, disconnect/forced-transition cancellation and no-recipient pass; accept/expiry/leave race has one result.
 - [x] Implement Top That neutral seed/current-target revision and ordered chain, with no semantic superiority judge or veto.
 - [x] Prove all-mode shared vote budgets, early team victory, tied runoff, eliminated permissions, timeout penalties, grace/forfeit/low-population and begun-round-only verdict.
-- [ ] Update dev/test gamebot policies and seeded ordered replay scripts for each mode/role, own observation only; test matches never earn live value.
+- [x] Update dev/test gamebot policies and seeded ordered replay scripts for each mode/role, own observation only; test matches never earn live value.
 - [ ] Gate: engine/property/race/no-leak tests pass at 4/6 and multi-round schedules, with no pending trade crossing round/elimination/verdict and no duplicate finish.
 
 
@@ -410,16 +414,16 @@ host churn, inaccessible time-limited controls and duplicate reducer removal.
 **Proof tests.** Queue/lobby integration, protocol matrix, reducer/widget tests,
 small-screen/large-text/keyboard/screen-reader/native/Web evidence.
 
-- [ ] Implement pre-admission v2 handshake/version rejection, monotonic sequence assignment, gap detection and authorized snapshot resync without replaying mutations.
-- [ ] Implement explicit mode/size/content-language FIFO queues with no silent substitution; waiting preserves place, change leaves/rejoins atomically.
-- [ ] Implement mode availability and default/last-choice discovery; disabled/unreleased modes cannot queue or silently become another mode.
-- [ ] Implement full connected Ready lobby, revision invalidation on settings/membership, owner-only settings and deterministic host transfer; revalidate next-match Host Pass sponsorship without charging guests or silently changing packs.
-- [ ] Implement settings/Ready rematches for Local/Quick Play, host rules, replacement members and leave; Quick Play retains its caps/core-featured eligibility and same-tuple FIFO replacements. Reject downsizing over current membership; cancel old reservations on settings change.
-- [ ] Render match contract and action previews; reducers operate on copy IDs and reconcile duplicate/out-of-order events without spending another card.
-- [ ] Build five mode controls and boards with attribution/chronology, including trade recipient response and public known-card evidence.
-- [ ] Build role-scoped reconnect with current board/history/private hand/pending deadline; clear secret views on elimination/logout/match change.
-- [ ] Remove gameplay catalog sync/prefetch and migrate only obsolete cache keys/service-worker generation; retain authentication/account preferences and non-playable assets.
-- [ ] Localize mode/rule/error/instruction copy; keep content language explicit, test long/RTL/diacritic text and touch/keyboard/screen-reader action equivalence.
+- [x] Implement pre-admission v2 handshake/version rejection, monotonic sequence assignment, gap detection and authorized snapshot resync without replaying mutations.
+- [x] Implement explicit mode/size/content-language FIFO queues with no silent substitution; waiting preserves place, change leaves/rejoins atomically.
+- [x] Implement mode availability and default/last-choice discovery; disabled/unreleased modes cannot queue or silently become another mode.
+- [x] Implement full connected Ready lobby, revision invalidation on settings/membership, owner-only settings and deterministic host transfer; revalidate next-match Host Pass sponsorship without charging guests or silently changing packs.
+- [x] Implement settings/Ready rematches for Local/Quick Play, host rules, replacement members and leave; Quick Play retains its caps/core-featured eligibility and same-tuple FIFO replacements. Reject downsizing over current membership; cancel old reservations on settings change.
+- [x] Render match contract and action previews; reducers operate on copy IDs and reconcile duplicate/out-of-order events without spending another card.
+- [x] Build five mode controls and boards with attribution/chronology, including trade recipient response and public known-card evidence.
+- [x] Build role-scoped reconnect with current board/history/private hand/pending deadline; clear secret views on elimination/logout/match change.
+- [x] Remove gameplay catalog sync/prefetch and migrate only obsolete cache keys/service-worker generation; retain authentication/account preferences and non-playable assets.
+- [x] Localize mode/rule/error/instruction copy; keep content language explicit, test long/RTL/diacritic text and touch/keyboard/screen-reader action equivalence.
 - [ ] Exercise native/PWA 4/6-seat flows, resize/reduced motion, stale deep links, old client/new server and new client/old server refusal; profile action/history updates against Blueprint client p95 ≤16.7 ms on the stated low-end device.
 - [ ] Gate: no text secret in downloaded catalog, persistent cache, logs, unauthorized/hidden/eliminated semantics or unauthorized snapshot; active-Nower reveal is screen-reader accessible, all five action and lobby journeys proven, no stale hidden controls.
 
@@ -472,22 +476,22 @@ legacy-reference loss, false billing/readiness claims.
 **Proof tests.** Real PostgreSQL transactions/concurrency/failure injection,
 pre/post balance+ledger+receipt+FK parity, privilege/privacy tests.
 
-- [ ] Apply additive schema and resumable bounded backfill to test copies; old rows remain legacy/unknown, not fabricated new-mode history.
-- [ ] Implement stable match/account admission and exactly-once start counter; share Quick Play caps across modes, release canceled reservations and preserve local uncapped access.
-- [ ] Implement idempotent durable result/points/XP/leaderboard/Noin settlement with transaction/outbox recovery and no duplicate value after callback/crash retry, including scored low-population endings.
-- [ ] Implement confirmed server-interruption closure and exactly-once free-allowance compensation; preserve committed awards, issue no fabricated completion/first-win/XP/points and prove crash-after-start/mid-award/retry.
-- [ ] Repair daily leaderboard counts, concurrent first-win/first-counter creation and conversion/earn caps at UTC/week boundaries across modes.
-- [ ] Preserve instant durable event Noin plus private settlement, absent/low-population rules and prototype zero-value; no rewards for item trades or ratings.
+- [x] Apply additive schema and resumable bounded backfill to test copies; old rows remain legacy/unknown, not fabricated new-mode history.
+- [x] Implement stable match/account admission and exactly-once start counter; share Quick Play caps across modes, release canceled reservations and preserve local uncapped access.
+- [x] Implement idempotent durable result/points/XP/leaderboard/Noin settlement with transaction/outbox recovery and no duplicate value after callback/crash retry, including scored low-population endings.
+- [x] Implement confirmed server-interruption closure and exactly-once free-allowance compensation; preserve committed awards, issue no fabricated completion/first-win/XP/points and prove crash-after-start/mid-award/retry.
+- [x] Repair daily leaderboard counts, concurrent first-win/first-counter creation and conversion/earn caps at UTC/week boundaries across modes.
+- [x] Preserve instant durable event Noin plus private settlement, absent/low-population rules and prototype zero-value; no rewards for item trades or ratings.
 - [ ] Reconcile legacy theme entitlements using reviewed equivalent-benefit mapping; inventory unresolved paid promises and remedy before disabling access.
 - [ ] Preserve consent/submission/challenge/report relationships and text-only new-write controls; approvals/payments never rerun from backfill/publication.
-- [ ] Complete text curation/activation/takedown and public report resolution with immutable revisions; automated screening plus human decision before visibility.
-- [ ] Complete challenge scheduler and exactly-once weekly title/payout transfer with restart and week-boundary tests.
-- [ ] Repair Guard identity, overlapping suspension isolation and expiry; prove admin-final enforcement and role separation.
+- [x] Complete text curation/activation/takedown and public report resolution with immutable revisions; automated screening plus human decision before visibility.
+- [x] Complete challenge scheduler and exactly-once weekly title/payout transfer with restart and week-boundary tests.
+- [x] Repair Guard identity, overlapping suspension isolation and expiry; prove admin-final enforcement and role separation.
 - [ ] Implement versioned chat/UGC terms acceptance and private user block/report/contact journey: hide authored chat/UGC, preserve required game evidence, prevent future co-matching/invites and prove no role leak or mid-match score manipulation; review platform compatibility.
 - [ ] Complete audited moderation/admin operations and text-provider contribution journey with failure/no-visibility proof.
-- [ ] Complete OAuth linking and second-device restoration with account-collision, revoked-token and lost-session proofs.
+- [x] Complete OAuth linking and second-device restoration with account-collision, revoked-token and lost-session proofs.
 - [ ] Complete in-app account deletion with reviewed retention, relational/JSONB/blob cleanup and reauthentication tests.
-- [ ] Complete entitled avatar screening/activation/takedown with unchanged non-playable WebP behavior and rejected-provider proof.
+- [x] Complete entitled avatar screening/activation/takedown with unchanged non-playable WebP behavior and rejected-provider proof.
 - [ ] Complete platform receipt validation, restore/refund and idempotent entitlements using platform test evidence.
 - [ ] Complete verified SSV/Premium doubler and consent flows with replay, refusal and private reward tests.
 - [ ] Verify ledger append-only enforcement, wallet reconciliation and deletion/retention handling across rows/JSONB/blobs; no private role rewards in public stats/analytics.
@@ -561,7 +565,7 @@ API: `AcquireTextOwner(ctx, dedicatedDB)` returns an immutable
 an owner-bound value-store constructor supplies that token to all new writes.
 `RecoverLostOwners(ctx, token, limit)` returns aggregate released/cancelled/
 interrupted/pending counts and completion. Migration 12 remains the trust lane;
-14 may separately extend Guard identity. No hidden match state is persisted.
+14 contains immutable development identity; 15 is reserved for Guard enforcement. 16 is provisionally reserved for durable challenge lifecycle. No hidden match state is persisted.
 
 The singleton guard precedes match, week, sorted accounts, day, profile and
 wallet locks; takeover cannot pass an in-flight guarded transaction. Persist

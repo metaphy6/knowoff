@@ -419,5 +419,327 @@
   "textPoked": "Sana dürtü gönderildi",
   "@textPoked": {
     "description": "Brief accessible feedback when a new live poke targets this player."
+  },
+  "safetyTitle": "Güvenlik ve gizlilik",
+  "@safetyTitle": {
+    "description": "Safety and account controls: safetyTitle"
+  },
+  "safetyIntro": "Kontrol sende, hesap senin. Bildirimler gizlidir; içerik koşullarını kabul etmeden de gönderebilirsin.",
+  "@safetyIntro": {
+    "description": "Safety and account controls: safetyIntro"
+  },
+  "safetyTerms": "Kullanıcı koşulları",
+  "@safetyTerms": {
+    "description": "Safety and account controls: safetyTerms"
+  },
+  "safetyTermsUnavailable": "Kullanıcı koşulları henüz yayımlanmadı. Yazılı sohbet ve katkılar kullanılamıyor.",
+  "@safetyTermsUnavailable": {
+    "description": "Safety and account controls: safetyTermsUnavailable"
+  },
+  "safetyAccept": "Bu koşulları kabul et",
+  "@safetyAccept": {
+    "description": "Safety and account controls: safetyAccept"
+  },
+  "safetyAccepted": "Güncel koşullar kabul edildi",
+  "@safetyAccepted": {
+    "description": "Safety and account controls: safetyAccepted"
+  },
+  "safetyTermsRequired": "Yazılı sohbet için güncel kullanıcı koşullarını inceleyip kabul et. Hazır Sohbet kullanılabilir.",
+  "@safetyTermsRequired": {
+    "description": "Safety and account controls: safetyTermsRequired"
+  },
+  "safetyBlocks": "Engellenen hesaplar",
+  "@safetyBlocks": {
+    "description": "Safety and account controls: safetyBlocks"
+  },
+  "safetyBlocksEmpty": "Bu sayfada engellenen hesap yok.",
+  "@safetyBlocksEmpty": {
+    "description": "Safety and account controls: safetyBlocksEmpty"
+  },
+  "safetyNext": "Sonraki sayfa",
+  "@safetyNext": {
+    "description": "Safety and account controls: safetyNext"
+  },
+  "safetyUnblock": "Engeli kaldır",
+  "@safetyUnblock": {
+    "description": "Safety and account controls: safetyUnblock"
+  },
+  "safetyBlock": "Bu oyuncuyu engelle",
+  "@safetyBlock": {
+    "description": "Safety and account controls: safetyBlock"
+  },
+  "safetyBlockHint": "Engelleme, oyuncunun yazdığı sohbeti senden gizler ve sonraki eşleşmeleri önler. Bu maç, oylar ve puanlar değişmez.",
+  "@safetyBlockHint": {
+    "description": "Safety and account controls: safetyBlockHint"
+  },
+  "safetyBlocked": "Oyuncu engellendi",
+  "@safetyBlocked": {
+    "description": "Safety and account controls: safetyBlocked"
+  },
+  "safetySupport": "Destek ile iletişim",
+  "@safetySupport": {
+    "description": "Safety and account controls: safetySupport"
+  },
+  "safetyPrivacy": "Gizlilik politikası",
+  "@safetyPrivacy": {
+    "description": "Safety and account controls: safetyPrivacy"
+  },
+  "safetyRestore": "Kayıtlı hesabın geri yüklenemedi. Bağlanınca yeniden dene veya aynı hesabı kurtarmak için destek ile iletişime geç.",
+  "@safetyRestore": {
+    "description": "Safety and account controls: safetyRestore"
+  },
+  "textReport": "Metni bildir",
+  "textReportConfirm": "Bu metin hakkında bildirim gönderilsin mi? Bir neden seç.",
+  "textReportInappropriate": "Uygunsuz içerik",
+  "textReportIncorrect": "Metin veya çeviri hatası",
+  "textReportOther": "Diğer içerik sorunu",
+  "textReportSend": "Bildirimi gönder",
+  "textReportSent": "Bildirim alındı.",
+  "textReportFailed": "Bildirim doğrulanamadı. Aynı bildirimi yeniden dene.",
+  "oauthTitle": "Hesabın",
+  "oauthIntro": "Bu cihazdaki ilerlemeni Google veya Facebook ile bağla ya da daha önce bağladığın ilerlemeyi geri yükle.",
+  "oauthLink": "Bu ilerlemeyi kaydet",
+  "oauthRestore": "Bağlı ilerlemeyi geri yükle",
+  "oauthGoogle": "Google ile devam et",
+  "oauthFacebook": "Facebook ile devam et",
+  "oauthPending": "Tarayıcıda giriş yapmayı tamamla, ardından buraya dön.",
+  "oauthCheck": "Girişi kontrol et",
+  "oauthCancel": "Girişi iptal et",
+  "oauthOpenBrowser": "Giriş sayfasını yeniden aç",
+  "oauthSwitchTitle": "Bağlı hesaba geçilsin mi?",
+  "oauthSwitchBody": "Bu cihaz başka bir hesap kullanıyor. İlerlemen, Noin ve satın almaların ayrı kalacak; birleştirilmeyecek.",
+  "oauthSwitch": "Hesabı değiştir",
+  "oauthKeepCurrent": "Mevcut hesabı koru",
+  "oauthSuccess": "Bağlı hesabın hazır.",
+  "oauthUnavailable": "Giriş şu anda kullanılamıyor. Daha sonra tekrar dene.",
+  "oauthUnlinked": "Bu girişe bağlı bir Knowoff hesabı yok. İlerlemenin bulunduğu cihaza dön ve önce orada hesabını bağla.",
+  "oauthConflict": "Bu giriş zaten başka bir hesaba bağlı. İlerlemesini kullanmak için geri yükle veya farklı bir giriş seç.",
+  "oauthExpired": "Bu girişin süresi doldu. Yeniden başla.",
+  "oauthInvalid": "Bu giriş doğrulanamadı. Yeniden başla.",
+  "oauthRateLimited": "Çok fazla giriş denemesi yapıldı. Daha sonra tekrar dene.",
+  "oauthMismatch": "Dönen hesap bu cihazla eşleşmiyor. Mevcut hesabın değişmedi.",
+  "oauthSessionRequired": "Hesabını bağlamak için mevcut oturumunu yenile veya daha önce bağladığın bir hesabı geri yükle.",
+  "oauthBrowserFailed": "Tarayıcı açılamadı. Giriş sayfasını açmayı tekrar dene.",
+  "@oauthTitle": {
+    "description": "Account linking and restoration: Title"
+  },
+  "@oauthIntro": {
+    "description": "Account linking and restoration: Intro"
+  },
+  "@oauthLink": {
+    "description": "Account linking and restoration: Link"
+  },
+  "@oauthRestore": {
+    "description": "Account linking and restoration: Restore"
+  },
+  "@oauthGoogle": {
+    "description": "Account linking and restoration: Google"
+  },
+  "@oauthFacebook": {
+    "description": "Account linking and restoration: Facebook"
+  },
+  "@oauthPending": {
+    "description": "Account linking and restoration: Pending"
+  },
+  "@oauthCheck": {
+    "description": "Account linking and restoration: Check"
+  },
+  "@oauthCancel": {
+    "description": "Account linking and restoration: Cancel"
+  },
+  "@oauthOpenBrowser": {
+    "description": "Account linking and restoration: OpenBrowser"
+  },
+  "@oauthSwitchTitle": {
+    "description": "Account linking and restoration: SwitchTitle"
+  },
+  "@oauthSwitchBody": {
+    "description": "Account linking and restoration: SwitchBody"
+  },
+  "@oauthSwitch": {
+    "description": "Account linking and restoration: Switch"
+  },
+  "@oauthKeepCurrent": {
+    "description": "Account linking and restoration: KeepCurrent"
+  },
+  "@oauthSuccess": {
+    "description": "Account linking and restoration: Success"
+  },
+  "@oauthUnavailable": {
+    "description": "Account linking and restoration: Unavailable"
+  },
+  "@oauthUnlinked": {
+    "description": "Account linking and restoration: Unlinked"
+  },
+  "@oauthConflict": {
+    "description": "Account linking and restoration: Conflict"
+  },
+  "@oauthExpired": {
+    "description": "Account linking and restoration: Expired"
+  },
+  "@oauthInvalid": {
+    "description": "Account linking and restoration: Invalid"
+  },
+  "@oauthRateLimited": {
+    "description": "Account linking and restoration: RateLimited"
+  },
+  "@oauthMismatch": {
+    "description": "Account linking and restoration: Mismatch"
+  },
+  "@oauthSessionRequired": {
+    "description": "Account linking and restoration: SessionRequired"
+  },
+  "@oauthBrowserFailed": {
+    "description": "Account linking and restoration: BrowserFailed"
+  },
+  "@textReport": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportConfirm": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportInappropriate": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportIncorrect": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportOther": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportSend": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportSent": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportFailed": {
+    "description": "Visible-text content report control."
+  },
+  "serviceAvatarCost": "Kalıcı Özel Avatar kilidini bir kez açın. Sonraki yüklemeler ek Noin gerektirmez.",
+  "@serviceAvatarCost": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarCostPrice": "Kalıcı Özel Avatar kilidi: {price} Noin.",
+  "@serviceAvatarCostPrice": {
+    "description": "Custom avatar ownership, screening or activation status.",
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceAvatarReview": "Görseliniz etkinleşmeden önce denetlenir. Yükleme başarısız olursa mevcut avatarınız korunur.",
+  "@serviceAvatarReview": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarSubmitted": "Avatar onaylandı ve güncellendi.",
+  "@serviceAvatarSubmitted": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarOwned": "Özel Avatar zaten açık. Yükleme için ek Noin alınmaz.",
+  "@serviceAvatarOwned": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnavailable": "Avatar denetimi kullanılamıyor. Görseliniz ve kilit açma hakkınız değişmedi.",
+  "@serviceAvatarUnavailable": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarRejected": "Bu görsel onaylanmadı. Başka bir görsel seçin; kilit açma hakkınız korunur.",
+  "@serviceAvatarRejected": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarChanged": "Hesabınız veya avatarınız değişti. Devam etmeden önce görseli yeniden seçin.",
+  "@serviceAvatarChanged": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlock": "Özel Avatar kilidini aç",
+  "@serviceAvatarUnlock": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlockConfirm": "Kalıcı kilit açma hakkını satın al",
+  "@serviceAvatarUnlockConfirm": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "purchaseTitle": "Uygulama içi satın almalar",
+  "purchaseOpening": "Mağaza açılıyor…",
+  "purchasePending": "Mağazanın ödemeyi tamamlaması bekleniyor.",
+  "purchaseVerifying": "Knowoff ile doğrulanıyor…",
+  "purchaseVerified": "Satın alma doğrulandı. Hesabın güncellendi.",
+  "purchaseCanceled": "Satın alma iptal edildi.",
+  "purchaseFailed": "Satın alma tamamlanamadı.",
+  "purchaseRetryMessage": "Doğrulama tamamlanmadı. Yeniden satın almadan tekrar dene.",
+  "purchaseAccountRequired": "Bu satın almanın ait olduğu Knowoff hesabını geri yükle.",
+  "purchaseOwned": "Bu hesapta Premium zaten etkin.",
+  "purchaseRestore": "Satın almaları geri yükle",
+  "purchaseRetry": "Doğrulamayı tekrar dene",
+  "purchaseRestoreHint": "Aboneliklerini aynı mağaza ve Knowoff hesaplarıyla geri yükle. Kullanılan Noin paketleri Knowoff hesabında kalır.",
+  "purchaseMonthlyTerms": "Mağazadan iptal edilene kadar gösterilen mağaza fiyatıyla her ay yenilenir.",
+  "purchaseYearlyTerms": "Mağazadan iptal edilene kadar gösterilen mağaza fiyatıyla her yıl yenilenir.",
+  "purchaseManageApple": "Apple aboneliklerini yönet",
+  "purchaseManageGoogle": "Google Play aboneliklerini yönet",
+  "purchaseBuyPrice": "Satın al · {price}",
+  "serviceBillingUnavailable": "Bu cihazda veya bu mağaza yapılandırmasında satın alma kullanılamıyor.",
+  "@purchaseTitle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseOpening": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchasePending": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseVerifying": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseVerified": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseCanceled": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseFailed": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRetryMessage": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseAccountRequired": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseOwned": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRestore": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRetry": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRestoreHint": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseMonthlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseYearlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseManageApple": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseManageGoogle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseBuyPrice": {
+    "description": "Native store purchase and restore flow.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@serviceBillingUnavailable": {
+    "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
   }
 }

@@ -100,6 +100,14 @@ func (w *Wallet) GrantTx(ctx context.Context, tx *sql.Tx, accountID string, even
 	return w.grantTxAt(ctx, tx, accountID, eventType, amount, reason, dailyCap, serverDay(time.Now().UTC()))
 }
 
+// GrantTxAt preserves the logical occurrence day across whole-transaction retries.
+func (w *Wallet) GrantTxAt(ctx context.Context, tx *sql.Tx, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64, at time.Time) (int, error) {
+	if at.IsZero() {
+		return 0, fmt.Errorf("occurrence time required")
+	}
+	return w.grantTxAt(ctx, tx, accountID, eventType, amount, reason, dailyCap, serverDay(at.UTC()))
+}
+
 func (w *Wallet) grantTxAt(ctx context.Context, tx *sql.Tx, accountID string, eventType LedgerEventType, amount int, reason string, dailyCap int64, day time.Time) (int, error) {
 	if amount <= 0 {
 		return 0, nil
@@ -123,8 +131,12 @@ func (w *Wallet) grantTxAt(ctx context.Context, tx *sql.Tx, accountID string, ev
 	countsTowardPlayCap := eventType != LedgerContributorReward && eventType != LedgerChallengeWinner
 	cappedAmount := amount
 	if countsTowardPlayCap {
- if dailyCap<0{return 0,fmt.Errorf("invalid daily cap")}
- if dailyCap==0{return 0,nil}
+		if dailyCap < 0 {
+			return 0, fmt.Errorf("invalid daily cap")
+		}
+		if dailyCap == 0 {
+			return 0, nil
+		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO daily_noin_earned(account_id,server_day,earned) VALUES($1,$2,0) ON CONFLICT DO NOTHING`, accountID, day); err != nil {
 			return 0, err
 		}

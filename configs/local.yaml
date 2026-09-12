@@ -19,32 +19,6 @@ server:
   metrics_port: 9091
   allowed_origins: ["*"]
 
-storage:
-  endpoint: http://minio:9000
-  assets_url: http://localhost:9000/knowoff
-
-media:
-  local_bundle_path: /data/packs/core-2026.10
-  workbench_ingest_path: /data/ingest
-
-security:
-  ssv_callback_key: dev-ssv-key-change-in-prod
-  oauth:
-    google:
-      client_id: dev-google-client-id
-      client_secret: dev-google-client-secret
-    facebook:
-      client_id: dev-facebook-client-id
-      client_secret: dev-facebook-client-secret
-
 tuning:
   economy:
     free_daily_quickplay_matches: 10000   # local dev: effectively unlimited
-  liquidity:
-    queue_timeout_s: 3   # local dev: backfill with bots almost immediately instead of the prod 25s wait
-
-# External dev/test bots may connect only when this block is present.
-# It is intentionally absent from prod.yaml.
-bots:
-  enabled: true
-  dev_bot_endpoint: ws://localhost:8080/ws

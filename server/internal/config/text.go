@@ -19,11 +19,11 @@ import (
 const TuningSnapshotVersion = "text-tuning-v1"
 
 func (t TuningConfig) Clone() TuningConfig {
+	t.cloneRetiredPolicy()
 	t.Game.RoomSizes = slices.Clone(t.Game.RoomSizes)
 	t.Game.DonowersBySize = maps.Clone(t.Game.DonowersBySize)
 	t.Game.VotesBySize = maps.Clone(t.Game.VotesBySize)
 	t.Game.AbandonCooldownsS = slices.Clone(t.Game.AbandonCooldownsS)
-	t.Hand.SpecialtyWeights = maps.Clone(t.Hand.SpecialtyWeights)
 	t.Economy.PlayPassPrices = maps.Clone(t.Economy.PlayPassPrices)
 	t.Economy.UnlockPrices = maps.Clone(t.Economy.UnlockPrices)
 	t.Economy.NoinBundles = slices.Clone(t.Economy.NoinBundles)
@@ -41,8 +41,8 @@ func (t TuningConfig) SHA256() (string, error) {
 	return hex.EncodeToString(hash[:]), nil
 }
 
-// TextConfig freezes the next-generation contract. It does not activate v2
-// handlers. Availability remains closed until the engine/client release gates.
+// TextConfig selects intended runtime cells. A cell is available only when its
+// immutable certified release also resolves through the server release store.
 type TextConfig struct {
 	Version       int                                    `yaml:"version"`
 	RulesVersion  string                                 `yaml:"rules_version"`
@@ -79,7 +79,7 @@ type TextCatalogTuning struct {
 }
 
 func validateTextConfig(cfg *Config) []string {
-	if cfg.Text == nil { // Existing v1 test/deployment fixtures remain readable.
+	if cfg.Text == nil { // Small validation fixtures may omit the runtime policy.
 		return nil
 	}
 	var errs []string
@@ -108,9 +108,8 @@ func validateTextConfig(cfg *Config) []string {
 		if !mode.Valid() {
 			errs = append(errs, "text.modes contains an unknown mode")
 		}
-		if availability.Enabled {
-			// Remove this admission fence only with the Phase 4 v2 integration.
-			errs = append(errs, fmt.Sprintf("text.modes.%s cannot be enabled: v2 runtime is not implemented", mode))
+		if availability.Enabled && len(availability.ContentLanguages) == 0 {
+			errs = append(errs, fmt.Sprintf("text.modes.%s.content_languages must name an enabled cell", mode))
 		}
 		seen := make(map[string]bool)
 		for _, language := range availability.ContentLanguages {
@@ -146,17 +145,22 @@ func validateTextConfig(cfg *Config) []string {
 }
 
 // ValidateTextCutover is a read-only key-presence preflight over a fully merged
-// YAML document, before secret interpolation. It is deliberately separate from
-// Load: current v1 deployments still need these keys until verified retirement.
-// The v2 activation boundary must call this preflight in Phase 4/6; passing it
-// alone neither validates a complete config nor authorizes removing consumers.
+// YAML document, called by Load before secret interpolation. Passing it alone
+// neither validates a complete config nor authorizes removing historical data.
 func ValidateTextCutover(mergedYAML []byte) error {
 	var document map[string]any
 	if err := yaml.Unmarshal(mergedYAML, &document); err != nil {
 		return fmt.Errorf("config_migration_invalid_yaml")
 	}
 	obsolete := []string{
+		"storage",
+		"media",
+		"bots",
+		"security.ssv_callback_key",
+		"security.ssv_allowed_senders",
 		"tuning.hand.specialty_weights",
+		"tuning.dealing.band_high",
+		"tuning.dealing.band_low",
 		"tuning.timers.prefetch_countdown",
 		"tuning.timers.reveal_lockout",
 		"tuning.timers.reveal_view",
@@ -169,6 +173,12 @@ func ValidateTextCutover(mergedYAML []byte) error {
 		"media.workbench_ingest_path",
 	}
 	var found []string
+	if protocol, present := document["protocol"]; present {
+		mapping, ok := protocol.(map[string]any)
+		if !ok || mapping["version"] != 2 {
+			found = append(found, "protocol.version (must be 2)")
+		}
+	}
 	for _, path := range obsolete {
 		var current any = document
 		present := true

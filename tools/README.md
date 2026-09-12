@@ -2,15 +2,18 @@
 
 ```text
 tools/
-├── mediapack/    # Go CLI: ingest → tag → embed → certify → bundle → simulate
+├── mediapack/    # Go CLI: reviewed text preparation → certify → publish → simulate
 └── gamebot/      # Go CLI: protocol-level dev/test bots
 ```
 
 Both tools are standalone Go modules that build against the same protocol and media libraries used by the server.
 
-The text transition adds versioned, text-only commands to `mediapack`; the
-legacy commands remain for historical packs. From `tools/mediapack`, use the
-shared configuration for every command:
+The `mediapack` CLI supports only versioned text commands. Legacy
+`build`, `certify`, `simulate` and `publish` commands refuse before reading or
+writing paths. `prepare_candidates.py` also refuses every invocation without
+opening inputs or importing image libraries. Historical pack and candidate
+bytes remain archived evidence. From `tools/mediapack`, use the shared
+configuration for every current command:
 
 ```bash
 go run ./cmd/mediapack text-prepare -tuning ../../configs/gameplay/tuning.yaml -input candidate.json -out prepared
@@ -74,4 +77,12 @@ ordered requests/clock steps, so keep it outside general diagnostics, client
 assets and public URLs. Console output contains aggregate outcome and evidence
 hash only. Replay verifies the pinned catalog/tuning, every recorded action,
 terminal outcome, round count and final public-evidence hash. This is local
-engine/policy evidence; the retained v1 WebSocket driver is not v2 journey proof.
+engine/policy evidence. For authenticated network proof, use the dedicated
+server-only prototype with `-text-network MODE -text-size 4/6 -text-out PATH`
+and the configured `KNOWOFF_DEV_BOT_KEY` environment secret. The default endpoint
+is `ws://127.0.0.1:8080/ws/v2`; only literal loopback prototype endpoints are
+accepted. Network execution refuses ordinary availability before admission.
+Choose exactly one command: simulation, replay or network. The old `-room`,
+`-queue` and `-count` flags are retired; conflicting or command-incompatible
+flags fail before file or network work. Existing historical replay files remain
+private evidence, not an ordinary-room bot entry point.

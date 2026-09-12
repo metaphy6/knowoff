@@ -5,16 +5,18 @@ package notices
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/config"
-	"github.com/knowoff/knowoff/server/internal/transport"
+	"github.com/knowoff/knowoff/server/internal/store"
 )
 
 // NoticeType is the kind of system notice.
@@ -46,30 +48,102 @@ type MatchmakingPauser interface {
 	SetReady(bool)
 }
 
-// Broadcaster emits events to connected clients.
-type Broadcaster interface {
-	BroadcastAll(*transport.Envelope)
-}
-
 // Manager owns system notices.
 type Manager struct {
-	db          *sql.DB
-	cfg         *config.Config
-	broadcaster Broadcaster
-	pauser      MatchmakingPauser
+	db             *sql.DB
+	cfg            *config.Config
+	pauser         MatchmakingPauser
+	refreshMu      sync.Mutex
+	changeNotifier func(context.Context) error
+	refreshHash    [32]byte
+}
+
+// SetChangeNotifier installs the text transport's public cache invalidation.
+// The HTTPS inbox remains authoritative; a failed refresh is retried on the poll.
+func (m *Manager) SetChangeNotifier(notify func(context.Context) error) {
+	m.refreshMu.Lock()
+	defer m.refreshMu.Unlock()
+	m.changeNotifier = notify
+	m.refreshHash = [32]byte{}
+}
+
+func noticeStage(n Notice, now time.Time) int {
+	if n.Type != NoticeMaintenance || n.MaintenanceStart == nil {
+		return 0
+	}
+	start := *n.MaintenanceStart
+	switch {
+	case !now.Before(start.Add(time.Duration(n.MaintenanceDurationMin) * time.Minute)):
+		return 5
+	case !now.Before(start):
+		return 4
+	case !now.Before(start.Add(-10 * time.Minute)):
+		return 3
+	case !now.Before(start.Add(-time.Hour)):
+		return 2
+	case !now.Before(start.Add(-24 * time.Hour)):
+		return 1
+	default:
+		return 0
+	}
+}
+
+func (m *Manager) refreshAt(ctx context.Context, now time.Time) error {
+	m.refreshMu.Lock()
+	defer m.refreshMu.Unlock()
+	if m.changeNotifier == nil {
+		return nil
+	}
+	active, err := m.ActiveNotices(ctx, now)
+	if err != nil {
+		return err
+	}
+	stages := make([]int, len(active))
+	for i, n := range active {
+		stages[i] = noticeStage(n, now)
+	}
+	raw, err := json.Marshal([]any{active, stages})
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(raw)
+	if digest == m.refreshHash {
+		return nil
+	}
+	if err = m.changeNotifier(ctx); err != nil {
+		return err
+	}
+	m.refreshHash = digest
+	return nil
+}
+
+// Run detects publication, withdrawal and maintenance reminder boundaries.
+// No gameplay state or financial claim depends on this best-effort invalidation.
+func (m *Manager) Run(ctx context.Context, report func(error)) {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		work, cancel := context.WithTimeout(ctx, 3*time.Second)
+		err := m.refreshAt(work, time.Now().UTC())
+		cancel()
+		if err != nil && report != nil && ctx.Err() == nil {
+			report(err)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // NewManager returns a notice manager.
 func NewManager(db *sql.DB, cfg *config.Config, pauser MatchmakingPauser) *Manager {
-	var broadcaster Broadcaster
-	if b, ok := pauser.(Broadcaster); ok {
-		broadcaster = b
-	}
-	return &Manager{db: db, cfg: cfg, broadcaster: broadcaster, pauser: pauser}
+	return &Manager{db: db, cfg: cfg, pauser: pauser}
 }
 
-// CreateNotice inserts a notice. If the notice is already published and not
-// withdrawn, it is broadcast to connected clients as a system_notice event.
+// CreateNotice commits the notice and its audit atomically. The polling
+// notifier publishes only public invalidation after commit and retries failures.
 func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error) {
 	if n.Type != NoticeMaintenance && n.Type != NoticeDowntime && n.Type != NoticeAnnouncement {
 		return uuid.Nil, fmt.Errorf("invalid notice type")
@@ -104,8 +178,10 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 
 	id := uuid.New()
 	var createdBy interface{}
+	var actor string
 	if n.CreatedBy != nil {
 		createdBy = *n.CreatedBy
+		actor = n.CreatedBy.String()
 	}
 
 	tx, err := m.db.BeginTx(ctx, nil)
@@ -113,6 +189,9 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 		return uuid.Nil, fmt.Errorf("begin notice transaction: %w", err)
 	}
 	defer tx.Rollback()
+	if err = lockNoticeActor(ctx, tx, actor); err != nil {
+		return uuid.Nil, err
+	}
 	_, err = tx.ExecContext(ctx,
 		`INSERT INTO system_notices (id, type, title, body, published_at, maintenance_start, maintenance_duration_min, created_by, created_at, updated_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, now(), now())`,
@@ -125,12 +204,11 @@ func (m *Manager) CreateNotice(ctx context.Context, n Notice) (uuid.UUID, error)
 	if err = auditNotice(ctx, tx, createdBy, "notice_create", id, map[string]any{}, map[string]any{"type": n.Type, "title": n.Title, "body": n.Body, "published_at": n.PublishedAt, "maintenance_start": n.MaintenanceStart, "maintenance_duration_min": n.MaintenanceDurationMin}); err != nil {
 		return uuid.Nil, err
 	}
+	if err = lockNoticeActor(ctx, tx, actor); err != nil {
+		return uuid.Nil, err
+	}
 	if err = tx.Commit(); err != nil {
 		return uuid.Nil, fmt.Errorf("commit notice: %w", err)
-	}
-	n.ID = id
-	if !n.PublishedAt.After(now) {
-		m.broadcastNotice(n)
 	}
 	return id, nil
 }
@@ -184,13 +262,15 @@ type LocalizedNotice struct {
 	PublishedAt            *time.Time `json:"published_at,omitempty"`
 	MaintenanceStart       *time.Time `json:"maintenance_start,omitempty"`
 	MaintenanceDurationMin int        `json:"maintenance_duration_min,omitempty"`
+	ReminderStage          int        `json:"reminder_stage"`
 }
 
 func (m *Manager) ActiveNoticesForLocale(ctx context.Context, locale string) ([]LocalizedNotice, error) {
 	if locale == "" {
 		locale = m.cfg.Localization.DefaultLocale
 	}
-	active, err := m.ActiveNotices(ctx, time.Now().UTC())
+	now := time.Now().UTC()
+	active, err := m.ActiveNotices(ctx, now)
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +284,7 @@ func (m *Manager) ActiveNoticesForLocale(ctx context.Context, locale string) ([]
 			PublishedAt:            n.PublishedAt,
 			MaintenanceStart:       n.MaintenanceStart,
 			MaintenanceDurationMin: n.MaintenanceDurationMin,
+			ReminderStage:          noticeStage(n, now),
 		})
 	}
 	return out, nil
@@ -212,6 +293,7 @@ func (m *Manager) ActiveNoticesForLocale(ctx context.Context, locale string) ([]
 // WithdrawNotice marks a notice as withdrawn.
 func (m *Manager) WithdrawNotice(ctx context.Context, id uuid.UUID, adminID ...string) error {
 	var actor any
+	var namedActor string
 	if len(adminID) > 1 {
 		return fmt.Errorf("invalid notice actor")
 	}
@@ -221,18 +303,22 @@ func (m *Manager) WithdrawNotice(ctx context.Context, id uuid.UUID, adminID ...s
 			return fmt.Errorf("invalid notice actor")
 		}
 		actor = parsed
+		namedActor = parsed.String()
 	}
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
+	if err = lockNoticeActor(ctx, tx, namedActor); err != nil {
+		return err
+	}
 	var previous sql.NullTime
 	if err = tx.QueryRowContext(ctx, `SELECT withdrawn_at FROM system_notices WHERE id=$1 FOR UPDATE`, id).Scan(&previous); err != nil {
 		return fmt.Errorf("notice unavailable: %w", err)
 	}
 	if previous.Valid {
-		return nil
+		return lockNoticeActor(ctx, tx, namedActor)
 	}
 	now := time.Now().UTC()
 	if _, err = tx.ExecContext(ctx, `UPDATE system_notices SET withdrawn_at=$2,updated_at=$2 WHERE id=$1`, id, now); err != nil {
@@ -241,7 +327,17 @@ func (m *Manager) WithdrawNotice(ctx context.Context, id uuid.UUID, adminID ...s
 	if err = auditNotice(ctx, tx, actor, "notice_withdraw", id, map[string]any{"withdrawn_at": nil}, map[string]any{"withdrawn_at": now}); err != nil {
 		return err
 	}
+	if err = lockNoticeActor(ctx, tx, namedActor); err != nil {
+		return err
+	}
 	return tx.Commit()
+}
+
+func lockNoticeActor(ctx context.Context, tx *sql.Tx, actor string) error {
+	if actor == "" && !store.HasAdminAuthorization(ctx) {
+		return nil // Explicit trusted system notice, never a browser fallback.
+	}
+	return store.LockAdminTx(ctx, tx, actor, []string{"admin"})
 }
 
 func auditNotice(ctx context.Context, tx *sql.Tx, actor any, action string, id uuid.UUID, before, after map[string]any) error {
@@ -260,43 +356,25 @@ func auditNotice(ctx context.Context, tx *sql.Tx, actor any, action string, id u
 	return nil
 }
 
-// MarkMaintenanceDrain pauses matchmaking while a future or active maintenance
-// notice exists, and resumes it otherwise.
+// MarkMaintenanceDrain closes admission only inside a published maintenance
+// window. Announcements before its start do not interrupt matchmaking.
 func (m *Manager) MarkMaintenanceDrain(ctx context.Context) error {
+	return m.markMaintenanceDrain(ctx, time.Now().UTC())
+}
+func (m *Manager) markMaintenanceDrain(ctx context.Context, now time.Time) error {
 	if m.pauser == nil {
 		return nil
 	}
-	rows, err := m.db.QueryContext(ctx,
-		`SELECT maintenance_start, maintenance_duration_min FROM system_notices
-		 WHERE type = 'maintenance'
-		   AND published_at IS NOT NULL AND published_at <= now()
-		   AND (withdrawn_at IS NULL OR withdrawn_at > now())`)
+	var paused bool
+	err := m.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM system_notices
+ WHERE type='maintenance' AND published_at IS NOT NULL AND published_at<=$1
+ AND (withdrawn_at IS NULL OR withdrawn_at>$1) AND maintenance_start<=$1
+ AND maintenance_start + maintenance_duration_min * interval '1 minute'>$1)`, now).Scan(&paused)
 	if err != nil {
+		m.pauser.SetReady(false)
 		return fmt.Errorf("query maintenance notices: %w", err)
 	}
-	defer rows.Close()
-
-	now := time.Now().UTC()
-	shouldPause := false
-	for rows.Next() {
-		var start sql.NullTime
-		var durationMin int
-		if err := rows.Scan(&start, &durationMin); err != nil {
-			continue
-		}
-		if !start.Valid {
-			continue
-		}
-		end := start.Time.Add(time.Duration(durationMin) * time.Minute)
-		if now.Before(start.Time) || (now.Equal(start.Time) || now.After(start.Time) && now.Before(end)) {
-			shouldPause = true
-			break
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	m.pauser.SetReady(!shouldPause)
+	m.pauser.SetReady(!paused)
 	return nil
 }
 
@@ -316,20 +394,6 @@ func (m *Manager) HTTPActiveNotices(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"notices": notices})
-}
-
-func (m *Manager) broadcastNotice(n Notice) {
-	if m.broadcaster == nil {
-		return
-	}
-	payload := map[string]any{
-		"id":   n.ID.String(),
-		"type": string(n.Type),
-	}
-	if len(n.Title) > 0 {
-		payload["title"] = pickLocale(n.Title, m.cfg.Localization.DefaultLocale, "en")
-	}
-	m.broadcaster.BroadcastAll(transport.NewEvent(transport.EventSystemNotice, payload))
 }
 
 func pickLocale(m map[string]string, locales ...string) string {

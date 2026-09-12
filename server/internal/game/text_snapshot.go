@@ -39,6 +39,20 @@ func (m *TextMatch) Snapshot(seat int) (v2.Snapshot, error) {
 	e = json.Unmarshal(data, &out)
 	return out, e
 }
+
+// SnapshotProjection returns a detached, role-scoped complete projection for
+// the server's recipient filter and paginator. It is not a wire frame: callers
+// must enforce the envelope's frame bound after filtering and pagination.
+func (m *TextMatch) SnapshotProjection(seat int) (v2.Snapshot, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	s, err := m.snapshotLocked(seat, m.now())
+	if err != nil {
+		return v2.Snapshot{}, err
+	}
+	return s.Clone(), nil
+}
+
 func (m *TextMatch) SnapshotPages(seat int) (v2.Snapshot, []v2.HistoryPage, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -299,4 +313,45 @@ func (m *TextMatch) ActionError(seat int, requestID string, code v2.ErrorCode) (
 	}
 	m.seq[seat]++
 	return event, nil
+}
+
+// VisibleText resolves one report target from the same role-scoped projection
+// used for delivery. It never advances the socket sequence or returns a catalog.
+func (m *TextMatch) VisibleText(seat int, ref v2.ContentRef) (v2.MatchContract, v2.TextContent, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if seat < 0 || seat >= len(m.state.Players) || ref.ContentID == "" || ref.Revision == 0 {
+		return v2.MatchContract{}, v2.TextContent{}, textError(v2.ErrUnauthorized, "content")
+	}
+	s := m.project(m.state, seat, m.now())
+	if err := s.Validate(m.limits); err != nil {
+		return v2.MatchContract{}, v2.TextContent{}, err
+	}
+	found := func(c v2.TextContent) bool { return c.ContentRef == ref }
+	if s.Private.Nown != nil && found(*s.Private.Nown) {
+		return s.Contract, *s.Private.Nown, nil
+	}
+	for _, c := range s.Private.Hand {
+		if found(c.Content) {
+			return s.Contract, c.Content, nil
+		}
+	}
+	for _, c := range s.Board.Cards {
+		if found(c.Card.Content) {
+			return s.Contract, c.Card.Content, nil
+		}
+	}
+	for _, e := range s.History {
+		for _, c := range e.Cards {
+			if found(c.Content) {
+				return s.Contract, c.Content, nil
+			}
+		}
+	}
+	for _, n := range s.VerdictNowns {
+		if found(n.Content) {
+			return s.Contract, n.Content, nil
+		}
+	}
+	return v2.MatchContract{}, v2.TextContent{}, textError(v2.ErrUnauthorized, "content")
 }

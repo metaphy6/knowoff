@@ -1,40 +1,51 @@
 # VPS migration and text-transition runbook
 
-**Status — 2026-09-12:** planned operator procedure, not an executed migration
-or verified recovery drill. The [Blueprint](../../BLUEPRINT.md) owns the target;
+**Status — 2026-09-12:** operator procedure with locally verified text-runtime
+drain; no deployment exists and no live migration has occurred. Isolated
+backup/restore evidence is tracked in the resumption report. The [Blueprint](../../BLUEPRINT.md) owns the target;
 the [transition design](../design/DESIGN-text-transition.md) owns compatibility,
 data and retirement requirements; the [Roadmap](../planning/ROADMAP.md) orders
 implementation. No production data, service, schema, DNS or storage change is
 authorized or performed by this documentation update.
 
 The target is one writable PostgreSQL database, Redis coordination and a Go
-server loading an immutable certified text bundle. The current stack still
-uses MinIO/readiness checks and the older game protocol. A host move and the
+server loading an immutable certified text bundle. The active server uses protocol v2 and checks PostgreSQL/Redis readiness;
+Compose storage and legacy source retirement remain separate gates. A host move and the
 text schema/protocol cutover are separate changes: rehearse them separately
 before combining them in an operator-approved release window.
 
-## Current gaps that block an execution claim
+## Implemented local proofs and remaining execution gates
 
-- The checked-in [snapshot script](../../infra/compose/snapshot.sh) is not a
-  safe production backup/restore procedure. Its MinIO export lacks a host
-  mount, its Redis wait is unbounded and suppresses errors, and restore removes
-  the existing named volumes. Repair it and prove an isolated restore before
-  using it for valued data. Never use that restore path as routine rollback.
-- Publishing `knowoff:drain_check` in Redis does not query active rooms. No
-  verified subscriber/response contract exists. Readiness becoming false or a
-  maintenance notice appearing also does not prove all matches and settlements
-  have drained. Add and verify an authenticated drain/status surface before
-  replacing a process with live matches.
-- Current room state lives in process memory. Redis room-to-node records and
-  an RDB snapshot do not recover hands, phases, timers or pending trades.
-- Current startup reads a local bundle; a configured storage endpoint is not
-  an implemented S3 catalog loader. Current Compose uses a development server
-  image and has `cloudflared` commented out. Prepare and verify the actual
-  production image, mounted text bundle and ingress configuration first.
-- Current financial completion applies several separate writes. Prove stable
-  match/account settlement identity and retry recovery before reopening live
-  rewards on the target. Native purchase verification remains a separate
-  launch gate; never use a test receipt flow against real purchases.
+- The [snapshot tool](../../infra/compose/snapshot.sh) now accepts only its own
+  nonce-labelled disposable fixture resources. It never restores into existing
+  databases/volumes or operates ordinary Compose resources. The reviewed
+  head21 rehearsal preserved PostgreSQL schema/data/roles/ACLs/settings,
+  sequences, Redis absolute expiries, two retained object versions and immutable
+  release inputs across three restores. Commands, files and cleanup are bounded.
+  See the [dated evidence](../reports/2026-09-12-text-transition-resumption.md).
+  This is an executable rehearsal, not production backup authorization; a real
+  deployment still needs an implemented all-writer barrier and selected target.
+- The internal authenticated runtime drain/status surface is verified against
+  real persisted matches. It reports match/admission/settlement work and rejects
+  stale process generations. It does not yet coordinate every SQL/background
+  writer; `writers_quiescent` remains false. A maintenance notice or Redis
+  `knowoff:drain_check` message does not establish either condition.
+- Room state lives in process memory. Redis records and an RDB snapshot do not
+  recover hands, phases, timers or pending trades. Confirmed owner loss preserves
+  committed awards and records interruption/allowance compensation exactly once.
+- Startup resolves persisted immutable certified text releases and checks exact
+  clean schema compatibility before process ownership. A local synthetic pack
+  is available only through explicit non-production prototype configuration.
+  The compiled `release-manifest` command reports paired migration bytes/hashes,
+  supported modes and protocol before reading configuration or credentials.
+  Image build788806 and manifest931787 prove the head21 artifact; rebuild and
+  reverify after subsequent migrations. Actual target ingress/device evidence
+  remains required; no service has been deployed.
+- Durable account settlement, outbox recovery, shared caps and provider receipt
+  processing have real PostgreSQL tests. Current subscription discovery/retry
+  integration is still being completed. Platform purchase/ad test accounts,
+  reviewed retention/consent policy and actual device results remain distinct
+  release gates; synthetic receipts cannot certify live purchases.
 
 ## 1. Prepare a concrete release manifest
 
@@ -91,10 +102,28 @@ initial host move.
 
 ## 3. Freeze admission and drain all writers
 
-Use the future verified drain operation to stop new queues/rooms and report
-actual running match count. Let in-flight old matches finish on their pinned
-old content. Confirm zero pending trades, zero active matches and zero pending
-settlements before stopping the old process. If the drain deadline expires,
+Use the internal Admin listener with an authenticated Admin browser session.
+`GET /admin/runtime/status` returns the current `owner_id`, `generation`,
+`observed_at`, process counts and `durable_all_owners` counts. Submit
+`POST /admin/runtime/drain` with `Content-Type: application/json`, the session's
+`X-CSRF-Token`, and exactly `owner_id`, `generation`, and a fresh UUID
+`request_id`. Reuse those exact values after an uncertain response. The durable
+audit records that request; a replacement process rejects the old generation
+with `409 runtime.owner_changed`. Never place session or CSRF secrets in URLs,
+shell history or reports.
+
+The operation stops new admission, releases unused reservations and lets begun
+matches finish on their pinned content. Repeated status reads do not advance
+game clocks. `GET /admin/runtime/wait?timeout_ms=5000` waits at most five seconds;
+`202` reports the most recent successful timestamped counts with `timed_out`.
+A failed initial read returns `503`, never a fabricated empty state. Repeat a
+bounded wait while the same process remains authoritative.
+
+`matches_drained` requires closed admission and zero active matches, pending
+trades/aborts, queued players, durable prepared/started matches, reserved
+admissions and pending/missing settlements. Unacknowledged output is reported
+separately: its value is already committed. Empty waiting rooms do not prevent
+match drain. Confirm these conditions before stopping the old process. If the drain deadline expires,
 keep the release paused or invoke the separately reviewed interrupted-match
 policy; do not invent completed outcomes or silently drop earned rewards.
 
@@ -117,7 +146,7 @@ privileges, documenting any exclusions. Verify the dump is readable and record
 its checksum/size/tool versions. A nonempty backup file alone is insufficient.
 
 Use the actual schema inventory, then record counts and deterministic row/value
-checksums for every table. The current schema contains:
+checksums for every table. The retained legacy schema includes:
 
 | Group | Tables |
 |---|---|
@@ -130,8 +159,11 @@ checksums for every table. The current schema contains:
 | Browser access | `portal_browser_sessions`, `portal_login_requests`, `portal_login_limits` |
 | Challenge | `challenge_topics`, `challenge_entries`, `challenge_votes`, `challenge_winners` |
 
-There is no current `media_packs` or `admin_audit` table. Inventory new transition
-tables from the actual applied migrations when implemented. Preserve receipt
+There is no `media_packs` or `admin_audit` table. The table above is not a
+complete current inventory: migrations9 onward add admissions, outcomes, owner
+fences, releases, trust, challenge lifecycle, reports, OAuth and provider source
+authority. Use the actual database catalog plus the compiled migration manifest
+for every rehearsal; never use a hardcoded table list as backup coverage. Preserve receipt
 transaction IDs, amounts/status, entitlement values/expiry, terms/version,
 creator credits, report/challenge references and avatar blobs. Prove wallet
 balances equal the ledger sum and compare per-day counters and profile totals;
@@ -160,8 +192,9 @@ Validate every deployed text bundle before selecting it as active.
 
 Start the intended production image with admission still closed. Confirm the
 known `/healthz` and `/readyz` surfaces through the selected ingress, including
-failure behavior for actual required dependencies. Text readiness must not
-remain tied to an unused MinIO service; its removal is implementation work.
+failure behavior for actual required dependencies. Text readiness checks PostgreSQL, Redis, process authority and admission
+policy; it has no MinIO dependency. Verify the selected Compose/ingress
+artifact also has no mandatory playable-object-store dependency.
 Verify the new process cannot accidentally load the old fixture or expose
 prompt catalogs through old media routes.
 

@@ -1,6 +1,7 @@
 package portal
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -10,9 +11,158 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/knowoff/knowoff/server/internal/auth"
 )
+
+type pausedPortalAuth struct {
+	*auth.Manager
+	validated, resume chan struct{}
+}
+
+func (a *pausedPortalAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) {
+	account, err := a.Manager.ValidateAccessToken(ctx, token)
+	if err != nil {
+		return "", err
+	}
+	close(a.validated)
+	select {
+	case <-a.resume:
+		return account, nil
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+}
+
+func TestPortalPairingRechecksRevokedEpochInsideApproval(t *testing.T) {
+	db := setupBrowserDB(t)
+	defer db.Close()
+	m := newTestManager(t, db)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	authManager := auth.NewManager(db, []byte("synthetic-portal-session-signing-key"), "portal-test", "portal-test", time.Hour, 24*time.Hour, auth.OAuthProviders{})
+	pair, err := authManager.CreateAnonymousAccount(ctx, "synthetic-portal-epoch-device")
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := &pausedPortalAuth{Manager: authManager, validated: make(chan struct{}), resume: make(chan struct{})}
+	m.auth = a
+	var once sync.Once
+	resume := func() { once.Do(func() { close(a.resume) }) }
+	defer resume()
+	if _, err = db.Exec(`INSERT INTO portal_login_requests(browser_hash,pairing_code,csrf_token,expires_at) VALUES('synthetic-browser','ABCDEFGH','synthetic-csrf',now()+interval '5 minutes')`); err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("POST", "/api/portal/connect", strings.NewReader(`{"code":"ABCDEFGH"}`)).WithContext(ctx)
+	r.Header.Set("Authorization", "Bearer "+pair.AccessToken)
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() { m.ConnectHandler().ServeHTTP(w, r); close(done) }()
+	select {
+	case <-a.validated:
+	case <-ctx.Done():
+		t.Fatal("access validation did not reach barrier")
+	}
+	if err = authManager.RevokeSessions(ctx, pair.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	resume()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("approval did not complete")
+	}
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("stale JWT approved browser after revocation: %d", w.Code)
+	}
+	var approved int
+	if err = db.QueryRow(`SELECT count(*) FROM portal_login_requests WHERE account_id IS NOT NULL`).Scan(&approved); err != nil || approved != 0 {
+		t.Fatal("revoked epoch retained approved request", approved, err)
+	}
+}
+
+func TestPortalBrowserIssuanceSerializesWithFinalRevocation(t *testing.T) {
+	db := setupBrowserDB(t)
+	defer db.Close()
+	m := newTestManager(t, db)
+	account := newAccount(t, db)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := db.Exec(`INSERT INTO portal_login_requests(browser_hash,pairing_code,csrf_token,account_id,expires_at) VALUES($1,'ABCDEFGH','synthetic-csrf',$2,now()+interval '5 minutes')`, portalHash("synthetic-browser"), account); err != nil {
+		t.Fatal(err)
+	}
+	control, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer control.Rollback()
+	var locked string
+	if err = control.QueryRowContext(ctx, `SELECT id FROM accounts WHERE id=$1 FOR UPDATE`, account).Scan(&locked); err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("POST", "/portal/session", strings.NewReader("csrf_token=synthetic-csrf")).WithContext(ctx)
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.AddCookie(&http.Cookie{Name: portalLoginCookie, Value: "synthetic-browser"})
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() { m.loginContinue(w, r); close(done) }()
+	defer func() {
+		control.Rollback()
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			t.Error("browser issuance did not drain")
+		}
+	}()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	var waiting string
+	for waiting == "" {
+		err = db.QueryRowContext(ctx, `SELECT query FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND (query LIKE '%portal_browser_sessions%' OR query LIKE '%FROM accounts%FOR UPDATE%') LIMIT 1`).Scan(&waiting)
+		if err != nil && err != sql.ErrNoRows {
+			t.Fatal(err)
+		}
+		if waiting != "" {
+			break
+		}
+		select {
+		case <-tick.C:
+		case <-done:
+			t.Fatal("issued a browser session while enforcement held the account lock")
+		case <-ctx.Done():
+			t.Fatal("did not observe the issuance lock boundary")
+		}
+	}
+	if !strings.Contains(waiting, "FROM accounts") {
+		t.Fatal("browser issuance touched session rows before canonical account lock")
+	}
+	if _, err = control.ExecContext(ctx, `UPDATE accounts SET banned_at=now() WHERE id=$1`, account); err != nil {
+		t.Fatal(err)
+	}
+	authManager := auth.NewManager(db, []byte("synthetic-portal-session-signing-key"), "portal-test", "portal-test", time.Hour, 24*time.Hour, auth.OAuthProviders{})
+	if err = authManager.RevokeSessionsTx(ctx, control, account); err != nil {
+		t.Fatal(err)
+	}
+	if err = control.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-done:
+	case <-ctx.Done():
+		t.Fatal("browser issuance stuck behind completed enforcement")
+	}
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("browser issuance after final revocation=%d", w.Code)
+	}
+	var count int
+	if err = db.QueryRow(`SELECT count(*) FROM portal_browser_sessions WHERE account_id=$1`, account).Scan(&count); err != nil || count != 0 {
+		t.Fatal("session survived revocation race", count, err)
+	}
+}
 
 func portalBody(t *testing.T, r *http.Response) string {
 	t.Helper()

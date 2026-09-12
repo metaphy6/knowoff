@@ -419,5 +419,327 @@
   "textPoked": "لقد تلقيت نغزة",
   "@textPoked": {
     "description": "Brief accessible feedback when a new live poke targets this player."
+  },
+  "safetyTitle": "السلامة والخصوصية",
+  "@safetyTitle": {
+    "description": "Safety and account controls: safetyTitle"
+  },
+  "safetyIntro": "تحكّم بحسابك. البلاغات خاصة ومتاحة دون قبول شروط المحتوى.",
+  "@safetyIntro": {
+    "description": "Safety and account controls: safetyIntro"
+  },
+  "safetyTerms": "شروط الاستخدام",
+  "@safetyTerms": {
+    "description": "Safety and account controls: safetyTerms"
+  },
+  "safetyTermsUnavailable": "لم تُنشر شروط الاستخدام بعد. الدردشة المكتوبة والمساهمات غير متاحة.",
+  "@safetyTermsUnavailable": {
+    "description": "Safety and account controls: safetyTermsUnavailable"
+  },
+  "safetyAccept": "قبول هذه الشروط",
+  "@safetyAccept": {
+    "description": "Safety and account controls: safetyAccept"
+  },
+  "safetyAccepted": "تم قبول الشروط الحالية",
+  "@safetyAccepted": {
+    "description": "Safety and account controls: safetyAccepted"
+  },
+  "safetyTermsRequired": "راجع شروط الاستخدام الحالية واقبلها لإرسال دردشة مكتوبة. الدردشة السريعة متاحة.",
+  "@safetyTermsRequired": {
+    "description": "Safety and account controls: safetyTermsRequired"
+  },
+  "safetyBlocks": "الحسابات المحظورة",
+  "@safetyBlocks": {
+    "description": "Safety and account controls: safetyBlocks"
+  },
+  "safetyBlocksEmpty": "لا توجد حسابات محظورة في هذه الصفحة.",
+  "@safetyBlocksEmpty": {
+    "description": "Safety and account controls: safetyBlocksEmpty"
+  },
+  "safetyNext": "الصفحة التالية",
+  "@safetyNext": {
+    "description": "Safety and account controls: safetyNext"
+  },
+  "safetyUnblock": "إلغاء الحظر",
+  "@safetyUnblock": {
+    "description": "Safety and account controls: safetyUnblock"
+  },
+  "safetyBlock": "حظر هذا اللاعب",
+  "@safetyBlock": {
+    "description": "Safety and account controls: safetyBlock"
+  },
+  "safetyBlockHint": "يخفي الحظر رسائل اللاعب المكتوبة عنك ويمنع مواجهته لاحقًا. تبقى هذه المباراة وأصواتها ونقاطها كما هي.",
+  "@safetyBlockHint": {
+    "description": "Safety and account controls: safetyBlockHint"
+  },
+  "safetyBlocked": "تم حظر اللاعب",
+  "@safetyBlocked": {
+    "description": "Safety and account controls: safetyBlocked"
+  },
+  "safetySupport": "التواصل مع الدعم",
+  "@safetySupport": {
+    "description": "Safety and account controls: safetySupport"
+  },
+  "safetyPrivacy": "سياسة الخصوصية",
+  "@safetyPrivacy": {
+    "description": "Safety and account controls: safetyPrivacy"
+  },
+  "safetyRestore": "تعذّرت استعادة حسابك المحفوظ. أعد المحاولة عند الاتصال أو تواصل مع الدعم لاستعادة الحساب نفسه.",
+  "@safetyRestore": {
+    "description": "Safety and account controls: safetyRestore"
+  },
+  "textReport": "الإبلاغ عن النص",
+  "textReportConfirm": "هل تريد الإبلاغ عن هذا النص؟ اختر السبب.",
+  "textReportInappropriate": "محتوى غير لائق",
+  "textReportIncorrect": "خطأ في النص أو الترجمة",
+  "textReportOther": "مشكلة أخرى في المحتوى",
+  "textReportSend": "إرسال البلاغ",
+  "textReportSent": "تم استلام البلاغ.",
+  "textReportFailed": "تعذر تأكيد البلاغ. أعد محاولة إرسال البلاغ نفسه.",
+  "oauthTitle": "حسابك",
+  "oauthIntro": "اربط تقدمك على هذا الجهاز بحساب Google أو Facebook، أو استعد تقدمًا سبق أن ربطته.",
+  "oauthLink": "حفظ هذا التقدم",
+  "oauthRestore": "استعادة التقدم المرتبط",
+  "oauthGoogle": "المتابعة باستخدام Google",
+  "oauthFacebook": "المتابعة باستخدام Facebook",
+  "oauthPending": "أكمل تسجيل الدخول في المتصفح، ثم عُد إلى هنا.",
+  "oauthCheck": "التحقق من تسجيل الدخول",
+  "oauthCancel": "إلغاء تسجيل الدخول",
+  "oauthOpenBrowser": "فتح تسجيل الدخول مجددًا",
+  "oauthSwitchTitle": "التبديل إلى الحساب المرتبط؟",
+  "oauthSwitchBody": "يستخدم هذا الجهاز حسابًا آخر. سيبقى تقدمك وNoin ومشترياتك منفصلة؛ ولن يتم دمجها.",
+  "oauthSwitch": "تبديل الحساب",
+  "oauthKeepCurrent": "الاحتفاظ بالحساب الحالي",
+  "oauthSuccess": "حسابك المرتبط جاهز.",
+  "oauthUnavailable": "تسجيل الدخول غير متاح. حاول مرة أخرى لاحقًا.",
+  "oauthUnlinked": "لا يوجد حساب Knowoff مرتبط بهذا الدخول. عُد إلى الجهاز الذي يحتوي على تقدمك واربطه هناك أولًا.",
+  "oauthConflict": "هذا الدخول مرتبط بالفعل بحساب آخر. استعده لاستخدام تقدمه، أو اختر حساب دخول مختلفًا.",
+  "oauthExpired": "انتهت صلاحية هذا الدخول. ابدأ من جديد.",
+  "oauthInvalid": "تعذر التحقق من هذا الدخول. ابدأ من جديد.",
+  "oauthRateLimited": "محاولات تسجيل الدخول كثيرة جدًا. حاول لاحقًا.",
+  "oauthMismatch": "الحساب المستعاد لا يطابق هذا الجهاز. لم يتغير حسابك الحالي.",
+  "oauthSessionRequired": "حدّث جلستك الحالية لربطها، أو استعد حسابًا سبق أن ربطته.",
+  "oauthBrowserFailed": "تعذر فتح المتصفح. حاول فتح تسجيل الدخول مجددًا.",
+  "@oauthTitle": {
+    "description": "Account linking and restoration: Title"
+  },
+  "@oauthIntro": {
+    "description": "Account linking and restoration: Intro"
+  },
+  "@oauthLink": {
+    "description": "Account linking and restoration: Link"
+  },
+  "@oauthRestore": {
+    "description": "Account linking and restoration: Restore"
+  },
+  "@oauthGoogle": {
+    "description": "Account linking and restoration: Google"
+  },
+  "@oauthFacebook": {
+    "description": "Account linking and restoration: Facebook"
+  },
+  "@oauthPending": {
+    "description": "Account linking and restoration: Pending"
+  },
+  "@oauthCheck": {
+    "description": "Account linking and restoration: Check"
+  },
+  "@oauthCancel": {
+    "description": "Account linking and restoration: Cancel"
+  },
+  "@oauthOpenBrowser": {
+    "description": "Account linking and restoration: OpenBrowser"
+  },
+  "@oauthSwitchTitle": {
+    "description": "Account linking and restoration: SwitchTitle"
+  },
+  "@oauthSwitchBody": {
+    "description": "Account linking and restoration: SwitchBody"
+  },
+  "@oauthSwitch": {
+    "description": "Account linking and restoration: Switch"
+  },
+  "@oauthKeepCurrent": {
+    "description": "Account linking and restoration: KeepCurrent"
+  },
+  "@oauthSuccess": {
+    "description": "Account linking and restoration: Success"
+  },
+  "@oauthUnavailable": {
+    "description": "Account linking and restoration: Unavailable"
+  },
+  "@oauthUnlinked": {
+    "description": "Account linking and restoration: Unlinked"
+  },
+  "@oauthConflict": {
+    "description": "Account linking and restoration: Conflict"
+  },
+  "@oauthExpired": {
+    "description": "Account linking and restoration: Expired"
+  },
+  "@oauthInvalid": {
+    "description": "Account linking and restoration: Invalid"
+  },
+  "@oauthRateLimited": {
+    "description": "Account linking and restoration: RateLimited"
+  },
+  "@oauthMismatch": {
+    "description": "Account linking and restoration: Mismatch"
+  },
+  "@oauthSessionRequired": {
+    "description": "Account linking and restoration: SessionRequired"
+  },
+  "@oauthBrowserFailed": {
+    "description": "Account linking and restoration: BrowserFailed"
+  },
+  "@textReport": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportConfirm": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportInappropriate": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportIncorrect": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportOther": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportSend": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportSent": {
+    "description": "Visible-text content report control."
+  },
+  "@textReportFailed": {
+    "description": "Visible-text content report control."
+  },
+  "serviceAvatarCost": "اشترِ فتح الصورة الرمزية المخصصة الدائم مرة واحدة. لا تكلف عمليات الرفع اللاحقة أي Noin إضافي.",
+  "@serviceAvatarCost": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarCostPrice": "فتح الصورة الرمزية المخصصة الدائم: {price} Noin.",
+  "@serviceAvatarCostPrice": {
+    "description": "Custom avatar ownership, screening or activation status.",
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "serviceAvatarReview": "تُفحص الصورة قبل تفعيلها. إذا فشل الرفع تبقى صورتك الحالية.",
+  "@serviceAvatarReview": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarSubmitted": "تمت الموافقة على الصورة الرمزية وتحديثها.",
+  "@serviceAvatarSubmitted": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarOwned": "الصورة الرمزية المخصصة مفتوحة بالفعل. لا يكلف الرفع أي Noin إضافي.",
+  "@serviceAvatarOwned": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnavailable": "فحص الصور غير متاح. لم تتغير صورتك أو ملكيتك لفتح الميزة.",
+  "@serviceAvatarUnavailable": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarRejected": "لم تُعتمد هذه الصورة. اختر صورة أخرى؛ يبقى حق فتح الميزة ملكك.",
+  "@serviceAvatarRejected": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarChanged": "تغيّر حسابك أو صورتك الرمزية. أعد اختيار الصورة قبل المتابعة.",
+  "@serviceAvatarChanged": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlock": "فتح الصورة الرمزية المخصصة",
+  "@serviceAvatarUnlock": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlockConfirm": "شراء الفتح الدائم",
+  "@serviceAvatarUnlockConfirm": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "purchaseTitle": "عمليات الشراء داخل التطبيق",
+  "purchaseOpening": "جارٍ فتح المتجر…",
+  "purchasePending": "بانتظار إتمام الدفع في المتجر.",
+  "purchaseVerifying": "جارٍ التحقق لدى Knowoff…",
+  "purchaseVerified": "تم التحقق من الشراء وتحديث حسابك.",
+  "purchaseCanceled": "أُلغيت عملية الشراء.",
+  "purchaseFailed": "تعذّر إتمام عملية الشراء.",
+  "purchaseRetryMessage": "لم يكتمل التحقق. أعد المحاولة دون الشراء مجددًا.",
+  "purchaseAccountRequired": "استعد حساب Knowoff الذي يملك هذا الشراء.",
+  "purchaseOwned": "Premium مفعّل بالفعل على هذا الحساب.",
+  "purchaseRestore": "استعادة المشتريات",
+  "purchaseRetry": "إعادة محاولة التحقق",
+  "purchaseRestoreHint": "استعد الاشتراكات باستخدام حسابَي المتجر وKnowoff نفسيهما. تبقى حزم Noin المستهلكة في حساب Knowoff.",
+  "purchaseMonthlyTerms": "يتجدد شهريًا بسعر المتجر المعروض حتى إلغائه في المتجر.",
+  "purchaseYearlyTerms": "يتجدد سنويًا بسعر المتجر المعروض حتى إلغائه في المتجر.",
+  "purchaseManageApple": "إدارة اشتراكات Apple",
+  "purchaseManageGoogle": "إدارة اشتراكات Google Play",
+  "purchaseBuyPrice": "شراء · {price}",
+  "serviceBillingUnavailable": "المشتريات غير متاحة على هذا الجهاز أو ضمن إعدادات المتجر هذه.",
+  "@purchaseTitle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseOpening": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchasePending": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseVerifying": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseVerified": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseCanceled": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseFailed": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRetryMessage": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseAccountRequired": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseOwned": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRestore": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRetry": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseRestoreHint": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseMonthlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseYearlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseManageApple": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseManageGoogle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "@purchaseBuyPrice": {
+    "description": "Native store purchase and restore flow.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "@serviceBillingUnavailable": {
+    "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
   }
 }

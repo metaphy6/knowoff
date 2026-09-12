@@ -1,526 +1,198 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/ratelimit"
-	"github.com/knowoff/knowoff/server/internal/transport"
-	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
-func testLobby(t *testing.T) *lobby.Manager {
-	t.Helper()
-	return lobby.NewManager(lobby.Deps{
-		Config: &config.Config{},
-		Pack:   &media.Pack{},
-	})
+func TestConnectionRepliesShareTextSocketWriter(t *testing.T) {
+	srv, _, manager := textHTTPFixture(t)
+	c := textDial(t, srv)
+	textHello(t, c, uuid.NewString())
+	done := make(chan error, 2)
+	go func() {
+		for i := 0; i < 10; i++ {
+			if err := c.WriteJSON(map[string]any{"v": 2, "type": "availability", "request_id": fmt.Sprintf("lookup-%d", i), "payload": struct{}{}}); err != nil {
+				done <- err
+				return
+			}
+		}
+		done <- nil
+	}()
+	go func() {
+		for i := 0; i < 10; i++ {
+			if err := manager.NotifyNotices(context.Background()); err != nil {
+				done <- err
+				return
+			}
+		}
+		done <- nil
+	}()
+	notices, acks, availability := 0, 0, 0
+	for i := 0; i < 30; i++ {
+		frame := textRead(t, c)
+		switch frame.Type {
+		case "system_notice":
+			notices++
+			if string(frame.Payload) != "{\"refresh\":true}" {
+				t.Fatal("notice leaked obsolete payload")
+			}
+		case "control_ack":
+			acks++
+		case "availability":
+			availability++
+		default:
+			t.Fatal("unexpected concurrent output", frame.Type)
+		}
+	}
+	for i := 0; i < 2; i++ {
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if notices != 10 || acks != 10 || availability != 10 {
+		t.Fatal("writer lost/corrupted messages", notices, acks, availability)
+	}
 }
 
-// TestRealtimeHandler_KeepsIdleConnectionAliveWithPing guards against the
-// regression where a legitimately silent connection (a player reading
-// through a long discussion/ballot window without sending an intent) got
-// killed by the read-deadline watchdog because nothing ever kept it warm.
-// The server must proactively ping on ping_period_s so idle-but-healthy
-// connections survive.
-func TestRealtimeHandler_KeepsIdleConnectionAliveWithPing(t *testing.T) {
-	cfg := &config.Config{
-		WebSocket: config.WebSocketConfig{
-			PongWaitS:   1,
-			PingPeriodS: 1,
-		},
-		Tuning: config.TuningConfig{
-			Game: config.GameTuning{
-				RoomSizes:      []int{4},
-				DonowersBySize: map[int]int{4: 1},
-				VotesBySize:    map[int]int{4: 2},
-				MinConnected:   3,
-			},
-		},
-	}
-	lobbyManager := lobby.NewManager(lobby.Deps{
-		Config:  cfg,
-		Logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Pack:    &media.Pack{},
-		Manager: media.NewManager(nil),
-		NodeID:  "test-node",
+func TestRealtimeHandlerKeepsIdleConnectionAliveWithPing(t *testing.T) {
+	srv, _, _ := textHTTPFixture(t)
+	c := textDial(t, srv)
+	textHello(t, c, uuid.NewString())
+	var pings atomic.Int32
+	c.SetPingHandler(func(data string) error {
+		pings.Add(1)
+		return c.WriteControl(websocket.PongMessage, []byte(data), time.Now().Add(time.Second))
 	})
-	room, err := lobbyManager.CreateRoom(4)
-	if err != nil {
-		t.Fatalf("create room: %v", err)
-	}
-
-	deps := HandlerDeps{
-		Config: cfg,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Lobby:  lobbyManager,
-	}
-	srv := httptest.NewServer(RealtimeHandler(deps))
-	defer srv.Close()
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
-
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	defer conn.Close()
-
-	pinged := make(chan struct{}, 1)
-	conn.SetPingHandler(func(string) error {
-		select {
-		case pinged <- struct{}{}:
-		default:
-		}
-		return conn.WriteControl(websocket.PongMessage, nil, time.Now().Add(time.Second))
-	})
-
-	join := map[string]any{
-		"v":    transport.ProtocolVersion,
-		"kind": "join_room",
-		"payload": map[string]any{
-			"code": room.Code,
-		},
-	}
-	if err := conn.WriteJSON(join); err != nil {
-		t.Fatalf("write join: %v", err)
-	}
-
-	// Gorilla only services control frames (ping/pong) during a read call, so
-	// keep reading in the background exactly like a real client would.
+	finished := make(chan error, 1)
 	go func() {
+		c.SetReadDeadline(time.Now().Add(6 * time.Second))
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
+			_, _, err := c.ReadMessage()
+			if err != nil {
+				finished <- err
 				return
 			}
 		}
 	}()
-
+	deadline := time.Now().Add(5 * time.Second)
+	for pings.Load() < 2 && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if pings.Load() < 2 {
+		t.Error("idle socket received fewer than two configured pings")
+	}
+	c.Close()
 	select {
-	case <-pinged:
-	case <-time.After(3 * time.Second):
-		t.Fatal("expected a keepalive ping from the server within ping_period_s, got none")
+	case <-finished:
+	case <-time.After(time.Second):
+		t.Fatal("reader did not close")
 	}
 }
 
-// TestRealtimeHandler_RejectsOverCapacity verifies the ConnLimiter is
-// enforced at upgrade time: once at capacity, further connections are
-// rejected with HTTP 503 instead of being accepted and exhausting resources.
-func TestRealtimeHandler_RejectsOverCapacity(t *testing.T) {
-	deps := HandlerDeps{
-		Config:      &config.Config{},
-		Logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Lobby:       testLobby(t),
-		ConnLimiter: ratelimit.NewConnLimiter(2),
-	}
-	srv := httptest.NewServer(RealtimeHandler(deps))
+func TestRealtimeHandlerRejectsOverCapacityAndReleasesSlot(t *testing.T) {
+	var cfg *config.Config
+	_, _, manager := textHTTPCustomFixture(t, textAuthStub{}, func(c *config.Config, _ *lobby.TextDeps) { cfg = c })
+	srv := httptest.NewServer(TextRealtimeHandler(TextHandlerDeps{Config: cfg, Lobby: manager, Auth: textAuthStub{}, ConnLimiter: ratelimit.NewConnLimiter(2)}))
 	defer srv.Close()
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
-
-	var conns []*websocket.Conn
-	defer func() {
-		for _, c := range conns {
-			c.Close()
-		}
-	}()
-
-	for i := 0; i < 2; i++ {
-		c, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-		if err != nil {
-			t.Fatalf("connection %d: expected upgrade to succeed, got %v", i, err)
-		}
-		conns = append(conns, c)
+	address := "ws" + strings.TrimPrefix(srv.URL, "http")
+	first, _, err := websocket.DefaultDialer.Dial(address, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err == nil {
-		t.Fatal("expected the 3rd connection to be rejected once at capacity")
+	defer first.Close()
+	second, _, err := websocket.DefaultDialer.Dial(address, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if resp == nil || resp.StatusCode != http.StatusServiceUnavailable {
-		t.Fatalf("expected HTTP 503, got %+v (err=%v)", resp, err)
+	defer second.Close()
+	rejected, response, err := websocket.DefaultDialer.Dial(address, nil)
+	if rejected != nil {
+		rejected.Close()
 	}
-
-	// Freeing a slot must allow the next connection through. The server-side
-	// release happens asynchronously after the close is observed, so retry
-	// briefly rather than racing it.
-	conns[0].Close()
-	conns = conns[1:]
-	var c *websocket.Conn
+	if err == nil || response == nil || response.StatusCode != http.StatusServiceUnavailable {
+		t.Fatal("capacity did not refuse upgrade", err)
+	}
+	response.Body.Close()
+	first.Close()
 	deadline := time.Now().Add(2 * time.Second)
 	for {
-		var dialErr error
-		c, _, dialErr = websocket.DefaultDialer.Dial(wsURL, nil)
-		if dialErr == nil {
+		next, response, e := websocket.DefaultDialer.Dial(address, nil)
+		if e == nil {
+			next.Close()
 			break
 		}
+		if response != nil {
+			response.Body.Close()
+		}
 		if time.Now().After(deadline) {
-			t.Fatalf("expected a connection to succeed after a slot freed up, got %v", dialErr)
+			t.Fatal("closed socket slot not released", e)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	conns = append(conns, c)
 }
 
-// TestRealtimeHandler_RejectedIntentCarriesReplyTo guards against a client
-// mistaking a stale/unrelated rejection for one about whatever it is
-// currently doing (e.g. a queued "ready" resurfacing as rejected while the
-// player is mid-ballot must not be read as the vote itself failing). The
-// server must tag every rejected-intent error with the intent kind it is
-// replying to.
-func TestRealtimeHandler_RejectedIntentCarriesReplyTo(t *testing.T) {
-	lobbyManager := lobby.NewManager(lobby.Deps{
-		Config: &config.Config{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Pack:   &media.Pack{},
-	})
-	deps := HandlerDeps{
-		Config: &config.Config{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Lobby:  lobbyManager,
-	}
-	srv := httptest.NewServer(RealtimeHandler(deps))
-	defer srv.Close()
-	wsURL := "ws" + strings.TrimPrefix(srv.URL, "http")
-
-	room, err := lobbyManager.CreateRoom(4)
-	if err != nil {
-		t.Fatalf("create room: %v", err)
-	}
-
-	conn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
-	}
-	defer conn.Close()
-
-	join := map[string]any{
-		"v":       transport.ProtocolVersion,
-		"kind":    "join_room",
-		"payload": map[string]any{"code": room.Code},
-	}
-	if err := conn.WriteJSON(join); err != nil {
-		t.Fatalf("write join: %v", err)
-	}
-
-	// A lone seat never starts a match, so any gameplay intent sent now is
-	// rejected with "match not started" — a stand-in for any rejected
-	// intent, exercising the same reply_to tagging path.
-	vote := map[string]any{
-		"v":       transport.ProtocolVersion,
-		"kind":    "cast_vote",
-		"payload": map[string]any{"target_seat": 1},
-	}
-	if err := conn.WriteJSON(vote); err != nil {
-		t.Fatalf("write cast_vote: %v", err)
-	}
-
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		conn.SetReadDeadline(deadline)
-		_, data, err := conn.ReadMessage()
-		if err != nil {
-			t.Fatalf("read message: %v", err)
-		}
-		var env transport.Envelope
-		if err := json.Unmarshal(data, &env); err != nil {
-			t.Fatalf("unmarshal envelope: %v", err)
-		}
-		if env.Kind != transport.EventError {
-			continue
-		}
-		params, _ := env.Payload["params"].(map[string]any)
-		if replyTo, _ := params["reply_to"].(string); replyTo != "cast_vote" {
-			t.Fatalf("expected reply_to %q, got %q (payload=%+v)", "cast_vote", replyTo, env.Payload)
-		}
-		break
-	}
-}
-
-// TestHandleJoinIntent_RejectsInvalidToken pins the failure behind a
-// "join_failed: daily quickplay limit reached" report on a healthy account:
-// an expired token used to fall through anonymously, and the empty account
-// then tripped the quickplay eligibility check instead of the auth check.
-func TestHandleJoinIntent_RejectsInvalidToken(t *testing.T) {
-	s := &ConnectionState{
-		Auth: auth.NewManager(nil, []byte("test-signing-key"), "knowoff",
-			"knowoff", time.Minute, time.Hour, auth.OAuthProviders{}),
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	env := &transport.Envelope{
-		Version: transport.ProtocolVersion,
-		Kind:    transport.IntentQueueQuickPlay,
-		Payload: map[string]any{"size": float64(4), "access_token": "expired.not.a.jwt"},
-	}
-
-	err := s.handleJoinIntent(env)
-	if err == nil || !strings.Contains(err.Error(), "invalid access token") {
-		t.Fatalf("expected an invalid access token error, got %v", err)
-	}
-	if s.AccountID != "" {
-		t.Fatalf("expected no account to be bound, got %q", s.AccountID)
-	}
-}
-
-// TestHandleIntent_DevForceRoleBeforeJoin pins the menu-picked role that used
-// to be lost when the socket hadn't joined a room yet: the server rejected
-// dev_force_role with "not joined" and the choice vanished. The handler now
-// stashes it on the connection and applies it the moment a seat is claimed.
-func TestHandleIntent_DevForceRoleBeforeJoin(t *testing.T) {
-	mgr := lobby.NewManager(lobby.Deps{
-		Config: &config.Config{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Pack:   &media.Pack{},
-	})
-	room, err := mgr.CreateRoom(4)
-	if err != nil {
-		t.Fatalf("create room: %v", err)
-	}
-	s := &ConnectionState{
-		Lobby:  mgr,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-
-	// Fire the intent before any join: it must not error, only stash.
-	if err := s.handleIntent(&transport.Envelope{
-		Kind:    transport.IntentDevForceRole,
-		Payload: map[string]any{"role": "donower"},
-	}); err != nil {
-		t.Fatalf("pre-join dev_force_role: %v", err)
-	}
-	if s.pendingRoleOverride != "donower" {
-		t.Fatalf("pending role = %q, want donower", s.pendingRoleOverride)
-	}
-
-	// Claim a seat in that room, then apply — the room must now remember it.
-	seat, _, ok := room.ClaimSeat("", false)
-	if !ok {
-		t.Fatal("claim seat failed")
-	}
-	s.Room = room
-	s.Seat = seat
-	s.applyPendingRoleOverride()
-	if got := room.DevRoleOverride(seat); got != "donower" {
-		t.Fatalf("room override = %q, want donower", got)
-	}
-}
-
-func TestQueueIntent_DevRoleIsCapturedBeforeMatchmaking(t *testing.T) {
-	mgr := lobby.NewManager(lobby.Deps{
-		Config: &config.Config{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Pack:   &media.Pack{},
-	})
-	s := &ConnectionState{
-		Lobby:  mgr,
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-
-	err := s.handleJoinIntent(&transport.Envelope{
-		Kind: transport.IntentQueueQuickPlay,
-		Payload: map[string]any{
-			"size":     float64(3),
-			"dev":      true,
-			"dev_role": "donower",
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "invalid room size") {
-		t.Fatalf("expected queue validation error, got %v", err)
-	}
-	if s.pendingRoleOverride != "donower" {
-		t.Fatalf("pending role = %q, want donower", s.pendingRoleOverride)
-	}
-}
-
-func TestJoinIntent_DevRoleValidationBeforeSeatClaim(t *testing.T) {
-	for _, tc := range []struct {
-		name, environment, role, wantError, wantPending string
-	}{
-		{"captures local role", "dev", "donower", "room not found", "donower"},
-		{"rejects production", "prod", "donower", "dev mode unavailable", ""},
-		{"rejects unknown role", "dev", "admin", "unknown role", ""},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			cfg := &config.Config{}
-			cfg.App.Env = tc.environment
-			mgr := lobby.NewManager(lobby.Deps{
-				Config: cfg,
-				Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-				Pack:   &media.Pack{},
-			})
-			s := &ConnectionState{Lobby: mgr, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-			err := s.handleJoinIntent(&transport.Envelope{
-				Kind:    transport.IntentJoinRoom,
-				Payload: map[string]any{"code": "ABSENT", "dev": true, "dev_role": tc.role},
-			})
-			if err == nil || !strings.Contains(err.Error(), tc.wantError) {
-				t.Fatalf("want %q, got %v", tc.wantError, err)
+func TestRetiredRoomHTTPAndQRRoutesNeverClaimSeats(t *testing.T) {
+	auth := &textCountingAuth{}
+	srv, values, _ := textHTTPAuthFixture(t, auth)
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		for _, path := range []string{"/rooms/create", "/rooms/create?size=6&dev_role=donower", "/join/ABCDEF", "/join/ABCDEF?format=qr", "/ws"} {
+			request, err := http.NewRequest(method, srv.URL+path, nil)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if s.pendingRoleOverride != tc.wantPending {
-				t.Fatalf("pending role = %q, want %q", s.pendingRoleOverride, tc.wantPending)
+			response, err := http.DefaultClient.Do(request)
+			if err != nil {
+				t.Fatal(err)
 			}
-		})
+			raw, err := io.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.StatusCode != http.StatusUpgradeRequired || response.Header.Get("Cache-Control") != "no-store" {
+				t.Fatal("retired route not fenced", method, path, response.StatusCode)
+			}
+			var body map[string]string
+			if err = json.Unmarshal(raw, &body); err != nil || body["code"] != "protocol.upgrade_required" {
+				t.Fatal("unclear obsolete client refusal", string(raw), err)
+			}
+		}
+	}
+	if values.reserved.Load() != 0 || auth.calls.Load() != 0 {
+		t.Fatal("obsolete room/QR request reached auth/admission")
 	}
 }
 
-// Binding the last local-room socket can start the match. Its selected role
-// must already belong to the room when that callback runs.
-func TestJoinIntent_DevRoleAppliedBeforeLastSeatStartsMatch(t *testing.T) {
-	mgr := lobby.NewManager(lobby.Deps{
-		Config: &config.Config{},
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
-		Pack:   &media.Pack{},
-	})
-	room, err := mgr.CreateRoom(4)
-	if err != nil {
-		t.Fatal(err)
-	}
-	started := make(chan string, 1)
-	room.SetOnStart(func(r *lobby.Room) error {
-		started <- r.DevRoleOverride(3)
-		return nil
-	})
-	for i := 0; i < 3; i++ {
-		seat, _, ok := room.ClaimSeat("", false)
-		if !ok {
-			t.Fatal("claim earlier seat")
-		}
-		room.SetConnection(seat, &websocket.Conn{})
-	}
-	done := make(chan error, 1)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
-		if err != nil {
-			done <- err
-			return
-		}
-		defer conn.Close()
-		s := &ConnectionState{Lobby: mgr, Conn: conn, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
-		done <- s.handleJoinIntent(&transport.Envelope{
-			Kind:    transport.IntentJoinRoom,
-			Payload: map[string]any{"code": room.Code, "dev": true, "dev_role": "donower"},
-		})
-	}))
-	defer srv.Close()
-	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http"), nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer conn.Close()
-	select {
-	case err := <-done:
-		if err != nil {
+func TestRetiredDevControlsCannotBindOrAlterSeats(t *testing.T) {
+	srv, values, _ := textHTTPFixture(t)
+	c := textDial(t, srv)
+	textHello(t, c, uuid.NewString())
+	for i, kind := range []string{"dev_force_role", "dev_grant_specialty", "dev_restart", "join", "queue", "prefetch_ack", "asset_request"} {
+		id := fmt.Sprintf("retired-%d", i)
+		if err := c.WriteJSON(map[string]any{"v": 2, "type": kind, "request_id": id, "payload": map[string]any{"role": "donower", "specialty": "one_more"}}); err != nil {
 			t.Fatal(err)
 		}
-	case <-time.After(time.Second):
-		t.Fatal("join timed out")
-	}
-	select {
-	case got := <-started:
-		if got != "donower" {
-			t.Fatalf("role at match start = %q, want donower", got)
+		frame := textRead(t, c)
+		if frame.Type != "error" || frame.RequestID != id {
+			t.Fatal("retired control accepted or lost correlation", frame)
 		}
-	case <-time.After(time.Second):
-		t.Fatal("last seat did not start match")
 	}
-}
-
-func TestRoomJoinHandler_JSON(t *testing.T) {
-	mgr := testLobby(t)
-	r, _ := mgr.CreateRoom(4)
-	req := httptest.NewRequest(http.MethodGet, "/join/"+r.Code, nil)
-	rec := httptest.NewRecorder()
-	RoomJoinHandler(mgr, "http://play.example.com")(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	body := rec.Body.String()
-	if body == "" {
-		t.Fatal("expected JSON body")
-	}
-	if rec.Header().Get("Content-Type") != "application/json" {
-		t.Fatal("expected JSON content type")
-	}
-}
-
-func TestRoomJoinHandler_QR(t *testing.T) {
-	mgr := testLobby(t)
-	r, _ := mgr.CreateRoom(4)
-	req := httptest.NewRequest(http.MethodGet, "/join/"+r.Code+"?format=qr", nil)
-	rec := httptest.NewRecorder()
-	RoomJoinHandler(mgr, "http://play.example.com")(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	if rec.Header().Get("Content-Type") != "image/png" {
-		t.Fatal("expected PNG content type")
-	}
-	if rec.Body.Len() == 0 {
-		t.Fatal("expected PNG body")
-	}
-}
-
-func TestRoomJoinHandler_NotFound(t *testing.T) {
-	mgr := testLobby(t)
-	req := httptest.NewRequest(http.MethodGet, "/join/BADBAD", nil)
-	rec := httptest.NewRecorder()
-	RoomJoinHandler(mgr, "http://play.example.com")(rec, req)
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d", rec.Code)
-	}
-}
-
-func TestRoomCreateHandler(t *testing.T) {
-	mgr := testLobby(t)
-	req := httptest.NewRequest(http.MethodPost, "/rooms/create", strings.NewReader(`{"size":6}`))
-	rec := httptest.NewRecorder()
-	RoomCreateHandler(mgr)(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
-	}
-	var body struct {
-		RoomID string `json:"room_id"`
-		Code   string `json:"code"`
-		Size   int    `json:"size"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if body.Size != 6 || body.Code == "" || body.RoomID == "" {
-		t.Fatalf("unexpected response: %+v", body)
-	}
-	if mgr.RoomByCode(body.Code) == nil {
-		t.Fatal("expected room to be findable by its code")
-	}
-}
-
-func TestRoomCreateHandler_DefaultsToFour(t *testing.T) {
-	mgr := testLobby(t)
-	req := httptest.NewRequest(http.MethodPost, "/rooms/create", nil)
-	rec := httptest.NewRecorder()
-	RoomCreateHandler(mgr)(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	if !strings.Contains(rec.Body.String(), `"size":4`) {
-		t.Fatalf("expected default size 4, got %s", rec.Body.String())
-	}
-}
-
-func TestRoomCreateHandler_MethodNotAllowed(t *testing.T) {
-	mgr := testLobby(t)
-	req := httptest.NewRequest(http.MethodGet, "/rooms/create", nil)
-	rec := httptest.NewRecorder()
-	RoomCreateHandler(mgr)(rec, req)
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", rec.Code)
+	if values.reserved.Load() != 0 {
+		t.Fatal("retired dev control reserved a seat")
 	}
 }

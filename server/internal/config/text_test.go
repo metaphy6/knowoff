@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -11,8 +12,8 @@ import (
 func textConfigSecrets(t *testing.T) {
 	t.Helper()
 	setRequiredSecrets(t)
-	for _, name := range []string{"KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID", "KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET", "KNOWOFF_OAUTH_GOOGLE_CLIENT_ID", "KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET", "KNOWOFF_SSV_CALLBACK_KEY"} {
-		t.Setenv(name, "test-only")
+	for _, name := range []string{"KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID", "KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET", "KNOWOFF_OAUTH_GOOGLE_CLIENT_ID", "KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET"} {
+		t.Setenv(name, "")
 	}
 }
 
@@ -22,8 +23,8 @@ func TestTextConfigDefaultsRemainUnavailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Protocol.Version != 1 || cfg.Text == nil || cfg.Text.Version != 2 || cfg.Text.DefaultMode != gamecontract.ModeMissedTheBriefing {
-		t.Fatal("text contract must be present without switching live protocol")
+	if cfg.Protocol.Version != 2 || cfg.Text == nil || cfg.Text.Version != 2 || cfg.Text.DefaultMode != gamecontract.ModeMissedTheBriefing {
+		t.Fatal("text contract and active wire must both be v2")
 	}
 	if cfg.Text.Compatibility.ProtocolVersion != 2 || cfg.Text.Compatibility.MinClientGeneration != 2 || cfg.Text.RulesVersion == "" {
 		t.Fatal("missing pinned compatibility contract")
@@ -37,7 +38,7 @@ func TestTextConfigDefaultsRemainUnavailable(t *testing.T) {
 			t.Fatalf("uncertified mode %s must stay unavailable", mode)
 		}
 	}
-	if cfg.Tuning.Timers.TradeResponseS != 10 || cfg.Tuning.Timers.RoundStartCountdown != 5 || cfg.Tuning.Timers.PlayTurn != 20 || cfg.Tuning.Timers.KnowoffBallot != 20 || cfg.Tuning.Hand.Size != 5 || cfg.Tuning.Hand.DrawPile != 3 {
+	if cfg.Tuning.Timers.VoteResultFalling != 4 || cfg.Tuning.Timers.VoteResultWindow != 8 || cfg.Tuning.Timers.TradeResponseS != 10 || cfg.Tuning.Timers.RoundStartCountdown != 5 || cfg.Tuning.Timers.PlayTurn != 20 || cfg.Tuning.Timers.KnowoffBallot != 20 || cfg.Tuning.Hand.Size != 5 || cfg.Tuning.Hand.DrawPile != 3 {
 		t.Fatal("text trade timer must retain the existing clock and hand defaults")
 	}
 	if cfg.Tuning.Points.DrawPenalty != 5 || cfg.Tuning.Noin.DailyEarnCap != 300 || cfg.Tuning.Economy.FreeDailyQuickplayMatches != 3 {
@@ -45,6 +46,32 @@ func TestTextConfigDefaultsRemainUnavailable(t *testing.T) {
 	}
 	if cfg.Tuning.Contract.MaxHistoryEvents != 8192 || cfg.Tuning.Contract.MaxHistoryPageEvents != 8 || cfg.Tuning.Contract.MaxTextBytes != 512 || cfg.Tuning.Contract.MaxRequestsPerSeat != 512 {
 		t.Fatal("missing explicit bounded contract budgets")
+	}
+}
+
+func TestDevelopmentKeyConfigurationBoundsAndProductionRefusal(t *testing.T) {
+	textConfigSecrets(t)
+	for _, tc := range []struct {
+		env   string
+		size  int
+		valid bool
+	}{
+		{"local", 0, true}, {"local", 31, false}, {"local", 32, true}, {"local", 512, true}, {"local", 513, false}, {"prod", 0, true}, {"prod", 32, false},
+	} {
+		t.Run(fmt.Sprintf("%s_%d", tc.env, tc.size), func(t *testing.T) {
+			key := strings.Repeat("x", tc.size)
+			t.Setenv("KNOWOFF_DEV_BOT_KEY", key)
+			cfg, err := Load("../../../configs/base.yaml", writeTemp(t, "environment.yaml", "app:\n  env: "+tc.env+"\n"))
+			if (err == nil) != tc.valid {
+				t.Fatalf("valid=%v error=%v", tc.valid, err)
+			}
+			if err == nil && cfg.Security.DevBotKey != key {
+				t.Fatal("environment secret not applied")
+			}
+			if err != nil && key != "" && strings.Contains(err.Error(), key) {
+				t.Fatal("secret reflected in configuration error")
+			}
+		})
 	}
 }
 
@@ -62,7 +89,7 @@ func TestTextConfigRejectsInvalidOverlay(t *testing.T) {
 		{"generation", "text:\n  compatibility:\n    min_client_generation: 0\n", "text.compatibility.min_client_generation"},
 		{"missing modes", "text:\n  modes: null\n", "text.modes"},
 		{"unknown mode", "text:\n  modes:\n    image_game: {enabled: false, content_languages: []}\n", "text.modes"},
-		{"premature activation", "text:\n  modes:\n    secret_scale: {enabled: true, content_languages: [en]}\n", "not implemented"},
+		{"enabled without language", "text:\n  modes:\n    secret_scale: {enabled: true, content_languages: []}\n", "content_languages"},
 		{"invalid language", "text:\n  modes:\n    secret_scale: {content_languages: [en_US]}\n", "content_languages"},
 		{"noncanonical language", "text:\n  modes:\n    secret_scale: {content_languages: [EN]}\n", "content_languages"},
 		{"duplicate language", "text:\n  modes:\n    secret_scale: {content_languages: [tr, tr]}\n", "content_languages"},
@@ -147,5 +174,16 @@ func TestTextCutoverRejectsObsoleteKeysByPresence(t *testing.T) {
 	}
 	if err := ValidateTextCutover([]byte("tuning: [malformed\n")); err == nil {
 		t.Fatal("malformed preflight must fail")
+	}
+}
+
+func TestTextConfigAllowsExplicitRuntimeReleaseCells(t *testing.T) {
+	textConfigSecrets(t)
+	cfg, err := Load("../../../configs/base.yaml", writeTemp(t, "enabled.yaml", "text:\n  modes:\n    secret_scale: {enabled: true, content_languages: [en]}\n"))
+	if err != nil {
+		t.Fatal("implemented runtime cell rejected", err)
+	}
+	if !cfg.Text.Modes[gamecontract.ModeSecretScale].Enabled {
+		t.Fatal("explicit cell lost")
 	}
 }

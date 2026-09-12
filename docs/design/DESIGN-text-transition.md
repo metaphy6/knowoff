@@ -1,6 +1,6 @@
 # Design: Text-only transition and system integrity
 
-**Status:** Phase 1 technical baseline and design proofs verified, 2026-09-12.
+**Status:** Local five-mode implementation in progress, 2026-09-12; final cutover, load, platform and human release gates remain open.
 **Authority:** [Blueprint](../../BLUEPRINT.md) owns the rules; [Roadmap](../planning/ROADMAP.md)
 owns the ordered work. [ADR-012](ADR-012-text-only-selectable-modes.md) records
 the pivot. [Business plan](../product/BUSINESS_PLAN.md) owns commercial hypotheses.
@@ -12,11 +12,12 @@ Transition all five modes without losing user value, exposing secret state or
 leaving a dormant copy of the old game. Preserve shared account/community/UI
 capabilities and their tests. The original planning pass changed no executable
 code or deployed state. The [foundation report](../reports/2026-09-12-text-phase1-validation.md)
-records subsequent local implementation and its limits. Current source references
-were inspected through CodeGraph on 2026-09-12; line numbers can move after
-implementation. Production data, traffic and active purchases were not inspected.
-Historical test success does not certify current gaps, and none of the new
-protocol fields below reach the live runtime merely because they are specified here.
+records the first implementation boundary. The [resumption report](../reports/2026-09-12-text-transition-resumption.md)
+records the subsequent v2 engines, lobbies, client, value and retirement proofs.
+The owner confirmed that no deployment exists. Source references in the runtime
+audit below describe the pre-transition checkout; removed symbols and their old
+line numbers remain evidence of the original defects. Current implementation
+status comes from the Roadmap and its linked tests, not those historical paths.
 
 ## Target data flow and ownership
 
@@ -148,7 +149,7 @@ The following require real owner/operator evidence before the dependent release:
 
 | Decision / evidence | Owner and blocking point |
 |---|---|
-| Existing deployed users, purchases, legacy image submissions and object use | Operator inventory before migration/cutover; never assume none |
+| Existing deployed users, purchases, legacy image submissions and object use | Owner confirmed no deployment on 2026-09-12; preserve realistic legacy fixtures and require a fresh inventory before any future deployed cutover |
 | Legacy paid-pack equivalence or compensation | Product/finance owner before old benefit retirement; preserve balances and provider provenance |
 | Initial enabled languages, modes/cohort windows and staffed review hours | Product/content leads before public exposure; all five remain intended |
 | Cash, hourly capacity, burn ceiling and current platform/provider costs | Owner before paid acquisition or procurement; business scenarios are assumptions |
@@ -156,7 +157,13 @@ The following require real owner/operator evidence before the dependent release:
 | Rollback observation window, acceptable recovery point/time and archival retention | Operator/owner before cutover; default no data loss and no destructive contract step without demonstrated recovery |
 | Concrete obsolete test-file deletions | Owner at retirement boundary under AGENTS.md §3, after replacement proof and exact file list exist |
 
-## Current runtime audit
+## Pre-transition runtime audit — historical source evidence
+
+Sections A–J record the checkout inspected before implementation on 2026-09-12.
+Their uses of “current” and “live” refer to that baseline. They do not describe
+the replacement v2 runtime. See the [current media module](../code/MODULE-media-engine.md)
+and [resumption evidence](../reports/2026-09-12-text-transition-resumption.md)
+for completed repairs and the remaining acceptance gates.
 
 ### A. Draw authority/privacy is incompatible, and an existing test deliberately preserves it
 
@@ -502,7 +509,12 @@ settlement gate is complete merely because this allocation or a mock passes.
 7. **Rollback checkpoint:** before any new writes, restoring routing/app to the intact source is possible after freezing the target. After target writes exist, rollback app/config/pack on the same compatible DB, or reconcile/restore those writes under a new maintenance window. Never point users at an older database and lose purchases/results. Do not call generic `MigrateDown`: it rolls back all migrations (`server/internal/store/migrate.go:35`), 000005 down is lossy, 000007 deliberately refuses lossy history downgrade, and 000003 down fails to remove admin_audit_log before referenced admin_accounts. Test each exact permitted downgrade/forward-fix procedure on copies.
 8. **Contract and retirement:** only after deployment evidence proves old matches/clients/catalog consumers are gone and rollback window has expired, enforce final active text-only constraints and remove executable old pathways, config knobs, routes, fixtures/build dependencies and frontend strings. Retain applied migrations, ADR/history, attribution, entitlement mapping and legally required archive evidence as historical records with a reason/owner/lifetime. A dated removal checklist must account for every temporary compatibility branch. No unexplained dormant dual architecture.
 
-## Retirement inventory
+## Retirement inventory — original planning baseline
+
+This table preserves the original disposition and required proof. The exact
+reviewed removal manifests, retained-test mappings, historical exceptions and
+cold verification results now live in the [resumption report](../reports/2026-09-12-text-transition-resumption.md).
+An entry here does not imply that a removed production file still exists.
 
 | Artifact | Planned disposition and proof |
 |---|---|

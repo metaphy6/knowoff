@@ -247,7 +247,9 @@ func PaginateHistory(matchID, snapshotID, epoch string, events []PublicAction, l
 			candidate := page
 			candidate.Events = append(append([]PublicAction{}, page.Events...), events[offset])
 			candidate.ThroughEvidenceSeq = events[offset].EvidenceSeq
-			candidate.SHA256 = eventsHash(candidate.Events)
+			// A SHA-256 hex digest always occupies exactly 64 JSON bytes.
+			// Size the candidate without re-hashing each growing prefix.
+			candidate.SHA256 = "0000000000000000000000000000000000000000000000000000000000000000"
 			data, err := json.Marshal(candidate)
 			if err != nil {
 				return empty, nil, invalid(ErrMalformed, "history_page")
@@ -261,6 +263,7 @@ func PaginateHistory(matchID, snapshotID, epoch string, events []PublicAction, l
 			page = candidate
 			offset++
 		}
+		page.SHA256 = eventsHash(page.Events)
 		pages = append(pages, page)
 	}
 	// Detach nested card slices and pointers from caller-owned state.

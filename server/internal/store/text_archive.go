@@ -43,6 +43,9 @@ func NewTextArchiveStore(db *sql.DB) *TextArchiveStore { return &TextArchiveStor
 // at most limit source records. Committed progress keeps source writes frozen
 // through crashes until both bounded passes have verified the original rows.
 func (s *TextArchiveStore) Start(ctx context.Context, limit int) error {
+	if HasAdminAuthorization(ctx) {
+		return ErrAdminRequired
+	}
 	return s.start(ctx, "", limit)
 }
 
@@ -81,6 +84,11 @@ func (s *TextArchiveStore) start(ctx context.Context, admin string, limit int) e
 		return err
 	}
 	if exists {
+		if admin != "" {
+			if err = textAdmin(ctx, tx, admin); err != nil {
+				return err
+			}
+		}
 		return tx.Commit()
 	}
 	kind, id, hash := "", archiveZeroID, archiveZeroHash
@@ -188,6 +196,9 @@ func archiveCheckMapping(ctx context.Context, tx *sql.Tx, row archiveSource, mis
 }
 
 func (s *TextArchiveStore) Batch(ctx context.Context, limit int) (TextArchiveBatch, error) {
+	if HasAdminAuthorization(ctx) {
+		return TextArchiveBatch{}, ErrAdminRequired
+	}
 	return s.batch(ctx, "", limit)
 }
 func (s *TextArchiveStore) BatchAs(ctx context.Context, admin string, limit int) (TextArchiveBatch, error) {
@@ -209,17 +220,22 @@ func (s *TextArchiveStore) batch(ctx context.Context, admin string, limit int) (
 	if _, err := tx.ExecContext(ctx, archiveFormatting); err != nil {
 		return result, err
 	}
-	p, err := archiveReadProgress(ctx, tx)
 	if admin != "" {
 		if actorErr := textAdmin(ctx, tx, admin); actorErr != nil {
 			return result, actorErr
 		}
 	}
+	p, err := archiveReadProgress(ctx, tx)
 	if err != nil {
 		return result, err
 	}
 	result.Pass = p.Phase
 	if p.Phase == "complete" {
+		if admin != "" {
+			if err = textAdmin(ctx, tx, admin); err != nil {
+				return result, err
+			}
+		}
 		result.Done = true
 		return result, tx.Commit()
 	}

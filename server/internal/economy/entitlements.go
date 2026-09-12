@@ -3,11 +3,13 @@ package economy
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/store"
+	"github.com/knowoff/knowoff/server/pkg/gamecontract"
 )
 
 // EntitlementType identifies an active entitlement.
@@ -44,22 +46,28 @@ func NewEntitlements(db *sql.DB) *Entitlements {
 // Has returns true if the account has an active entitlement of the given type.
 // For time-bounded entitlements, active_until must be in the future.
 func (e *Entitlements) Has(ctx context.Context, accountID string, t EntitlementType) (bool, error) {
-	var activeUntil sql.NullTime
+	var active bool
 	err := e.db.QueryRowContext(ctx,
-		"SELECT active_until FROM entitlements WHERE account_id = $1 AND entitlement_type = $2",
+		`SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type=$2 AND (active_until IS NULL OR active_until>now()))
+		 OR EXISTS(SELECT 1 FROM named_entitlement_items WHERE account_id=$1 AND entitlement_type=$2)`,
 		accountID, string(t),
-	).Scan(&activeUntil)
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
+	).Scan(&active)
 	if err != nil {
 		return false, fmt.Errorf("load entitlement: %w", err)
 	}
-	if !activeUntil.Valid {
-		// Permanent unlock (e.g. custom_avatar).
-		return true, nil
+	return active, nil
+}
+
+// HasValue checks one named benefit. Legacy rows remain readable without being
+// overwritten when the account acquires another theme or poke style.
+func (e *Entitlements) HasValue(ctx context.Context, accountID string, t EntitlementType, value string) (bool, error) {
+	if (t != EntitlementThemePack && t != EntitlementPokeStyle) || !gamecontract.ValidIdentifier(value) {
+		return false, fmt.Errorf("invalid named entitlement")
 	}
-	return activeUntil.Time.After(time.Now().UTC()), nil
+	var active bool
+	err := e.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type=$2 AND value=$3 AND (active_until IS NULL OR active_until>now()))
+	 OR EXISTS(SELECT 1 FROM named_entitlement_items WHERE account_id=$1 AND entitlement_type=$2 AND value=$3)`, accountID, string(t), value).Scan(&active)
+	return active, err
 }
 
 // HasPremium returns true if the account has an active Premium subscription.
@@ -95,7 +103,9 @@ func (e *Entitlements) List(ctx context.Context, accountID string) ([]Entitlemen
 	rows, err := e.db.QueryContext(ctx,
 		`SELECT entitlement_type, value, active_until
 		 FROM entitlements
-		 WHERE account_id = $1 AND (active_until IS NULL OR active_until > now())`,
+		 WHERE account_id = $1 AND (active_until IS NULL OR active_until > now())
+		 UNION SELECT entitlement_type,value,NULL FROM named_entitlement_items WHERE account_id=$1
+		 ORDER BY entitlement_type,value`,
 		accountID,
 	)
 	if err != nil {
@@ -158,12 +168,30 @@ func (e *Entitlements) GrantUnlock(ctx context.Context, accountID string, t Enti
 	if price <= 0 || (t != EntitlementCustomAvatar && t != EntitlementPokeStyle && t != EntitlementThemePack) {
 		return fmt.Errorf("invalid unlock purchase")
 	}
+	named := t == EntitlementPokeStyle || t == EntitlementThemePack
+	if named && !gamecontract.ValidIdentifier(value) {
+		return fmt.Errorf("invalid named entitlement")
+	}
 	day := serverDay(time.Now().UTC())
 	return store.WithValueTransaction(ctx, e.db, func(tx *sql.Tx) error {
 		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
 			return err
 		}
 		var exists bool
+		if named {
+			if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type=$2 AND value=$3 AND (active_until IS NULL OR active_until>now()))
+			 OR EXISTS(SELECT 1 FROM named_entitlement_items WHERE account_id=$1 AND entitlement_type=$2 AND value=$3)`, accountID, string(t), value).Scan(&exists); err != nil {
+				return err
+			}
+			if exists {
+				return nil
+			}
+			if err := debitTx(ctx, tx, accountID, price, fmt.Sprintf("unlock %s", t), day); err != nil {
+				return err
+			}
+			_, err := tx.ExecContext(ctx, `INSERT INTO named_entitlement_items(account_id,entitlement_type,value,source_id) VALUES($1,$2,$3,$4)`, accountID, string(t), value, uuid.NewString())
+			return err
+		}
 		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type=$2)`, accountID, string(t)).Scan(&exists); err != nil {
 			return err
 		}
@@ -210,4 +238,44 @@ func playPassDuration(t EntitlementType) time.Duration {
 	default:
 		return 0
 	}
+}
+
+var ErrAvatarPurchaseUnavailable = errors.New("store.catalog_unavailable")
+var ErrAvatarPurchaseAuth = errors.New("auth.required")
+
+// PurchaseCustomAvatar is the interactive paid upload unlock. The SQL-only
+// credential callback runs under the account lock and again after value writes.
+// Permanent ownership is idempotent even while the provider is unavailable.
+func (e *Entitlements) PurchaseCustomAvatar(ctx context.Context, account string, price int, available bool, authorize func(context.Context, *sql.Tx) error) error {
+	if authorize == nil {
+		return ErrAvatarPurchaseAuth
+	}
+	return store.WithValueTransaction(ctx, e.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, account); err != nil {
+			return err
+		}
+		if err := authorize(ctx, tx); err != nil {
+			return ErrAvatarPurchaseAuth
+		}
+		var owned bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type='custom_avatar' AND active_until IS NULL)`, account).Scan(&owned); err != nil {
+			return err
+		}
+		if owned {
+			return nil
+		}
+		if !available || price <= 0 {
+			return ErrAvatarPurchaseUnavailable
+		}
+		if err := debitTx(ctx, tx, account, price, "unlock custom_avatar", serverDay(time.Now().UTC())); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO entitlements(account_id,entitlement_type,value) VALUES($1,'custom_avatar','')`, account); err != nil {
+			return err
+		}
+		if err := authorize(ctx, tx); err != nil {
+			return ErrAvatarPurchaseAuth
+		}
+		return nil
+	})
 }

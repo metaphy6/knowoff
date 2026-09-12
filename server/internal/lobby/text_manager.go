@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ var (
 	ErrTextHost         = errors.New("lobby.host_required")
 	ErrTextRevision     = errors.New("lobby.stale_revision")
 	ErrTextSlowConsumer = errors.New("connection.slow_consumer")
+	ErrTextWalletHidden = errors.New("wallet.match_in_progress")
 )
 
 // TextValues is the durable admission/value boundary. No hidden engine state is stored here.
@@ -35,6 +37,7 @@ type TextValues interface {
 	Start(context.Context, string, string, int64, time.Time) error
 	CancelPrepared(context.Context, string, string, int64, time.Time) error
 	Award(context.Context, store.TextAward) (int, error)
+	Abandon(context.Context, store.TextAbandon) error
 	Finish(context.Context, store.TextOutcome) error
 	SettlePending(context.Context, string) error
 	Interrupt(context.Context, string, string, int64, time.Time) error
@@ -47,6 +50,7 @@ type TextDeps struct {
 	Owner          string
 	Authority      TextAuthority
 	Config         *config.Config
+	Operations     TextRoomOperations
 	Values         TextValues
 	Resolve        func(context.Context, string, string) (*media.TextSnapshot, error)
 	ResolveRelease func(context.Context, string, string, string) (*media.TextSnapshot, error)
@@ -110,7 +114,8 @@ type TextPeer struct {
 	Done      <-chan struct{}
 	frames    chan TextEnvelope
 	done      chan struct{}
-	closed    bool // manager.mu only
+	enqueueMu sync.Mutex // final enqueue and close; never covers socket I/O
+	closed    atomic.Bool
 }
 type textMember struct {
 	account, admission string
@@ -120,6 +125,9 @@ type textMember struct {
 	ready              *v2.ReadyAcknowledgement
 }
 type textRoom struct {
+	runtimeMu                            sync.Mutex // under manager read lock
+	pendingOperator                      *textRoomOperation
+	excludedAccounts                     map[string]bool
 	pendingAbort                         string
 	id, code, path                       string
 	settings                             v2.LobbySettings
@@ -145,18 +153,92 @@ type textRateState struct {
 
 type TextManager struct {
 	requestRates map[string]textRateState
-	// Serialize all membership/admission/output transitions. Engine and durable
-	// callbacks have bounded caller contexts; no callback may reenter this manager.
-	mu       sync.Mutex
-	deps     TextDeps
-	peers    map[string]*TextPeer
-	members  map[string]*textRoom
-	rooms    map[string]*textRoom
-	queues   map[string]*textQueue
-	order    uint64
-	owner    string
-	draining bool
-	lost     bool
+	// Writers own membership/admission changes. Active room operations retain a
+	// read lock plus runtimeMu, so unrelated tables progress independently.
+	// Callbacks have bounded contexts and must not reenter this manager.
+	mu                    sync.RWMutex
+	rateMu                sync.Mutex
+	deps                  TextDeps
+	peers                 map[string]*TextPeer
+	members               map[string]*textRoom
+	rooms                 map[string]*textRoom
+	queues                map[string]*textQueue
+	order                 uint64
+	owner                 string
+	draining              atomic.Bool
+	lost                  atomic.Bool
+	maintenancePaused     bool
+	dependencyUnavailable bool
+}
+
+// SetReady implements notices.MatchmakingPauser. Maintenance and dependency
+// state are independent, so recovery of either cannot reopen the other's fence.
+func (m *TextManager) SetReady(ready bool) {
+	_ = waitTextLock(context.Background(), m.mu.TryLock)
+	defer m.mu.Unlock()
+	m.maintenancePaused = !ready
+}
+
+func (m *TextManager) SetDependencyReady(ready bool) {
+	_ = waitTextLock(context.Background(), m.mu.TryLock)
+	defer m.mu.Unlock()
+	m.dependencyUnavailable = !ready
+}
+
+// admissionPaused is called with mu held. Begun matches keep their own clocks
+// and reconnect projection while reversible admission pauses are in force.
+func (m *TextManager) admissionPaused() bool {
+	return m.draining.Load() || m.maintenancePaused || m.dependencyUnavailable
+}
+
+// WithWalletAccess serializes a bounded, database-only wallet operation with
+// admission and game actions. Even disconnected seats retain the privacy fence
+// until verdict; checking first and reading later would race a new match start.
+func (m *TextManager) WithWalletAccess(ctx context.Context, account string, operation func() error) error {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
+	defer m.mu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return err
+	}
+	if room := m.members[account]; room != nil && room.match != nil {
+		if phase, _ := room.match.Clock(); phase != v2.PhaseVerdict {
+			return ErrTextWalletHidden
+		}
+	}
+	return operation()
+}
+
+func (m *TextManager) RuntimeReady(ctx context.Context) error {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
+	defer m.mu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return err
+	}
+	if m.admissionPaused() {
+		return ErrTextUnavailable
+	}
+	return nil
+}
+
+// NotifyNotices exposes no game or account data. Connected clients fetch the
+// public, localized inbox on this bounded signal and on connection recovery.
+func (m *TextManager) NotifyNotices(ctx context.Context) error {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
+	defer m.mu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return err
+	}
+	var result error
+	for _, p := range m.peers {
+		result = errors.Join(result, m.emit(p, "system_notice", "", map[string]bool{"refresh": true}))
+	}
+	return result
 }
 
 func NewTextManager(d TextDeps) (*TextManager, error) {
@@ -209,7 +291,7 @@ func (m *TextManager) emit(p *TextPeer, kind, request string, payload any) error
 		default:
 		}
 	}
-	if p == nil || p.closed {
+	if p == nil || p.closed.Load() {
 		return ErrTextMembership
 	}
 	raw, e := json.Marshal(payload)
@@ -225,39 +307,66 @@ func (m *TextManager) emit(p *TextPeer, kind, request string, payload any) error
 		m.closePeer(p)
 		return ErrTextSlowConsumer
 	}
+	// Serialization may overlap another reader observing owner loss. Recheck at
+	// the enqueue boundary, mutually exclusive with closing this peer.
+	p.enqueueMu.Lock()
+	if m.lost.Load() || p.closed.Load() {
+		p.enqueueMu.Unlock()
+		return ErrTextUnavailable
+	}
+	if m.deps.Authority != nil {
+		select {
+		case <-m.deps.Authority.Done():
+			p.enqueueMu.Unlock()
+			m.loseAuthority()
+			return ErrTextUnavailable
+		default:
+		}
+	}
 	select {
 	case p.frames <- env:
+		p.enqueueMu.Unlock()
 		return nil
 	default:
+		p.enqueueMu.Unlock()
 		m.closePeer(p)
 		return ErrTextSlowConsumer
 	}
 }
 func (m *TextManager) closePeer(p *TextPeer) {
-	if p != nil && !p.closed {
-		p.closed = true
+	if p == nil {
+		return
+	}
+	p.enqueueMu.Lock()
+	defer p.enqueueMu.Unlock()
+	if p.closed.CompareAndSwap(false, true) {
 		close(p.done)
 	}
 }
 func (m *TextManager) Send(p *TextPeer, kind, request string, payload any) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	if !m.current(p) {
 		return ErrTextMembership
 	}
 	return m.emit(p, kind, request, payload)
 }
 func (m *TextManager) current(p *TextPeer) bool {
-	return p != nil && !p.closed && m.peers[p.AccountID] == p
+	return p != nil && !p.closed.Load() && m.peers[p.AccountID] == p
 }
 func (m *TextManager) Open(ctx context.Context, account string) (*TextPeer, error) {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return nil, err
+	}
 	defer m.mu.Unlock()
 	if e := m.checkAuthority(ctx); e != nil {
 		return nil, e
 	}
 	if _, e := uuid.Parse(account); e != nil {
 		return nil, ErrTextMembership
+	}
+	if room := m.members[account]; room != nil && room.pendingOperator != nil {
+		return nil, ErrTextUnavailable
 	}
 	if old := m.peers[account]; old != nil {
 		if e := m.disconnect(ctx, old); e != nil {
@@ -274,18 +383,27 @@ func (m *TextManager) Open(ctx context.Context, account string) (*TextPeer, erro
 func (m *TextManager) Availability(ctx context.Context) TextAvailability {
 	// Snapshot immutable configuration; catalog/database I/O never stalls a live
 	// connection or match mutation. Admission revalidates publication separately.
-	m.mu.Lock()
-	d, draining := m.deps, m.draining
-	m.mu.Unlock()
+	if err := waitTextLock(ctx, m.mu.TryRLock); err != nil {
+		return TextAvailability{Prototype: m.deps.Prototype != nil, ProtocolVersion: 2, ClientGeneration: 2, Limits: m.Limits(), Modes: []TextModeAvailability{}}
+	}
+	d, draining := m.deps, m.admissionPaused()
+	m.mu.RUnlock()
 	if d.Authority != nil {
 		if err := d.Authority.Check(ctx); err != nil {
-			m.mu.Lock()
-			m.loseAuthority()
-			m.mu.Unlock()
+			// A cancelled discovery request closes only its own admission result.
+			// Physical authority loss still fences every peer below.
+			if ctx.Err() == nil || !errors.Is(err, ctx.Err()) {
+				m.mu.RLock()
+				m.loseAuthority()
+				m.mu.RUnlock()
+			}
 			draining = true
 		}
 		select {
 		case <-d.Authority.Done():
+			m.mu.RLock()
+			m.loseAuthority()
+			m.mu.RUnlock()
 			draining = true
 		default:
 		}
@@ -388,7 +506,7 @@ func (m *TextManager) access(ctx context.Context, account string, s v2.LobbySett
 	if e := m.checkAuthority(ctx); e != nil {
 		return e
 	}
-	if m.draining {
+	if m.admissionPaused() {
 		return ErrTextUnavailable
 	}
 	if s.PackReleaseID == "" {
@@ -457,7 +575,7 @@ func (m *TextManager) lobby(r *textRoom, p *TextPeer) error {
 		if member == nil {
 			continue
 		}
-		s.Seats = append(s.Seats, v2.LobbySeat{Seat: seat, Connected: member.peer != nil && !member.peer.closed, Ready: member.ready})
+		s.Seats = append(s.Seats, v2.LobbySeat{Seat: seat, Connected: member.peer != nil && !member.peer.closed.Load(), Ready: member.ready})
 		if member.account == p.AccountID {
 			my = seat
 		}
@@ -476,20 +594,30 @@ func (m *TextManager) broadcastLobby(r *textRoom) {
 }
 
 func (m *TextManager) loseAuthority() {
-	m.lost = true
-	m.draining = true
+	m.lost.Store(true)
+	m.draining.Store(true)
 	for _, p := range m.peers {
 		m.closePeer(p)
 	}
 }
 func (m *TextManager) checkAuthority(ctx context.Context) error {
-	if m.lost {
+	if m.lost.Load() {
 		return ErrTextUnavailable
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	if m.deps.Authority == nil {
 		return nil
 	}
 	if e := m.deps.Authority.Check(ctx); e != nil {
+		if ctx.Err() != nil && errors.Is(e, ctx.Err()) {
+			select {
+			case <-m.deps.Authority.Done():
+			default:
+				return e
+			}
+		}
 		m.loseAuthority()
 		return ErrTextUnavailable
 	}
@@ -503,10 +631,12 @@ func (m *TextManager) checkAuthority(ctx context.Context) error {
 }
 
 // AllowRequest keeps the rate budget on an account across socket generations.
-func (m *TextManager) AllowRequest(p *TextPeer) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if !m.current(p) || m.lost {
+func (m *TextManager) AllowRequest(ctx context.Context, p *TextPeer) bool {
+	if waitTextLock(ctx, m.mu.TryRLock) != nil {
+		return false
+	}
+	defer m.mu.RUnlock()
+	if !m.current(p) || m.lost.Load() {
 		return false
 	}
 	cfg := m.deps.Config.RateLimit
@@ -516,6 +646,10 @@ func (m *TextManager) AllowRequest(p *TextPeer) bool {
 	if cfg.MaxIntentsPerSecond <= 0 || cfg.MaxIntentsBurst <= 0 {
 		return false
 	}
+	if waitTextLock(ctx, m.rateMu.TryLock) != nil {
+		return false
+	}
+	defer m.rateMu.Unlock()
 	now := m.deps.Now()
 	rate, capacity := float64(cfg.MaxIntentsPerSecond), float64(cfg.MaxIntentsBurst)
 	state, ok := m.requestRates[p.AccountID]

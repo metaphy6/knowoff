@@ -197,7 +197,9 @@ class _DoodlePainter extends CustomPainter {
     final h = size.height;
     paint.style = PaintingStyle.stroke;
     canvas.drawRect(
-        Rect.fromLTRB(w * 0.18, h * 0.42, w * 0.82, h * 0.82), paint);
+      Rect.fromLTRB(w * 0.18, h * 0.42, w * 0.82, h * 0.82),
+      paint,
+    );
     final awning = Path()
       ..moveTo(w * 0.14, h * 0.42)
       ..lineTo(w * 0.86, h * 0.42)
@@ -206,9 +208,14 @@ class _DoodlePainter extends CustomPainter {
       ..close();
     canvas.drawPath(awning, paint);
     canvas.drawLine(
-        Offset(w * 0.50, h * 0.24), Offset(w * 0.50, h * 0.42), paint);
+      Offset(w * 0.50, h * 0.24),
+      Offset(w * 0.50, h * 0.42),
+      paint,
+    );
     canvas.drawRect(
-        Rect.fromLTRB(w * 0.42, h * 0.62, w * 0.58, h * 0.82), paint);
+      Rect.fromLTRB(w * 0.42, h * 0.62, w * 0.58, h * 0.82),
+      paint,
+    );
   }
 
   void _hailer(Canvas canvas, Size size, Paint paint) {
@@ -223,15 +230,22 @@ class _DoodlePainter extends CustomPainter {
       ..close();
     canvas.drawPath(horn, paint);
     canvas.drawLine(
-        Offset(w * 0.32, h * 0.56), Offset(w * 0.26, h * 0.82), paint);
+      Offset(w * 0.32, h * 0.56),
+      Offset(w * 0.26, h * 0.82),
+      paint,
+    );
     canvas.drawLine(
-        Offset(w * 0.22, h * 0.82), Offset(w * 0.38, h * 0.82), paint);
+      Offset(w * 0.22, h * 0.82),
+      Offset(w * 0.38, h * 0.82),
+      paint,
+    );
     canvas.drawArc(
-        Rect.fromCircle(center: Offset(w * 0.78, h * 0.45), radius: w * 0.13),
-        -0.9,
-        1.8,
-        false,
-        paint);
+      Rect.fromCircle(center: Offset(w * 0.78, h * 0.45), radius: w * 0.13),
+      -0.9,
+      1.8,
+      false,
+      paint,
+    );
   }
 
   void _pin(Canvas canvas, Size size, Paint paint) {
@@ -278,8 +292,9 @@ class _DoodlePainter extends CustomPainter {
     final eyeWidth = w * 0.32;
     final eyeHeight = h * 0.20;
     final path = Path()
-      ..addOval(Rect.fromCenter(
-          center: c, width: eyeWidth * 2, height: eyeHeight * 2));
+      ..addOval(
+        Rect.fromCenter(center: c, width: eyeWidth * 2, height: eyeHeight * 2),
+      );
     canvas.drawPath(path, paint..style = PaintingStyle.stroke);
     canvas.drawCircle(c, eyeWidth * 0.25, paint..style = PaintingStyle.fill);
   }
@@ -288,14 +303,27 @@ class _DoodlePainter extends CustomPainter {
     final c = size.center(Offset.zero);
     final r = size.shortestSide * 0.18;
     final path = Path()
-      ..addOval(Rect.fromCenter(
-          center: Offset(c.dx - r, c.dy), width: r * 2, height: r * 2))
-      ..addOval(Rect.fromCenter(
-          center: Offset(c.dx + r, c.dy), width: r * 2, height: r * 2))
-      ..addOval(Rect.fromCenter(
+      ..addOval(
+        Rect.fromCenter(
+          center: Offset(c.dx - r, c.dy),
+          width: r * 2,
+          height: r * 2,
+        ),
+      )
+      ..addOval(
+        Rect.fromCenter(
+          center: Offset(c.dx + r, c.dy),
+          width: r * 2,
+          height: r * 2,
+        ),
+      )
+      ..addOval(
+        Rect.fromCenter(
           center: Offset(c.dx, c.dy - r * 0.6),
           width: r * 2.4,
-          height: r * 2.4));
+          height: r * 2.4,
+        ),
+      );
     canvas.drawPath(path, paint..style = PaintingStyle.stroke);
   }
 
@@ -346,7 +374,10 @@ class _DoodlePainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
-              center: Offset.zero, width: w * 0.34, height: h * 0.5),
+            center: Offset.zero,
+            width: w * 0.34,
+            height: h * 0.5,
+          ),
           Radius.circular(w * 0.05),
         ),
         paint,
@@ -407,9 +438,15 @@ class _DoodlePainter extends CustomPainter {
     final h = size.height;
     paint.style = PaintingStyle.stroke;
     canvas.drawLine(
-        Offset(w * 0.24, h * 0.24), Offset(w * 0.76, h * 0.76), paint);
+      Offset(w * 0.24, h * 0.24),
+      Offset(w * 0.76, h * 0.76),
+      paint,
+    );
     canvas.drawLine(
-        Offset(w * 0.76, h * 0.24), Offset(w * 0.24, h * 0.76), paint);
+      Offset(w * 0.76, h * 0.24),
+      Offset(w * 0.24, h * 0.76),
+      paint,
+    );
   }
 
   void _poke(Canvas canvas, Size size, Paint paint) {
@@ -448,9 +485,15 @@ class _DoodlePainter extends CustomPainter {
       ..close();
     canvas.drawPath(path, paint);
     canvas.drawLine(
-        Offset(w * 0.30, h * 0.46), Offset(w * 0.40, h * 0.46), paint);
+      Offset(w * 0.30, h * 0.46),
+      Offset(w * 0.40, h * 0.46),
+      paint,
+    );
     canvas.drawLine(
-        Offset(w * 0.60, h * 0.46), Offset(w * 0.70, h * 0.46), paint);
+      Offset(w * 0.60, h * 0.46),
+      Offset(w * 0.70, h * 0.46),
+      paint,
+    );
   }
 
   void _clock(Canvas canvas, Size size, Paint paint) {
@@ -475,12 +518,18 @@ class _DoodlePainter extends CustomPainter {
     );
     // Antenna: the one line that stops the head reading as a plain box.
     canvas.drawLine(
-        Offset(w * 0.50, h * 0.34), Offset(w * 0.50, h * 0.18), paint);
+      Offset(w * 0.50, h * 0.34),
+      Offset(w * 0.50, h * 0.18),
+      paint,
+    );
     canvas.drawCircle(Offset(w * 0.50, h * 0.14), w * 0.06, paint);
     canvas.drawCircle(Offset(w * 0.38, h * 0.52), w * 0.05, paint);
     canvas.drawCircle(Offset(w * 0.62, h * 0.52), w * 0.05, paint);
     canvas.drawLine(
-        Offset(w * 0.36, h * 0.68), Offset(w * 0.64, h * 0.68), paint);
+      Offset(w * 0.36, h * 0.68),
+      Offset(w * 0.64, h * 0.68),
+      paint,
+    );
   }
 
   void _ballotBox(Canvas canvas, Size size, Paint paint) {
@@ -497,7 +546,10 @@ class _DoodlePainter extends CustomPainter {
     canvas.drawPath(box, paint);
     // The slot in the lid.
     canvas.drawLine(
-        Offset(w * 0.38, h * 0.44), Offset(w * 0.62, h * 0.44), paint);
+      Offset(w * 0.38, h * 0.44),
+      Offset(w * 0.62, h * 0.44),
+      paint,
+    );
     // A ballot card, tilted mid-drop through the slot.
     canvas.save();
     canvas.translate(w * 0.5, h * 0.30);
@@ -526,17 +578,26 @@ class _DoodlePainter extends CustomPainter {
     );
     // The ribbon running down its face.
     canvas.drawLine(
-        Offset(w * 0.5, h * 0.32), Offset(w * 0.5, h * 0.86), paint);
+      Offset(w * 0.5, h * 0.32),
+      Offset(w * 0.5, h * 0.86),
+      paint,
+    );
     // The bow — the one shape that reads as "gift" rather than plain card.
     final bowY = h * 0.28;
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(w * 0.39, bowY), width: w * 0.20, height: h * 0.16),
+        center: Offset(w * 0.39, bowY),
+        width: w * 0.20,
+        height: h * 0.16,
+      ),
       paint,
     );
     canvas.drawOval(
       Rect.fromCenter(
-          center: Offset(w * 0.61, bowY), width: w * 0.20, height: h * 0.16),
+        center: Offset(w * 0.61, bowY),
+        width: w * 0.20,
+        height: h * 0.16,
+      ),
       paint,
     );
     canvas.drawCircle(Offset(w * 0.5, bowY), w * 0.05, paint);
@@ -602,7 +663,10 @@ class _DoodlePainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
-              center: Offset.zero, width: w * 0.30, height: h * 0.38),
+            center: Offset.zero,
+            width: w * 0.30,
+            height: h * 0.38,
+          ),
           Radius.circular(w * 0.05),
         ),
         paint,
@@ -665,7 +729,10 @@ class _DoodlePainter extends CustomPainter {
 
     // Hat band
     canvas.drawLine(
-        Offset(w * 0.28, h * 0.34), Offset(w * 0.72, h * 0.34), paint);
+      Offset(w * 0.28, h * 0.34),
+      Offset(w * 0.72, h * 0.34),
+      paint,
+    );
 
     // Hat brim
     final brim = Path()
@@ -692,11 +759,20 @@ class _DoodlePainter extends CustomPainter {
 
     // Bridge & arms
     canvas.drawLine(
-        Offset(w * 0.46, h * 0.52), Offset(w * 0.54, h * 0.52), paint);
+      Offset(w * 0.46, h * 0.52),
+      Offset(w * 0.54, h * 0.52),
+      paint,
+    );
     canvas.drawLine(
-        Offset(w * 0.20, h * 0.52), Offset(w * 0.12, h * 0.48), paint);
+      Offset(w * 0.20, h * 0.52),
+      Offset(w * 0.12, h * 0.48),
+      paint,
+    );
     canvas.drawLine(
-        Offset(w * 0.80, h * 0.52), Offset(w * 0.88, h * 0.48), paint);
+      Offset(w * 0.80, h * 0.52),
+      Offset(w * 0.88, h * 0.48),
+      paint,
+    );
   }
 
   @override

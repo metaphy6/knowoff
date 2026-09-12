@@ -78,27 +78,55 @@ func (m *Manager) revokeToken(ctx context.Context, tokenID string, expiresAt tim
 // LinkOAuth links an OAuth provider subject to an account. It returns an error
 // if the subject is already linked to a different account.
 func (m *Manager) LinkOAuth(ctx context.Context, accountID, provider, subject, email string) error {
-	purpose, err := m.accountPurpose(ctx, accountID)
+	if !validOAuthIdentity(provider, subject, email) {
+		return fmt.Errorf("invalid provider identity")
+	}
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	purpose, _, err := m.accountSession(ctx, tx, accountID, true)
 	if err != nil || purpose != "player" {
 		return fmt.Errorf("player account required")
 	}
-	var existing string
-	err = m.db.QueryRowContext(ctx,
-		"SELECT account_id FROM oauth_links WHERE provider = $1 AND provider_subject = $2",
-		provider, subject,
-	).Scan(&existing)
-	if err == nil && existing != accountID {
-		return fmt.Errorf("provider subject already linked to another account")
+	if err := linkOAuthTx(ctx, tx, accountID, provider, subject, email); err != nil {
+		return err
 	}
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("lookup oauth link: %w", err)
+	return tx.Commit()
+}
+
+func validOAuthIdentity(provider, subject, email string) bool {
+	if (provider != "google" && provider != "facebook") || len(subject) < 1 || len(subject) > 255 || len(email) > 320 {
+		return false
 	}
-	_, err = m.db.ExecContext(ctx,
+	for _, b := range []byte(subject) {
+		if b <= 32 || b >= 127 {
+			return false
+		}
+	}
+	for _, b := range []byte(email) {
+		if b < 32 || b == 127 {
+			return false
+		}
+	}
+	return true
+}
+
+// The unique provider subject is claimed conditionally in one statement: a
+// concurrent losing account cannot report success or overwrite the winner's email.
+func linkOAuthTx(ctx context.Context, tx *sql.Tx, accountID, provider, subject, email string) error {
+	var owner string
+	err := tx.QueryRowContext(ctx,
 		`INSERT INTO oauth_links (account_id, provider, provider_subject, provider_email)
 		 VALUES ($1, $2, $3, $4)
-		 ON CONFLICT (provider, provider_subject) DO UPDATE SET provider_email = EXCLUDED.provider_email`,
+		 ON CONFLICT (provider, provider_subject) DO UPDATE SET provider_email = EXCLUDED.provider_email
+		 WHERE oauth_links.account_id=EXCLUDED.account_id RETURNING account_id`,
 		accountID, provider, subject, email,
-	)
+	).Scan(&owner)
+	if err == sql.ErrNoRows {
+		return ErrOAuthConflict
+	}
 	if err != nil {
 		return fmt.Errorf("upsert oauth link: %w", err)
 	}

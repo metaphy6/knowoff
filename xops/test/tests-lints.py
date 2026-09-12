@@ -83,6 +83,20 @@ def require(command):
 def summarize(output, kind, exit_code):
     result = dict(passed=0, failed=0, skipped=0, package_failures=0, exit_code=exit_code)
     complete = kind in ("plain", "format")
+    if kind == "node":
+        # Only unindented terminal TAP counters count; nested subtest output
+        # must not become a second suite summary or hide missing completion.
+        counters = {}
+        duplicate = False
+        for line in output.splitlines():
+            match = re.fullmatch(r"# (tests|pass|fail|cancelled|skipped|todo) (\d+)", line)
+            if match:
+                duplicate |= match[1] in counters
+                counters[match[1]] = int(match[2])
+        if counters.keys() == {"tests", "pass", "fail", "cancelled", "skipped", "todo"}:
+            result.update(passed=counters["pass"], failed=counters["fail"] + counters["cancelled"] + counters["todo"], skipped=counters["skipped"])
+            complete = (not duplicate and counters["tests"] > 0
+                        and counters["tests"] == result["passed"] + result["failed"] + result["skipped"])
     for line in output.splitlines():
         try:
             event = json.loads(line)
@@ -201,8 +215,12 @@ def go_environment(dsn, redis_address="redis:6379"):
 def go_checks(modules, backend, database, environment):
     checks = []
     for module in modules:
+        # Preserve the complete 12-minute matrix and matched warm/measurement
+        # workload (15 minutes each), plus three minutes of auxiliary work.
+        # The inner workload deadlines and all tests remain authoritative.
+        timeout = "45m" if module == "tools/gamebot" else "120s"
         commands = [
-            ("test", ["go", "test", "-json", "./...", "-count=1", "-p=1", "-timeout=120s"], "go"),
+            ("test", ["go", "test", "-json", "./...", "-count=1", "-p=1", "-timeout=" + timeout], "go"),
             ("format", ["gofmt", "-l", "."], "format"),
             ("vet", ["go", "vet", "./..."], "plain"),
             ("build", ["go", "build", "-o", os.devnull, "./..."], "plain"),
@@ -259,6 +277,7 @@ def main(argv=None):
             results.append(dict(stage="go:services", **summarize(str(error), "plain", 1)))
     if "client" in suites:
         results += run_checks([
+            ("client:web-cache", ["node", "--test", "--test-reporter=tap", "test/web/text_generation_test.mjs"], "client", "node"),
             ("client:test", ["flutter", "test", "--machine"], "client", "flutter"),
             ("client:analyze", ["flutter", "analyze"], "client", "plain"),
             ("client:format", ["dart", "format", "--output=none", "--set-exit-if-changed", "."], "client", "plain"),

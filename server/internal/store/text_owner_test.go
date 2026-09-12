@@ -92,6 +92,184 @@ func TestTextOwnerExclusionReleaseAndUnboundFence(t *testing.T) {
 		t.Fatal("old cancellation", err)
 	}
 }
+
+func TestTextOwnerCancelledCallerPreservesPhysicalAuthority(t *testing.T) {
+	db, values := textValueDB(t)
+	owner, bound := ownerReady(t, db, values)
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := owner.Check(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatal("cancelled check", err)
+	}
+	select {
+	case <-owner.Done():
+		t.Fatal("caller cancellation killed healthy owner")
+	default:
+	}
+	if err := owner.Check(t.Context()); err != nil {
+		t.Fatal("healthy owner unavailable", err)
+	}
+	if other, err := AcquireTextOwner(t.Context(), db); !errors.Is(err, ErrTextOwnerBusy) || other != nil {
+		if other != nil {
+			_ = other.Release(t.Context())
+		}
+		t.Fatal("cancellation released physical authority", err)
+	}
+	if err := bound.Reserve(t.Context(), TextReservation{ID: uuid.NewString(), AccountID: valueAccount(t, db), EntryPath: "local", At: time.Now()}); err != nil {
+		t.Fatal("cancellation fenced valid writer", err)
+	}
+}
+
+func TestTextOwnerQueuedCallerCancellationDoesNotWaitForProbe(t *testing.T) {
+	owner := &TextOwner{done: make(chan struct{})}
+	owner.ready.Store(true)
+	owner.mu.Lock()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- owner.Check(ctx) }()
+	completed := false
+	select {
+	case err := <-done:
+		completed = true
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Error("cancelled caller waited for the process probe mutex")
+	}
+	owner.mu.Unlock()
+	if !completed {
+		if err := <-done; !errors.Is(err, context.DeadlineExceeded) {
+			t.Error(err)
+		}
+	}
+	select {
+	case <-owner.Done():
+		t.Error("queued cancellation lost physical owner")
+	default:
+	}
+	if !owner.ready.Load() {
+		t.Error("queued cancellation cleared readiness")
+	}
+}
+
+func TestTextOwnerQueuedReleaseCancellationPreservesAuthority(t *testing.T) {
+	db, values := textValueDB(t)
+	owner, _ := ownerReady(t, db, values)
+	owner.mu.Lock()
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- owner.Release(ctx) }()
+	completed := false
+	select {
+	case err := <-result:
+		completed = true
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Error("queued release lost caller deadline", err)
+		}
+	case <-time.After(300 * time.Millisecond):
+		t.Error("release waited beyond its deadline for owner mutex")
+	}
+	owner.mu.Unlock()
+	if !completed {
+		select {
+		case <-result:
+		case <-time.After(5 * time.Second):
+			t.Fatal("release did not return after mutex became available")
+		}
+	}
+	if err := owner.Check(t.Context()); err != nil {
+		t.Fatal("queued cancellation changed physical authority", err)
+	}
+	if next, err := AcquireTextOwner(t.Context(), db); !errors.Is(err, ErrTextOwnerBusy) || next != nil {
+		if next != nil {
+			_ = next.Release(t.Context())
+		}
+		t.Fatal("canceled queued release enabled another owner", err)
+	}
+	if err := owner.Release(t.Context()); err != nil {
+		t.Fatal("explicit later release failed", err)
+	}
+}
+
+func TestTextOwnerWaitJoinsHeartbeatAfterRelease(t *testing.T) {
+	db, values := textValueDB(t)
+	owner, _ := ownerReady(t, db, values)
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	if err := owner.Wait(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("healthy heartbeat reported completed", err)
+	}
+	if err := owner.Release(t.Context()); err != nil {
+		t.Fatal(err)
+	}
+	joined, stop := context.WithTimeout(t.Context(), time.Second)
+	defer stop()
+	if err := owner.Wait(joined); err != nil {
+		t.Fatal("released heartbeat did not join", err)
+	}
+	if err := owner.Release(joined); err != nil {
+		t.Fatal("released owner lost idempotency", err)
+	}
+}
+
+func TestTextOwnerInFlightCallerCancellationDoesNotCancelProbe(t *testing.T) {
+	db, values := textValueDB(t)
+	owner, _ := ownerReady(t, db, values)
+	ctx := t.Context()
+	var pid int
+	if err := db.QueryRowContext(ctx, `SELECT backend_pid FROM text_process_owners WHERE incarnation_id=$1`, owner.Token().IncarnationID).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	block, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer block.Rollback()
+	if _, err = block.ExecContext(ctx, `LOCK TABLE text_process_current IN ACCESS EXCLUSIVE MODE`); err != nil {
+		t.Fatal(err)
+	}
+	request, cancel := context.WithCancel(ctx)
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { result <- owner.Check(request) }()
+	deadline := time.Now().Add(time.Second)
+	for {
+		var waiting bool
+		if err = db.QueryRowContext(ctx, `SELECT COALESCE(wait_event_type='Lock',false) FROM pg_stat_activity WHERE pid=$1`, pid).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("owner probe did not reach its controlled table lock")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	cancel()
+	if err = block.Rollback(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err = <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatal("in-flight cancellation", err)
+		}
+	case <-time.After(4 * time.Second):
+		t.Fatal("probe did not finish within its server bound")
+	}
+	if err = owner.Check(ctx); err != nil {
+		t.Fatal("caller cancelled physical probe", err)
+	}
+	select {
+	case <-owner.Done():
+		t.Fatal("healthy owner lost")
+	default:
+	}
+}
 func TestTextOwnerPhysicalLossPreservesAwardsAndTerminal(t *testing.T) {
 	db, values := textValueDB(t)
 	ctx := context.Background()

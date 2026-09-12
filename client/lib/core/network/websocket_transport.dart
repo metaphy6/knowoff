@@ -85,7 +85,10 @@ class WebSocketTransport implements GameTransport {
       return _connectAttempt!;
     }
     final pending = _openWithBackoff(
-        initialDelay: initialDelay, attempt: attempt, generation: generation);
+      initialDelay: initialDelay,
+      attempt: attempt,
+      generation: generation,
+    );
     _connectAttempt = pending;
     _attemptGeneration = generation;
     return pending.whenComplete(() {
@@ -104,9 +107,9 @@ class WebSocketTransport implements GameTransport {
     }
     if (_disposed || generation != _generation) return;
 
-    _setState(attempt == 0
-        ? ConnectionState.connecting
-        : ConnectionState.reconnecting);
+    _setState(
+      attempt == 0 ? ConnectionState.connecting : ConnectionState.reconnecting,
+    );
 
     try {
       final channel = channelFactory(Uri.parse(url));
@@ -129,7 +132,9 @@ class WebSocketTransport implements GameTransport {
               }
             } on Exception catch (e) {
               AppLogger.warning(
-                  LogTopic.network, 'Discarded malformed server message');
+                LogTopic.network,
+                'Discarded malformed server message',
+              );
               _messageController.addError(e);
             }
           }
@@ -145,9 +150,11 @@ class WebSocketTransport implements GameTransport {
         },
         onError: (Object error) {
           if (_disposed || generation != _generation) return;
-          AppLogger.error(LogTopic.network, 'Game connection failed', fields: {
-            'error_type': error.runtimeType,
-          });
+          AppLogger.error(
+            LogTopic.network,
+            'Game connection failed',
+            fields: {'error_type': error.runtimeType},
+          );
           _messageController.addError(error);
         },
       );
@@ -155,10 +162,11 @@ class WebSocketTransport implements GameTransport {
       if (_disposed || generation != _generation) return;
       _connected = false;
       _setState(ConnectionState.disconnected);
-      AppLogger.error(LogTopic.network, 'Could not open game connection',
-          fields: {
-            'error_type': e.runtimeType,
-          });
+      AppLogger.error(
+        LogTopic.network,
+        'Could not open game connection',
+        fields: {'error_type': e.runtimeType},
+      );
       _messageController.addError(e);
       _scheduleReconnect(attempt + 1, generation);
     }
@@ -170,19 +178,23 @@ class WebSocketTransport implements GameTransport {
     final capped = min(base, maxReconnectDelay.inMilliseconds);
     final jitter = (capped * reconnectJitter * _rand.nextDouble()).toInt();
     final delay = Duration(milliseconds: capped + jitter);
-    AppLogger.info(LogTopic.network, 'Scheduled game reconnection', fields: {
-      'attempt': attempt,
-      'delay_ms': delay.inMilliseconds,
-    });
+    AppLogger.info(
+      LogTopic.network,
+      'Scheduled game reconnection',
+      fields: {'attempt': attempt, 'delay_ms': delay.inMilliseconds},
+    );
     // Wait outside the pending-attempt gate: a failed handshake schedules this
     // while its own future is still completing. Coalescing that same future
     // would silently lose the retry.
-    unawaited(Future<void>.delayed(delay, () {
-      return _connectWithBackoff(
+    unawaited(
+      Future<void>.delayed(delay, () {
+        return _connectWithBackoff(
           initialDelay: Duration.zero,
           attempt: attempt,
-          generation: generation);
-    }));
+          generation: generation,
+        );
+      }),
+    );
   }
 
   @override
@@ -191,9 +203,11 @@ class WebSocketTransport implements GameTransport {
       AppLogger.warning(LogTopic.network, 'Blocked send while disconnected');
       throw StateError('transport not connected');
     }
-    AppLogger.debug(LogTopic.network, 'Sent game message', fields: {
-      'message_type': message['type'],
-    });
+    AppLogger.debug(
+      LogTopic.network,
+      'Sent game message',
+      fields: {'message_type': message['type']},
+    );
     _channel!.sink.add(TransportCodec.encode(message));
   }
 

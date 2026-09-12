@@ -163,16 +163,44 @@ func (m *Manager) portalSubmissionPublish(w http.ResponseWriter, r *http.Request
 }
 
 func (m *Manager) portalFreezes(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	adminPage(w, r, "Guard enforcement", "This workspace is not enabled yet.", `<p class="notice">Guard identity, timeboxed suspension enforcement and safe expiry must be completed before these controls can be enabled.</p><a href="/admin/reports">Review report cases</a>`, nil)
+	freezes, err := pm.ListActiveFreezes(r.Context())
+	if err != nil {
+		http.Error(w, "Freeze queue unavailable.", 503)
+		return
+	}
+	adminPage(w, r, "Guard enforcement", "Review each independent freeze. Dismissal never clears an existing admin ban.", freezeAdminBody, map[string]any{"Freezes": freezes})
 }
 
 func (m *Manager) portalFreezeDismiss(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	http.Error(w, "This operation is not available until its product enforcement or pack-deployment workflow is implemented.", http.StatusNotImplemented)
+	if err := pm.DismissFreeze(r.Context(), adminIDFromContext(r.Context()), r.PathValue("id")); err != nil {
+		adminError(w, r, err, "/admin/portal/freezes")
+		return
+	}
+	http.Redirect(w, r, "/admin/portal/freezes", http.StatusSeeOther)
 }
 
 func (m *Manager) portalFreezeBan(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
-	http.Error(w, "This operation is not available until its product enforcement or pack-deployment workflow is implemented.", http.StatusNotImplemented)
+	var err error
+	switch r.FormValue("decision") {
+	case "permanent":
+		err = pm.ConvertFreezeToBan(r.Context(), adminIDFromContext(r.Context()), r.PathValue("id"), r.FormValue("reason"))
+	case "timed":
+		var until time.Time
+		until, err = time.Parse(time.RFC3339, r.FormValue("until"))
+		if err == nil {
+			err = pm.ConvertFreezeToTimedBan(r.Context(), adminIDFromContext(r.Context()), r.PathValue("id"), r.FormValue("reason"), until)
+		}
+	default:
+		err = errors.New("choose timed or permanent ban")
+	}
+	if err != nil {
+		adminError(w, r, err, "/admin/portal/freezes")
+		return
+	}
+	http.Redirect(w, r, "/admin/portal/freezes", http.StatusSeeOther)
 }
+
+const freezeAdminBody = `{{range .Data.Freezes}}<article class="panel"><h2>Account <code>{{.account_id}}</code></h2><p>Guard <code>{{.frozen_by}}</code> · expires {{.expires_at}}</p><p>{{.reason}}</p><form method="post" action="/admin/portal/freezes/{{.id}}/dismiss"><input type="hidden" name="csrf_token" value="{{$.CSRF}}"><button>Dismiss this freeze</button></form><form method="post" action="/admin/portal/freezes/{{.id}}/ban"><input type="hidden" name="csrf_token" value="{{$.CSRF}}"><label for="decision-{{.id}}">Final decision</label><select id="decision-{{.id}}" name="decision"><option value="timed">Timed ban</option><option value="permanent">Permanent ban</option></select><label for="until-{{.id}}">Timed ban end, RFC3339 with timezone</label><input id="until-{{.id}}" name="until" placeholder="2026-09-20T12:00:00Z"><label for="reason-{{.id}}">Decision reason</label><textarea id="reason-{{.id}}" name="reason" required></textarea><button>Apply final decision</button></form></article>{{else}}<p>No active freezes.</p>{{end}}`
 
 func (m *Manager) portalChallenge(w http.ResponseWriter, r *http.Request, pm *portal.Manager) {
 	topic, err := pm.CurrentChallengeTopic(r.Context())

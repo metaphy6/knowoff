@@ -390,6 +390,10 @@ func (m *TextMatch) advance(s *textState, now time.Time, p *textPending) error {
 		v := &s.Players[i]
 		if !v.Connected && !v.Absent && v.GraceDeadline > 0 && now.UnixMilli() >= v.GraceDeadline {
 			v.Absent = true
+			if m.penalizeAbandon && !v.AbandonRecorded {
+				v.AbandonRecorded = true
+				p.Abandons = append(p.Abandons, TextAbandonEvent{MatchID: m.contract.MatchID, Seat: i, OccurredAt: time.UnixMilli(v.GraceDeadline).UTC()})
+			}
 		}
 	}
 	if m.absenceEnd(s, now, p) {

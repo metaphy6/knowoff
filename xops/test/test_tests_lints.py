@@ -20,6 +20,23 @@ SPEC.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_gamebot_full_workload_has_its_own_bounded_package_timeout(self):
+        modules = ["server", "tools/gamebot", "tools/mediapack", "tools/new-tool"]
+        for backend in ("native", "docker"):
+            with self.subTest(backend=backend), patch.object(runner.shutil, "which", return_value=None):
+                checks = runner.go_checks(modules, backend, {"network": "isolated"}, runner.go_environment(TEST_DSN))
+                tests = {name.removesuffix(":test"): command for name, command, _, kind in checks if kind == "go"}
+                self.assertEqual(set(tests), set(modules))
+                for module, command in tests.items():
+                    go = command[command.index("go"):]
+                    expected = "45m" if module == "tools/gamebot" else "120s"
+                    self.assertEqual([arg for arg in go if arg.startswith("-timeout=")], ["-timeout=" + expected])
+                    self.assertEqual(go[:3], ["go", "test", "-json"])
+                    self.assertIn("./...", go)
+                    self.assertIn("-count=1", go)
+                    self.assertIn("-p=1", go)
+                    self.assertFalse(any(arg.startswith(("-run", "-skip", "-short")) for arg in go))
+
     def test_discovers_every_retained_module_and_python_suite(self):
         modules, suites = runner.discover_checks(runner.REPOSITORY_ROOT)
         self.assertTrue({"server", "tools/gamebot", "tools/mediapack"} <= set(modules))
@@ -91,6 +108,35 @@ class RunnerTests(unittest.TestCase):
     def test_formatter_output_fails_even_when_gofmt_exits_zero(self):
         self.assertFalse(runner.summarize("needs_format.go\n", "format", 0)["ok"])
         self.assertTrue(runner.summarize("", "format", 0)["ok"])
+
+    def test_node_tap_counts_and_refuses_missing_or_inconsistent_completion(self):
+        output = "TAP version 13\n1..2\n# tests 2\n# suites 0\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n"
+        result = runner.summarize(output, "node", 0)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["passed"], result["failed"], result["skipped"]), (2, 0, 0))
+        for broken in ["", output.replace("# tests 2\n", ""), output.replace("# tests 2", "# tests 3"), output + "# pass 2\n", output.replace("# tests 2", "# tests 0")]:
+            with self.subTest(output=broken):
+                self.assertFalse(runner.summarize(broken, "node", 0)["ok"])
+        self.assertFalse(runner.summarize(output, "node", 1)["ok"])
+
+    def test_node_skip_todo_cancel_and_failure_are_not_green(self):
+        for state, expected in [("skipped", "skipped"), ("todo", "failed"), ("cancelled", "failed"), ("fail", "failed")]:
+            output = "# tests 1\n# pass 0\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n"
+            output = output.replace(f"# {state} 0", f"# {state} 1")
+            with self.subTest(state=state):
+                result = runner.summarize(output, "node", 0)
+                self.assertFalse(result["ok"])
+                self.assertEqual(result[expected], 1)
+
+    def test_client_gate_includes_real_node_cache_upgrade_suite(self):
+        seen = []
+        def run_checks(checks, *_args):
+            seen.extend(checks)
+            return []
+        with patch.object(runner, "run_checks", side_effect=run_checks), redirect_stdout(io.StringIO()):
+            runner.main(["--suite", "client"])
+        node = [check for check in seen if check[0] == "client:web-cache"]
+        self.assertEqual(node, [("client:web-cache", ["node", "--test", "--test-reporter=tap", "test/web/text_generation_test.mjs"], "client", "node")])
 
     def test_incomplete_machine_output_is_not_green(self):
         self.assertFalse(runner.summarize("not test output", "go", 0)["ok"])

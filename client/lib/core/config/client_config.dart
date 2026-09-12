@@ -46,7 +46,7 @@ class ClientConfig {
       featureFlags: (json['featureFlags'] as Map<String, dynamic>?) ?? const {},
       supportedLocales:
           (json['supportedLocales'] as List<dynamic>?)?.cast<String>() ??
-              const ['en'],
+          const ['en'],
       defaultLocale: json['defaultLocale'] as String? ?? 'en',
     );
   }
@@ -62,13 +62,13 @@ class ClientConfig {
   }
 
   static ClientConfig defaultConfig() => ClientConfig(
-        serverUrl: _resolveHostForEmulator('http://localhost:8080'),
-        websocketUrl: _resolveHostForEmulator('ws://localhost:8080/ws/v2'),
-        protocolVersion: 2,
-        featureFlags: const {},
-        supportedLocales: const ['en'],
-        defaultLocale: 'en',
-      );
+    serverUrl: _resolveHostForEmulator('http://localhost:8080'),
+    websocketUrl: _resolveHostForEmulator('ws://localhost:8080/ws/v2'),
+    protocolVersion: 2,
+    featureFlags: const {},
+    supportedLocales: const ['en'],
+    defaultLocale: 'en',
+  );
 
   bool isEnabled(String flag) => featureFlags[flag] == true;
 }

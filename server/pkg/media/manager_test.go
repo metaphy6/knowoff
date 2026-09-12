@@ -1,55 +1,64 @@
 package media
 
 import (
-	"bytes"
+	"reflect"
 	"testing"
 )
 
-func TestManager_ActiveAndAssetBytes(t *testing.T) {
-	pack, err := LoadPack("testdata/golden-pack", DefaultDealingTuning())
+func TestTextManagerExposesOnlyImmutableRevisionCopies(t *testing.T) {
+	snapshot, err := NewTextSnapshot(textTestReviewedBundle(t, "retirement-one"), textFixtureLimits())
 	if err != nil {
-		t.Fatalf("load golden pack: %v", err)
+		t.Fatal(err)
 	}
-	// The golden bundle is text-only; attach a real synthetic static WebP
-	// to exercise the retained asset lookup without a conditional skip.
-	data := imageBytes(t, staticWebP)
-	ref := ContentHash(data)
-	pack.Assets = map[string][]byte{ref: data}
-
-	m := NewManager(pack)
-	if got := m.Active(); got == nil {
-		t.Fatal("expected active pack")
+	manager := new(TextManager)
+	if err := manager.Activate(snapshot, "text-v2", textFixtureTuning()); err != nil {
+		t.Fatal(err)
 	}
-	if got := m.Active().Manifest.PackTag; got != "test-golden" {
-		t.Fatalf("expected pack tag test-golden, got %q", got)
+	active := manager.Active()
+	original := active.Bundle()
+	copy := active.Bundle()
+	copy.Cards[0].Text = "caller mutation"
+	copy.Artifacts["technical.json"][0] = 'x'
+	if !reflect.DeepEqual(active.Bundle(), original) {
+		t.Fatal("caller mutated pinned text or evidence bytes")
 	}
-
-	if got := m.AssetBytes(ref); !bytes.Equal(got, data) {
-		t.Fatal("expected exact asset bytes")
+	if _, ok := active.Nown("missing"); ok {
+		t.Fatal("missing Nown fabricated")
 	}
-	if got := m.AssetBytes("missing"); got != nil {
-		t.Fatal("expected nil for missing asset")
+	if _, ok := active.Card("missing"); ok {
+		t.Fatal("missing card fabricated")
 	}
 }
 
-func TestManager_HotSwapKeepsPreviousPack(t *testing.T) {
-	p1, err := LoadPack("testdata/golden-pack", DefaultDealingTuning())
+func TestTextManagerActivationPreservesPreviousReleaseAndRejectsFailedCandidate(t *testing.T) {
+	manager := new(TextManager)
+	first, err := NewTextSnapshot(textTestReviewedBundle(t, "retirement-first"), textFixtureLimits())
 	if err != nil {
-		t.Fatalf("load golden pack: %v", err)
+		t.Fatal(err)
 	}
-	p2, err := LoadPack("testdata/band-starved-pack", DefaultDealingTuning())
+	second, err := NewTextSnapshot(textTestReviewedBundle(t, "retirement-second"), textFixtureLimits())
 	if err != nil {
-		t.Fatalf("load band-starved pack: %v", err)
+		t.Fatal(err)
 	}
-
-	m := NewManager(p1)
-	captured := m.Active()
-
-	m.Load(p2)
-	if m.Active().Manifest.PackTag != p2.Manifest.PackTag {
-		t.Fatal("expected active pack to be swapped")
+	if err := manager.Activate(first, "text-v2", textFixtureTuning()); err != nil {
+		t.Fatal(err)
 	}
-	if captured.Manifest.PackTag != p1.Manifest.PackTag {
-		t.Fatal("captured pack reference must remain stable")
+	pinned := manager.Active()
+	before := pinned.Bundle()
+	if err := manager.Activate(second, "text-v2", textFixtureTuning()); err != nil {
+		t.Fatal(err)
+	}
+	if manager.Active() != second || !reflect.DeepEqual(pinned.Bundle(), before) {
+		t.Fatal("activation changed a begun match's release")
+	}
+	synthetic, err := NewTextSnapshot(textFixtureBundle(t, "en"), textFixtureLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := manager.Activate(synthetic, "text-v2", textFixtureTuning()); err == nil {
+		t.Fatal("failed candidate activated")
+	}
+	if manager.Active() != second || !reflect.DeepEqual(pinned.Bundle(), before) {
+		t.Fatal("failed activation replaced current or pinned release")
 	}
 }

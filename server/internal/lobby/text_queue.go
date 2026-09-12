@@ -12,7 +12,9 @@ func (m *TextManager) queueView(q *textQueue, status string) TextQueueState {
 	return TextQueueState{QueueID: q.id, Status: status, JoinedAtMS: q.joined.UnixMilli(), DecisionAtMS: q.decision.UnixMilli(), Settings: q.settings}
 }
 func (m *TextManager) QueueJoin(ctx context.Context, p *TextPeer, s v2.LobbySettings) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if !m.current(p) || m.members[p.AccountID] != nil {
 		return ErrTextMembership
@@ -44,7 +46,9 @@ func (m *TextManager) QueueJoin(ctx context.Context, p *TextPeer, s v2.LobbySett
 	return m.matchQueues(ctx)
 }
 func (m *TextManager) KeepWaiting(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	q := m.queues[p.AccountID]
 	if !m.current(p) || q == nil || q.peer != p {
@@ -55,7 +59,9 @@ func (m *TextManager) KeepWaiting(ctx context.Context, p *TextPeer) error {
 	return m.emit(p, "queue", "", m.queueView(q, "waiting"))
 }
 func (m *TextManager) QueueLeave(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if !m.current(p) {
 		return ErrTextMembership
@@ -71,7 +77,7 @@ func (m *TextManager) leaveQueue(ctx context.Context, p *TextPeer) error {
 		return e
 	}
 	delete(m.queues, p.AccountID)
-	if !p.closed {
+	if !p.closed.Load() {
 		return m.emit(p, "queue", "", m.queueView(q, "left"))
 	}
 	return nil
@@ -108,7 +114,7 @@ func (m *TextManager) assign(r *textRoom, q *textQueue) {
 	_ = m.emit(q.peer, "queue", "", m.queueView(q, "assigned"))
 }
 func (m *TextManager) matchQueues(ctx context.Context) error {
-	if m.draining {
+	if m.admissionPaused() {
 		return nil
 	}
 	// Existing rematches receive explicit human FIFO replacements, always unready.
@@ -119,14 +125,14 @@ func (m *TextManager) matchQueues(ctx context.Context) error {
 	sort.Strings(codes)
 	for _, code := range codes {
 		r := m.rooms[code]
-		if !r.rematching || r.path != "quick_play" || r.match != nil {
+		if !r.rematching || r.path != "quick_play" || r.match != nil || r.pendingOperator != nil {
 			continue
 		}
 		for _, q := range m.sortedQueue() {
 			if len(r.seats) == r.settings.Size {
 				break
 			}
-			if q.settings != r.settings {
+			if q.settings != r.settings || r.excludedAccounts[q.peer.AccountID] {
 				continue
 			}
 			accounts := append(m.accounts(r), q.peer.AccountID)

@@ -12,10 +12,6 @@
   "@mainMenuLocalRoom": {
     "description": "Main menu button to create or join a local room."
   },
-  "lobbyWaitingForPlayers": "Waiting for players...",
-  "@lobbyWaitingForPlayers": {
-    "description": "Lobby status while seats are not full."
-  },
   "playersCount": "{count, plural, =0{No players} =1{One player} other{{count} players}}",
   "@playersCount": {
     "description": "Player count label with ICU plural support.",
@@ -28,10 +24,6 @@
   "queueTitle": "Quick Play",
   "@queueTitle": {
     "description": "Queue screen title."
-  },
-  "findingMatch": "Finding a match...",
-  "@findingMatch": {
-    "description": "Queue status label."
   },
   "queueInitializing": "Joining queue...",
   "@queueInitializing": {
@@ -65,25 +57,9 @@
   "@knowoffTitle": {
     "description": "Voting screen title."
   },
-  "verdictTitle": "Verdict",
-  "@verdictTitle": {
-    "description": "Match verdict screen title."
-  },
-  "readyLabel": "Ready",
-  "@readyLabel": {
-    "description": "Ready button label."
-  },
-  "pokeLabel": "Poke",
-  "@pokeLabel": {
-    "description": "Poke action label."
-  },
   "voteLabel": "Vote",
   "@voteLabel": {
     "description": "Vote action label."
-  },
-  "youLabel": "You",
-  "@youLabel": {
-    "description": "Label marking the local player."
   },
   "roleNower": "Nower",
   "@roleNower": {
@@ -93,46 +69,13 @@
   "@roleDonower": {
     "description": "Donower role name."
   },
-  "eliminatedLabel": "Eliminated",
-  "@eliminatedLabel": {
-    "description": "Eliminated player label."
-  },
   "yourTurn": "Your turn",
   "@yourTurn": {
     "description": "Label shown when it is the local player's turn."
   },
-  "playCard": "Play card",
-  "@playCard": {
-    "description": "Button label to play a card."
-  },
-  "drawCards": "Draw",
-  "@drawCards": {
-    "description": "Button label to draw cards."
-  },
-  "passTurn": "Pass",
-  "@passTurn": {
-    "description": "Button label to pass the turn."
-  },
   "timedOutLabel": "Timed out",
   "@timedOutLabel": {
     "description": "Shown on the evidence table in place of a card for a seat that auto-passed on turn timeout."
-  },
-  "discussionPrompt": "Argue. Accuse. Bluff.",
-  "@discussionPrompt": {
-    "description": "Prompt shown during discussion."
-  },
-  "voteFor": "Vote for {name}",
-  "@voteFor": {
-    "description": "Accessibility label for a vote button.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "waitingForVotes": "Waiting for votes...",
-  "@waitingForVotes": {
-    "description": "Label shown while votes are being cast."
   },
   "nowerWin": "Nowers win",
   "@nowerWin": {
@@ -166,39 +109,6 @@
   "@quickChatLaugh": {
     "description": "Canned chat reaction."
   },
-  "quickChatTargetHint": "Suspect or trust {name}",
-  "@quickChatTargetHint": {
-    "description": "Semantic hint on a table box that opens the targeted Quick Chat picker.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "quickChatSuspectLog": "{name} suspects {target}",
-  "@quickChatSuspectLog": {
-    "description": "Feed entry and accusation banner for a targeted \"I suspect you\" sent at another player.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "target": {
-        "type": "String"
-      }
-    }
-  },
-  "quickChatTrustLog": "{name} trusts {target}",
-  "@quickChatTrustLog": {
-    "description": "Feed entry and accusation banner for a targeted \"Trust me\" sent at another player.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "target": {
-        "type": "String"
-      }
-    }
-  },
   "pressAndHoldRole": "Press and hold to check your role",
   "@pressAndHoldRole": {
     "description": "Hint on the role card."
@@ -206,18 +116,6 @@
   "revealYourRoleAction": "Reveal your role",
   "@revealYourRoleAction": {
     "description": "Label on the compact role chip above the draw pile, unpressed state."
-  },
-  "donowerPlaceholder": "You cannot see this Nown.",
-  "@donowerPlaceholder": {
-    "description": "Placeholder prompt shown to Donowers."
-  },
-  "emptyTable": "No cards played yet.",
-  "@emptyTable": {
-    "description": "Placeholder when the table has no cards."
-  },
-  "emptyHand": "Your hand is empty.",
-  "@emptyHand": {
-    "description": "Placeholder when the player has no cards."
   },
   "mainMenuProfile": "Profile",
   "@mainMenuProfile": {
@@ -570,10 +468,6 @@
   "@profileChangeAvatar": {
     "description": "Profile screen button to open the avatar upload sheet."
   },
-  "reportNownAction": "Report",
-  "@reportNownAction": {
-    "description": "Button to report the current round's Nown media."
-  },
   "reportPlayerAction": "Report player",
   "@reportPlayerAction": {
     "description": "Button in the seat sheet that opens a conduct report."
@@ -599,14 +493,6 @@
   "@drawPileLabel": {
     "description": "Caption on the draw pile object."
   },
-  "drawPileEmpty": "Pile empty",
-  "@drawPileEmpty": {
-    "description": "Caption on the draw pile once every card is gone."
-  },
-  "drawPileFreeChip": "FREE",
-  "@drawPileFreeChip": {
-    "description": "Price chip on the draw pile while a One More Free Card token makes the next draw free."
-  },
   "freeDrawHeadline": "FREE CARD!",
   "@freeDrawHeadline": {
     "description": "Dramatic headline when a One More Free Card specialty banks a free draw."
@@ -620,41 +506,13 @@
       }
     }
   },
-  "specialtyRevealAction": "Reveal a Hand",
-  "@specialtyRevealAction": {
-    "description": "Button to use the Reveal specialty card."
-  },
-  "specialtyOneMoreAction": "Free Card",
-  "@specialtyOneMoreAction": {
-    "description": "Button to use the One More Free Card specialty."
-  },
-  "specialtyShuffleAction": "Shuffle",
-  "@specialtyShuffleAction": {
-    "description": "Button to use the Shuffle specialty card."
-  },
-  "specialtyRevoteAction": "Revote",
-  "@specialtyRevoteAction": {
-    "description": "Button to use the Revote specialty card."
-  },
   "revoteRushHint": "Last seconds — slam it before the ballot closes!",
   "@revoteRushHint": {
     "description": "Urgent Revote hint shown during the final five seconds of the ballot window."
   },
-  "specialtyRevoteUsageHint": "The card is used during voting.",
-  "@specialtyRevoteUsageHint": {
-    "description": "Small note on the Revote card in-hand, revealed after a tap, explaining when it is played."
-  },
   "specialtyRevoteOwnerHint": "Nowers only.",
   "@specialtyRevoteOwnerHint": {
     "description": "Small static note on the Revote card in-hand naming which role may use it."
-  },
-  "specialtyShuffleOwnerHint": "Donowers only.",
-  "@specialtyShuffleOwnerHint": {
-    "description": "Small static note on the Shuffle card in-hand naming which role may use it."
-  },
-  "chooseRevealTargetTitle": "Choose a player to reveal",
-  "@chooseRevealTargetTitle": {
-    "description": "Dialog title when picking a Reveal specialty target."
   },
   "handRevealHeadline": "HAND HEIST!",
   "@handRevealHeadline": {
@@ -663,24 +521,6 @@
   "handRevealAnnouncement": "{name}'s hand is exposed!",
   "@handRevealAnnouncement": {
     "description": "Public Reveal announcement naming the exposed player.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "viewRevealedHand": "View {name}'s exposed hand",
-  "@viewRevealedHand": {
-    "description": "Accessibility label for the one-time Reveal doodle on a seat avatar.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "revealedHandTitle": "{name}'s exposed hand",
-  "@revealedHandTitle": {
-    "description": "Title above a privately opened Reveal hand view.",
     "placeholders": {
       "name": {
         "type": "String"
@@ -696,47 +536,6 @@
       }
     }
   },
-  "pokedByLabel": "{name} poked you",
-  "@pokedByLabel": {
-    "description": "Shown when the local player is poked.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "chatLogEmpty": "No chatter yet.",
-  "@chatLogEmpty": {
-    "description": "Empty state for the Quick Chat / poke feed."
-  },
-  "pokedTargetLog": "{name} poked {target}",
-  "@pokedTargetLog": {
-    "description": "Feed entry for a poke sent to another player.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "target": {
-        "type": "String"
-      }
-    }
-  },
-  "botSeatLabel": "Bot",
-  "@botSeatLabel": {
-    "description": "Badge on a labeled backfill-bot seat."
-  },
-  "seatOnTheClock": "On the clock",
-  "@seatOnTheClock": {
-    "description": "Badge on the seat whose turn it currently is."
-  },
-  "seatDisconnected": "Offline",
-  "@seatDisconnected": {
-    "description": "Badge on a disconnected seat inside its grace window."
-  },
-  "handTitle": "Your hand",
-  "@handTitle": {
-    "description": "Heading above the player's cards."
-  },
   "handCardCount": "{count, plural, =0{no cards} =1{1 card} other{{count} cards}}",
   "@handCardCount": {
     "description": "Count of cards held.",
@@ -746,41 +545,13 @@
       }
     }
   },
-  "drawPileCost": "{count} in pile · -{penalty} pts each",
-  "@drawPileCost": {
-    "description": "Draw pile size plus the per-draw match-point penalty.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      },
-      "penalty": {
-        "type": "int"
-      }
-    }
-  },
   "cardSelected": "Selected",
   "@cardSelected": {
     "description": "Label on the currently selected hand card."
   },
-  "cardTypeText": "Text",
-  "@cardTypeText": {
-    "description": "Card media type: plain text."
-  },
   "cardTypeImage": "Image",
   "@cardTypeImage": {
     "description": "Card media type: image."
-  },
-  "cardTypeSpecialty": "Specialty",
-  "@cardTypeSpecialty": {
-    "description": "Footer label on the specialty card in hand, in place of a media type."
-  },
-  "evidenceTableTitle": "On the table",
-  "@evidenceTableTitle": {
-    "description": "Heading over the played-card evidence surface."
-  },
-  "nownLabel": "Nown",
-  "@nownLabel": {
-    "description": "Caption rail label over a visible Nown."
   },
   "nownHiddenLabel": "Nown — hidden",
   "@nownHiddenLabel": {
@@ -797,10 +568,6 @@
   "roleDonowerHint": "You can't see Nown. Blend in.",
   "@roleDonowerHint": {
     "description": "Hint shown while a Donower holds their role card revealed."
-  },
-  "yourVoteLabel": "Your vote",
-  "@yourVoteLabel": {
-    "description": "Stamp on the ballot row the local player voted for."
   },
   "mainMenuTagline": "One of you can't see this.",
   "@mainMenuTagline": {
@@ -830,99 +597,9 @@
       }
     }
   },
-  "roundLabel": "Round {round}",
-  "@roundLabel": {
-    "description": "Round header with its number.",
-    "placeholders": {
-      "round": {
-        "type": "int"
-      }
-    }
-  },
-  "turnOwnerLabel": "{name} is playing",
-  "@turnOwnerLabel": {
-    "description": "Status while another seat is on the clock.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      }
-    }
-  },
-  "turnYoursLabel": "Your turn — play one card",
-  "@turnYoursLabel": {
-    "description": "Status while the local player is on the clock."
-  },
-  "turnWaitLabel": "Waiting for the table",
-  "@turnWaitLabel": {
-    "description": "Status when no seat is on the clock."
-  },
-  "gameStartTitle": "It's Knowoff time!",
-  "@gameStartTitle": {
-    "description": "Hero headline on the game-start splash shown during the pre-match countdown."
-  },
-  "gameStartSubtitle": "Roles are dealt. The first Nown is on its way.",
-  "@gameStartSubtitle": {
-    "description": "Sub-line under the game-start splash headline."
-  },
-  "spectatingLabel": "You're out",
-  "@spectatingLabel": {
-    "description": "Banner heading for an eliminated player."
-  },
-  "spectatingHint": "Stay to the end to collect your points in full.",
-  "@spectatingHint": {
-    "description": "Explains that staying connected still scores."
-  },
-  "selectCardHint": "Pick a card, then play it.",
-  "@selectCardHint": {
-    "description": "Hint on the round screen before a card is selected."
-  },
-  "playCardTapHint": "Tap it again to play",
-  "@playCardTapHint": {
-    "description": "Banner shown over the hand when a card is selected and it is the player's turn."
-  },
-  "playEarlyTapHint": "Tap it again to play early — it fires the instant your turn starts",
-  "@playEarlyTapHint": {
-    "description": "Banner shown over the hand when a card is selected before the player's turn."
-  },
-  "playEarlyLockedHint": "Locked in — plays automatically on your turn",
-  "@playEarlyLockedHint": {
-    "description": "Banner shown over the hand once an early move is locked in."
-  },
-  "voteBudgetLabel": "Votes left",
-  "@voteBudgetLabel": {
-    "description": "Label for the match's remaining Knowoff votes."
-  },
-  "knowoffPrompt": "Who can't see Nown?",
-  "@knowoffPrompt": {
-    "description": "Ballot heading."
-  },
-  "knowoffBlindBallot": "Live ballot. Every vote lands for the whole table to see — change your mind any time before the window closes.",
-  "@knowoffBlindBallot": {
-    "description": "Explains that the ballot is open and revotable."
-  },
   "knowoffLockedLabel": "Vote cast",
   "@knowoffLockedLabel": {
     "description": "Status once the local player has voted at least once."
-  },
-  "voteCastAnnouncement": "{voter} votes {target}!",
-  "@voteCastAnnouncement": {
-    "description": "Accessibility label for a live vote chip landing on a candidate's row.",
-    "placeholders": {
-      "voter": {
-        "type": "String"
-      },
-      "target": {
-        "type": "String"
-      }
-    }
-  },
-  "runoffTitle": "Runoff",
-  "@runoffTitle": {
-    "description": "Title for the tie-break ballot."
-  },
-  "resultWindowTitle": "Result",
-  "@resultWindowTitle": {
-    "description": "Title of the 8-second result window."
   },
   "resultMissLabel": "Nobody eliminated",
   "@resultMissLabel": {
@@ -934,82 +611,6 @@
     "placeholders": {
       "name": {
         "type": "String"
-      }
-    }
-  },
-  "revoteHint": "Only a Nower can reset this ballot.",
-  "@revoteHint": {
-    "description": "Explains who may play the Revote card."
-  },
-  "discussionReadyHint": "When everyone is Ready the window ends early.",
-  "@discussionReadyHint": {
-    "description": "Hint under the Ready button."
-  },
-  "resultReadyHint": "When everyone is Ready this finalizes early.",
-  "@resultReadyHint": {
-    "description": "Hint under the Ready button in the Knowoff result window."
-  },
-  "ballotReadyHint": "When everyone is Ready, uncast ballots abstain and this resolves early.",
-  "@ballotReadyHint": {
-    "description": "Hint under the Ready button in the Knowoff ballot window."
-  },
-  "quickChatTitle": "Quick Chat",
-  "@quickChatTitle": {
-    "description": "Heading over the canned-phrase bar."
-  },
-  "verdictPointsLabel": "Match points",
-  "@verdictPointsLabel": {
-    "description": "Label over the local player's match point total."
-  },
-  "verdictNownsTitle": "Every Nown",
-  "@verdictNownsTitle": {
-    "description": "Heading over the post-match Nown reveal."
-  },
-  "verdictBackToMenu": "Back to menu",
-  "@verdictBackToMenu": {
-    "description": "Verdict screen exit button."
-  },
-  "verdictNowerBlurb": "Every Donower was caught.",
-  "@verdictNowerBlurb": {
-    "description": "Verdict subtitle after a Nower win."
-  },
-  "verdictDonowerBlurb": "The votes ran out. Donowers win together.",
-  "@verdictDonowerBlurb": {
-    "description": "Verdict subtitle after a Donower win."
-  },
-  "rematchTitle": "Play again?",
-  "@rematchTitle": {
-    "description": "Heading on the post-match rematch window."
-  },
-  "rematchPrompt": "Stay at this table, or head to a fresh one.",
-  "@rematchPrompt": {
-    "description": "Subtitle explaining the two rematch choices."
-  },
-  "rematchSameTable": "Same table",
-  "@rematchSameTable": {
-    "description": "Button: rematch with the same players."
-  },
-  "rematchNewTable": "New table",
-  "@rematchNewTable": {
-    "description": "Button: leave for a fresh Quick Play table."
-  },
-  "rematchWaitingSameTable": "Waiting for the rest of the table…",
-  "@rematchWaitingSameTable": {
-    "description": "Status once this seat picked same table, before the rematch resolves."
-  },
-  "rematchWaitingNewTable": "Heading to a new table…",
-  "@rematchWaitingNewTable": {
-    "description": "Status once this seat picked a new table."
-  },
-  "rematchDecidedCount": "{decided} of {total} decided",
-  "@rematchDecidedCount": {
-    "description": "How many seats have chosen a rematch option so far.",
-    "placeholders": {
-      "decided": {
-        "type": "int"
-      },
-      "total": {
-        "type": "int"
       }
     }
   },
@@ -1125,61 +726,9 @@
   "@roomHostHeading": {
     "description": "Heading above the room-size choice when hosting a local room."
   },
-  "gameCaseFile": "THE CASE OF THE MISSING CLUE",
-  "@gameCaseFile": {
-    "description": "Decorative uppercase game heading using a detective case-file metaphor."
-  },
-  "gameEvidenceHint": "Exhibit A: everyone has an explanation.",
-  "@gameEvidenceHint": {
-    "description": "Subtitle for the public table of played cards; uses a courtroom evidence metaphor."
-  },
-  "gameHandHint": "Your alibi is in here. Probably.",
-  "@gameHandHint": {
-    "description": "Subtitle for the local player hand; a card is jokingly described as an alibi."
-  },
-  "gameShuffleHeadline": "PLOT TWIST!",
-  "@gameShuffleHeadline": {
-    "description": "Brief announcement when the Shuffle specialty changes the clue and cards."
-  },
-  "gameShuffleHint": "The evidence vanished. Act natural.",
-  "@gameShuffleHint": {
-    "description": "Explanation accompanying Shuffle: the previous evidence is no longer available."
-  },
-  "gameDrawAnnouncement": "{name} drew {count, plural, =1{1 card} other{{count} cards}}.",
-  "@gameDrawAnnouncement": {
-    "description": "Public game announcement naming who drew and how many cards they took.",
-    "placeholders": {
-      "name": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "gameChatSend": "Send",
-  "@gameChatSend": {
-    "description": "Action that sends the selected or composed quick-chat message."
-  },
-  "gameConnectionRetrying": "Reconnecting. Your seat is saved.",
-  "@gameConnectionRetrying": {
-    "description": "Connection notice while reconnecting; reassures the player their seat is retained."
-  },
-  "gameMatchScored": "Case closed",
-  "@gameMatchScored": {
-    "description": "Heading for a match that has ended and had its score recorded."
-  },
-  "gameMatchScoredHint": "The table emptied. Your earned points still count.",
-  "@gameMatchScoredHint": {
-    "description": "Explains that an ended match still keeps points already earned."
-  },
   "gameMediaUnavailable": "This clue could not load.",
   "@gameMediaUnavailable": {
     "description": "Fallback label when a clue media asset fails to load."
-  },
-  "gameDrawFreeHint": "Draw your free card before playing.",
-  "@gameDrawFreeHint": {
-    "description": "Instruction to take the granted free draw before playing a card."
   },
   "gameRevealExpired": "This hand is hidden again.",
   "@gameRevealExpired": {
@@ -1201,7 +750,7 @@
   "@serviceNicknameInvalid": {
     "description": "Nickname validation error for exceeding the allowed encoded length."
   },
-  "serviceBillingUnavailable": "Cash purchases require platform billing, which is not connected in this client. Play Passes and Noin unlocks are available below.",
+  "serviceBillingUnavailable": "Purchases are unavailable on this device or for this store configuration.",
   "@serviceBillingUnavailable": {
     "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
   },
@@ -1297,18 +846,6 @@
   "@serviceCredits": {
     "description": "Profile statistic showing credits earned through content contributions."
   },
-  "gameLeaveTitle": "Leave this match?",
-  "@gameLeaveTitle": {
-    "description": "Title of the confirmation dialog before leaving an active match."
-  },
-  "gameLeaveHint": "Leaving before the verdict can reduce your match points.",
-  "@gameLeaveHint": {
-    "description": "Explains that leaving before the match verdict can reduce the player’s points."
-  },
-  "gameInspectCard": "Inspect card",
-  "@gameInspectCard": {
-    "description": "Accessibility label for opening the full-size card preview."
-  },
   "serviceAvatarLimits": "JPEG or PNG, up to 2 MB and 2048 × 2048 pixels.",
   "@serviceAvatarLimits": {
     "description": "Avatar upload requirements: accepted image formats, file size, and pixel dimensions."
@@ -1317,7 +854,7 @@
   "@serviceAvatarInvalid": {
     "description": "Validation error when an avatar file violates the format or size limits."
   },
-  "serviceAvatarCost": "Custom avatars use the Noin unlock price shown in the Store.",
+  "serviceAvatarCost": "Buy the permanent Custom Avatar unlock once. Replacement uploads cost no extra Noin.",
   "@serviceAvatarCost": {
     "description": "Explains where to find the Noin price for unlocking custom avatars."
   },
@@ -1325,7 +862,7 @@
   "@serviceAvatarSelected": {
     "description": "Confirmation that an avatar image has been selected but has not yet been uploaded."
   },
-  "serviceAvatarCostPrice": "First custom avatar: {price} Noin. Already unlocked? No extra charge.",
+  "serviceAvatarCostPrice": "Permanent Custom Avatar unlock: {price} Noin.",
   "@serviceAvatarCostPrice": {
     "description": "Explains the first custom-avatar unlock cost and that existing unlock owners are not charged again.",
     "placeholders": {
@@ -1334,93 +871,13 @@
       }
     }
   },
-  "unreadyLabel": "Not ready",
-  "@unreadyLabel": {
-    "description": "Accessibility label and tooltip for marking the local player as not ready."
-  },
-  "serviceAvatarSubmitted": "Image uploaded for review.",
+  "serviceAvatarSubmitted": "Avatar approved and updated.",
   "@serviceAvatarSubmitted": {
     "description": "Confirmation that the uploaded avatar was submitted for moderation."
   },
-  "serviceAvatarReview": "Uploads are submitted for review; your preset avatar stays active.",
+  "serviceAvatarReview": "Your image is screened before activation. A failed upload keeps your current avatar.",
   "@serviceAvatarReview": {
     "description": "Explains that the current preset avatar remains visible while a custom upload is reviewed."
-  },
-  "gameWorkspaceHand": "Hand",
-  "@gameWorkspaceHand": {
-    "description": "Phone game navigation label for the player’s private hand."
-  },
-  "gameWorkspaceTable": "Table",
-  "@gameWorkspaceTable": {
-    "description": "Phone game navigation label for the clue and public played-card evidence."
-  },
-  "gameWorkspacePeople": "People",
-  "@gameWorkspacePeople": {
-    "description": "Game navigation label for chat, player seats, and player information."
-  },
-  "gameWorkspaceAction": "Now",
-  "@gameWorkspaceAction": {
-    "description": "Game navigation label for the current phase action, such as voting or results."
-  },
-  "devTools": "Dev tools",
-  "@devTools": {
-    "description": "Debug-only development tools title and entry-point label."
-  },
-  "devToolsHint": "A backstage pass for testing.",
-  "@devToolsHint": {
-    "description": "Playful subtitle for the debug-only development controls."
-  },
-  "devFreeze": "Freeze client",
-  "@devFreeze": {
-    "description": "Debug action that pauses processing incoming client updates and the displayed countdown."
-  },
-  "devResume": "Resume client",
-  "@devResume": {
-    "description": "Debug action that resumes processing client updates after a freeze."
-  },
-  "devFreezeHint": "Holds incoming updates and this screen’s clock. The server keeps playing.",
-  "@devFreezeHint": {
-    "description": "Explains that freezing affects only this client; the authoritative server continues."
-  },
-  "devRestart": "Restart to menu",
-  "@devRestart": {
-    "description": "Debug action that clears the local match and returns to the main menu."
-  },
-  "devRestartHint": "Clears the local match and opens a fresh connection.",
-  "@devRestartHint": {
-    "description": "Explains that restarting creates a fresh connection after clearing local match state."
-  },
-  "devEchoPokes": "Echo pokes to self",
-  "@devEchoPokes": {
-    "description": "Debug switch label for previewing outgoing poke feedback on the local screen."
-  },
-  "devEchoPokesHint": "Preview your own poke with the same brief nudge.",
-  "@devEchoPokesHint": {
-    "description": "Explains the brief local motion used to preview an outgoing poke."
-  },
-  "devGrantSpecialty": "Grant a specialty",
-  "@devGrantSpecialty": {
-    "description": "Heading for debug controls that grant a specialty card."
-  },
-  "devGrantSpecialtyHint": "Adds it to your hand. Play it using the normal controls.",
-  "@devGrantSpecialtyHint": {
-    "description": "Explains that a granted specialty must still be played using normal game controls."
-  },
-  "devNextRole": "Next-match role",
-  "@devNextRole": {
-    "description": "Debug selection label for the player’s role in the next match."
-  },
-  "devRandomRole": "Random — trust your luck",
-  "@devRandomRole": {
-    "description": "Debug role-selection option that restores normal random role assignment."
-  },
-  "devRoleHint": "Choose before joining, or apply to the next rematch.",
-  "@devRoleHint": {
-    "description": "Explains when a debug role override takes effect."
-  },
-  "devMatchRequired": "Join a match to grant a specialty.",
-  "@devMatchRequired": {
-    "description": "Debug helper text when specialty grants are unavailable outside an active match."
   },
   "navigationPlay": "Play",
   "@navigationPlay": {
@@ -2064,5 +1521,302 @@
   "textPoked": "You were poked",
   "@textPoked": {
     "description": "Brief accessible feedback when a new live poke targets this player."
+  },
+  "safetyTitle": "Safety & privacy",
+  "@safetyTitle": {
+    "description": "Safety and account controls: safetyTitle"
+  },
+  "safetyIntro": "Your controls, your account. Reports are private and available without accepting content terms.",
+  "@safetyIntro": {
+    "description": "Safety and account controls: safetyIntro"
+  },
+  "safetyTerms": "User terms",
+  "@safetyTerms": {
+    "description": "Safety and account controls: safetyTerms"
+  },
+  "safetyTermsUnavailable": "User terms are not published yet. Typed chat and contributions remain unavailable.",
+  "@safetyTermsUnavailable": {
+    "description": "Safety and account controls: safetyTermsUnavailable"
+  },
+  "safetyAccept": "Accept these terms",
+  "@safetyAccept": {
+    "description": "Safety and account controls: safetyAccept"
+  },
+  "safetyAccepted": "Current terms accepted",
+  "@safetyAccepted": {
+    "description": "Safety and account controls: safetyAccepted"
+  },
+  "safetyTermsRequired": "Review and accept the current user terms to send typed chat. Quick Chat is still available.",
+  "@safetyTermsRequired": {
+    "description": "Safety and account controls: safetyTermsRequired"
+  },
+  "safetyBlocks": "Blocked accounts",
+  "@safetyBlocks": {
+    "description": "Safety and account controls: safetyBlocks"
+  },
+  "safetyBlocksEmpty": "No blocked accounts on this page.",
+  "@safetyBlocksEmpty": {
+    "description": "Safety and account controls: safetyBlocksEmpty"
+  },
+  "safetyNext": "Next page",
+  "@safetyNext": {
+    "description": "Safety and account controls: safetyNext"
+  },
+  "safetyUnblock": "Unblock",
+  "@safetyUnblock": {
+    "description": "Safety and account controls: safetyUnblock"
+  },
+  "safetyBlock": "Block this player",
+  "@safetyBlock": {
+    "description": "Safety and account controls: safetyBlock"
+  },
+  "safetyBlockHint": "Blocking hides their authored chat from you and prevents future matching. This match, its votes and scores stay intact.",
+  "@safetyBlockHint": {
+    "description": "Safety and account controls: safetyBlockHint"
+  },
+  "safetyBlocked": "Player blocked",
+  "@safetyBlocked": {
+    "description": "Safety and account controls: safetyBlocked"
+  },
+  "safetySupport": "Contact support",
+  "@safetySupport": {
+    "description": "Safety and account controls: safetySupport"
+  },
+  "safetyPrivacy": "Privacy policy",
+  "@safetyPrivacy": {
+    "description": "Safety and account controls: safetyPrivacy"
+  },
+  "safetyRestore": "Your saved account could not be restored. Retry when connected or use support to recover the same account.",
+  "@safetyRestore": {
+    "description": "Safety and account controls: safetyRestore"
+  },
+  "textReport": "Report text",
+  "@textReport": {
+    "description": "Visible-text content report control."
+  },
+  "textReportConfirm": "Send a report about this text? Choose a reason.",
+  "@textReportConfirm": {
+    "description": "Visible-text content report control."
+  },
+  "textReportInappropriate": "Inappropriate content",
+  "@textReportInappropriate": {
+    "description": "Visible-text content report control."
+  },
+  "textReportIncorrect": "Text or translation error",
+  "@textReportIncorrect": {
+    "description": "Visible-text content report control."
+  },
+  "textReportOther": "Other content issue",
+  "@textReportOther": {
+    "description": "Visible-text content report control."
+  },
+  "textReportSend": "Send report",
+  "@textReportSend": {
+    "description": "Visible-text content report control."
+  },
+  "textReportSent": "Report received.",
+  "@textReportSent": {
+    "description": "Visible-text content report control."
+  },
+  "textReportFailed": "The report could not be confirmed. Retry the same report.",
+  "@textReportFailed": {
+    "description": "Visible-text content report control."
+  },
+  "oauthTitle": "Your account",
+  "@oauthTitle": {
+    "description": "Account linking and restoration: Title"
+  },
+  "oauthIntro": "Link this device’s progress to Google or Facebook, or restore progress you already linked.",
+  "@oauthIntro": {
+    "description": "Account linking and restoration: Intro"
+  },
+  "oauthLink": "Save this progress",
+  "@oauthLink": {
+    "description": "Account linking and restoration: Link"
+  },
+  "oauthRestore": "Restore linked progress",
+  "@oauthRestore": {
+    "description": "Account linking and restoration: Restore"
+  },
+  "oauthGoogle": "Continue with Google",
+  "@oauthGoogle": {
+    "description": "Account linking and restoration: Google"
+  },
+  "oauthFacebook": "Continue with Facebook",
+  "@oauthFacebook": {
+    "description": "Account linking and restoration: Facebook"
+  },
+  "oauthPending": "Finish signing in in your browser, then return here.",
+  "@oauthPending": {
+    "description": "Account linking and restoration: Pending"
+  },
+  "oauthCheck": "Check sign-in",
+  "@oauthCheck": {
+    "description": "Account linking and restoration: Check"
+  },
+  "oauthCancel": "Cancel sign-in",
+  "@oauthCancel": {
+    "description": "Account linking and restoration: Cancel"
+  },
+  "oauthOpenBrowser": "Open sign-in again",
+  "@oauthOpenBrowser": {
+    "description": "Account linking and restoration: OpenBrowser"
+  },
+  "oauthSwitchTitle": "Switch to the linked account?",
+  "@oauthSwitchTitle": {
+    "description": "Account linking and restoration: SwitchTitle"
+  },
+  "oauthSwitchBody": "This device is using another account. Your progress, Noin and purchases will remain separate; they will not be merged.",
+  "@oauthSwitchBody": {
+    "description": "Account linking and restoration: SwitchBody"
+  },
+  "oauthSwitch": "Switch account",
+  "@oauthSwitch": {
+    "description": "Account linking and restoration: Switch"
+  },
+  "oauthKeepCurrent": "Keep current account",
+  "@oauthKeepCurrent": {
+    "description": "Account linking and restoration: KeepCurrent"
+  },
+  "oauthSuccess": "Your linked account is ready.",
+  "@oauthSuccess": {
+    "description": "Account linking and restoration: Success"
+  },
+  "oauthUnavailable": "Sign-in is unavailable. Try again later.",
+  "@oauthUnavailable": {
+    "description": "Account linking and restoration: Unavailable"
+  },
+  "oauthUnlinked": "That sign-in has no linked Knowoff account. Return to the device with your progress and link it there first.",
+  "@oauthUnlinked": {
+    "description": "Account linking and restoration: Unlinked"
+  },
+  "oauthConflict": "That sign-in is already linked to another account. Restore it to use its progress, or choose a different sign-in.",
+  "@oauthConflict": {
+    "description": "Account linking and restoration: Conflict"
+  },
+  "oauthExpired": "This sign-in expired. Start again.",
+  "@oauthExpired": {
+    "description": "Account linking and restoration: Expired"
+  },
+  "oauthInvalid": "This sign-in could not be verified. Start again.",
+  "@oauthInvalid": {
+    "description": "Account linking and restoration: Invalid"
+  },
+  "oauthRateLimited": "Too many sign-in attempts. Try again later.",
+  "@oauthRateLimited": {
+    "description": "Account linking and restoration: RateLimited"
+  },
+  "oauthMismatch": "The returned account does not match this device. Your current account is unchanged.",
+  "@oauthMismatch": {
+    "description": "Account linking and restoration: Mismatch"
+  },
+  "oauthSessionRequired": "Refresh your current session to link it, or restore an account you already linked.",
+  "@oauthSessionRequired": {
+    "description": "Account linking and restoration: SessionRequired"
+  },
+  "oauthBrowserFailed": "The browser could not open. Retry opening sign-in.",
+  "@oauthBrowserFailed": {
+    "description": "Account linking and restoration: BrowserFailed"
+  },
+  "serviceAvatarOwned": "Custom Avatar is already unlocked. Uploading costs no extra Noin.",
+  "@serviceAvatarOwned": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnavailable": "Avatar screening is unavailable. Your image and unlock are unchanged.",
+  "@serviceAvatarUnavailable": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarRejected": "This image was not approved. Choose another image; your unlock remains yours.",
+  "@serviceAvatarRejected": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarChanged": "Your account or avatar changed. Select the image again before continuing.",
+  "@serviceAvatarChanged": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlock": "Unlock Custom Avatar",
+  "@serviceAvatarUnlock": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "serviceAvatarUnlockConfirm": "Buy permanent unlock",
+  "@serviceAvatarUnlockConfirm": {
+    "description": "Custom avatar ownership, screening or activation status."
+  },
+  "purchaseTitle": "In-app purchases",
+  "@purchaseTitle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseOpening": "Opening the store…",
+  "@purchaseOpening": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchasePending": "Waiting for the store to complete payment.",
+  "@purchasePending": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseVerifying": "Verifying with Knowoff…",
+  "@purchaseVerifying": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseVerified": "Purchase verified. Your account has been updated.",
+  "@purchaseVerified": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseCanceled": "Purchase canceled.",
+  "@purchaseCanceled": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseFailed": "The purchase could not be completed.",
+  "@purchaseFailed": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseRetryMessage": "Verification is unfinished. Retry without buying again.",
+  "@purchaseRetryMessage": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseAccountRequired": "Restore the Knowoff account that owns this purchase.",
+  "@purchaseAccountRequired": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseOwned": "Premium is already active on this account.",
+  "@purchaseOwned": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseRestore": "Restore purchases",
+  "@purchaseRestore": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseRetry": "Retry verification",
+  "@purchaseRetry": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseRestoreHint": "Restore subscriptions with the same store and Knowoff accounts. Consumed Noin bundles remain in your Knowoff account.",
+  "@purchaseRestoreHint": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseMonthlyTerms": "Renews monthly at the displayed store price until canceled in the store.",
+  "@purchaseMonthlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseYearlyTerms": "Renews yearly at the displayed store price until canceled in the store.",
+  "@purchaseYearlyTerms": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseManageApple": "Manage Apple subscriptions",
+  "@purchaseManageApple": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseManageGoogle": "Manage Google Play subscriptions",
+  "@purchaseManageGoogle": {
+    "description": "Native store purchase and restore flow."
+  },
+  "purchaseBuyPrice": "Buy · {price}",
+  "@purchaseBuyPrice": {
+    "description": "Native store purchase and restore flow.",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
   }
 }

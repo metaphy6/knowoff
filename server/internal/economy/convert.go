@@ -47,7 +47,7 @@ func (m *Manager) ConvertPoints(ctx context.Context, accountID string, points in
 			return fmt.Errorf("lock daily earned: %w", err)
 		}
 		dailyCap := int64(m.config.Tuning.Noin.DailyEarnCap)
-		if dailyCap<=0 || dailyEarned<0 || dailyEarned>dailyCap || noin>dailyCap-dailyEarned {
+		if dailyCap <= 0 || dailyEarned < 0 || dailyEarned > dailyCap || noin > dailyCap-dailyEarned {
 			return fmt.Errorf("daily earn cap reached")
 		}
 

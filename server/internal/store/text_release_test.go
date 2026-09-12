@@ -46,6 +46,15 @@ func TestTextReleaseAcceptedLineageRestartAndTakedown(t *testing.T) {
 	for i := range b.Cards {
 		b.Cards[i].Provenance = accept(b.Cards[i].Text)
 	}
+	// A later profile rename cannot rewrite frozen credit or make a safe capture
+	// retry fail. Neither operation repeats approval or its reward.
+	if _, err := db.Exec(`UPDATE accounts SET nickname='New display name' WHERE id=$1`, author); err != nil {
+		t.Fatal(err)
+	}
+	first := b.Nowns[0].Provenance
+	if again, err := r.CaptureAccepted(ctx, admin, "portal_submission", first.ApprovalReference); err != nil || again != first {
+		t.Fatal("capture retry changed original attribution", again, err)
+	}
 	snap = releaseTestEvidence(t, r, b)
 	if err = r.Publish(ctx, uuid.NewString(), snap, TextPackAccess{Class: "core"}); err == nil {
 		t.Fatal("unauthorized publication")
@@ -137,6 +146,21 @@ func TestTextReleaseAcceptedLineageRestartAndTakedown(t *testing.T) {
 	}
 	if err = r.CheckAccess(ctx, players[1], settings, "local", time.Now().UTC()); err != nil {
 		t.Fatal("host sponsorship", err)
+	}
+	if _, err = db.Exec(`INSERT INTO named_entitlement_items(account_id,entitlement_type,value,source_id) VALUES($1,'theme_pack','other_theme',$2)`, players[0], uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
+	if err = r.CheckAccess(ctx, players[0], settings, "local", time.Now().UTC()); err == nil {
+		t.Fatal("different named theme sponsored pack")
+	}
+	if _, err = db.Exec(`INSERT INTO named_entitlement_items(account_id,entitlement_type,value,source_id) VALUES($1,'theme_pack','test_theme',$2)`, players[0], uuid.NewString()); err != nil {
+		t.Fatal(err)
+	}
+	if err = r.CheckAccess(ctx, players[0], settings, "local", time.Now().UTC()); err != nil {
+		t.Fatal("named host sponsorship", err)
+	}
+	if err = r.CheckAccess(ctx, players[0], settings, "quick_play", time.Now().UTC()); err == nil {
+		t.Fatal("named theme entered Quick Play")
 	}
 	// The earlier core snapshot remains pinned, even after active withdrawal.
 	if n := valueCount(t, db, `SELECT count(*) FROM noin_ledger`); n != 0 {

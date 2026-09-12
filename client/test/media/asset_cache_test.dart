@@ -1,75 +1,107 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:knowoff_client/media/asset_cache.dart';
+import 'package:knowoff_client/core/text/v2_contract.dart';
+import 'package:knowoff_client/core/text/v2_reducer.dart';
 
-Uint8List _bytes(String s) => Uint8List.fromList(utf8.encode(s));
+import '../core/network/text_reducer_test.dart' show fixture, limits;
 
-String _hash(String s) => sha256.convert(_bytes(s)).toString();
-
+// The retired image LRU's verified-byte and eviction cases now protect the
+// actual playable cache: immutable, bounded, role-scoped text snapshots.
 void main() {
-  group('AssetCache', () {
-    test('stores and retrieves verified bytes', () {
-      final cache = AssetCache(maxBytes: 1024);
-      final data = _bytes('hello asset');
-      final ref = _hash('hello asset');
-      cache.put(ref, data);
-      expect(cache.get(ref), equals(data));
-    });
-
-    test('rejects corrupted bytes', () {
-      final cache = AssetCache(maxBytes: 1024);
-      final data = _bytes('tampered');
-      cache.put('wrong-ref', data);
-      expect(cache.get('wrong-ref'), isNull);
-      expect(cache.size, 0);
-    });
-
-    test('evicts least recently used entries when over budget', () {
-      final cache = AssetCache(maxBytes: 50);
-      final a = _bytes('a'); // 1 byte
-      final refA = _hash('a');
-      final b = _bytes('bbb'); // 3 bytes
-      final refB = _hash('bbb');
-      final c = _bytes('cccccccccccccccccccc'); // 20 bytes
-      final refC = _hash('cccccccccccccccccccc');
-
-      cache.put(refA, a);
-      cache.put(refB, b);
-      cache.put(refC, c);
-
-      // A should have been evicted to stay under budget (1+3+20=24 <= 30, actually fits)
-      // Use a larger c to force eviction.
-      final big = _bytes('c' * 40); // 40 bytes
-      final refBig = _hash('c' * 40);
-      cache.put(refBig, big);
-
-      expect(cache.get(refA), isNull);
-      expect(cache.get(refBig), equals(big));
-    });
-
-    test('moves touched entries to most-recently-used position', () {
-      final cache = AssetCache(maxBytes: 10);
-      final a = _bytes('aaaa');
-      final refA = _hash('aaaa');
-      final b = _bytes('bbbb');
-      final refB = _hash('bbbb');
-      cache.put(refA, a);
-      cache.put(refB, b);
-
-      // Touch A so it becomes MRU.
-      cache.get(refA);
-
-      final c = _bytes('cccc');
-      final refC = _hash('cccc');
-      cache.put(refC, c);
-
-      // B (LRU) should be evicted, A and C remain.
-      expect(cache.get(refA), isNotNull);
-      expect(cache.get(refB), isNull);
-      expect(cache.get(refC), isNotNull);
-    });
+  test('stores only immutable verified text and preserves copy identity', () {
+    final wire = fixture('snapshot-nower');
+    final r = V2Reducer(limits)..snapshot(wire);
+    final hand = r.current!.json['private']['hand'];
+    wire['private']['hand'][0]['content']['text'] = 'tampered after decode';
+    expect(hand[0]['content']['text'], 'Spare key');
+    expect(hand[0]['copy_id'], 'copy-1');
+    expect(() => hand.clear(), throwsUnsupportedError);
+    expect(
+      () => hand[0]['content']['text'] = 'tampered',
+      throwsUnsupportedError,
+    );
+    expect(
+      () => r.current!.json['private']['role'] = 'donower',
+      throwsUnsupportedError,
+    );
   });
+
+  test('rejects corrupted page bytes before installing any private state', () {
+    final r = V2Reducer(limits)..snapshot(fixture('snapshot-paged-history'));
+    expect(r.current, isNull);
+    final page = fixture('public-history-page');
+    page['events'][0]['count'] = 2;
+    expect(() => r.page(page), throwsA(isA<V2Failure>()));
+    expect(r.current, isNull);
+    expect(r.pendingPageCount, 0);
+    expect(r.needsResync, isTrue);
+  });
+
+  test(
+    'enforces configured frame and history budgets without partial install',
+    () {
+      const tiny = V2Limits(
+        maxFrameBytes: 128,
+        maxHistoryEvents: 8192,
+        maxHistoryPageEvents: 8,
+        maxTextBytes: 512,
+        maxRequestsPerSeat: 512,
+      );
+      final r = V2Reducer(tiny);
+      expect(
+        () => r.snapshot(fixture('snapshot-nower')),
+        throwsA(isA<V2Failure>()),
+      );
+      expect(r.current, isNull);
+      const one = V2Limits(
+        maxFrameBytes: 65536,
+        maxHistoryEvents: 1,
+        maxHistoryPageEvents: 1,
+        maxTextBytes: 512,
+        maxRequestsPerSeat: 512,
+      );
+      final bounded = V2Reducer(one);
+      final wire = fixture('snapshot-paged-history');
+      wire['history_pages']['total_events'] = 2;
+      wire['history_pages']['page_count'] = 2;
+      wire['history_pages']['through_evidence_seq'] = 2;
+      wire['cursor']['evidence_seq'] = 2;
+      expect(() => bounded.snapshot(wire), throwsA(isA<V2Failure>()));
+      expect(bounded.current, isNull);
+      expect(bounded.pendingPageCount, 0);
+    },
+  );
+
+  test(
+    'verified page replay is stable and disconnect evicts all private data',
+    () {
+      final r = V2Reducer(limits)..snapshot(fixture('snapshot-paged-history'));
+      r.page(fixture('public-history-page'));
+      final before = jsonEncode(r.current!.json);
+      expect(
+        () => r.page(fixture('public-history-page')),
+        throwsA(isA<V2Failure>()),
+      );
+      expect(jsonEncode(r.current!.json), before);
+      r.confirm({'kind': 'draw', 'count': 1}, 'draw-request', 0);
+      r.disconnect();
+      expect(r.current, isNull);
+      expect(r.pendingRequest, isNull);
+      expect(r.pendingPageCount, 0);
+      final fresh = fixture('snapshot-paged-history');
+      fresh['cursor']['stream_epoch'] = 'fresh-role-stream';
+      r.snapshot(fresh);
+      final page = fixture('public-history-page');
+      page['stream_epoch'] = 'fresh-role-stream';
+      r.page(page);
+      expect(r.current!.json['private']['hand'][0]['copy_id'], 'copy-1');
+      expect(r.current!.json['history'][0]['count'], 1);
+      expect(
+        () => r.snapshot(fixture('snapshot-paged-history')),
+        throwsA(isA<V2Failure>()),
+      );
+      expect(r.current!.json['cursor']['stream_epoch'], 'fresh-role-stream');
+    },
+  );
 }

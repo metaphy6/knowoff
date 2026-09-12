@@ -26,6 +26,44 @@ import (
 
 type textAuthStub struct{}
 
+type textCountingAuth struct{ calls atomic.Int32 }
+
+func (a *textCountingAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) {
+	a.calls.Add(1)
+	return (textAuthStub{}).ValidateAccessToken(ctx, token)
+}
+
+func TestTextRoutesRejectLegacyGameplayBeforeAuthentication(t *testing.T) {
+	auth := &textCountingAuth{}
+	srv, values, manager := textHTTPAuthFixture(t, auth)
+	for _, path := range []string{"/ws", "/rooms/create", "/join/ABCDEF"} {
+		for _, method := range []string{http.MethodGet, http.MethodPost} {
+			req, err := http.NewRequest(method, srv.URL+path, strings.NewReader(`{"size":4}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			req.Header.Set("Authorization", "Bearer "+uuid.NewString())
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			resp, err := srv.Client().Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var body struct {
+				Code string `json:"code"`
+			}
+			err = json.NewDecoder(resp.Body).Decode(&body)
+			resp.Body.Close()
+			if err != nil || resp.StatusCode != http.StatusUpgradeRequired || body.Code != "protocol.upgrade_required" || resp.Header.Get("Cache-Control") != "no-store" {
+				t.Fatalf("legacy %s %s = %d %+v %v", method, path, resp.StatusCode, body, err)
+			}
+		}
+	}
+	if auth.calls.Load() != 0 || values.reserved.Load() != 0 || manager.ActiveMatches() != 0 {
+		t.Fatal("legacy route crossed auth/admission boundary")
+	}
+}
+
 func (textAuthStub) ValidateAccessToken(_ context.Context, token string) (string, error) {
 	if _, e := uuid.Parse(token); e != nil {
 		return "", errors.New("unauthorized")
@@ -34,6 +72,12 @@ func (textAuthStub) ValidateAccessToken(_ context.Context, token string) (string
 }
 
 type textValueStub struct{ reserved atomic.Int32 }
+
+func TestTextCooldownControlErrorKeepsStableCode(t *testing.T) {
+	if got := textErrorCode(fmt.Errorf("queue reservation: %w", store.ErrTextCooldown)); got != "admission.cooldown" {
+		t.Fatal("cooldown lost stable refusal code", got)
+	}
+}
 
 func (v *textValueStub) Reserve(context.Context, store.TextReservation) error {
 	v.reserved.Add(1)
@@ -46,6 +90,7 @@ func (*textValueStub) CancelPrepared(context.Context, string, string, int64, tim
 	return nil
 }
 func (*textValueStub) Award(context.Context, store.TextAward) (int, error)               { return 0, nil }
+func (*textValueStub) Abandon(context.Context, store.TextAbandon) error                  { return nil }
 func (*textValueStub) Finish(context.Context, store.TextOutcome) error                   { return nil }
 func (*textValueStub) SettlePending(context.Context, string) error                       { return nil }
 func (*textValueStub) Interrupt(context.Context, string, string, int64, time.Time) error { return nil }
@@ -84,8 +129,7 @@ func textHTTPCustomFixture(t *testing.T, auth TextAuth, configure func(*config.C
 	}
 	deps := TextHandlerDeps{Config: cfg, Lobby: manager, Auth: auth}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/ws/v2", TextRealtimeHandler(deps))
-	mux.HandleFunc("/api/text/availability", TextAvailabilityHandler(deps))
+	RegisterTextRealtimeRoutes(mux, deps)
 	srv := httptest.NewServer(mux)
 	t.Cleanup(func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -386,6 +430,35 @@ func TestTextActionErrorCorrelatesNestedRequestIdentity(t *testing.T) {
 }
 
 type textRevocableAuth struct{ revoked atomic.Bool }
+
+type textOpenRevokedAuth struct{ calls atomic.Int32 }
+
+func (a *textOpenRevokedAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) {
+	if a.calls.Add(1) > 1 {
+		return "", errors.New("revoked during Open")
+	}
+	return (textAuthStub{}).ValidateAccessToken(ctx, token)
+}
+
+func TestTextRechecksTokenAfterRegisteringConnection(t *testing.T) {
+	auth := &textOpenRevokedAuth{}
+	srv, values, _ := textHTTPAuthFixture(t, auth)
+	c := textDial(t, srv)
+	if err := textWriteJSON(c, map[string]any{"v": 2, "type": "hello", "payload": map[string]any{"client_generation": 2, "access_token": uuid.NewString()}}); err != nil {
+		t.Fatal(err)
+	}
+	frame := textRead(t, c)
+	if frame.Type != "error" || !strings.Contains(string(frame.Payload), "auth.required") {
+		t.Fatal("token revoked before Open admitted a connection", frame.Type)
+	}
+	if values.reserved.Load() != 0 {
+		t.Fatal("post-open refusal reserved value")
+	}
+	c.SetReadDeadline(time.Now().Add(time.Second))
+	if err := c.ReadJSON(&frame); err == nil {
+		t.Fatal("revoked connection received later discovery or game data")
+	}
+}
 
 func (a *textRevocableAuth) ValidateAccessToken(ctx context.Context, token string) (string, error) {
 	if a.revoked.Load() {

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/config"
-	"github.com/knowoff/knowoff/server/pkg/media"
 )
 
 var ready atomic.Bool
@@ -23,13 +22,12 @@ func SetReady(v bool) {
 
 // Deps bundles dependencies shared by HTTP handlers.
 type Deps struct {
-	Config      *config.Config
-	Logger      *slog.Logger
-	DB          *sql.DB
-	RedisPing   func(context.Context) error
-	StoragePing func(context.Context) error
-	Connections interface{}
-	Media       *media.Manager
+	Config    *config.Config
+	Logger    *slog.Logger
+	DB        *sql.DB
+	RedisPing func(context.Context) error
+	// RuntimeReady is the authoritative text runtime admission/dependency fence.
+	RuntimeReady func(context.Context) error
 }
 
 // HealthzHandler always returns 200 OK; it only reports that the process is up.
@@ -51,7 +49,7 @@ func ReadyzHandler(deps Deps) http.HandlerFunc {
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 			return
 		}
-		if deps.Media == nil || deps.Media.Active() == nil {
+		if deps.RuntimeReady == nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 			return
@@ -59,10 +57,19 @@ func ReadyzHandler(deps Deps) http.HandlerFunc {
 
 		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 		defer cancel()
+		if deps.RuntimeReady != nil {
+			if err := deps.RuntimeReady(ctx); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
+				return
+			}
+		}
 
 		if deps.DB != nil {
 			if err := deps.DB.PingContext(ctx); err != nil {
-				deps.Logger.Warn("readiness check failed", "dependency", "postgres", "error", err)
+				if deps.Logger != nil {
+					deps.Logger.Warn("readiness check failed", "dependency", "postgres", "error", err)
+				}
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 				return
@@ -70,15 +77,9 @@ func ReadyzHandler(deps Deps) http.HandlerFunc {
 		}
 		if deps.RedisPing != nil {
 			if err := deps.RedisPing(ctx); err != nil {
-				deps.Logger.Warn("readiness check failed", "dependency", "redis", "error", err)
-				w.WriteHeader(http.StatusServiceUnavailable)
-				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
-				return
-			}
-		}
-		if deps.StoragePing != nil {
-			if err := deps.StoragePing(ctx); err != nil {
-				deps.Logger.Warn("readiness check failed", "dependency", "storage", "error", err)
+				if deps.Logger != nil {
+					deps.Logger.Warn("readiness check failed", "dependency", "redis", "error", err)
+				}
 				w.WriteHeader(http.StatusServiceUnavailable)
 				_ = json.NewEncoder(w).Encode(map[string]string{"status": "not ready"})
 				return

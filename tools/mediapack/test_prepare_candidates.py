@@ -1,177 +1,132 @@
-"""Behavior checks for the local, non-loadable image candidate preparation tool."""
-
+"""Executable refusal proofs for the retired playable-image preparation tool."""
 import base64
 import hashlib
-import io
 import json
-import struct
+import os
+from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
-import zlib
-from pathlib import Path
 
-from PIL import Image
-
-import prepare_candidates as preparation
+SCRIPT = Path(__file__).with_name("prepare_candidates.py").resolve()
 
 
 class PreparationTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
+        run_root = Path("/tmp/agent-runs")
+        run_root.mkdir(exist_ok=True)
+        self.tmp = tempfile.TemporaryDirectory(prefix="retired-image-tests-", dir=run_root)
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.batch = self.root / "batch"
         self.source = self.root / "source.png"
-        picture = Image.new("RGB", (1200, 800), (10, 180, 80))
-        picture.save(self.source, pnginfo=None)
-        self.provenance = {"tool": "image_gen.imagegen", "prompt": "Exact scene prompt."}
+        self.source.write_bytes(base64.b64decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a7X8AAAAASUVORK5CYII="))
+        self.provenance = self.root / "provenance.json"
+        self.provenance.write_text(json.dumps({"tool": "image_gen.imagegen", "prompt": "Exact retained scene prompt."}))
 
-    def prepare(self, **kwargs):
-        return preparation.prepare(
-            self.batch, kwargs.get("image", self.source),
-            kwargs.get("candidate_id", "img-0001"),
-            kwargs.get("provenance", self.provenance),
-        )
+    def run_retired(self, *args):
+        result = subprocess.run([sys.executable, "-I", "-S", str(SCRIPT), *map(str, args)],
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("retired", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertNotIn(str(self.root), result.stderr)
+        self.assertFalse(self.batch.exists())
+        return result
 
-    def test_real_image_is_resized_and_original_and_hashes_are_retained(self):
-        receipt = self.prepare()
-        self.assertEqual(receipt["state"], "prepared_candidate")
-        self.assertIsNone(receipt["generation"]["model"])
-        self.assertEqual(receipt["generation"]["prompt"], "Exact scene prompt.")
-        original = self.batch / receipt["source"]["path"]
-        self.assertEqual(original.read_bytes(), self.source.read_bytes())
-        asset = self.batch / receipt["asset"]["path"]
-        self.assertEqual(hashlib.sha256(asset.read_bytes()).hexdigest(), receipt["asset"]["sha256"])
-        with Image.open(asset) as converted:
-            self.assertEqual(converted.format, "WEBP")
-            self.assertEqual(converted.size, (720, 480))
-            self.assertFalse(converted.getexif())
-        self.assertEqual(receipt["asset"]["bytes"], asset.stat().st_size)
-        self.assertFalse((self.batch / "manifest.json").exists())
+    def prepare(self, source=None, candidate_id="img-0001", provenance=None):
+        return self.run_retired("prepare", "--batch-dir", self.batch,
+                                "--image", self.source if source is None else source,
+                                "--id", candidate_id, "--provenance",
+                                self.provenance if provenance is None else provenance)
 
-    def test_same_input_is_idempotent_but_revised_input_never_overwrites(self):
-        first = self.prepare()
-        second = self.prepare()
-        self.assertEqual(first, second)
-        receipt_path = self.batch / "generated/receipts/img-0001.json"
-        receipt_before = receipt_path.read_bytes()
-        with self.assertRaisesRegex(ValueError, "conflict"):
-            self.prepare(provenance={"tool": "image_gen.imagegen", "prompt": "Changed prompt"})
-        self.assertEqual(receipt_path.read_bytes(), receipt_before)
-        Image.new("RGB", (30, 20), "blue").save(self.source)
-        with self.assertRaisesRegex(ValueError, "conflict"):
-            self.prepare()
-        self.assertEqual(receipt_path.read_bytes(), receipt_before)
-
-    def test_ids_and_symlinks_cannot_escape_batch(self):
-        with self.assertRaisesRegex(ValueError, "id"):
-            self.prepare(candidate_id="../../escape")
-        (self.batch / "generated").mkdir(parents=True)
-        (self.batch / "generated/sources").symlink_to(self.root, target_is_directory=True)
-        with self.assertRaisesRegex(ValueError, "outside|symlink"):
-            self.prepare()
-        self.assertFalse((self.root / "img-0001.png").exists())
-
-    def test_animated_media_and_missing_prompt_are_rejected(self):
-        with self.assertRaisesRegex(ValueError, "prompt"):
-            self.prepare(provenance={"tool": "image_gen.imagegen"})
-        gif = self.root / "animated.gif"
-        Image.new("RGB", (20, 20), "red").save(
-            gif, save_all=True, append_images=[Image.new("RGB", (20, 20), "blue")],
-            duration=100, loop=0,
-        )
-        with self.assertRaisesRegex(ValueError, "animated"):
-            self.prepare(image=gif)
-
-    def test_static_gif_and_animated_webp_or_png_cannot_enter_image_pipeline(self):
-        for format_name, animated in [("GIF", False), ("WEBP", True), ("PNG", True)]:
-            with self.subTest(format=format_name):
-                # A misleading extension must not bypass inspection of the bytes.
-                source = self.root / "disguised.png"
-                Image.new("RGB", (20, 20), "red").save(
-                    source, format=format_name, save_all=animated,
-                    append_images=[Image.new("RGB", (20, 20), "blue")] if animated else [],
-                    duration=100, loop=0,
-                )
-                with self.assertRaisesRegex(ValueError, "static|animated"):
-                    self.prepare(image=source)
-                self.assertFalse((self.batch / "generated").exists())
-
-    def test_single_frame_animation_containers_are_rejected(self):
-        # One-frame APNGs and animated WebPs report n_frames=1 and
-        # is_animated=False in Pillow, but their containers still carry animation.
-        def png_chunk(kind, payload):
-            return (struct.pack(">I", len(payload)) + kind + payload
-                    + struct.pack(">I", zlib.crc32(kind + payload)))
-
-        png = io.BytesIO()
-        Image.new("RGB", (2, 2), "red").save(png, format="PNG")
-        original = png.getvalue()
-        apng = (original[:33]
-                + png_chunk(b"acTL", struct.pack(">II", 1, 0))
-                + png_chunk(b"fcTL", struct.pack(">IIIIIHHBB", 0, 2, 2, 0, 0, 100, 1000, 0, 0))
-                + original[33:])
-        two_frames = base64.b64decode(
-            "UklGRoQAAABXRUJQVlA4WAoAAAACAAAAAQAAAQAAQU5JTQYAAAAAAAAAAABBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAAJWUDhMDwAAAC8BQAAABxD9j/4HIqL/AQBBTk1GKAAAAAAAAAAAAAEAAAEAAGQAAABWUDhMDwAAAC8BQAAABxDR//4HIqL/AQA=")
-        chunks, offset = [], 12
-        while offset < len(two_frames):
-            size = int.from_bytes(two_frames[offset + 4:offset + 8], "little")
-            end = offset + 8 + size + size % 2
-            chunks.append(two_frames[offset:end])
-            if two_frames[offset:offset + 4] == b"ANMF":
-                break
-            offset = end
-        payload = b"WEBP" + b"".join(chunks)
-        animated_webp = b"RIFF" + struct.pack("<I", len(payload)) + payload
-
-        for name, data in [("APNG", apng), ("WEBP", animated_webp)]:
-            with self.subTest(format=name):
-                with Image.open(io.BytesIO(data)) as picture:
-                    picture.load()
-                    self.assertEqual(picture.n_frames, 1)
-                    self.assertFalse(picture.is_animated)
-                source = self.root / f"{name}.png"
-                source.write_bytes(data)
-                with self.assertRaisesRegex(ValueError, "animated"):
-                    self.prepare(image=source, candidate_id=name)
-                self.assertFalse((self.batch / f"generated/receipts/{name}.json").exists())
-
-    def test_static_png_jpeg_webp_remain_supported(self):
-        for format_name in ["PNG", "JPEG", "WEBP"]:
-            with self.subTest(format=format_name):
-                source = self.root / f"static-{format_name}"
-                Image.new("RGB", (2, 2), "red").save(source, format=format_name)
-                receipt = self.prepare(image=source, candidate_id=format_name)
-                self.assertEqual(receipt["source"]["format"], format_name)
-                self.assertEqual(receipt["asset"]["format"], "WEBP")
-
-    def test_report_exposes_missing_images_and_detects_corruption(self):
-        receipt = self.prepare()
-        candidates = self.batch / "candidates-a.jsonl"
-        candidates.write_text('\n'.join(json.dumps({"id": ident}) for ident in ["img-0001", "img-0002"]) + '\n')
-        report = preparation.validate(self.batch)
-        self.assertEqual(report["expected_images"], 2)
-        self.assertEqual(report["prepared_images"], 1)
-        self.assertEqual(report["missing_images"], ["img-0002"])
-        self.assertFalse(report["complete"])
-        self.assertEqual(report["errors"], [])
-        (self.batch / receipt["asset"]["path"]).write_bytes(b"broken image")
-        corrupted = preparation.validate(self.batch)
-        self.assertTrue(corrupted["errors"])
-        self.assertEqual(corrupted["prepared_images"], 0)
-        self.assertIn("img-0001", corrupted["missing_images"])
-
-    def test_report_rejects_receipt_path_traversal_and_duplicate_candidates(self):
+    def test_real_image_and_exact_provenance_remain_unchanged(self):
+        before = self.source.read_bytes(), self.provenance.read_bytes()
         self.prepare()
-        receipt_path = self.batch / "generated/receipts/img-0001.json"
-        receipt = json.loads(receipt_path.read_text())
-        receipt["source"]["path"] = "../source.png"
-        receipt_path.write_text(json.dumps(receipt))
-        candidates = self.batch / "candidates-a.jsonl"
+        self.prepare()
+        self.assertEqual((self.source.read_bytes(), self.provenance.read_bytes()), before)
+
+    def test_all_former_commands_and_unknown_input_refuse_without_site_packages(self):
+        for command in ("prepare", "validate", "report", "unknown", "--help"):
+            with self.subTest(command=command):
+                self.run_retired(command, "--batch-dir", self.batch)
+        self.run_retired()
+
+    def test_ids_and_symlinks_cannot_escape_or_mutate_a_batch(self):
+        target = self.root / "retained"
+        target.mkdir()
+        sentinel = target / "keep"
+        sentinel.write_bytes(b"retained bytes")
+        linked = self.root / "linked.png"
+        linked.symlink_to(self.source)
+        self.prepare(source=linked, candidate_id="../../escape")
+        self.assertEqual(sentinel.read_bytes(), b"retained bytes")
+        self.assertFalse((self.root / "escape").exists())
+
+    def test_missing_and_corrupt_provenance_is_never_interpreted(self):
+        for data in (b"{}", b"not JSON", b'{"prompt":"different captured words"}'):
+            with self.subTest(data=data):
+                self.provenance.write_bytes(data)
+                self.prepare()
+                self.assertEqual(self.provenance.read_bytes(), data)
+        self.prepare(provenance=self.root / "missing.json")
+
+    def test_static_animated_and_malformed_binary_inputs_are_all_retired(self):
+        blobs = {
+            "png": self.source.read_bytes(),
+            "gif": base64.b64decode("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=="),
+            "webp": base64.b64decode("UklGRhwAAABXRUJQVlA4TA8AAAAvAUAAAAcQ/Y/+ByKi/wEA"),
+            "animated-webp-marker": b"RIFF\x00\x00\x00\x00WEBPANIM",
+            "apng-marker": b"\x89PNG\r\n\x1a\nacTL",
+            "jpeg-marker": b"\xff\xd8\xff\xd9",
+            "malformed": b"not an image",
+        }
+        for name, blob in blobs.items():
+            with self.subTest(name=name):
+                source = self.root / name
+                source.write_bytes(blob)
+                before = hashlib.sha256(blob).digest()
+                self.prepare(source=source)
+                self.assertEqual(hashlib.sha256(source.read_bytes()).digest(), before)
+
+    def test_fifo_source_is_not_opened_and_no_preparation_blocks(self):
+        source = self.root / "blocking-source"
+        os.mkfifo(source)
+        self.prepare(source=source)
+
+    def test_retained_receipts_and_corrupt_candidate_reports_are_not_rewritten(self):
+        retained = self.root / "historical-batch"
+        (retained / "generated/receipts").mkdir(parents=True)
+        receipt = retained / "generated/receipts/img-0001.json"
+        receipt.write_text('{"source":{"path":"../source.png"},"state":"prepared_candidate"}')
+        candidates = retained / "candidates-a.jsonl"
         candidates.write_text('{"id":"img-0001"}\n{"id":"img-0001"}\n')
-        report = preparation.validate(self.batch)
-        self.assertTrue(any("outside" in error for error in report["errors"]))
-        self.assertTrue(any("duplicate" in error for error in report["errors"]))
+        before = receipt.read_bytes(), candidates.read_bytes()
+        for command in ("validate", "report"):
+            self.run_retired(command, "--batch-dir", retained)
+        self.assertEqual((receipt.read_bytes(), candidates.read_bytes()), before)
+
+    def test_entrypoint_cannot_open_inputs_or_make_network_calls(self):
+        audit = """import runpy, sys
+script, source, provenance, batch = sys.argv[1:]
+def audit(event, args):
+    if event == 'open' and str(args[0]) in (source, provenance, batch):
+        raise AssertionError('retired input was opened')
+    if event.startswith('socket.'):
+        raise AssertionError('retired network access')
+sys.addaudithook(audit)
+sys.argv = [script, 'prepare', '--image', source, '--provenance', provenance, '--batch-dir', batch, '--id', 'img-0001']
+runpy.run_path(script, run_name='__main__')
+"""
+        result = subprocess.run([sys.executable, "-I", "-S", "-c", audit, str(SCRIPT),
+                                 str(self.source), str(self.provenance), str(self.batch)],
+                                capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("retired", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertFalse(self.batch.exists())
 
 
 if __name__ == "__main__":

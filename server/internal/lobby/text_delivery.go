@@ -20,7 +20,9 @@ func (m *TextManager) Owner() string { return m.owner }
 // PumpDeliveries claims only currently connected accounts. It never acknowledges
 // a transport write; the authenticated recipient confirms its immutable ID.
 func (m *TextManager) PumpDeliveries(ctx context.Context, source TextDeliveries) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	authorityErr := m.checkAuthority(ctx)
 	m.mu.Unlock()
 	if authorityErr != nil {
@@ -29,7 +31,9 @@ func (m *TextManager) PumpDeliveries(ctx context.Context, source TextDeliveries)
 	if _, e := source.RecoverPending(ctx, 100); e != nil {
 		return e
 	}
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	accounts := []string{}
 	for id, p := range m.peers {
 		if m.current(p) {
@@ -47,7 +51,9 @@ func (m *TextManager) PumpDeliveries(ctx context.Context, source TextDeliveries)
 		if e != nil {
 			return errors.Join(result, e)
 		}
-		m.mu.Lock()
+		if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+			return err
+		}
 		for _, delivery := range deliveries {
 			p := m.peers[delivery.AccountID]
 			// Finish may have committed its durable outcome while the engine is

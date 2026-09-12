@@ -1,15 +1,13 @@
 # Community operations
 
-This first working slice supports text contributions and the Weekly Nown
-Challenge. The player interface is Flutter; Contributor Studio is web-only and
-the Admin Console remains on the separate internal listener.
-
-The [Blueprint](../../BLUEPRINT.md) now adopts five text-only gameplay modes.
-The operations below describe the existing working text slice; mode/language
-catalog authoring, certification and activation remain planned in the
-[transition design](../design/DESIGN-text-transition.md) and
-[Roadmap](../planning/ROADMAP.md). A working contribution form does not mean the
-new gameplay or complete release pipeline exists.
+Knowoff supports text contributions, moderated release operations and the Weekly
+Nown Challenge. The player interface is Flutter; Contributor Studio is web-only
+and the Admin Console remains on a separate internal listener. The
+[Blueprint](../../BLUEPRINT.md) defines the five text modes. The
+[Roadmap](../planning/ROADMAP.md) and
+[resumption evidence](../reports/2026-09-12-text-transition-resumption.md)
+record remaining production, provider, policy and human release gates. A working
+contribution or release form does not authorize a real pack or deployment.
 
 ## Open the studio
 
@@ -20,7 +18,7 @@ new gameplay or complete release pipeline exists.
    five minutes and establishes an eight-hour HttpOnly session.
 4. Open **Roles & applications** to see your account's eligibility and apply.
    An administrator reviews the request. Curator includes Contributor access;
-   Guard is an independent safety role whose enforcement tools remain pending.
+   Guard is an independent safety role with timeboxed, audited freeze tools.
 
 The browser must use the server origin configured in the game. Do not paste
 access tokens into URLs. Signing out revokes the browser session; the server
@@ -35,8 +33,8 @@ does not expose these administration pages.
 
 Before collecting real contributions, publish the actual contribution terms
 through **Contribution terms**, using a new version and activation time. The
-bootstrap terms body is a placeholder; do not treat it as a reviewed legal
-document or rewrite versions already accepted by contributors. The latest
+bootstrap does not manufacture owner-authored terms. Do not treat historical
+placeholder text as a reviewed legal document or rewrite accepted versions. The latest
 effective stored version is shown to players and checked when they consent.
 
 Configure [text screening](CHAT_MODERATION.md#contributor-and-challenge-text-screening)
@@ -52,9 +50,14 @@ excludes private drafts. Approval binds to the text actually shown on the
 review form, requires human confirmation and automated screening, and records
 the decision, profile credit and reward atomically. Rejection requires a reason.
 
-Approval means accepted for curation. Building, certifying and deploying a real
-text bundle is a separate pipeline; the old status-only publish action is
-disabled instead of pretending a pack was deployed.
+Approval means accepted for curation. The text release workflow captures the
+exact accepted source, builds and certifies an immutable bundle, then separately
+publishes, activates or takes it down. Capture and publication preserve original
+consent and credits and never pay the approval reward again. Release operations
+require their own exact administrator session and audit. Missing screening or
+required evidence refuses visibility. See [content/dealing](../code/MODULE-media-engine.md)
+and [CLI usage](../../tools/README.md). The retired portal simulator returns 410;
+use the supported text tooling for reviewed simulation input.
 
 ## Prepare the humor pilot
 
@@ -106,12 +109,16 @@ immutable and cannot be replaced.
 Players open **Weekly Nown Challenge** from Home to see the topic, public
 approved entries, their own review status and the current terms. Only approved
 entries become public and votable. Players have one final vote, cannot vote
-for themselves, and cannot vote after closure. Admin closes the week explicitly
-in this slice. Closing more than once credits the recorded winner only once;
+for themselves, and cannot vote after closure. The scheduler closes expired
+weeks and supports restart-safe catch-up; administrators can also close a week.
+Tied vote totals choose the earliest accepted entry, then immutable ID. Closing
+more than once credits the recorded winner only once;
 the full configured reward is separate from the daily gameplay cap.
 
-The current week's result stays readable after closure. Automated weekly
-rollover and transfer of the current-winner title remain roadmap work.
+The current week's result stays readable after closure. Weekly rollover moves
+the current-winner title and preserves its history without a duplicate payout.
+A missing next approved topic remains unavailable; the scheduler does not invent
+content or approve submissions.
 
 ## Other available operations
 
@@ -120,15 +127,22 @@ challenge review, notices, report and feedback triage, and account wallet and
 entitlement lookup. Triage records supported status changes with an audit; it
 does not claim that closing a report removes media or bans an account.
 
-Guard enforcement, arbitrary grants/refunds, complete leaderboard controls,
-reviewed text catalog authoring/certification/activation, and avatar approval
-and activation remain open work in the [roadmap](../planning/ROADMAP.md).
-The text target supersedes gameplay-image processing and
-[ADR-011](../design/ADR-011-static-image-and-text-content.md) through
-[ADR-012](../design/ADR-012-text-only-selectable-modes.md); image/GIF/video
-submissions are not future playable formats. Preserve separate avatar support.
-The legacy non-production workbench is a separate development surface; this
-slice does not certify its authentication or production readiness.
+Guards can freeze an account within their independent, timeboxed authority;
+overlapping freezes remain separate and expire independently. Administrators
+make final decisions. Avatar upload/activation requires the account's unlock,
+automated screening and validated non-playable WebP output; provider refusal
+preserves the prior avatar and entitlement. Administrative takedown remains
+separate from a report's status.
+
+Additional room controls, sanctions, Noin adjustments and complete leaderboard
+controls are tracked as unfinished operator work. Immutable operator decisions
+and delivery receipts alone do not imply those effects are mounted. The
+[Roadmap](../planning/ROADMAP.md) records the reviewed implementation boundaries.
+
+Gameplay image/GIF/video submissions are retired under
+[ADR-012](../design/ADR-012-text-only-selectable-modes.md). Historical image
+records are retained; the old workbench/image candidate execution path is gone.
+Avatar support is a separate non-playable consumer.
 
 ## Preserve contributions during transition
 
@@ -140,13 +154,13 @@ SQL migrations. Use the reviewed archive/backfill plan with verified reference
 mapping before enforcing text-only active-content constraints.
 
 New catalog records need stable content IDs/revisions, response/item or prompt
-kind, mode suitability, canonical language and rights/review evidence. Those
-fields are a target contract, not fields already available in Contributor
-Studio. Content publication must preserve approval reward idempotency; importing
-or republishing previously rewarded work never pays it again. Closing a report
-still does not deactivate a catalog: a takedown needs a separately verified
-replacement release, with existing matches pinned to their recorded contract
-or explicitly ended under the operational policy.
+kind, mode suitability, canonical language and rights/review evidence. The shared
+bundle contract implements those fields; the Studio remains an accepted-text
+intake surface rather than a complete mode/pool authoring editor. Content publication must preserve approval reward idempotency; importing
+or republishing previously rewarded work never pays it again. Changing a report
+status alone does not deactivate a catalog: use the separate audited release
+takedown/activation operation. Existing matches retain their pinned contract or
+are explicitly ended under the operational policy.
 
 ## API and verification
 
@@ -158,10 +172,11 @@ The existing challenge endpoints are `GET /api/challenge/active`,
 `POST /api/challenge/entry` and `POST /api/challenge/vote`. Their response shape,
 consent fields and stable error codes are retained in the
 [historical roadmap's community slice](../planning/ROADMAP-pre-text-20260912.md#community-and-operations-source-audit-and-first-working-slice--2026-09-10),
-under **Challenge API handoff**. It documents the current slice, not protocol
-v2 mode actions. No current-week topic returns 204.
+under **Challenge API handoff**. Those HTTP contribution endpoints are separate
+from protocol v2 match actions; current lifecycle behavior is described above. No current-week topic returns 204.
 
-Use a dedicated disposable database for integration tests: several suites
-truncate fixtures. Set `KNOWOFF_TEST_DSN` to that database before running
-`python3 xops/test/tests-lints.py`; otherwise database tests may report skips.
+Run `python3 xops/test/tests-lints.py` from the repository root. It provisions
+guarded disposable PostgreSQL/Redis for integration fixtures, includes standalone
+tools, and fails required skips. Never point these fixture suites at a retained
+application database.
 Screening tests use a local fake provider and do not make paid or live API calls.

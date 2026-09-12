@@ -3,7 +3,9 @@ package leaderboard
 import (
 	"context"
 	"database/sql"
+	"net/url"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -82,22 +84,37 @@ func TestDailyBucketsTiedRanksAndClosedWriter(t *testing.T) {
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	dsn, token := os.Getenv("KNOWOFF_TEST_DSN"), os.Getenv("KNOWOFF_TEST_DB_TOKEN")
+	u, err := url.Parse(dsn)
+	if err != nil || u == nil || len(token) != 12 || strings.Trim(token, "0123456789abcdef") != "" || u.Scheme != "postgres" || u.Path != "/knowoff_test_"+token || u.Fragment != "" || (u.Hostname() != "postgres" && u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
+		t.Fatal("uniquely named disposable PostgreSQL required")
+	}
+	q, err := url.ParseQuery(u.RawQuery)
+	if err != nil {
+		t.Fatal("invalid disposable parameters")
+	}
+	for key := range q {
+		if key != "sslmode" {
+			t.Fatal("unexpected database override")
+		}
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		t.Fatalf("open db: %v", err)
+		t.Fatal(err)
 	}
-	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available: %v", err)
+	t.Cleanup(func() { db.Close() })
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	var actual string
+	if err := db.QueryRowContext(ctx, "SELECT current_database()").Scan(&actual); err != nil || actual != "knowoff_test_"+token {
+		t.Fatal("refusing non-disposable database", err)
+	}
+	if _, err := db.ExecContext(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
+		t.Fatal(err)
 	}
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
-		t.Fatalf("migrate: %v", err)
+		t.Fatal(err)
 	}
-	// Keep tests hermetic: global leaderboard rows persist across runs.
-	_, _ = db.Exec("TRUNCATE TABLE leaderboard_entries, leaderboard_weeks, leaderboard_history, accounts, profiles RESTART IDENTITY CASCADE")
 	return db
 }
 

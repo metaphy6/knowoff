@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestDevelopmentIdentityCannotEnterProductionOrBecomePlayer(t *testing.T) {
@@ -41,6 +42,10 @@ func TestDevelopmentIdentityCannotEnterProductionOrBecomePlayer(t *testing.T) {
 	if claims.Purpose != "development" {
 		t.Fatal("unsigned/inferred development purpose")
 	}
+	var nickname string
+	if err := db.QueryRow(`SELECT nickname FROM accounts WHERE id=$1`, pair.AccountID).Scan(&nickname); err != nil || len(nickname) > 20 {
+		t.Fatal("development identity exceeds public nickname limit", err)
+	}
 	if _, err := dev.AuthenticateDevice(ctx, claims.DeviceHash); err == nil {
 		t.Fatal("dev namespace accepted by ordinary device auth")
 	}
@@ -66,6 +71,51 @@ func TestDevelopmentIdentityCannotEnterProductionOrBecomePlayer(t *testing.T) {
 	}
 	if _, err := prod.ValidateAccessToken(ctx, player.AccessToken); err != nil {
 		t.Fatal("ordinary player rejected", err)
+	}
+}
+
+func TestTimedSuspensionAndGuardAccessBoundaries(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	m := newTestManager(db)
+	ctx := context.Background()
+	p, err := m.AuthenticateDevice(ctx, HashDevice(uuid.NewString()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	guard, err := m.AuthenticateDevice(ctx, HashDevice(uuid.NewString()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO guard_freezes(id,account_id,guard_account_id,reason,frozen_at,expires_at) VALUES($1,$2,$3,'test case',now(),now()+interval '1 hour')`, uuid.NewString(), p.AccountID, guard.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.ValidateAccessToken(ctx, p.AccessToken); err != nil {
+		t.Fatal("Guard-only freeze blocked safety/report access", err)
+	}
+	if _, err := db.Exec(`UPDATE accounts SET suspended_until=$2 WHERE id=$1`, p.AccountID, time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.ValidateAccessToken(ctx, p.AccessToken); err == nil {
+		t.Fatal("timed admin suspension accepted access")
+	}
+	if _, err := m.Refresh(ctx, p.RefreshToken); err == nil {
+		t.Fatal("timed admin suspension refreshed")
+	}
+	if _, err := db.Exec(`UPDATE accounts SET suspended_until=now()-interval '1 second' WHERE id=$1`, p.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.ValidateAccessToken(ctx, p.AccessToken); err != nil {
+		t.Fatal("expired suspension still blocks", err)
+	}
+	if _, err := m.Refresh(ctx, p.RefreshToken); err != nil {
+		t.Fatal("refusal consumed refresh credential", err)
+	}
+	if _, err := db.Exec(`UPDATE accounts SET banned_at=now() WHERE id=$1`, p.AccountID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.ValidateAccessToken(ctx, p.AccessToken); err == nil {
+		t.Fatal("expired suspension cleared independent ban")
 	}
 }
 

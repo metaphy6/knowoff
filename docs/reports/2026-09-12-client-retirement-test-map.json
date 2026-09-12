@@ -1,0 +1,1700 @@
+{
+  "version": 1,
+  "scope": "Phase6 client partition D",
+  "inventory_captured_at": "2026-09-12T18:46:13.132759+00:00",
+  "notes": [
+    "No test files deleted. Declaration prefixes come from the before-edit inventory; parameterized families expand into several real tests.",
+    "Retired specialty/image/dev positives are replaced by strict rejection and private-state proofs, not compatibility APIs.",
+    "A scrollable current text page permits public status label wrapping; exact selection-only position, same element/copy dimensions/order and nooverflow are retained."
+  ],
+  "families": {
+    "private_retirement": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "retired $type cannot install private fields, buffer a replay or grant authority",
+      "reason": "Retired private-hand/power messages are strict rejection cases; no timer, alternate hand or buffered replay remains."
+    },
+    "ready": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "Ready acknowledgement alone never fabricates readiness or a phase change",
+      "reason": "Server Ready seats and matching complete state own readiness."
+    },
+    "round": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "new round atomically replaces hand, prior ballot, Ready and phase deadline",
+      "reason": "A complete new-round snapshot replaces these fields together."
+    },
+    "reconnect": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "background erases private state and resume reclaims same seat without retrying move",
+      "reason": "All five modes clear private state and reclaim same room/seat with fresh epoch; no automatic intent replay."
+    },
+    "rematch": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "verdict $mode choice is explicit and leave erases match before new admission",
+      "reason": "Same table sends rematch {}; new table explicitly leaves and uses a certified queue tuple."
+    },
+    "draw": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "$kind changes the hand only when the authoritative complete snapshot arrives",
+      "reason": "Draw adds owned copies; public evidence contains drawer/count without drawn card identity. Play/timeout remove only from a complete snapshot."
+    },
+    "move": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "atomic move carries exact evidence and never spends optimistically",
+      "reason": "All five mode payloads bind copy/revision/phase; duplicate pending confirmation cannot emit another request; explicit retry reuses original immutable request."
+    },
+    "vote_error": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "correlated $code preserves or clears only its exact pending ballot",
+      "reason": "Matching request/error plus cursor decides pending intent; unrelated rejection cannot release it."
+    },
+    "result": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "resolved ballot and revealed role arrive only from the server result",
+      "reason": "Runoff candidates, voters and revealed role are authoritative."
+    },
+    "clock": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "deadline is server-owned and expiry never emits an auto-play",
+      "reason": "All five modes reject locally expired actions without changing original deadline or hand."
+    },
+    "missing_clock": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "a phase missing its mandatory deadline cannot preserve an old countdown",
+      "reason": "V2 deadlines are required; incomplete phase payloads fail closed instead of merging legacy partial events."
+    },
+    "deadline_merge": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "$phase retains original deadline and history through unrelated seat updates",
+      "reason": "Discussion, ballot and result snapshots retain exact original deadline."
+    },
+    "handshake": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "handshake waits for credentials and sends no role override or queue implicitly",
+      "reason": "Credential completion precedes hello; development role picking is retired."
+    },
+    "auth_retry": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "rejected handshake requires explicit retry without creating or queuing an identity",
+      "reason": "Rejected hello does not self-loop; explicit resume loads credentials again."
+    },
+    "offline": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "unavailable credentials clear authority and public AppConfig still initializes",
+      "reason": "Offline public initialization never fabricates replacement identity."
+    },
+    "selection": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "selection stays local until explicit confirmation and cancellation sends nothing",
+      "reason": "Selection/cancel is local. Off-turn controls are unavailable and a new turn never auto-plays."
+    },
+    "selection_ui": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "$input selection and confirm send exactly one current copy and no optimistic spend",
+      "reason": "Actual TextSession receives one explicit touch/keyboard/semantics confirmation and preserves hand until server state."
+    },
+    "copy_stability": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "stable copies retain identity and selection through seat update and rotation at $width",
+      "reason": "Exact position is retained on selection alone. Public status wrapping may move the scrollable page, while element/dimensions/order/selection survive; no overflow at360px."
+    },
+    "evidence_selection": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "public evidence preserves hand order but invalidates stale board selection at $width",
+      "reason": "New board revision deliberately invalidates stale action preview without replacing retained hand copies."
+    },
+    "new_selection": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "next round clears stale local selection while retained copies stay readable",
+      "reason": "New round/phase clears local preview while hand IDs remain authoritative."
+    },
+    "sizing": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "$name $players seats at $viewport keeps every retained card and board reachable",
+      "reason": "Five modes,4/6seats,320/430/834/1440 widths use current scrollable text surfaces; old workspace tabs/two-column/image-inspector assumptions are retired."
+    },
+    "large_text": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "$name fits 320px and 2x $locale with reduced motion",
+      "reason": "All five modes plus ballot/result/verdict remain bounded with Arabic/pseudo2x text and48dp controls."
+    },
+    "role_ui": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "role seal has no concealed semantics and keeps footprint while held",
+      "reason": "Held role disclosure has exact footprint and no hidden semantics."
+    },
+    "spectator": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "$name never mounts private Nown or an unauthorized active hand",
+      "reason": "Donower and eliminated projections do not install Nown; eliminated player has no role/hand/active controls."
+    },
+    "background": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "background drops private hand, role, focus and pending selection before resume",
+      "reason": "Private widgets and semantics disappear before reconnect; same role state returns without local preview."
+    },
+    "ballot_ui": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "runoff uses only server candidates and pending vote prevents duplicate click",
+      "reason": "Exact target seat is sent; pending intent disables repeated clicks."
+    },
+    "result_ui": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "result animation finishes without inventing role until server reveal boundary",
+      "reason": "A completed animation never reveals early; fresh server boundary exposes stationary poster."
+    },
+    "verdict_ui": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "verdict exposes only begun Nowns and explicit same-table rematch",
+      "reason": "Only begun Nowns/finalscores and explicit rematch are exposed."
+    },
+    "authored": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "long authored text remains complete and reachable at enlarged phone scale",
+      "reason": "Full text is directly readable in current hand; no old media inspector needed."
+    },
+    "attribution": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "$size attributed public table cards retain exact seat and chronological history",
+      "reason": "All4/6public cards retain seat attribution and chronological evidence; old newest-round table reorder is replaced by explicit evidence sequence."
+    },
+    "round_zero": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "round one is explicit and a zero-round snapshot cannot replace evidence",
+      "reason": "V2 rounds start at1; invalid round0 must reject instead of legacy display adjustment."
+    },
+    "media_refusal": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "obsolete $field playable metadata never mounts media or private content",
+      "reason": "Legacy asset/type/URL fields fail closed without Image/playback."
+    },
+    "share": {
+      "file": "client/test/presentation/game_screen_test.dart",
+      "test_search": "lobby QR and clipboard agree on the actual app route web=$web",
+      "reason": "Preserved rendered QR byte comparison against copied native/web join URL; actual TextPlay lobby now mounts same shared widget."
+    },
+    "quick_chat": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "quick chat retains protocol IDs, localized labels and fallback",
+      "reason": "All four locales retain stable phrase IDs and fallback."
+    },
+    "poke": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "poke excludes self, eliminated and disconnected; chat trims and ignores empty",
+      "reason": "Current phase recipients only; empty chat emits nothing and valid authored chat carries locale."
+    },
+    "poke_round": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "accepted poke suppresses the same phase group and resets on a new round",
+      "reason": "Same-round accepted evidence suppresses duplicate target; next round restores allowance."
+    },
+    "retired_actions": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "retired Reveal and Shuffle cannot reveal another hand for $role",
+      "reason": "Neither role may submit removed powers."
+    },
+    "identity": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "wire seat identity never infers a bot or grants authority from a nickname",
+      "reason": "Strict public seat identity rejects nickname fields; no nickname-based synthetic eligibility."
+    },
+    "role_override": {
+      "file": "client/test/domain/preserved_actions_test.dart",
+      "test_search": "role override and foreign-copy intent never cross current admission authority",
+      "reason": "Client-selected role and foreign/extended copy payloads are rejected without mutation."
+    },
+    "debug_retired": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "retired powers and roles cannot emit text intents in $name",
+      "reason": "All five modes reject removed debug/specialty actions with no frame, state change or pendingrequest."
+    },
+    "poke_feedback": {
+      "file": "client/test/presentation/text_match_test.dart",
+      "test_search": "targeted new poke shakes once and uses native haptics without replay",
+      "reason": "Actual server evidence triggers finite feedback; debug echo is retired."
+    },
+    "snapshot_cache": {
+      "file": "client/test/media/asset_cache_test.dart",
+      "test_search": "stores only immutable verified text and preserves copy identity",
+      "reason": "Deep immutable text cache replaces old image-byte LRU."
+    },
+    "page_corrupt": {
+      "file": "client/test/media/asset_cache_test.dart",
+      "test_search": "rejects corrupted page bytes before installing any private state",
+      "reason": "Hash-invalid history cannot install partial role projection."
+    },
+    "cache_budget": {
+      "file": "client/test/media/asset_cache_test.dart",
+      "test_search": "enforces configured frame and history budgets without partial install",
+      "reason": "Protocol limits replace image-memory eviction budget."
+    },
+    "cache_evict": {
+      "file": "client/test/media/asset_cache_test.dart",
+      "test_search": "verified page replay is stable and disconnect evicts all private data",
+      "reason": "Replay rejection preserves complete baseline; disconnect clears private state and new epoch restores only authorized copies."
+    },
+    "media_network": {
+      "file": "client/test/media/media_engine_test.dart",
+      "test_search": "actual text page launch and reconnect never fetch playable media; corrupt=$corrupt",
+      "reason": "Real TextPlay+ApiClient captured HTTP proves services are used but no catalog/asset URLs; valid reconnect or corrupt private media refusal."
+    },
+    "cache_retirement": {
+      "file": "client/test/media/pack_sync_service_test.dart",
+      "test_search": "retires obsolete playable metadata without fetching",
+      "reason": "All exact old keys removed for text/image/GIF/future/corrupt/wrongtyped values; retained identity/preferences unchanged; HttpOverrides prohibits refresh."
+    },
+    "header": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "compact retained header action has a label and48dp target",
+      "reason": "48dp retained public header action and no debug launcher."
+    },
+    "small_shell": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "small pseudo text shell stays usable without dev grants",
+      "reason": "2x pseudo small shell keeps real action reachable without debug controls."
+    },
+    "countdown_label": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "compact countdown keeps its full accessible time label",
+      "reason": "Exact original accessibility countdown assertion retained."
+    },
+    "countdown_frozen": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "countdown holds frozen display then catches up on resume",
+      "reason": "Exact original display-only countdown assertion retained."
+    },
+    "finite_poke": {
+      "file": "client/test/presentation/dev_tools_panel_test.dart",
+      "test_search": "poke feedback is finite and keeps layout stable reduced=$reduced",
+      "reason": "Original finite/reduced-motion feedback assertions retained after shared-widget extraction."
+    },
+    "request_budget": {
+      "file": "client/test/presentation/game_session_provider_test.dart",
+      "test_search": "negotiated mutation budget survives phase changes and reconnect",
+      "reason": "Hello-negotiated immutable request cap is retained across phases and reconnect; no omitted field resets it."
+    }
+  },
+  "cases": [
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "join routes accept only valid local and native room codes",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "web share keeps app deployment path and strips unrelated query",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "initial route $route prefills join without creating a session",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "unknown initial route $route falls back to home",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "warm native join route opens the same prefilled form",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "home mounts offline with configured pseudo-localization",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/app_shell_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "pseudo-locale catalog remains available",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "a failed opening handshake still schedules a later attempt",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "concurrent connect requests share one pending handshake",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "stale socket callbacks cannot disconnect or expose errors on a fresh connection",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "connected is announced only after the socket handshake completes",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "defaults to a short maximum reconnect delay",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "connects, sends, and receives echoed JSON",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "reconnects after server drops the socket",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/websocket_transport_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "reconnect() opens a brand-new socket for a fresh handshake",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/media/media_engine_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "prefetches and caches verified asset bytes",
+      "replacement_families": [
+        "media_network"
+      ]
+    },
+    {
+      "original_file": "client/test/media/media_engine_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "retries transient failures and succeeds",
+      "replacement_families": [
+        "media_network"
+      ]
+    },
+    {
+      "original_file": "client/test/media/asset_cache_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "stores and retrieves verified bytes",
+      "replacement_families": [
+        "snapshot_cache"
+      ]
+    },
+    {
+      "original_file": "client/test/media/asset_cache_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "rejects corrupted bytes",
+      "replacement_families": [
+        "page_corrupt"
+      ]
+    },
+    {
+      "original_file": "client/test/media/asset_cache_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "evicts least recently used entries when over budget",
+      "replacement_families": [
+        "cache_budget"
+      ]
+    },
+    {
+      "original_file": "client/test/media/asset_cache_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "moves touched entries to most-recently-used position",
+      "replacement_families": [
+        "cache_evict"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "accepts only explicit image and text media types",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "rejects GIF metadata without replacing a working pack",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "evicts legacy GIF metadata and recovers from the network",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "invalid cached media stays unavailable when refresh fails",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "fetches unrecognized tag and persists metadata",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "loads already-persisted tag without network",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/media/pack_sync_service_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "rejects unsupported format version",
+      "replacement_families": [
+        "cache_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/ko_ui_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "compact header gives unused action width back to its title",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/ko_ui_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "button has one accessible label and an actionable semantic target",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/ko_ui_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "button has a 48dp target and supports keyboard activation",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/ko_ui_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "reduced motion settles without leaving a ticker or moving targets",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/ko_ui_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "all house shadows remain hard and palette stays legible",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "retired protocol $protocol cannot enter a legacy quick play",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "retired protocol $protocol cannot create a legacy local room",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "retired direct text entry refuses connection and lifecycle resume",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "retired route replacement preserves six seats and API host=$host",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "account access is public and successful return clears cached profiles",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "text generation opens explicit selection without legacy admission",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "community routes are discoverable from Play and own Profile",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "${device.$2} has ${device.$1} navigation and retained tasks",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "service navigation preserves a draft across window classes and back",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 10,
+      "original_declaration_prefix": "quick play preserves selected size before explicit admission",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 11,
+      "original_declaration_prefix": "offline player can open selection, leave and return without admission",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 12,
+      "original_declaration_prefix": "host preserves selected table and waits for explicit text creation",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 13,
+      "original_declaration_prefix": "join validates six characters and normalizes the room code",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 14,
+      "original_declaration_prefix": "a prefilled join waits for the player to submit",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 15,
+      "original_declaration_prefix": "local room host=$host fits $width in $locale at 2x text",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/home_screen_test.dart",
+      "original_declaration_index": 16,
+      "original_declaration_prefix": "home remains usable at $width in $locale with enlarged text",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "compact header control has a full label and 48dp target",
+      "replacement_families": [
+        "header"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "grants are disabled before joining while role choice stays usable",
+      "replacement_families": [
+        "debug_retired"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "freeze and resume replay buffered updates in order",
+      "replacement_families": [
+        "debug_retired"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "grant picker sends exactly each specialty without using it",
+      "replacement_families": [
+        "debug_retired"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "role choices and Random update the existing session hooks",
+      "replacement_families": [
+        "debug_retired"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "echo toggle works and restart resets with a fresh connection",
+      "replacement_families": [
+        "debug_retired"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "small phone and expanded text keep every dev action reachable",
+      "replacement_families": [
+        "small_shell"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "compact countdown keeps its full accessible time label",
+      "replacement_families": [
+        "countdown_label"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "countdown holds frozen display then catches up on resume",
+      "replacement_families": [
+        "countdown_frozen"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/dev_tools_panel_test.dart",
+      "original_declaration_index": 10,
+      "original_declaration_prefix": "poke feedback is finite and keeps layout stable reduced=$reduced",
+      "replacement_families": [
+        "finite_poke"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "revealed hand expires without a mounted overlay",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "a new revealed hand replaces the prior expiry timer",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "freezing buffers incoming events instead of applying them",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "public specialty use is retained for announcement surfaces",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "using the local Revote clears it from the hand",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "Reveal availability is round-scoped and viewable through one intent",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "public Ready events retain every ready seat for the current phase",
+      "replacement_families": [
+        "ready"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "a ready_state with ready:false takes a seat back out of readySeats",
+      "replacement_families": [
+        "ready"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "discussionReady resets when the next round opens a fresh discussion ",
+      "replacement_families": [
+        "round"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 10,
+      "original_declaration_prefix": "a new Play phase clears the prior round play so the new hand is tappable",
+      "replacement_families": [
+        "round"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 11,
+      "original_declaration_prefix": "a newer turn event drops a prior round auto-play lock when round events ",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 12,
+      "original_declaration_prefix": "rematch sends the chosen mode and rematch_state accumulates choices",
+      "replacement_families": [
+        "rematch"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 13,
+      "original_declaration_prefix": "rematch resumes a frozen session before sending the choice",
+      "replacement_families": [
+        "reconnect"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 14,
+      "original_declaration_prefix": "new table rematch resets the finished session and queues Quick Play",
+      "replacement_families": [
+        "rematch"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 15,
+      "original_declaration_prefix": "rematchChoices resets once a fresh match phase starts",
+      "replacement_families": [
+        "rematch"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 16,
+      "original_declaration_prefix": "a rematch restart clears the finished match state",
+      "replacement_families": [
+        "rematch"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 17,
+      "original_declaration_prefix": "a rematch keeps the new role assigned before its prefetch phase",
+      "replacement_families": [
+        "reconnect"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 18,
+      "original_declaration_prefix": "draw events add cards to the local hand without recording a play",
+      "replacement_families": [
+        "draw"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 19,
+      "original_declaration_prefix": "draw events retain a public drawer and count announcement",
+      "replacement_families": [
+        "draw"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 20,
+      "original_declaration_prefix": "shuffle events retain an anonymous table announcement",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 21,
+      "original_declaration_prefix": "shuffle sweeps the table plays and any locked move",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 22,
+      "original_declaration_prefix": "hand_dealt with an empty specialty clears the slot",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 23,
+      "original_declaration_prefix": "One More Free Card banks a round-scoped free draw on the pile",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 24,
+      "original_declaration_prefix": "a fresh round clears an unspent free draw token",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 25,
+      "original_declaration_prefix": "drawing cancels a pending auto-play selection",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 26,
+      "original_declaration_prefix": "drawing removes a queued auto-play request",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 27,
+      "original_declaration_prefix": "unfreezing replays buffered events in order",
+      "replacement_families": [
+        "private_retirement"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 28,
+      "original_declaration_prefix": "restarting resets state to initial and drops buffered events",
+      "replacement_families": [
+        "rematch"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 29,
+      "original_declaration_prefix": "a fresh ballot clears the previous result and vote",
+      "replacement_families": [
+        "round"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 30,
+      "original_declaration_prefix": "a next-round phase clears the finalized result snapshot",
+      "replacement_families": [
+        "round"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 31,
+      "original_declaration_prefix": "a ready_ack flips the local resultReady flag",
+      "replacement_families": [
+        "ready"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 32,
+      "original_declaration_prefix": "a resolved ballot retains each voter target",
+      "replacement_families": [
+        "result"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 33,
+      "original_declaration_prefix": "a fresh result window clears a stale resultReady",
+      "replacement_families": [
+        "ready"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 34,
+      "original_declaration_prefix": "a finalized elimination stores the revealed role for announcement",
+      "replacement_families": [
+        "result"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 35,
+      "original_declaration_prefix": "a phase window starts a display-only countdown",
+      "replacement_families": [
+        "clock"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 36,
+      "original_declaration_prefix": "a phase with no window clears the countdown",
+      "replacement_families": [
+        "missing_clock"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 37,
+      "original_declaration_prefix": "merging a phase payload keeps the chat feed and the countdown",
+      "replacement_families": [
+        "deadline_merge"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 38,
+      "original_declaration_prefix": "the vote budget survives phases that omit it",
+      "replacement_families": [
+        "request_budget"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 39,
+      "original_declaration_prefix": "copyWith can explicitly clear the result and the deadline",
+      "replacement_families": [
+        "round"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 40,
+      "original_declaration_prefix": "casting a vote locks the ballot locally and sends target_seat",
+      "replacement_families": [
+        "vote_error"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 41,
+      "original_declaration_prefix": "a live vote_cast event updates the live ballots map",
+      "replacement_families": [
+        "result"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 42,
+      "original_declaration_prefix": "a rejected cast_vote releases the local lock",
+      "replacement_families": [
+        "vote_error"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 43,
+      "original_declaration_prefix": "an error outside the voting phases leaves the ballot alone",
+      "replacement_families": [
+        "vote_error"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 44,
+      "original_declaration_prefix": "a rejection of an unrelated intent during the voting phase does not ",
+      "replacement_families": [
+        "vote_error"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 45,
+      "original_declaration_prefix": "the queue handshake refreshes the session before sending its token",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 46,
+      "original_declaration_prefix": "new game request includes the selected dev role",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 47,
+      "original_declaration_prefix": "prejoin dev role stays local until the queue handshake",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 48,
+      "original_declaration_prefix": "local-room handshake carries the preselected dev role",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 49,
+      "original_declaration_prefix": "Random clears the dev role across restart and the next join",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 50,
+      "original_declaration_prefix": "Random clears the server override when already joined",
+      "replacement_families": [
+        "handshake"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 51,
+      "original_declaration_prefix": "app configuration initializes when the backend is unavailable",
+      "replacement_families": [
+        "offline"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 52,
+      "original_declaration_prefix": "does not retry quickplay after a handshake rejection",
+      "replacement_families": [
+        "auth_retry"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 53,
+      "original_declaration_prefix": "reclaims the room after a dropped authenticated socket",
+      "replacement_families": [
+        "reconnect"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 54,
+      "original_declaration_prefix": "a rejected access token reissues credentials instead of wedging",
+      "replacement_families": [
+        "auth_retry"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 55,
+      "original_declaration_prefix": "lockMove marks the pending card locked without sending anything",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 56,
+      "original_declaration_prefix": "clearSelection drops the pending card and its lock without sending",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 57,
+      "original_declaration_prefix": "a locked move auto-plays the instant this seat",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 58,
+      "original_declaration_prefix": "turn_started for another seat does not fire a locked move",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 59,
+      "original_declaration_prefix": "playing a card removes it from my own hand",
+      "replacement_families": [
+        "draw"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 60,
+      "original_declaration_prefix": "a turn timeout removes the auto-discarded card from my own hand",
+      "replacement_families": [
+        "draw"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 61,
+      "original_declaration_prefix": "a turn timeout for another seat still marks that seat as played",
+      "replacement_families": [
+        "draw"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_session_provider_test.dart",
+      "original_declaration_index": 62,
+      "original_declaration_prefix": "a new round clears a stale pre-selection",
+      "replacement_families": [
+        "new_selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "unsupported media types never mount an image or playback control",
+      "replacement_families": [
+        "media_refusal"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "workspace tabs expose working screen-reader activation",
+      "replacement_families": [
+        "selection_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "timed ballot opens the action workspace from phone People",
+      "replacement_families": [
+        "ballot_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "large phone shows two complete cards per row",
+      "replacement_families": [
+        "sizing"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "phone task dialogs scroll at enlarged pseudo text",
+      "replacement_families": [
+        "large_text"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "debug poke echo sends only one allowed poke and settles",
+      "replacement_families": [
+        "poke_feedback"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "device workspace $size $phase survives expanded text",
+      "replacement_families": [
+        "large_text"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "phone workspace retains selection through bot update and rotation",
+      "replacement_families": [
+        "copy_stability"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "phone workspaces keep hand first and table one tap away",
+      "replacement_families": [
+        "sizing"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 10,
+      "original_declaration_prefix": "stable hand retains its origin on first bot evidence at $width",
+      "replacement_families": [
+        "evidence_selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 11,
+      "original_declaration_prefix": "stable hand shows four complete cards at $width",
+      "replacement_families": [
+        "sizing"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 12,
+      "original_declaration_prefix": "stable hand does not move after a bot play and turn at $width",
+      "replacement_families": [
+        "copy_stability"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 13,
+      "original_declaration_prefix": "stable hand keeps card positions when selecting at $width",
+      "replacement_families": [
+        "copy_stability"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 14,
+      "original_declaration_prefix": "stable hand stays in place when play becomes discussion at $width",
+      "replacement_families": [
+        "new_selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 15,
+      "original_declaration_prefix": "stable hand four cards remain readable in expanded pseudolocale",
+      "replacement_families": [
+        "large_text"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 16,
+      "original_declaration_prefix": "attributed table sits directly below Nown in $phase at $width",
+      "replacement_families": [
+        "attribution"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 17,
+      "original_declaration_prefix": "$playerCount table cards stay readable and bounded at $width",
+      "replacement_families": [
+        "attribution"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 18,
+      "original_declaration_prefix": "a new round brings its attributed plays to the top of the table",
+      "replacement_families": [
+        "attribution"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 19,
+      "original_declaration_prefix": "server round zero shows Round 1 and retains attributed evidence",
+      "replacement_families": [
+        "round_zero"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 20,
+      "original_declaration_prefix": "private role appears only while held; decoy never renders Nown",
+      "replacement_families": [
+        "role_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 21,
+      "original_declaration_prefix": "second card tap plays once, first tap only selects",
+      "replacement_families": [
+        "selection_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 22,
+      "original_declaration_prefix": "early selection locks locally and can be cancelled",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 23,
+      "original_declaration_prefix": "ballot sends candidate seat and allows changing vote",
+      "replacement_families": [
+        "ballot_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 24,
+      "original_declaration_prefix": "eliminated spectators see no secret or active controls",
+      "replacement_families": [
+        "spectator"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 25,
+      "original_declaration_prefix": "phone and expanded text layouts settle with reduced motion",
+      "replacement_families": [
+        "large_text"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 26,
+      "original_declaration_prefix": "desktop hand and draw action are available without scrolling",
+      "replacement_families": [
+        "sizing"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 27,
+      "original_declaration_prefix": "a free draw blocks the card play until the pile is drawn",
+      "replacement_families": [
+        "retired_actions"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 28,
+      "original_declaration_prefix": "Reveal selects only another living player and sends their seat",
+      "replacement_families": [
+        "retired_actions"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 29,
+      "original_declaration_prefix": "off-role Shuffle cannot send an intent",
+      "replacement_families": [
+        "retired_actions"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 30,
+      "original_declaration_prefix": "server runoff candidate announcement narrows the next ballot",
+      "replacement_families": [
+        "ballot_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 31,
+      "original_declaration_prefix": "free chat includes locale and Ready dispatches once",
+      "replacement_families": [
+        "poke",
+        "ready"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 32,
+      "original_declaration_prefix": "private revealed cards vanish when session expiry fires",
+      "replacement_families": [
+        "background"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 33,
+      "original_declaration_prefix": "verdict reveals Nowns to Donower and sends same-table choice",
+      "replacement_families": [
+        "verdict_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 34,
+      "original_declaration_prefix": "result seal falls once then reveals a stationary poster",
+      "replacement_families": [
+        "result_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 35,
+      "original_declaration_prefix": "a selectable text card can scroll and opens a readable inspector",
+      "replacement_families": [
+        "authored"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 36,
+      "original_declaration_prefix": "private hand blocks background focus and semantics",
+      "replacement_families": [
+        "background"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 37,
+      "original_declaration_prefix": "role seal keeps the same footprint while held",
+      "replacement_families": [
+        "role_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 38,
+      "original_declaration_prefix": "keyboard focus marks the card and Enter selects it",
+      "replacement_families": [
+        "selection_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 39,
+      "original_declaration_prefix": "lobby QR and clipboard agree on the actual app route web=$web",
+      "replacement_families": [
+        "share"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/game_screen_test.dart",
+      "original_declaration_index": 40,
+      "original_declaration_prefix": "$phase ${locale.toLanguageTag()} ${size.width} fits at 2x text without motion",
+      "replacement_families": [
+        "large_text"
+      ]
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "reports bind only visible Nown and hand immutable references",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "elimination and background dispose pending private report",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "report controls follow visible sources in $name",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "public history and revealed verdict Nowns retain report controls",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "background and match replacement discard unsubmitted report choice",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "typed chat is closed without accepted terms while canned chat remains open",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "targeted new poke shakes once and uses native haptics without replay",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "result uses the server reveal boundary and never exposes a role early",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "normal falling reveal keeps opaque text and settles without exposing the poster",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 10,
+      "original_declaration_prefix": "canned chat sends stable IDs and history renders localized phrases",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 11,
+      "original_declaration_prefix": "a prior-round poke does not hide the current round target",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 12,
+      "original_declaration_prefix": "$input confirmation matches touch without spending locally",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 13,
+      "original_declaration_prefix": "hand content direction follows content language, not interface locale",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 14,
+      "original_declaration_prefix": "ongoing points stay private and final scores use authoritative verdict",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 15,
+      "original_declaration_prefix": "pinned contract and public seat results remain readable",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 16,
+      "original_declaration_prefix": "atomic action from ${entry.key}",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 17,
+      "original_declaration_prefix": "trade recipient sees both public cards and decides $resolution",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 18,
+      "original_declaration_prefix": "large RTL text, semantics and background cleanup preserve authored boundaries",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 19,
+      "original_declaration_prefix": "five mode board is readable: $name",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 20,
+      "original_declaration_prefix": "selection previews a copy and confirmation sends one atomic intent",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 21,
+      "original_declaration_prefix": "Donower and eliminated widgets contain no private Nown semantics",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/presentation/text_match_test.dart",
+      "original_declaration_index": 22,
+      "original_declaration_prefix": "text board remains usable in $locale",
+      "retained_or_transferred": "Original assertions retained with provider-free shell, current shared-widget import or canonical v2 transport frame as applicable."
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 1,
+      "original_declaration_prefix": "bot flag and legacy nickname remain recognizable",
+      "replacement_families": [
+        "identity"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 2,
+      "original_declaration_prefix": "reveal lockout prevents send and targets exclude local/eliminated",
+      "replacement_families": [
+        "retired_actions"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 3,
+      "original_declaration_prefix": "shuffle is donower-only and works outside own turn",
+      "replacement_families": [
+        "retired_actions"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 4,
+      "original_declaration_prefix": "poke suppresses repeats per phase; chat trims and rejects empty",
+      "replacement_families": [
+        "poke"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 5,
+      "original_declaration_prefix": "selection confirms immediately or locks and cancels an early move",
+      "replacement_families": [
+        "selection"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 6,
+      "original_declaration_prefix": "poke allowance resets on a new round even if phase name repeats",
+      "replacement_families": [
+        "poke_round"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 7,
+      "original_declaration_prefix": "ballot ignores local, eliminated, and unchanged targets",
+      "replacement_families": [
+        "ballot_ui"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 8,
+      "original_declaration_prefix": "quick chat retains protocol ids, localized labels and fallback",
+      "replacement_families": [
+        "quick_chat"
+      ]
+    },
+    {
+      "original_file": "client/test/domain/preserved_actions_test.dart",
+      "original_declaration_index": 9,
+      "original_declaration_prefix": "a role picked before join re-fires once the seat exists",
+      "replacement_families": [
+        "role_override"
+      ]
+    }
+  ]
+}

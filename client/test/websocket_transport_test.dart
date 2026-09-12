@@ -33,11 +33,12 @@ void main() {
     final next = _DelayedChannel()..handshake.complete();
     var opened = 0;
     final transport = WebSocketTransport(
-        url: 'ws://example.invalid/ws/v2',
-        reconnectDelay: const Duration(milliseconds: 5),
-        maxReconnectDelay: const Duration(milliseconds: 10),
-        reconnectJitter: 0,
-        channelFactory: (_) => opened++ == 0 ? first : next);
+      url: 'ws://example.invalid/ws/v2',
+      reconnectDelay: const Duration(milliseconds: 5),
+      maxReconnectDelay: const Duration(milliseconds: 10),
+      reconnectJitter: 0,
+      channelFactory: (_) => opened++ == 0 ? first : next,
+    );
     final subscription = transport.messages.listen((_) {}, onError: (_) {});
     final connecting = transport.connect();
     first.handshake.completeError(const FormatException('handshake failed'));
@@ -54,11 +55,12 @@ void main() {
     final channel = _DelayedChannel();
     var opened = 0;
     final transport = WebSocketTransport(
-        url: 'ws://example.invalid/ws/v2',
-        channelFactory: (_) {
-          opened++;
-          return channel;
-        });
+      url: 'ws://example.invalid/ws/v2',
+      channelFactory: (_) {
+        opened++;
+        return channel;
+      },
+    );
     final first = transport.connect(), second = transport.connect();
     expect(opened, 1);
     channel.handshake.complete();
@@ -70,42 +72,51 @@ void main() {
   });
 
   test(
-      'stale socket callbacks cannot disconnect or expose errors on a fresh connection',
-      () async {
-    final first = _DelayedChannel()..handshake.complete();
-    final next = _DelayedChannel()..handshake.complete();
-    var attempt = 0;
-    final transport = WebSocketTransport(
+    'stale socket callbacks cannot disconnect or expose errors on a fresh connection',
+    () async {
+      final first = _DelayedChannel()..handshake.complete();
+      final next = _DelayedChannel()..handshake.complete();
+      var attempt = 0;
+      final transport = WebSocketTransport(
         url: 'ws://example.invalid/ws/v2',
-        channelFactory: (_) => attempt++ == 0 ? first : next);
-    final errors = <Object>[];
-    final subscription = transport.messages.listen((_) {}, onError: errors.add);
-    await transport.connect();
-    await transport.reconnect();
-    first.incoming.addError(StateError('discarded socket'));
-    await first.incoming.close();
-    expect(errors, isEmpty);
-    expect(transport.isConnected, isTrue);
-    await transport.close();
-    next.incoming.addError(StateError('disposed socket'));
-    await next.incoming.close();
-    await subscription.cancel();
-  });
+        channelFactory: (_) => attempt++ == 0 ? first : next,
+      );
+      final errors = <Object>[];
+      final subscription = transport.messages.listen(
+        (_) {},
+        onError: errors.add,
+      );
+      await transport.connect();
+      await transport.reconnect();
+      first.incoming.addError(StateError('discarded socket'));
+      await first.incoming.close();
+      expect(errors, isEmpty);
+      expect(transport.isConnected, isTrue);
+      await transport.close();
+      next.incoming.addError(StateError('disposed socket'));
+      await next.incoming.close();
+      await subscription.cancel();
+    },
+  );
 
-  test('connected is announced only after the socket handshake completes',
-      () async {
-    final channel = _DelayedChannel();
-    final transport = WebSocketTransport(
-        url: 'ws://example.invalid/ws/v2', channelFactory: (_) => channel);
-    final connecting = transport.connect();
-    await Future<void>.delayed(Duration.zero);
-    expect(transport.isConnected, isFalse);
-    channel.handshake.complete();
-    await connecting;
-    expect(transport.isConnected, isTrue);
-    await transport.close();
-    await channel.incoming.close();
-  });
+  test(
+    'connected is announced only after the socket handshake completes',
+    () async {
+      final channel = _DelayedChannel();
+      final transport = WebSocketTransport(
+        url: 'ws://example.invalid/ws/v2',
+        channelFactory: (_) => channel,
+      );
+      final connecting = transport.connect();
+      await Future<void>.delayed(Duration.zero);
+      expect(transport.isConnected, isFalse);
+      channel.handshake.complete();
+      await connecting;
+      expect(transport.isConnected, isTrue);
+      await transport.close();
+      await channel.incoming.close();
+    },
+  );
 
   group('WebSocketTransport contract', () {
     late HttpServer server;
@@ -114,11 +125,11 @@ void main() {
 
     Future<void> startServer() async {
       server = await HttpServer.bind('localhost', 0);
-      url = 'ws://localhost:${server.port}/ws';
+      url = 'ws://localhost:${server.port}/ws/v2';
       lastServerSocket = null;
 
       server.listen((request) async {
-        if (request.uri.path != '/ws') {
+        if (request.uri.path != '/ws/v2') {
           request.response.statusCode = 404;
           await request.response.close();
           return;
@@ -155,10 +166,19 @@ void main() {
       expect(transport.isConnected, isTrue);
 
       final received = transport.messages.first;
-      await transport.send({'hello': 'world'});
+      await transport.send({
+        'v': 2,
+        'type': 'hello',
+        'payload': {'client_generation': 2, 'access_token': 'fixture-token'},
+      });
 
       final msg = await received;
-      expect(msg['hello'], equals('world'));
+      expect(msg['v'], 2);
+      expect(msg['type'], 'hello');
+      expect(msg['payload'], {
+        'client_generation': 2,
+        'access_token': 'fixture-token',
+      });
       expect(msg['echo'], isTrue);
 
       await transport.close();
@@ -189,34 +209,36 @@ void main() {
       await transport.close();
     });
 
-    test('reconnect() opens a brand-new socket for a fresh handshake',
-        () async {
-      final transport = WebSocketTransport(
-        url: url,
-        reconnectDelay: const Duration(milliseconds: 50),
-        maxReconnectDelay: const Duration(milliseconds: 200),
-      );
+    test(
+      'reconnect() opens a brand-new socket for a fresh handshake',
+      () async {
+        final transport = WebSocketTransport(
+          url: url,
+          reconnectDelay: const Duration(milliseconds: 50),
+          maxReconnectDelay: const Duration(milliseconds: 200),
+        );
 
-      await transport.connect();
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      final firstServerSocket = lastServerSocket;
-      expect(firstServerSocket, isNotNull);
+        await transport.connect();
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        final firstServerSocket = lastServerSocket;
+        expect(firstServerSocket, isNotNull);
 
-      await transport.reconnect();
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+        await transport.reconnect();
+        await Future<void>.delayed(const Duration(milliseconds: 100));
 
-      expect(transport.isConnected, isTrue);
-      expect(lastServerSocket, isNot(same(firstServerSocket)));
+        expect(transport.isConnected, isTrue);
+        expect(lastServerSocket, isNot(same(firstServerSocket)));
 
-      // The first socket's own onDone handler would otherwise schedule an
-      // auto-reconnect that later clobbers the fresh connection with a
-      // third socket. Give that stale timer a chance to fire and confirm it
-      // didn't.
-      final settledSocket = lastServerSocket;
-      await Future<void>.delayed(const Duration(milliseconds: 300));
-      expect(lastServerSocket, same(settledSocket));
+        // The first socket's own onDone handler would otherwise schedule an
+        // auto-reconnect that later clobbers the fresh connection with a
+        // third socket. Give that stale timer a chance to fire and confirm it
+        // didn't.
+        final settledSocket = lastServerSocket;
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        expect(lastServerSocket, same(settledSocket));
 
-      await transport.close();
-    });
+        await transport.close();
+      },
+    );
   });
 }

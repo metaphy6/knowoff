@@ -2,14 +2,87 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/knowoff/knowoff/server/pkg/media"
 	"github.com/knowoff/knowoff/tools/mediapack/internal/generator"
 )
+
+func TestMediapackCLIProcess(t *testing.T) {
+	if os.Getenv("KNOWOFF_MEDIAPACK_CLI_TEST") != "1" {
+		return
+	}
+	for i, arg := range os.Args {
+		if arg == "--" {
+			os.Args = append([]string{"mediapack"}, os.Args[i+1:]...)
+			main()
+			os.Exit(0)
+		}
+	}
+	os.Exit(99)
+}
+
+func mediapackCLI(t *testing.T, args ...string) (string, error) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(ctx, executable, append([]string{"-test.run=^TestMediapackCLIProcess$", "--"}, args...)...)
+	cmd.Env = append(os.Environ(), "KNOWOFF_MEDIAPACK_CLI_TEST=1")
+	out, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		t.Fatal("CLI exceeded bounded test deadline", ctx.Err())
+	}
+	return string(out), err
+}
+
+func TestMediapackCLIRetiredCommandsRefuseBeforePaths(t *testing.T) {
+	for _, command := range []string{"build", "certify", "simulate", "publish"} {
+		t.Run(command, func(t *testing.T) {
+			root := t.TempDir()
+			output := filepath.Join(root, "output")
+			out, err := mediapackCLI(t, command, "-out", output, "missing-pack")
+			if err == nil || !strings.Contains(out, "retired") {
+				t.Fatalf("expected explicit retired command refusal: %v %s", err, out)
+			}
+			entries, err := os.ReadDir(root)
+			if err != nil || len(entries) != 0 {
+				t.Fatal("retired command created output", entries, err)
+			}
+		})
+	}
+}
+
+func TestMediapackCLITextFixtureRemainsCanonical(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "text-fixture")
+	message, err := mediapackCLI(t, "text-build-fixture", "-tuning", "../../../../configs/gameplay/tuning.yaml", "-language", "en", "-rules", "text-v1", "-release", "synthetic-text-en", "-out", out)
+	if err != nil {
+		t.Fatal(message, err)
+	}
+	for _, name := range []string{"manifest.json", "media.jsonl", "cards.jsonl", "suitability.jsonl"} {
+		got, err := os.ReadFile(filepath.Join(out, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, err := os.ReadFile(filepath.Join("../../../../server/pkg/media/testdata/text-en", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(got, want) {
+			t.Fatalf("actual CLI changed canonical %s", name)
+		}
+	}
+}
 
 func TestTextCheckedInFixtureGeneratorParity(t *testing.T) {
 	limits, _, err := loadTextTuning("../../../../configs/gameplay/tuning.yaml")

@@ -33,7 +33,7 @@ func (m *Manager) CreateDevelopmentAccount(ctx context.Context) (*TokenPair, err
 		return nil, err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO accounts(id,nickname,auth_purpose) VALUES($1,$2,'development')`, id, "Test "+id); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO accounts(id,nickname,auth_purpose) VALUES($1,$2,'development')`, id, "Test "+id[:15]); err != nil {
 		return nil, err
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO profiles(account_id) VALUES($1)`, id); err != nil {
@@ -48,13 +48,6 @@ func (m *Manager) CreateDevelopmentAccount(ctx context.Context) (*TokenPair, err
 	return m.issueTokens(ctx, id, device)
 }
 func (m *Manager) accountPurpose(ctx context.Context, id string) (string, error) {
-	var purpose string
-	err := m.db.QueryRowContext(ctx, `SELECT auth_purpose FROM accounts WHERE id=$1 AND banned_at IS NULL AND deleted_at IS NULL`, id).Scan(&purpose)
-	if err != nil {
-		return "", fmt.Errorf("account unavailable")
-	}
-	if purpose != "player" && (purpose != "development" || !m.development.Load()) {
-		return "", fmt.Errorf("account environment unavailable")
-	}
-	return purpose, nil
+	purpose, _, err := m.accountSession(ctx, m.db, id, false)
+	return purpose, err
 }

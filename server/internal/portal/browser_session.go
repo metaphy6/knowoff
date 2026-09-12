@@ -74,7 +74,7 @@ func validPortalCSRF(stored, supplied string) bool {
 // role claims cached in a cookie. Role/workflow checks remain in domain methods.
 func (m *Manager) portalAccountAllowed(ctx context.Context, account string) bool {
 	var allowed bool
-	err := m.db.QueryRowContext(ctx, `SELECT banned_at IS NULL AND deleted_at IS NULL
+	err := m.db.QueryRowContext(ctx, `SELECT banned_at IS NULL AND deleted_at IS NULL AND (suspended_until IS NULL OR suspended_until<=now())
   AND NOT EXISTS (SELECT 1 FROM guard_freezes f WHERE f.account_id=a.id
   AND f.expires_at>now() AND f.dismissed_at IS NULL AND f.converted_to_ban_at IS NULL)
   FROM accounts a WHERE a.id=$1`, account).Scan(&allowed)
@@ -246,7 +246,24 @@ func (m *Manager) ConnectHandler() http.Handler {
 			http.Error(w, "invalid code", 400)
 			return
 		}
-		result, err := m.db.ExecContext(r.Context(), `UPDATE portal_login_requests SET account_id=$1 WHERE pairing_code=$2 AND account_id IS NULL AND expires_at>now()`, account, code)
+		tx, err := m.db.BeginTx(r.Context(), nil)
+		if err != nil {
+			http.Error(w, "connection unavailable", 500)
+			return
+		}
+		defer tx.Rollback()
+		// Initial authentication is a routing precheck. Bind this derived session
+		// only after validating the same credential under the account lock.
+		verified, err := m.auth.ValidateAccessTokenTx(r.Context(), tx, strings.Fields(r.Header.Get("Authorization"))[1])
+		if err != nil || verified != account {
+			http.Error(w, "unauthorized", 401)
+			return
+		}
+		if err = portalActorAllowedTx(r.Context(), tx, account, m.now()); err != nil {
+			http.Error(w, "account unavailable", 403)
+			return
+		}
+		result, err := tx.ExecContext(r.Context(), `UPDATE portal_login_requests SET account_id=$1 WHERE pairing_code=$2 AND account_id IS NULL AND expires_at>clock_timestamp()`, account, code)
 		if err != nil {
 			http.Error(w, "connection unavailable", 500)
 			return
@@ -255,6 +272,10 @@ func (m *Manager) ConnectHandler() http.Handler {
 		if err != nil || count != 1 {
 			slog.Warn("portal pairing rejected", "reason", "invalid or expired code")
 			http.Error(w, "code invalid, expired, or already approved", 400)
+			return
+		}
+		if err = tx.Commit(); err != nil {
+			http.Error(w, "connection unavailable", 500)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -300,7 +321,14 @@ func (m *Manager) loginContinue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback()
-	result, err := tx.ExecContext(r.Context(), `DELETE FROM portal_login_requests WHERE browser_hash=$1 AND account_id=$2 AND expires_at>now()`, portalHash(cookie.Value), account.String)
+	// Account precedes pairing/session rows, matching final session revocation.
+	// Revocation deletes approved requests under this lock, so an old approval
+	// cannot produce a fresh browser session after its credential epoch is closed.
+	if err = m.authorizePortalWriteTx(r.Context(), tx, account.String, "", false); err != nil {
+		http.Error(w, "account unavailable", 403)
+		return
+	}
+	result, err := tx.ExecContext(r.Context(), `DELETE FROM portal_login_requests WHERE browser_hash=$1 AND account_id=$2 AND csrf_token=$3 AND expires_at>clock_timestamp()`, portalHash(cookie.Value), account.String, csrf)
 	if err != nil {
 		http.Error(w, "login unavailable", 500)
 		return
@@ -316,7 +344,7 @@ func (m *Manager) loginContinue(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if _, err = tx.ExecContext(r.Context(), `DELETE FROM portal_browser_sessions WHERE expires_at<=now()`); err != nil {
+	if _, err = tx.ExecContext(r.Context(), `DELETE FROM portal_browser_sessions WHERE account_id=$1 AND expires_at<=clock_timestamp()`, account.String); err != nil {
 		http.Error(w, "login unavailable", 500)
 		return
 	}

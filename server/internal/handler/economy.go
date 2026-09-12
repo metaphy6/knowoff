@@ -2,8 +2,11 @@ package handler
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -16,9 +19,29 @@ import (
 
 // EconomyDeps bundles economy handlers.
 type EconomyDeps struct {
-	Config  *config.Config
-	Auth    *auth.Manager
-	Economy *economy.Manager
+	Config       *config.Config
+	Auth         *auth.Manager
+	Economy      *economy.Manager
+	WalletAccess func(context.Context, string, func() error) error
+}
+
+// The active text runtime supplies an atomic privacy fence. The operation must
+// contain only bounded database work, never request parsing or response writes.
+func (d EconomyDeps) walletOperation(w http.ResponseWriter, r *http.Request, account string, operation func(context.Context) error) (error, bool) {
+	w.Header().Set("Cache-Control", "no-store")
+	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	var operationErr error
+	work := func() error { operationErr = operation(ctx); return nil }
+	if d.WalletAccess != nil {
+		if err := d.WalletAccess(ctx, account, work); err != nil {
+			purchaseError(w, http.StatusConflict, "wallet.match_in_progress")
+			return nil, false
+		}
+	} else {
+		_ = work()
+	}
+	return operationErr, true
 }
 
 // RegisterEconomyRoutes mounts wallet, store, and purchase endpoints.
@@ -33,12 +56,18 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		bal, err := deps.Economy.Wallet.Balance(r.Context(), accountID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		var bal, earned int64
+		err, visible := deps.walletOperation(w, r, accountID, func(ctx context.Context) error {
+			var err error
+			bal, err = deps.Economy.Wallet.Balance(ctx, accountID)
+			if err == nil {
+				earned, err = deps.Economy.Wallet.DailyEarned(ctx, accountID, time.Now().UTC())
+			}
+			return err
+		})
+		if !visible {
 			return
 		}
-		earned, err := deps.Economy.Wallet.DailyEarned(r.Context(), accountID, time.Now().UTC())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -59,12 +88,35 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		_, ok := bearerAccount(r, deps.Auth)
+		account, ok := bearerAccount(r, deps.Auth)
 		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		writeJSON(w, storeCatalog(deps.Config))
+		w.Header().Set("Cache-Control", "no-store")
+		catalog := storeCatalog(deps.Config)
+		catalog["billing"] = deps.Economy.Purchases.Catalog()
+		var owned bool
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		if err := deps.Economy.DB().QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type='custom_avatar' AND active_until IS NULL)`, account).Scan(&owned); err != nil {
+			purchaseError(w, http.StatusServiceUnavailable, "store.catalog_unavailable")
+			return
+		}
+		catalog["custom_avatar_owned"] = owned
+		premium, err := deps.Economy.Entitlements.HasPremium(ctx, account)
+		if err != nil {
+			purchaseError(w, http.StatusServiceUnavailable, "store.catalog_unavailable")
+			return
+		}
+		platforms, err := deps.Economy.Purchases.ManagementPlatforms(ctx, account)
+		if err != nil {
+			purchaseError(w, http.StatusServiceUnavailable, "store.catalog_unavailable")
+			return
+		}
+		catalog["premium_active"] = premium
+		catalog["premium_management_platforms"] = platforms
+		writeJSON(w, catalog)
 	})
 
 	mux.HandleFunc("/api/economy/convert", func(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +136,15 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
-		noin, err := deps.Economy.ConvertPoints(r.Context(), accountID, req.Points)
+		var noin int64
+		err, visible := deps.walletOperation(w, r, accountID, func(ctx context.Context) error {
+			var err error
+			noin, err = deps.Economy.ConvertPoints(ctx, accountID, req.Points)
+			return err
+		})
+		if !visible {
+			return
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -119,7 +179,15 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			http.Error(w, "unknown play pass type", http.StatusBadRequest)
 			return
 		}
-		until, err := deps.Economy.Entitlements.GrantPlayPass(r.Context(), accountID, ent, price)
+		var until time.Time
+		err, visible := deps.walletOperation(w, r, accountID, func(ctx context.Context) error {
+			var err error
+			until, err = deps.Economy.Entitlements.GrantPlayPass(ctx, accountID, ent, price)
+			return err
+		})
+		if !visible {
+			return
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -151,7 +219,39 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 			return
 		}
 		ent := economy.EntitlementType(req.Type)
-		if err := deps.Economy.Entitlements.GrantUnlock(r.Context(), accountID, ent, req.Value, price); err != nil {
+		// A configured category price does not certify a selectable item. The
+		// public named catalog must bind a deliverable before it may spend Noin.
+		if ent == economy.EntitlementThemePack || ent == economy.EntitlementPokeStyle {
+			w.Header().Set("Cache-Control", "no-store")
+			purchaseError(w, http.StatusServiceUnavailable, "store.catalog_unavailable")
+			return
+		}
+		err, visible := deps.walletOperation(w, r, accountID, func(ctx context.Context) error {
+			if ent == economy.EntitlementCustomAvatar {
+				token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+				authorize := func(ctx context.Context, tx *sql.Tx) error {
+					id, err := deps.Auth.ValidateAccessTokenTx(ctx, tx, token)
+					if err != nil || id != accountID {
+						return economy.ErrAvatarPurchaseAuth
+					}
+					return nil
+				}
+				return deps.Economy.Entitlements.PurchaseCustomAvatar(ctx, accountID, price, config.AvatarScreeningEnabled(deps.Config.Moderation.AvatarScreening), authorize)
+			}
+			return deps.Economy.Entitlements.GrantUnlock(ctx, accountID, ent, req.Value, price)
+		})
+		if !visible {
+			return
+		}
+		if errors.Is(err, economy.ErrAvatarPurchaseUnavailable) {
+			purchaseError(w, http.StatusServiceUnavailable, err.Error())
+			return
+		}
+		if errors.Is(err, economy.ErrAvatarPurchaseAuth) {
+			purchaseError(w, http.StatusUnauthorized, err.Error())
+			return
+		}
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -159,55 +259,55 @@ func RegisterEconomyRoutes(mux *http.ServeMux, deps EconomyDeps) {
 	})
 
 	mux.HandleFunc("/api/economy/purchase/receipt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
 		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			purchaseError(w, http.StatusMethodNotAllowed, "request.method")
 			return
 		}
-		accountID, ok := bearerAccount(r, deps.Auth)
+		account, ok := bearerAccount(r, deps.Auth)
 		if !ok {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			purchaseError(w, http.StatusUnauthorized, "auth.required")
 			return
 		}
-		var req struct {
-			Platform      string         `json:"platform"`
-			ProductID     string         `json:"product_id"`
-			TransactionID string         `json:"transaction_id"`
-			RawReceipt    map[string]any `json:"raw_receipt"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+		p := deps.Economy.Purchases
+		if p == nil || (!p.BillingAvailable(economy.PlatformGooglePlay) && !p.BillingAvailable(economy.PlatformAppStore)) {
+			purchaseError(w, http.StatusServiceUnavailable, "billing.unavailable")
 			return
 		}
-		id, existing, err := deps.Economy.Purchases.RecordReceipt(r.Context(), accountID, economy.PurchasePlatform(req.Platform), req.ProductID, req.TransactionID, req.RawReceipt)
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, deps.Config.Billing.MaxReceiptBytes))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				purchaseError(w, http.StatusRequestEntityTooLarge, "request.too_large")
+			} else {
+				purchaseError(w, http.StatusBadRequest, "billing.invalid_proof")
+			}
 			return
 		}
-		if existing {
-			writeJSON(w, map[string]any{"id": id, "status": "already_recorded"})
+		req, err := economy.DecodeReceipt(body, deps.Config.Billing.MaxReceiptBytes)
+		if err != nil {
+			purchaseError(w, http.StatusBadRequest, "billing.invalid_proof")
 			return
 		}
-
-		// Synchronous verification stub: grant Noin for bulk products, premium for subscriptions.
-		if err := verifyProduct(r.Context(), deps, accountID, req.ProductID, req.TransactionID); err != nil {
-			writeJSON(w, map[string]any{"id": id, "status": "pending_verification"})
+		result, err := p.VerifyReceipt(r.Context(), account, req)
+		if err != nil {
+			status, code := http.StatusServiceUnavailable, "billing.unavailable"
+			if errors.Is(err, economy.ErrBillingProof) {
+				status, code = http.StatusBadRequest, "billing.invalid_proof"
+			}
+			if errors.Is(err, economy.ErrBillingConflict) {
+				status, code = http.StatusConflict, "billing.conflict"
+			}
+			if errors.Is(err, economy.ErrBillingBusy) {
+				status, code = http.StatusTooManyRequests, "billing.busy"
+			}
+			purchaseError(w, status, code)
 			return
 		}
-		writeJSON(w, map[string]any{"id": id, "status": "granted"})
+		writeJSON(w, result)
 	})
 
-	// SSV callback endpoint is called by the ad network, not the client.
-	mux.HandleFunc("/api/economy/ssv", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		if err := deps.Economy.Purchases.VerifySSV(r.Context(), r.URL.String()); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
 }
 
 func playPassEntitlement(key string) economy.EntitlementType {
@@ -285,34 +385,13 @@ func storeCatalog(cfg *config.Config) map[string]any {
 		"premium_yearly_discount_pct": cfg.Tuning.Economy.PremiumYearlyDiscountPct,
 		"unlocks":                     unlocks,
 		"unlock_prices":               unlockPrices,
+		"custom_avatar_available":     config.AvatarScreeningEnabled(cfg.Moderation.AvatarScreening),
 		"points_to_noin":              cfg.Tuning.Economy.PointsToNoin,
 	}
 }
 
-func verifyProduct(ctx context.Context, deps EconomyDeps, accountID, productID, transactionID string) error {
-	if strings.HasPrefix(productID, "noin_") {
-		amount, err := strconv.Atoi(strings.TrimPrefix(productID, "noin_"))
-		if err != nil || amount <= 0 {
-			return fmt.Errorf("invalid noin product")
-		}
-		switch deps.Config.App.Env {
-		case "prod":
-			return fmt.Errorf("deferred to platform verification")
-		default:
-			// Staging/local: trust the receipt for testability.
-			if err := deps.Economy.Purchases.VerifyGooglePlay(ctx, transactionID, amount); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
-	switch productID {
-	case "premium_monthly":
-		until := time.Now().UTC().Add(30 * 24 * time.Hour)
-		return deps.Economy.Entitlements.GrantPremium(ctx, accountID, economy.EntitlementPremiumMonthly, until)
-	case "premium_yearly":
-		until := time.Now().UTC().Add(365 * 24 * time.Hour)
-		return deps.Economy.Entitlements.GrantPremium(ctx, accountID, economy.EntitlementPremiumYearly, until)
-	}
-	return fmt.Errorf("unknown product")
+func purchaseError(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"code": code})
 }

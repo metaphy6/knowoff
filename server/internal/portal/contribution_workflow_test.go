@@ -7,6 +7,59 @@ import (
 	"testing"
 )
 
+func TestContributionCurrentUserTermsAndNormalizedText(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	m := newTestManager(t, db)
+	ctx := context.Background()
+	account := newAccount(t, db)
+	admin := newAdmin(t, db)
+	if err := m.GrantRole(ctx, admin, account, RoleContributor); err != nil {
+		t.Fatal(err)
+	}
+	consent := ContributionConsent{Version: "v1", Accepted: true}
+	m.cfg.Trust.UserTermsVersion = ""
+	if _, err := m.CreateDraft(ctx, account, MediaText, "missing user terms", consent); err == nil {
+		t.Fatal("missing current user terms admitted authored text")
+	}
+	m.cfg.Trust.UserTermsVersion = "community-test-v1"
+	if _, err := db.Exec(`INSERT INTO user_terms_versions(version,body,active_from) VALUES('community-test-v1','Synthetic user terms',now()-interval '1 day') ON CONFLICT DO NOTHING`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.CreateDraft(ctx, account, MediaText, "unaccepted user terms", consent); err == nil {
+		t.Fatal("contribution consent substituted for user terms")
+	}
+	if _, err := db.Exec(`INSERT INTO user_terms_acceptances(account_id,version,accepted_at) VALUES($1,'community-test-v1',now())`, account); err != nil {
+		t.Fatal(err)
+	}
+	m.cfg.Tuning.Contract.MaxTextBytes = 40
+	for _, text := range []string{string([]byte{0xff}), "hidden\u202e direction", "line\ncontrol", strings.Repeat("ü", 21)} {
+		if _, err := m.CreateDraft(ctx, account, MediaText, text, consent); err == nil {
+			t.Fatalf("invalid text accepted %q", text)
+		}
+	}
+	draft, err := m.CreateDraft(ctx, account, MediaText, "  Cafe\u0301  ", consent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if draft.Content != "Café" {
+		t.Fatalf("normalization=%q", draft.Content)
+	}
+	if err = m.EditDraft(ctx, account, draft.ID, "editing\u0000control"); err == nil {
+		t.Fatal("edit bypassed text validation")
+	}
+	guard := guardAccount(t, m, db, admin)
+	if err = m.FreezeAccount(ctx, guard, account, "review"); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.SubmitDraft(ctx, account, draft.ID); err == nil {
+		t.Fatal("frozen actor submitted directly")
+	}
+	if err = m.EditDraft(ctx, account, draft.ID, "changed"); err == nil {
+		t.Fatal("frozen actor edited directly")
+	}
+}
+
 func TestDraftRequiresExplicitConsent(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

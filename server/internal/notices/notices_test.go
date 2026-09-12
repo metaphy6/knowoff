@@ -3,13 +3,13 @@ package notices
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/store"
-	"github.com/knowoff/knowoff/server/internal/transport"
 	_ "github.com/lib/pq"
 )
 
@@ -128,7 +128,7 @@ func TestMarkMaintenanceDrain(t *testing.T) {
 		t.Fatal("expected matchmaking not paused with no maintenance")
 	}
 
-	start := time.Now().UTC().Add(time.Hour)
+	start := time.Now().UTC().Add(time.Hour).Truncate(time.Microsecond)
 	if _, err := m.CreateNotice(ctx, Notice{
 		Type:                   NoticeMaintenance,
 		Title:                  map[string]string{"en": "Maint"},
@@ -141,9 +141,74 @@ func TestMarkMaintenanceDrain(t *testing.T) {
 	if err := m.MarkMaintenanceDrain(ctx); err != nil {
 		t.Fatalf("mark drain after maintenance: %v", err)
 	}
-	if !pauser.paused {
-		t.Fatal("expected matchmaking paused for future maintenance")
+	if pauser.paused {
+		t.Fatal("future announcement must not pause matchmaking")
 	}
+	for _, step := range []struct {
+		at     time.Time
+		paused bool
+	}{
+		{start.Add(-time.Microsecond), false}, {start, true},
+		{start.Add(30*time.Minute - time.Microsecond), true}, {start.Add(30 * time.Minute), false},
+	} {
+		if err := m.markMaintenanceDrain(ctx, step.at); err != nil {
+			t.Fatal(err)
+		}
+		if pauser.paused != step.paused {
+			t.Fatalf("maintenance at %s paused=%v", step.at, pauser.paused)
+		}
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.MarkMaintenanceDrain(ctx); err == nil || !pauser.paused {
+		t.Fatal("unknown maintenance state reopened admission", err)
+	}
+}
+
+func TestTextNoticeRefreshSchedulesWithdrawalAndFailedDelivery(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	m := NewManager(db, testConfig(), nil)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	start, published := now.Add(25*time.Hour), now.Add(-time.Hour)
+	id, err := m.CreateNotice(ctx, Notice{Type: NoticeMaintenance, Title: map[string]string{"en": "Planned work"}, Body: map[string]string{"en": "Matches finish first."}, PublishedAt: &published, MaintenanceStart: &start, MaintenanceDurationMin: 30})
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls, fail := 0, false
+	m.SetChangeNotifier(func(context.Context) error {
+		calls++
+		if fail {
+			return errors.New("transport unavailable")
+		}
+		return nil
+	})
+	check := func(at time.Time, want int) {
+		t.Helper()
+		if err := m.refreshAt(ctx, at); err != nil {
+			t.Fatal(err)
+		}
+		if calls != want {
+			t.Fatalf("at %s refreshes=%d want=%d", at, calls, want)
+		}
+	}
+	check(now, 1)
+	check(now, 1)
+	for i, at := range []time.Time{start.Add(-24 * time.Hour), start.Add(-time.Hour), start.Add(-10 * time.Minute), start, start.Add(30 * time.Minute)} {
+		check(at, i+2)
+	}
+	if err := m.WithdrawNotice(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	fail = true
+	if err := m.refreshAt(ctx, start.Add(time.Hour)); err == nil {
+		t.Fatal("failed delivery falsely acknowledged")
+	}
+	fail = false
+	check(start.Add(time.Hour), 8)
+	check(start.Add(time.Hour), 8)
 }
 
 func TestLocalizedFallback(t *testing.T) {
@@ -177,12 +242,16 @@ type auditBroadcastProbe struct {
 }
 
 func (p *auditBroadcastProbe) SetReady(bool) {}
-func (p *auditBroadcastProbe) BroadcastAll(e *transport.Envelope) {
+func (p *auditBroadcastProbe) Notify(ctx context.Context) error {
 	p.calls++
-	var count int
-	if err := p.db.QueryRow(`SELECT count(*) FROM admin_audit_log WHERE action='notice_create' AND target_id=$1`, e.Payload["id"]).Scan(&count); err != nil || count == 0 {
-		p.t.Errorf("broadcast before committed audit: count=%d err=%v", count, err)
+	var missing int
+	if err := p.db.QueryRowContext(ctx, `SELECT count(*) FROM system_notices n WHERE NOT EXISTS(SELECT 1 FROM admin_audit_log a WHERE a.action='notice_create' AND a.target_id=n.id::text)`).Scan(&missing); err != nil {
+		return err
 	}
+	if missing != 0 {
+		p.t.Errorf("invalidation before committed audit: %d", missing)
+	}
+	return nil
 }
 
 func TestNoticeAuditAtomicityAndScheduledBroadcast(t *testing.T) {
@@ -190,6 +259,7 @@ func TestNoticeAuditAtomicityAndScheduledBroadcast(t *testing.T) {
 	defer db.Close()
 	probe := &auditBroadcastProbe{db: db, t: t}
 	m := NewManager(db, testConfig(), probe)
+	m.SetChangeNotifier(probe.Notify)
 	future := time.Now().UTC().Add(time.Hour)
 	scheduled, err := m.CreateNotice(t.Context(), Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Later"}, Body: map[string]string{"en": "Scheduled"}, PublishedAt: &future})
 	if err != nil {
@@ -203,6 +273,9 @@ func TestNoticeAuditAtomicityAndScheduledBroadcast(t *testing.T) {
 		t.Fatalf("missing create audit=%d %v", count, err)
 	}
 	if _, err = m.CreateNotice(t.Context(), Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Now"}, Body: map[string]string{"en": "Visible"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.refreshAt(t.Context(), time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if probe.calls != 1 {
@@ -224,9 +297,13 @@ func TestNoticeAuditFailureRollsBackMutation(t *testing.T) {
 	defer db.Close()
 	probe := &auditBroadcastProbe{db: db, t: t}
 	m := NewManager(db, testConfig(), probe)
+	m.SetChangeNotifier(probe.Notify)
 	notice := Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Audit me"}, Body: map[string]string{"en": "Atomic change"}}
 	existing, err := m.CreateNotice(t.Context(), notice)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.refreshAt(t.Context(), time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	_, err = db.Exec(`CREATE FUNCTION test_reject_notice_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic audit unavailable'; END; $$; CREATE TRIGGER test_reject_notice_audit BEFORE INSERT ON admin_audit_log FOR EACH ROW WHEN (NEW.action IN ('notice_create','notice_withdraw')) EXECUTE FUNCTION test_reject_notice_audit()`)
@@ -250,6 +327,9 @@ func TestNoticeAuditFailureRollsBackMutation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err = db.QueryRow(`SELECT withdrawn_at FROM system_notices WHERE id=$1`, existing).Scan(&withdrawn); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.refreshAt(t.Context(), time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if count != 1 || withdrawn.Valid || probe.calls != 1 {

@@ -31,12 +31,13 @@ type TextOwnerToken struct {
 // TextOwner is one process incarnation. A lost object is permanently unusable.
 // Its pinned physical connection is never returned to the shared pool alive.
 type TextOwner struct {
-	db    *sql.DB
-	conn  *sql.Conn
-	token TextOwnerToken
-	mu    sync.Mutex
-	done  chan struct{}
-	ready atomic.Bool
+	db        *sql.DB
+	conn      *sql.Conn
+	token     TextOwnerToken
+	mu        sync.Mutex
+	done      chan struct{}
+	watchDone chan struct{}
+	ready     atomic.Bool
 }
 
 func AcquireTextOwner(ctx context.Context, db *sql.DB) (*TextOwner, error) {
@@ -78,7 +79,7 @@ func AcquireTextOwner(ctx context.Context, db *sql.DB) (*TextOwner, error) {
 			return nil, err
 		}
 	}
-	owner := &TextOwner{db: db, conn: conn, token: TextOwnerToken{IncarnationID: uuid.NewString(), Generation: oldGeneration + 1}, done: make(chan struct{})}
+	owner := &TextOwner{db: db, conn: conn, token: TextOwnerToken{IncarnationID: uuid.NewString(), Generation: oldGeneration + 1}, done: make(chan struct{}), watchDone: make(chan struct{})}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO text_process_owners(incarnation_id,generation,backend_pid,backend_started_at) SELECT $1,$2,pid,backend_start FROM pg_stat_activity WHERE pid=pg_backend_pid()`, owner.token.IncarnationID, owner.token.Generation); err != nil {
 		return nil, err
 	}
@@ -112,6 +113,7 @@ func (o *TextOwner) loseLocked() {
 	discardTextOwnerConnection(o.conn)
 }
 func (o *TextOwner) watch() {
+	defer close(o.watchDone)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -119,9 +121,9 @@ func (o *TextOwner) watch() {
 		case <-o.done:
 			return
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-			err := o.Check(ctx)
-			cancel()
+			// Check owns the probe timeout. A deadline while waiting for another
+			// serialized probe must not stop this watch while authority is healthy.
+			err := o.Check(context.Background())
 			if err != nil {
 				return
 			}
@@ -137,29 +139,72 @@ const textOwnerAuthoritySQL = `SELECT EXISTS(
  AND l.database=(SELECT oid FROM pg_database WHERE datname=current_database())
  WHERE c.singleton=1 AND c.incarnation_id=$1 AND c.generation=$2 AND o.lost_at IS NULL)`
 
-// Check observes actual backend/advisory authority. Any uncertain result fences
-// this local object; only a successor acquiring the lock may declare durable loss.
+// Check observes actual backend/advisory authority with a bounded server probe.
+// A request cancellation must never cancel this process-wide physical session.
+// Probe failure still fences locally; only lock acquisition confirms durable loss.
 func (o *TextOwner) Check(ctx context.Context) error {
-	o.mu.Lock()
+	if err := o.lockProbe(ctx); err != nil {
+		return err
+	}
 	defer o.mu.Unlock()
 	select {
 	case <-o.done:
 		return ErrTextOwnerLost
 	default:
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	probe, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	var valid bool
-	err := o.conn.QueryRowContext(ctx, textOwnerAuthoritySQL, o.token.IncarnationID, o.token.Generation, textOwnerLockClass, textOwnerLockObject).Scan(&valid)
+	err := o.conn.QueryRowContext(probe, textOwnerAuthoritySQL, o.token.IncarnationID, o.token.Generation, textOwnerLockClass, textOwnerLockObject).Scan(&valid)
 	if err != nil || !valid {
 		o.loseLocked()
 		return ErrTextOwnerLost
 	}
-	return nil
+	return ctx.Err()
 }
 
-// Release unlocks healthy authority, then physically discards the session even
-// if shutdown was cancelled. The next acquired owner records the durable loss.
+// Cancellation only stops the caller's queue wait. Once admitted, Check uses
+// its independent bounded probe so a player cannot cancel the physical owner.
+func (o *TextOwner) lockProbe(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if o.mu.TryLock() {
+		return nil
+	}
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-o.done:
+			return ErrTextOwnerLost
+		case <-ticker.C:
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if o.mu.TryLock() {
+				return nil
+			}
+		}
+	}
+}
+
+// Release waits for the owner mutex within ctx. A canceled queue wait leaves
+// authority intact and reports failure; callers must not claim a stopped owner.
+// Once admitted, it unlocks and physically discards the session even if the SQL
+// request fails. The next acquired owner records the durable loss.
 func (o *TextOwner) Release(ctx context.Context) error {
-	o.mu.Lock()
+	if err := o.lockProbe(ctx); err != nil {
+		if errors.Is(err, ErrTextOwnerLost) {
+			return nil
+		}
+		return err
+	}
 	defer o.mu.Unlock()
 	select {
 	case <-o.done:
@@ -173,6 +218,20 @@ func (o *TextOwner) Release(ctx context.Context) error {
 		return ErrTextOwnerLost
 	}
 	return nil
+}
+
+// Wait joins the actual heartbeat goroutine after release or physical loss.
+// Done signals lost authority; it alone is not a goroutine-completion receipt.
+func (o *TextOwner) Wait(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-o.watchDone:
+		return ctx.Err()
+	}
 }
 
 func (s *TextValueStore) WithOwner(owner *TextOwner) (*TextValueStore, error) {

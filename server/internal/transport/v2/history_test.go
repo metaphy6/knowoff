@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -164,5 +165,91 @@ func TestHistoryCanonicalJSON(t *testing.T) {
 	want := "{\"a\":[1,2],\"z\":\"<>&\u2028\u2029\\\\u2028\"}"
 	if string(encoded) != want {
 		t.Fatalf("canonical bytes: %q != %q", encoded, want)
+	}
+}
+
+// This intentionally retains the original candidate-hash algorithm as an
+// independent compatibility oracle for page boundaries and canonical hashes.
+func referenceHistoryPages(events []PublicAction, l Limits) (HistoryManifest, []HistoryPage) {
+	pages := []HistoryPage{}
+	for offset := 0; offset < len(events); {
+		page := HistoryPage{Version: Version, MatchID: "match-a", SnapshotID: "snapshot-a", StreamEpoch: "epoch-a", Index: len(pages), FromEvidenceSeq: events[offset].EvidenceSeq, Events: []PublicAction{}}
+		for offset < len(events) && len(page.Events) < l.MaxHistoryPageEvents {
+			candidate := page
+			candidate.Events = append(append([]PublicAction{}, page.Events...), events[offset])
+			candidate.ThroughEvidenceSeq = events[offset].EvidenceSeq
+			candidate.SHA256 = eventsHash(candidate.Events)
+			encoded, _ := json.Marshal(candidate)
+			if len(encoded) > l.MaxFrameBytes {
+				break
+			}
+			page = candidate
+			offset++
+		}
+		if len(page.Events) == 0 {
+			panic("reference fixture event exceeds frame")
+		}
+		pages = append(pages, page)
+	}
+	return HistoryManifest{TotalEvents: len(events), PageCount: len(pages), ThroughEvidenceSeq: uint64(len(events)), RootSHA256: rootHash(pages)}, pages
+}
+
+func TestHistoryPaginationPreservesExactReferenceAndOwnership(t *testing.T) {
+	events := make([]PublicAction, 37)
+	for i := range events {
+		actor, count := i%6, 1
+		e := PublicAction{Phase: PhasePlay, PhaseID: "phase-a", EventID: fmt.Sprintf("event-%d", i), EvidenceSeq: uint64(i + 1), Round: 1, Actor: Actor{Kind: "seat", Seat: &actor}, Kind: "draw", Cards: []Card{}, BeforeRevision: uint64(i), AfterRevision: uint64(i + 1), Reason: "player", ServerTimeMS: int64(i + 1000), Count: &count}
+		if i%2 == 0 {
+			e.Kind, e.Count, e.Text, e.UILocale = "chat", nil, "İstanbul <>&\u2028\u2029 😄 \"\\", "tr"
+		}
+		if i%3 == 1 {
+			e.Kind, e.Count, e.Text, e.UILocale = "respond", nil, "", ""
+			e.Cards = []Card{{CopyID: CopyID(fmt.Sprintf("copy-%d", i)), Content: TextContent{ContentRef: ContentRef{ContentID: "text-a", Revision: 1}, Text: "A nested card"}}}
+		}
+		events[i] = e
+	}
+	for _, frame := range []int{1024, 2048, 8192, 65536} {
+		for _, count := range []int{1, 8, 32} {
+			t.Run(fmt.Sprintf("frame%d/count%d", frame, count), func(t *testing.T) {
+				l := testLimits
+				l.MaxFrameBytes, l.MaxHistoryPageEvents = frame, count
+				wantM, wantP := referenceHistoryPages(events, l)
+				gotM, gotP, err := PaginateHistory("match-a", "snapshot-a", "epoch-a", events, l)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !reflect.DeepEqual(gotM, wantM) || !reflect.DeepEqual(gotP, wantP) {
+					t.Fatal("history boundaries or canonical hashes changed")
+				}
+				original := *events[0].Actor.Seat
+				*gotP[0].Events[0].Actor.Seat = 99
+				gotP[0].Events[0].Text = "caller mutation"
+				if *events[0].Actor.Seat != original || events[0].Text == "caller mutation" {
+					t.Fatal("page aliases input")
+				}
+			})
+		}
+	}
+}
+
+func TestHistoryPaginationFailureBoundaries(t *testing.T) {
+	actor, count := 0, 1
+	event := PublicAction{Phase: PhasePlay, PhaseID: "phase-a", EventID: "event-a", EvidenceSeq: 1, Round: 1, Actor: Actor{Kind: "seat", Seat: &actor}, Kind: "draw", Cards: []Card{}, Reason: "player", ServerTimeMS: 1000, Count: &count}
+	if _, _, err := PaginateHistory("match-a", "snapshot-a", "epoch-a", nil, testLimits); errorCode(err) != ErrHistoryIntegrity {
+		t.Fatalf("empty history: %v", err)
+	}
+	l := testLimits
+	l.MaxFrameBytes = 0
+	if _, _, err := PaginateHistory("match-a", "snapshot-a", "epoch-a", []PublicAction{event}, l); errorCode(err) != ErrMalformed {
+		t.Fatalf("invalid limits: %v", err)
+	}
+	l = testLimits
+	l.MaxFrameBytes, l.MaxTextBytes = 128, 64
+	if _, _, err := PaginateHistory("match-a", "snapshot-a", "epoch-a", []PublicAction{event}, l); errorCode(err) != ErrFrameTooLarge {
+		t.Fatalf("oversize event: %v", err)
+	}
+	event.Kind, event.Count, event.Text, event.UILocale = "chat", nil, "forbidden\ncontrol", "en"
+	if _, _, err := PaginateHistory("match-a", "snapshot-a", "epoch-a", []PublicAction{event}, testLimits); errorCode(err) != ErrMalformed {
+		t.Fatalf("control character accepted: %v", err)
 	}
 }

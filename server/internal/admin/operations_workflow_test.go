@@ -5,6 +5,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/portal"
 	"github.com/knowoff/knowoff/server/internal/profile"
+	"github.com/knowoff/knowoff/server/internal/reports"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -19,6 +20,71 @@ type workflowScreen struct{}
 
 func (workflowScreen) ScreenText(context.Context, string) error { return nil }
 
+func TestGuardAdminFinalDecisionRequiresLiveAdminAndCSRF(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	cfg := testConfig()
+	cfg.Tuning.Portal.GuardFreezeMaxH = 48
+	cfg.Tuning.Portal.MaxTextSubmissionLength = 2000
+	cfg.Tuning.Contract.MaxTextBytes = 2000
+	m := NewManager(db, cfg, nil)
+	adminAccount := newAccount(t, db)
+	if err := m.CreateAdmin(ctx, adminAccount, "guard-admin@test.local", "test-password", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	admin, err := m.Authenticate(ctx, "guard-admin@test.local", "test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pm := portal.NewManager(portal.Deps{DB: db, Config: cfg, Admin: m})
+	pm.SetAccountDisconnect(func(context.Context, string) error { return nil })
+	guard := newAccount(t, db)
+	target := newAccount(t, db)
+	if err = pm.GrantRole(ctx, admin.ID, guard, portal.RoleGuard); err != nil {
+		t.Fatal(err)
+	}
+	if err = pm.FreezeAccount(ctx, guard, target, "<script>plain report</script>"); err != nil {
+		t.Fatal(err)
+	}
+	freezes, err := pm.ListActiveFreezes(ctx)
+	if err != nil || len(freezes) != 1 {
+		t.Fatalf("freeze %v %v", freezes, err)
+	}
+	id := freezes[0]["id"].(string)
+	sid, csrf, _, err := m.CreateSession(ctx, admin.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	call := func(method, path, token string) *httptest.ResponseRecorder {
+		form := url.Values{"csrf_token": {token}, "decision": {"permanent"}, "reason": {"confirmed violation"}}
+		r := httptest.NewRequest(method, path, strings.NewReader(form.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(&http.Cookie{Name: "knowoff_admin_session", Value: sid})
+		w := httptest.NewRecorder()
+		m.PortalHandler(pm).ServeHTTP(w, r)
+		return w
+	}
+	if w := call("GET", "/admin/portal/freezes", ""); w.Code != 200 || strings.Contains(w.Body.String(), "<script>plain report") {
+		t.Fatalf("review page %d", w.Code)
+	}
+	path := "/admin/portal/freezes/" + id + "/ban"
+	if w := call("POST", path, ""); w.Code != 403 {
+		t.Fatalf("missing CSRF=%d", w.Code)
+	}
+	if w := call("POST", path, csrf); w.Code != 303 {
+		t.Fatalf("confirmed ban=%d %s", w.Code, w.Body.String())
+	}
+	var banned bool
+	if err = db.QueryRow(`SELECT banned_at IS NOT NULL FROM accounts WHERE id=$1`, target).Scan(&banned); err != nil || !banned {
+		t.Fatalf("admin ban missing %v", err)
+	}
+	var count int
+	if err = db.QueryRow(`SELECT count(*) FROM admin_audit_log WHERE target_id=$1 AND action='guard_freeze_convert_ban' AND admin_id=$2`, target, admin.ID).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("ban audit %d %v", count, err)
+	}
+}
+
 func TestOperationsApplicantContributionAndTriageBrowserJourney(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
@@ -26,10 +92,18 @@ func TestOperationsApplicantContributionAndTriageBrowserJourney(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tuning.Portal.MinAccountLevelToApply = 1
 	cfg.Tuning.Portal.MaxTextSubmissionLength = 2000
+	cfg.Tuning.Contract.MaxTextBytes = 2000
+	cfg.Trust.UserTermsVersion = "synthetic-operations-user-v1"
 	cfg.Tuning.Portal.SubmissionsPerContributorPerDay = 5
 	cfg.Tuning.Noin.ContributorAcceptedAsset = 100
 	m := NewManager(db, cfg, nil)
 	account := newAccount(t, db)
+	if _, err := db.Exec(`INSERT INTO user_terms_versions(version,body,active_from) VALUES('synthetic-operations-user-v1','Synthetic operator fixture user terms',now()-interval '1 hour')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO user_terms_acceptances(account_id,version,accepted_at) VALUES($1,'synthetic-operations-user-v1',now())`, account); err != nil {
+		t.Fatal(err)
+	}
 	if err := m.CreateAdmin(ctx, newAccount(t, db), "workflow@test.local", "test-password", "admin"); err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +111,7 @@ func TestOperationsApplicantContributionAndTriageBrowserJourney(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pm := portal.NewManager(portal.Deps{DB: db, Config: cfg, Admin: m, Profile: profile.NewManager(db, cfg.Tuning.Progression), Economy: economy.NewManager(db, cfg), Screener: workflowScreen{}})
+	pm := portal.NewManager(portal.Deps{DB: db, Config: cfg, Admin: m, Profile: profile.NewManager(db), Economy: economy.NewManager(db, cfg), Screener: workflowScreen{}})
 	if err = pm.CreateTermsVersion(ctx, a.ID, "workflow", "Contribution terms", "Commercial use and modification permitted.", time.Now().Add(-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -167,5 +241,72 @@ func TestTriageRejectsInvalidStateAndRollsBackWhenAuditFails(t *testing.T) {
 	}
 	if status != "new" {
 		t.Fatalf("audit failure left status=%s", status)
+	}
+}
+
+func TestReportCaseAdminPageEscapesAndRequiresLiveAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	m := NewManager(db, testConfig(), nil)
+	if err := m.CreateAdmin(ctx, newAccount(t, db), "cases@test.local", "test-password", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	admin, err := m.Authenticate(ctx, "cases@test.local", "test-password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sid, csrf, _, err := m.CreateSession(ctx, admin.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := newAccount(t, db)
+	rm := reports.NewManager(db)
+	for i := 0; i < 2; i++ {
+		if err = rm.CreateReport(ctx, newAccount(t, db), reports.ReportConduct, target, "", "<script>reason</script>", "observed"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, _, err := rm.ListCases(ctx, "", "", 100)
+	if err != nil || len(page) != 1 {
+		t.Fatalf("cases %v %v", page, err)
+	}
+	id := page[0].ID.String()
+	handler := m.Handler(nil)
+	call := func(method, path, token string) *httptest.ResponseRecorder {
+		form := url.Values{"csrf_token": {token}, "decision": {"dismissed"}, "reason": {"reviewed"}, "status": {"in_review"}}
+		r := httptest.NewRequest(method, path, strings.NewReader(form.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(&http.Cookie{Name: "knowoff_admin_session", Value: sid})
+		w := httptest.NewRecorder()
+		handler.ServeHTTP(w, r)
+		return w
+	}
+	w := call("GET", "/admin/reports", "")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "2 reports") || strings.Contains(w.Body.String(), "<script>reason") {
+		t.Fatalf("case page count or escaping failed: status=%d", w.Code)
+	}
+	if w = call("POST", "/admin/cases/"+id+"/status", csrf); w.Code != 303 || w.Header().Get("Location") != "/admin/reports" {
+		t.Fatalf("triage navigation %d %s", w.Code, w.Header().Get("Location"))
+	}
+	path := "/admin/report-cases/" + id + "/resolve"
+	if w = call("POST", path, ""); w.Code != 403 {
+		t.Fatalf("missing CSRF %d", w.Code)
+	}
+	if w = call("POST", path, csrf); w.Code != 303 {
+		t.Fatalf("resolve %d %s", w.Code, w.Body.String())
+	}
+	if _, err = db.Exec(`UPDATE admin_accounts SET role='curator' WHERE id=$1`, admin.ID); err != nil {
+		t.Fatal(err)
+	}
+	var reportID string
+	if err = db.QueryRow(`SELECT id FROM reports WHERE case_id=$1 LIMIT 1`, id).Scan(&reportID); err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Triage(ctx, admin.ID, "reports", reportID, "in_review"); err == nil {
+		t.Fatal("revoked admin triaged")
+	}
+	if w = call("POST", path, csrf); w.Code != 403 {
+		t.Fatalf("revoked admin HTTP=%d", w.Code)
 	}
 }

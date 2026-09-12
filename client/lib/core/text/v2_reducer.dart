@@ -4,16 +4,19 @@ import 'v2_contract.dart';
 
 class _EvidenceFingerprint {
   _EvidenceFingerprint(dynamic event)
-      : exact = v2Hash(event),
-        authored = event['kind'] == 'chat' &&
-            ((event['text'] is String && event['text'].isNotEmpty) ||
-                event['phrase_id'] == 'chat.hidden'),
-        visibleText = event['text'] is String && event['text'].isNotEmpty
-            ? v2Hash(event['text'])
-            : null,
-        structure = v2Hash({...event as Map<String, dynamic>}
+    : exact = v2Hash(event),
+      authored =
+          event['kind'] == 'chat' &&
+          ((event['text'] is String && event['text'].isNotEmpty) ||
+              event['phrase_id'] == 'chat.hidden'),
+      visibleText = event['text'] is String && event['text'].isNotEmpty
+          ? v2Hash(event['text'])
+          : null,
+      structure = v2Hash(
+        {...event as Map<String, dynamic>}
           ..remove('text')
-          ..remove('phrase_id'));
+          ..remove('phrase_id'),
+      );
   final String exact, structure;
   final bool authored;
   String? visibleText;
@@ -36,15 +39,15 @@ class _EvidenceFingerprint {
 }
 
 int _phaseOrder(String phase) => switch (phase) {
-      'round_start' => 0,
-      'play' || 'trade_response' => 1,
-      'discussion' => 2,
-      'knowoff' => 3,
-      'runoff' => 4,
-      'result' => 5,
-      'verdict' => 6,
-      _ => -1
-    };
+  'round_start' => 0,
+  'play' || 'trade_response' => 1,
+  'discussion' => 2,
+  'knowoff' => 3,
+  'runoff' => 4,
+  'result' => 5,
+  'verdict' => 6,
+  _ => -1,
+};
 
 /// Owns one role-scoped stream. A partial snapshot is never visible, and no
 /// mutation is replayed by resynchronization. Reconnect drops private buffers.
@@ -125,10 +128,12 @@ class V2Reducer {
     final identity = v2Hash([
       s.json['contract'],
       s.json['private']['seat'],
-      s.json['private']['role']
+      s.json['private']['role'],
     ]);
-    final eliminated = (s.json['seats'] as List).singleWhere((seat) =>
-            seat['seat'] == s.json['private']['seat'])['eliminated'] ==
+    final eliminated =
+        (s.json['seats'] as List).singleWhere(
+          (seat) => seat['seat'] == s.json['private']['seat'],
+        )['eliminated'] ==
         true;
     if ((_identityHash != null && identity != _identityHash) ||
         s.evidenceSeq < _evidenceSeq ||
@@ -185,8 +190,9 @@ class V2Reducer {
   }
 
   void _apply(V2Snapshot s) {
-    final history =
-        (s.json['history'] as List).map(_EvidenceFingerprint.new).toList();
+    final history = (s.json['history'] as List)
+        .map(_EvidenceFingerprint.new)
+        .toList();
     if (history.length < _historyHashes.length) {
       _reject('history.integrity', clear: true);
     }
@@ -261,7 +267,10 @@ class V2Reducer {
   }
 
   Map<String, dynamic> confirm(
-      Map<String, dynamic> action, String requestID, int serverNowMS) {
+    Map<String, dynamic> action,
+    String requestID,
+    int serverNowMS,
+  ) {
     final s = current;
     if (s == null || needsResync || pendingRequest != null) {
       _reject('action.unauthorized');
@@ -276,20 +285,21 @@ class V2Reducer {
     }
     if (_requests >= limits.maxRequestsPerSeat) _reject('request.limit');
     final request = V2Codec.decode(
-        'action',
-        jsonEncode({
-          'v': 2,
-          'request_id': requestID,
-          'match_id': s.matchID,
-          'mode_id': s.mode,
-          'round': s.round,
-          'turn': s.turn,
-          'phase': s.phase,
-          'phase_id': s.phaseID,
-          'expected_board_revision': s.boardRevision,
-          'action': action
-        }),
-        limits);
+      'action',
+      jsonEncode({
+        'v': 2,
+        'request_id': requestID,
+        'match_id': s.matchID,
+        'mode_id': s.mode,
+        'round': s.round,
+        'turn': s.turn,
+        'phase': s.phase,
+        'phase_id': s.phaseID,
+        'expected_board_revision': s.boardRevision,
+        'action': action,
+      }),
+      limits,
+    );
     _requests++;
     pendingRequest = request;
     _requestAcknowledged = false;
@@ -351,7 +361,7 @@ class V2Reducer {
       'action.deadline_expired',
       'stream.gap',
       'stream.stale_epoch',
-      'history.integrity'
+      'history.integrity',
     ].contains(code)) {
       disconnect();
     }

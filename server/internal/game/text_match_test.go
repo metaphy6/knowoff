@@ -1023,3 +1023,68 @@ func TestTextActionErrorConsumesOnlyRecipientSequence(t *testing.T) {
 		t.Fatal("error consumed another recipient or invalid error consumed sequence")
 	}
 }
+
+func TestTextSnapshotProjectionIsDetachedAndComplete(t *testing.T) {
+	for _, mode := range gamecontract.AllModes() {
+		for _, size := range []int{4, 6} {
+			t.Run(fmt.Sprintf("%s/%d", mode, size), func(t *testing.T) {
+				m, now := textFixture(t, mode, size)
+				for seat := 0; seat < size; seat++ {
+					s, err := m.SnapshotProjection(seat)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if (s.Private.Nown != nil) != (s.Private.Role == "nower") {
+						t.Fatal("projection role boundary")
+					}
+					if s.Private.Nown != nil {
+						s.Private.Nown.Text = "mutated nown"
+					}
+					s.Private.Hand[0].Content.Text = "mutated hand"
+					if len(s.Board.Cards) > 0 {
+						s.Board.Cards[0].Card.Content.Text = "mutated board"
+					}
+					if len(s.History) > 0 && len(s.History[0].Cards) > 0 {
+						s.History[0].Cards[0].Content.Text = "mutated history"
+					}
+					again, err := m.SnapshotProjection(seat)
+					if err != nil {
+						t.Fatal(err)
+					}
+					encoded, _ := json.Marshal(again)
+					if strings.Contains(string(encoded), "mutated ") {
+						t.Fatal("projection aliases engine")
+					}
+				}
+				for i := 0; i < 80; i++ {
+					phase, wake := m.Clock()
+					if phase == v2.PhaseVerdict {
+						break
+					}
+					*now = wake
+					if _, err := m.Advance(context.Background(), wake); err != nil {
+						t.Fatal(err)
+					}
+				}
+				m.limits.MaxFrameBytes = 1024
+				full, err := m.SnapshotProjection(0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if full.Phase != v2.PhaseVerdict || full.HistoryPages != nil || len(full.History) == 0 || uint64(len(full.History)) != full.Cursor.EvidenceSeq {
+					t.Fatal("projection truncated evidence")
+				}
+				encoded, _ := json.Marshal(full)
+				if len(encoded) <= m.limits.MaxFrameBytes {
+					t.Fatal("fixture did not cross wire boundary")
+				}
+				if _, err := m.Snapshot(0); err == nil {
+					t.Fatal("wire snapshot incorrectly accepted oversized projection")
+				}
+				if _, err := m.SnapshotProjection(-1); err == nil {
+					t.Fatal("invalid recipient accepted")
+				}
+			})
+		}
+	}
+}

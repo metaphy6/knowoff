@@ -8,6 +8,8 @@ import "time"
 // Config is the single merged configuration struct. Every key from
 // configs/base.yaml and gameplay/tuning.yaml is represented here.
 type Config struct {
+	Rewarded     RewardedConfig     `yaml:"rewarded_ads"`
+	Billing      BillingConfig      `yaml:"billing"`
 	Trust        TrustConfig        `yaml:"trust"`
 	App          AppConfig          `yaml:"app"`
 	Log          LogConfig          `yaml:"log"`
@@ -19,12 +21,9 @@ type Config struct {
 	Moderation   ModerationConfig   `yaml:"moderation"`
 	Database     DatabaseConfig     `yaml:"database"`
 	Redis        RedisConfig        `yaml:"redis"`
-	Storage      StorageConfig      `yaml:"storage"`
-	Media        MediaConfig        `yaml:"media"`
 	Security     SecurityConfig     `yaml:"security"`
 	RateLimit    RateLimitConfig    `yaml:"rate_limit"`
 	Tuning       TuningConfig       `yaml:"tuning"`
-	Bots         *BotsConfig        `yaml:"bots,omitempty"`
 }
 
 // AppConfig identifies the running service.
@@ -84,9 +83,11 @@ type LocalizationConfig struct {
 // ModerationConfig holds per-language free-chat word lists. English is always
 // applied as the fallback list in addition to a player's selected language.
 type ModerationConfig struct {
-	DefaultLanguage  string                 `yaml:"default_language"`
-	WordLists        map[string][]string    `yaml:"word_lists"`
-	ContentScreening ContentScreeningConfig `yaml:"content_screening"`
+	DefaultLanguage   string                 `yaml:"default_language"`
+	WordLists         map[string][]string    `yaml:"word_lists"`
+	ContentScreening  ContentScreeningConfig `yaml:"content_screening"`
+	AvatarScreening   ContentScreeningConfig `yaml:"avatar_screening"`
+	AvatarUploadSlots int                    `yaml:"avatar_upload_slots"`
 }
 
 // ContentScreeningConfig controls the optional server-only automated text reviewer.
@@ -121,49 +122,26 @@ type RedisConfig struct {
 	PoolSize int    `yaml:"pool_size"`
 }
 
-// StorageConfig is the S3-compatible object storage client.
-type StorageConfig struct {
-	Driver          string `yaml:"driver"`
-	Endpoint        string `yaml:"endpoint"`
-	Region          string `yaml:"region"`
-	Bucket          string `yaml:"bucket"`
-	AccessKeyID     string `yaml:"access_key_id"`
-	SecretAccessKey string `yaml:"secret_access_key"`
-	UsePathStyle    bool   `yaml:"use_path_style"`
-	AssetsURL       string `yaml:"assets_url"`
-}
-
-// MediaConfig controls pack loading and signed URLs.
-type MediaConfig struct {
-	ActivePackTag       string `yaml:"active_pack_tag"`
-	PackCheckIntervalS  int    `yaml:"pack_check_interval_s"`
-	SignedURLTTLS       int    `yaml:"signed_url_ttl_s"`
-	LocalBundlePath     string `yaml:"local_bundle_path"`
-	URLSigningKey       string `yaml:"url_signing_key"`
-	WorkbenchIngestPath string `yaml:"workbench_ingest_path"`
-}
-
 // SecurityConfig holds JWT and crypto settings.
 type SecurityConfig struct {
-	DevBotKey         string              `yaml:"dev_bot_key"`
-	JWTSigningKey     string              `yaml:"jwt_signing_key"`
-	JWTIssuer         string              `yaml:"jwt_issuer"`
-	JWTAudience       string              `yaml:"jwt_audience"`
-	AccessTokenTTLM   int                 `yaml:"access_token_ttl_m"`
-	RefreshTokenTTLH  int                 `yaml:"refresh_token_ttl_h"`
-	BcryptCost        int                 `yaml:"bcrypt_cost"`
-	AdminTOTPIssuer   string              `yaml:"admin_totp_issuer"`
-	AdminSessionTTLH  int                 `yaml:"admin_session_ttl_h"`
-	SSVCallbackKey    string              `yaml:"ssv_callback_key"`
-	SSVAllowedSenders string              `yaml:"ssv_allowed_senders"`
-	OAuth             OAuthSecurityConfig `yaml:"oauth"`
+	DevBotKey        string              `yaml:"dev_bot_key"`
+	JWTSigningKey    string              `yaml:"jwt_signing_key"`
+	JWTIssuer        string              `yaml:"jwt_issuer"`
+	JWTAudience      string              `yaml:"jwt_audience"`
+	AccessTokenTTLM  int                 `yaml:"access_token_ttl_m"`
+	RefreshTokenTTLH int                 `yaml:"refresh_token_ttl_h"`
+	BcryptCost       int                 `yaml:"bcrypt_cost"`
+	AdminTOTPIssuer  string              `yaml:"admin_totp_issuer"`
+	AdminSessionTTLH int                 `yaml:"admin_session_ttl_h"`
+	OAuth            OAuthSecurityConfig `yaml:"oauth"`
 }
 
 // OAuthSecurityConfig holds OAuth client settings. Secrets are interpolated
 // from environment variables.
 type OAuthSecurityConfig struct {
-	Google   OAuthProviderSecurityConfig `yaml:"google"`
-	Facebook OAuthProviderSecurityConfig `yaml:"facebook"`
+	TrustedProxyCIDRs []string                    `yaml:"trusted_proxy_cidrs"`
+	Google            OAuthProviderSecurityConfig `yaml:"google"`
+	Facebook          OAuthProviderSecurityConfig `yaml:"facebook"`
 }
 
 // OAuthProviderSecurityConfig is one OAuth provider's client credentials.
@@ -171,6 +149,7 @@ type OAuthProviderSecurityConfig struct {
 	ClientID     string `yaml:"client_id"`
 	ClientSecret string `yaml:"client_secret"`
 	RedirectURL  string `yaml:"redirect_url"`
+	GraphVersion string `yaml:"graph_version"`
 }
 
 // RateLimitConfig tunes the per-connection and per-account intent rate limits.
@@ -181,28 +160,23 @@ type RateLimitConfig struct {
 	MaxBytesPerFrame    int  `yaml:"max_bytes_per_frame"`
 }
 
-// BotsConfig enables external dev/test bot connections. Intentionally absent from prod.
-type BotsConfig struct {
-	Enabled        bool   `yaml:"enabled"`
-	DevBotEndpoint string `yaml:"dev_bot_endpoint,omitempty"`
-}
-
 // TuningConfig is the gameplay and economy tuning loaded from gameplay/tuning.yaml.
 type TuningConfig struct {
-	TextCatalog TextCatalogTuning `yaml:"text_catalog"`
-	Contract    ContractTuning    `yaml:"contract"`
-	Seed        int               `yaml:"seed"`
-	Game        GameTuning        `yaml:"game"`
-	Timers      TimersTuning      `yaml:"timers"`
-	Hand        HandTuning        `yaml:"hand"`
-	Dealing     DealingTuning     `yaml:"dealing"`
-	Points      PointsTuning      `yaml:"points"`
-	Noin        NoinTuning        `yaml:"noin"`
-	Economy     EconomyTuning     `yaml:"economy"`
-	Liquidity   LiquidityTuning   `yaml:"liquidity"`
-	LiveOps     LiveOpsTuning     `yaml:"liveops"`
-	Portal      PortalTuning      `yaml:"portal"`
-	Progression ProgressionTuning `yaml:"progression"`
+	retiredPolicy *retiredPolicyV1
+	TextCatalog   TextCatalogTuning `yaml:"text_catalog"`
+	Contract      ContractTuning    `yaml:"contract"`
+	Seed          int               `yaml:"seed"`
+	Game          GameTuning        `yaml:"game"`
+	Timers        TimersTuning      `yaml:"timers"`
+	Hand          HandTuning        `yaml:"hand"`
+	Dealing       DealingTuning     `yaml:"dealing"`
+	Points        PointsTuning      `yaml:"points"`
+	Noin          NoinTuning        `yaml:"noin"`
+	Economy       EconomyTuning     `yaml:"economy"`
+	Liquidity     LiquidityTuning   `yaml:"liquidity"`
+	LiveOps       LiveOpsTuning     `yaml:"liveops"`
+	Portal        PortalTuning      `yaml:"portal"`
+	Progression   ProgressionTuning `yaml:"progression"`
 }
 
 // GameTuning is room structure and victory rules.
@@ -226,25 +200,18 @@ type TimersTuning struct {
 	KnowoffRunoff       int `yaml:"knowoff_runoff"`
 	VoteResultWindow    int `yaml:"vote_result_window"`
 	VoteResultFalling   int `yaml:"vote_result_falling" json:"VoteResultFalling,omitempty"`
-	RevealLockout       int `yaml:"reveal_lockout"`
-	RevealView          int `yaml:"reveal_view"`
-	ShuffleBonusSeconds int `yaml:"shuffle_bonus_seconds"`
-	PrefetchCountdown   int `yaml:"prefetch_countdown"`
 }
 
-// HandTuning is hand size and specialty dealing weights.
+// HandTuning sets retained hand and reserve sizes.
 type HandTuning struct {
-	Size             int                `yaml:"size"`
-	DrawPile         int                `yaml:"draw_pile"`
-	SpecialtyWeights map[string]float64 `yaml:"specialty_weights"`
+	Size     int `yaml:"size"`
+	DrawPile int `yaml:"draw_pile"`
 }
 
-// DealingTuning is the relevance mesh thresholds.
+// DealingTuning requires reviewed coverage across every scheduled text Nown.
 type DealingTuning struct {
-	BandHigh          float64 `yaml:"band_high"`
-	BandLow           float64 `yaml:"band_low"`
-	MinHighPerNown    int     `yaml:"min_high_per_nown"`
-	MinDistantPerNown int     `yaml:"min_distant_per_nown"`
+	MinHighPerNown    int `yaml:"min_high_per_nown"`
+	MinDistantPerNown int `yaml:"min_distant_per_nown"`
 }
 
 // PointsTuning is match point awards and penalties.
@@ -278,15 +245,12 @@ type EconomyTuning struct {
 	NoinBundles               []int          `yaml:"noin_bundles"`
 }
 
-// LiquidityTuning is Quick Play backfill bot settings.
+// LiquidityTuning sets human-only queue and reward eligibility thresholds.
 type LiquidityTuning struct {
-	BackfillEnabled      bool    `yaml:"backfill_enabled"`
-	QueueTimeoutS        int     `yaml:"queue_timeout_s"`
-	MinHumans            int     `yaml:"min_humans"`
-	LeaderboardMinHumans int     `yaml:"leaderboard_min_humans"`
-	NoinMinHumans        int     `yaml:"noin_min_humans"`
-	BotThinkMinS         float64 `yaml:"bot_think_min_s"`
-	BotThinkMaxS         float64 `yaml:"bot_think_max_s"`
+	QueueTimeoutS        int `yaml:"queue_timeout_s"`
+	MinHumans            int `yaml:"min_humans"`
+	LeaderboardMinHumans int `yaml:"leaderboard_min_humans"`
+	NoinMinHumans        int `yaml:"noin_min_humans"`
 }
 
 // LiveOpsTuning is leaderboard and challenge constants.
@@ -323,10 +287,7 @@ func (c *Config) RequiredSecrets() []string {
 	return []string{
 		"KNOWOFF_DB_PASSWORD",
 		"KNOWOFF_REDIS_PASSWORD",
-		"KNOWOFF_STORAGE_ACCESS_KEY",
-		"KNOWOFF_STORAGE_SECRET_KEY",
 		"KNOWOFF_JWT_KEY",
-		"KNOWOFF_MEDIA_URL_KEY",
 	}
 }
 

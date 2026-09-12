@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -67,6 +68,7 @@ func (f *fakeTextValues) Award(context.Context, store.TextAward) (int, error) {
 	f.awards++
 	return 0, nil
 }
+func (f *fakeTextValues) Abandon(context.Context, store.TextAbandon) error { return nil }
 func (f *fakeTextValues) Finish(context.Context, store.TextOutcome) error {
 	f.finishes++
 	f.reservations = map[string]store.TextReservation{}
@@ -113,6 +115,229 @@ func textPeer(t *testing.T, m *TextManager) *TextPeer {
 		t.Fatal(e)
 	}
 	return p
+}
+
+func TestTextMaintenanceAndDependenciesPauseIndependently(t *testing.T) {
+	m, values, now, settings := textManagerFixture(t)
+	ctx := context.Background()
+	peers, room := textReadyRoom(t, m, settings)
+	if err := m.Start(ctx, peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	waiting, waitingRoom := textReadyRoom(t, m, settings)
+	outsider := textPeer(t, m)
+	reserved := len(values.reservations)
+	paused := func() {
+		t.Helper()
+		if m.RuntimeReady(ctx) == nil {
+			t.Fatal("paused runtime advertised ready")
+		}
+		for _, cell := range m.Availability(ctx).Modes {
+			if cell.Available || len(cell.Languages) != 0 {
+				t.Fatal("paused admission advertised", cell)
+			}
+		}
+		if _, err := m.Create(ctx, outsider, settings); !errors.Is(err, ErrTextUnavailable) {
+			t.Fatal("paused create", err)
+		}
+		if err := m.QueueJoin(ctx, outsider, settings); !errors.Is(err, ErrTextUnavailable) {
+			t.Fatal("paused queue", err)
+		}
+		if err := m.Start(ctx, waiting[0]); !errors.Is(err, ErrTextUnavailable) {
+			t.Fatal("paused start", err)
+		}
+		if err := m.Ready(ctx, waiting[0], v2.ReadyAcknowledgement{SettingsRevision: waitingRoom.settingsRevision, MembershipRevision: waitingRoom.membershipRevision}); !errors.Is(err, ErrTextUnavailable) {
+			t.Fatal("paused ready", err)
+		}
+		if len(values.reservations) != reserved {
+			t.Fatal("pause mutated reservations")
+		}
+		for _, p := range peers {
+			textDrainFrames(p)
+		}
+		if err := m.Resync(ctx, peers[0]); err != nil {
+			t.Fatal("pause stopped begun snapshot", err)
+		}
+	}
+	m.SetReady(false)
+	paused()
+	m.SetDependencyReady(true)
+	paused()
+	m.SetDependencyReady(false)
+	m.SetReady(true)
+	paused()
+	m.SetDependencyReady(true)
+	if err := m.RuntimeReady(ctx); err != nil {
+		t.Fatal("healthy resumed runtime", err)
+	}
+	if err := m.Start(ctx, waiting[0]); err != nil {
+		t.Fatal("resume failed", err)
+	}
+	m.SetReady(false)
+	textFinishRoom(t, m, room, now)
+	if err := m.Rematch(ctx, peers[0]); !errors.Is(err, ErrTextUnavailable) {
+		t.Fatal("paused rematch", err)
+	}
+	m.SetReady(true)
+	m.Drain()
+	m.SetReady(true)
+	m.SetDependencyReady(true)
+	if m.RuntimeReady(ctx) == nil {
+		t.Fatal("permanent drain reopened")
+	}
+}
+
+func TestTextWalletVisibilityWaitsForVerdictAcrossDisconnectAndLeave(t *testing.T) {
+	m, _, now, settings := textManagerFixture(t)
+	ctx := t.Context()
+	peers, room := textReadyRoom(t, m, settings)
+	reads := 0
+	read := func() error { reads++; return nil }
+	if err := m.WithWalletAccess(ctx, peers[0].AccountID, read); err != nil || reads != 1 {
+		t.Fatal("waiting lobby wallet", err, reads)
+	}
+	if err := m.Start(ctx, peers[0]); err != nil {
+		t.Fatal(err)
+	}
+	denied := func() {
+		t.Helper()
+		for _, p := range peers {
+			if err := m.WithWalletAccess(ctx, p.AccountID, read); !errors.Is(err, ErrTextWalletHidden) {
+				t.Fatal("live match exposed wallet", err)
+			}
+		}
+		if reads != 1 {
+			t.Fatal("hidden callback executed", reads)
+		}
+	}
+	denied()
+	m.Disconnect(ctx, peers[0])
+	denied()
+	if err := m.Leave(ctx, peers[1]); err != nil {
+		t.Fatal(err)
+	}
+	denied()
+	reconnected, err := m.Open(ctx, peers[1].AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = m.Join(ctx, reconnected, room.code); err != nil {
+		t.Fatal(err)
+	}
+	denied()
+	textFinishRoom(t, m, room, now)
+	if err = m.WithWalletAccess(ctx, peers[0].AccountID, read); err != nil || reads != 2 {
+		t.Fatal("terminal wallet stayed hidden", err, reads)
+	}
+	m.mu.Lock()
+	m.loseAuthority()
+	m.mu.Unlock()
+	if err = m.WithWalletAccess(ctx, peers[0].AccountID, read); !errors.Is(err, ErrTextUnavailable) || reads != 2 {
+		t.Fatal("lost owner exposed wallet", err, reads)
+	}
+}
+
+func TestTextSystemNoticeCarriesOnlyRefreshSignal(t *testing.T) {
+	m, _, _, _ := textManagerFixture(t)
+	peers := []*TextPeer{textPeer(t, m), textPeer(t, m)}
+	if err := m.NotifyNotices(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range peers {
+		frame := <-p.Frames
+		if frame.Version != 2 || frame.Type != "system_notice" || string(frame.Payload) != `{"refresh":true}` {
+			t.Fatalf("unexpected notice payload: %+v", frame)
+		}
+	}
+	a := &textAuthorityStub{done: make(chan struct{}), lost: true}
+	m.deps.Authority = a
+	if err := m.NotifyNotices(context.Background()); err == nil {
+		t.Fatal("lost owner broadcast")
+	}
+	for _, p := range peers {
+		if len(p.frames) != 0 {
+			t.Fatal("lost owner emitted notice")
+		}
+	}
+}
+
+func TestTextRoomIdentityLookupRequiresCurrentMembership(t *testing.T) {
+	m, _, _, settings := textManagerFixture(t)
+	ctx := context.Background()
+	peers, room := textReadyRoom(t, m, settings)
+	if got, err := m.RoomAccount(ctx, peers[0].AccountID, room.id, 1); err != nil || got != peers[1].AccountID {
+		t.Fatal(got, err)
+	}
+	outsider := textPeer(t, m)
+	for _, c := range []struct {
+		account, room string
+		seat          int
+	}{{outsider.AccountID, room.id, 1}, {peers[0].AccountID, uuid.NewString(), 1}, {peers[0].AccountID, room.id, 6}} {
+		if _, err := m.RoomAccount(ctx, c.account, c.room, c.seat); err == nil {
+			t.Fatal("unauthorized room identity", c)
+		}
+	}
+	if err := m.Leave(ctx, peers[1]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.RoomAccount(ctx, peers[0].AccountID, room.id, 1); err == nil {
+		t.Fatal("departed seat identity retained")
+	}
+	if _, err := m.RoomAccount(ctx, peers[1].AccountID, room.id, 0); err == nil {
+		t.Fatal("departed participant retained lookup access")
+	}
+	if err := m.Join(ctx, outsider, room.code); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := m.RoomAccount(ctx, peers[0].AccountID, room.id, 1); err != nil || got != outsider.AccountID {
+		t.Fatal("seat replacement stale identity", got, err)
+	}
+}
+
+func TestTextFinalEnforcementClosesCurrentPeerBeforeFailedCleanup(t *testing.T) {
+	m, values, _, settings := textManagerFixture(t)
+	ctx := context.Background()
+	p := textPeer(t, m)
+	if err := m.QueueJoin(ctx, p, settings); err != nil {
+		t.Fatal(err)
+	}
+	check := func(_ context.Context, id string) (bool, error) {
+		if id != p.AccountID {
+			t.Fatal("wrong account")
+		}
+		return false, nil
+	}
+	if err := m.EnforceAccount(ctx, p.AccountID, check); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-p.Done:
+		t.Fatal("expired/reversed sanction closed new session")
+	default:
+	}
+	values.failCancel = true
+	check = func(context.Context, string) (bool, error) { return true, nil }
+	if err := m.EnforceAccount(ctx, p.AccountID, check); err == nil {
+		t.Fatal("cleanup failure hidden")
+	}
+	select {
+	case <-p.Done:
+	default:
+		t.Fatal("failed cleanup retained live socket")
+	}
+	if err := m.Send(p, "test", "", map[string]string{}); err == nil {
+		t.Fatal("enforced peer still receives")
+	}
+	values.failCancel = false
+	if err := m.Tick(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if len(values.reservations) != 0 {
+		t.Fatal("enforced reservation lost cleanup retry")
+	}
+	if err := m.EnforceAccount(ctx, p.AccountID, check); err != nil {
+		t.Fatal("repeated enforcement", err)
+	}
 }
 func TestTextManagerClosedAvailabilityAndExactFIFO(t *testing.T) {
 	m, values, now, s := textManagerFixture(t)
@@ -510,7 +735,7 @@ func TestTextManagerSlowConsumerAndSimultaneousAccountGeneration(t *testing.T) {
 	m.mu.Lock()
 	current := m.peers[account]
 	m.mu.Unlock()
-	if current == nil || current.closed {
+	if current == nil || current.closed.Load() {
 		t.Fatal("latest generation lost")
 	}
 }
@@ -706,18 +931,18 @@ func TestTextManagerRateBudgetSurvivesReconnect(t *testing.T) {
 	m.deps.Config.RateLimit.MaxIntentsPerSecond = 2
 	m.deps.Config.RateLimit.MaxIntentsBurst = 2
 	p := textPeer(t, m)
-	if !m.AllowRequest(p) || !m.AllowRequest(p) || m.AllowRequest(p) {
+	if !m.AllowRequest(t.Context(), p) || !m.AllowRequest(t.Context(), p) || m.AllowRequest(t.Context(), p) {
 		t.Fatal("wrong initial account budget")
 	}
 	replacement, e := m.Open(context.Background(), p.AccountID)
 	if e != nil {
 		t.Fatal(e)
 	}
-	if m.AllowRequest(p) || m.AllowRequest(replacement) {
+	if m.AllowRequest(t.Context(), p) || m.AllowRequest(t.Context(), replacement) {
 		t.Fatal("reconnect refreshed budget or old socket accepted")
 	}
 	*now = now.Add(500 * time.Millisecond)
-	if !m.AllowRequest(replacement) || m.AllowRequest(replacement) {
+	if !m.AllowRequest(t.Context(), replacement) || m.AllowRequest(t.Context(), replacement) {
 		t.Fatal("budget refill wrong")
 	}
 	if e := m.Disconnect(context.Background(), replacement); e != nil {
@@ -891,6 +1116,81 @@ func TestTextManagerUnavailableDiscoveryHasNoAdmissibleTuples(t *testing.T) {
 			if mode.Available || len(mode.Languages) != 0 {
 				t.Fatal("closed discovery still advertises admissible tuples", lost, mode.ModeID)
 			}
+		}
+	}
+}
+
+func TestTextReportAuthorizationUsesOnlyRecipientVisibleContent(t *testing.T) {
+	for _, mode := range []gamecontract.ModeID{gamecontract.ModeMissedTheBriefing, gamecontract.ModeSecretScale, gamecontract.ModeMakeRoom, gamecontract.ModeBadBargains, gamecontract.ModeTopThat} {
+		for _, size := range []int{4, 6} {
+			t.Run(string(mode)+fmt.Sprint(size), func(t *testing.T) {
+				m, _, now, settings := textManagerFixture(t)
+				settings.ModeID = mode
+				settings.Size = size
+				ctx := context.Background()
+				peers, room := textReadyRoom(t, m, settings)
+				if err := m.Start(ctx, peers[0]); err != nil {
+					t.Fatal(err)
+				}
+				snapshots := make([]v2.Snapshot, size)
+				nower, donower := -1, -1
+				for seat := range peers {
+					s, e := room.match.Snapshot(seat)
+					if e != nil {
+						t.Fatal(e)
+					}
+					snapshots[seat] = s
+					if s.Private.Nown != nil {
+						nower = seat
+					} else {
+						donower = seat
+					}
+				}
+				if nower < 0 || donower < 0 {
+					t.Fatal("role fixture")
+				}
+				own := snapshots[donower].Private.Hand[0].Content
+				match := snapshots[0].Contract.MatchID
+				if contract, got, err := m.VisibleText(ctx, peers[donower].AccountID, match, own.ContentRef); err != nil || got != own || contract != snapshots[0].Contract {
+					t.Fatal("own content unavailable", err)
+				}
+				nown := *snapshots[nower].Private.Nown
+				if _, got, err := m.VisibleText(ctx, peers[nower].AccountID, match, nown.ContentRef); err != nil || got != nown {
+					t.Fatal("authorized Nown unavailable", err)
+				}
+				for _, ref := range []v2.ContentRef{nown.ContentRef, {ContentID: own.ContentID, Revision: own.Revision + 1}, {ContentID: "unknown", Revision: 1}} {
+					if _, _, err := m.VisibleText(ctx, peers[donower].AccountID, match, ref); err == nil {
+						t.Fatal("hidden/wrong revision content accepted", ref)
+					}
+				}
+				outsider := textPeer(t, m)
+				if _, _, err := m.VisibleText(ctx, outsider.AccountID, match, own.ContentRef); err == nil {
+					t.Fatal("outsider report access")
+				}
+				if _, _, err := m.VisibleText(ctx, peers[donower].AccountID, uuid.NewString(), own.ContentRef); err == nil {
+					t.Fatal("wrong match report access")
+				}
+				after, err := room.match.Snapshot(donower)
+				if err != nil || after.Cursor.RecipientSeq != snapshots[donower].Cursor.RecipientSeq+1 {
+					t.Fatal("report lookup advanced socket stream", err)
+				}
+				for _, card := range snapshots[donower].Board.Cards {
+					if _, got, err := m.VisibleText(ctx, peers[donower].AccountID, match, card.Card.Content.ContentRef); err != nil || got != card.Card.Content {
+						t.Fatal("public card unavailable", err)
+					}
+				}
+				textFinishRoom(t, m, room, now)
+				// Only begun prompts become public at verdict. The initial prompt is one.
+				if _, got, err := m.VisibleText(ctx, peers[donower].AccountID, match, nown.ContentRef); err != nil || got != nown {
+					t.Fatal("public verdict Nown unavailable", err)
+				}
+				if err := m.Leave(ctx, peers[donower]); err != nil {
+					t.Fatal(err)
+				}
+				if _, _, err := m.VisibleText(ctx, peers[donower].AccountID, match, nown.ContentRef); err == nil {
+					t.Fatal("former member retained private lookup")
+				}
+			})
 		}
 	}
 }

@@ -9,12 +9,15 @@ class KoDeviceLayout {
 
   factory KoDeviceLayout.forSize(Size size) {
     if (size.width < 600 || (size.width < 1000 && size.height < 500)) {
-      return KoDeviceLayout(size.width < 380 || size.height < 700
-          ? KoDeviceKind.smallPhone
-          : KoDeviceKind.largePhone);
+      return KoDeviceLayout(
+        size.width < 380 || size.height < 700
+            ? KoDeviceKind.smallPhone
+            : KoDeviceKind.largePhone,
+      );
     }
     return KoDeviceLayout(
-        size.width < 1200 ? KoDeviceKind.tablet : KoDeviceKind.desktop);
+      size.width < 1200 ? KoDeviceKind.tablet : KoDeviceKind.desktop,
+    );
   }
 
   factory KoDeviceLayout.of(BuildContext context) =>

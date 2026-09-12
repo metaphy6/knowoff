@@ -3,7 +3,9 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -188,6 +190,85 @@ func TestTextPreparedPolicyIdentityAndOwnership(t *testing.T) {
 	m.Contract.Tuning.SHA256 = repeatHash()
 	if err := restarted.Prepare(context.Background(), m, now); !errors.Is(err, ErrValueConflict) {
 		t.Errorf("unbound advertised tuning hash: %v", err)
+	}
+}
+
+func TestHistoricalTextPolicySurvivesRetirementAndDurableReplay(t *testing.T) {
+	db, original := textValueDB(t)
+	ctx := context.Background()
+	raw, err := os.ReadFile("../config/testdata/policy_v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var historical config.TuningConfig
+	if err := json.Unmarshal(raw, &historical); err != nil {
+		t.Fatal(err)
+	}
+	const historicalHash = "aeeb1bbfc2bc881635a04d504aa61a73168ea1ed36b00565dee44a5b6778fb7b"
+	if hash := valuePolicyHash(t, historical); hash != historicalHash {
+		t.Fatalf("pre-retirement policy hash changed: %s", hash)
+	}
+	oldProcess := NewTextValueStore(db, historical)
+	at := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+	m, accounts := valuePreparedMatch(t, oldProcess, db, at, false)
+	var before []byte
+	if err := db.QueryRow(`SELECT contract FROM text_matches WHERE id=$1`, m.Contract.MatchID).Scan(&before); err != nil {
+		t.Fatal(err)
+	}
+	// The restarted process uses new active settings. The SQL record's original
+	// JSONB policy, including nonzero retired fields, remains the replay authority.
+	newTuning := original.tuning.Clone()
+	newTuning.Noin.CorrectVote = 91
+	newTuning.Noin.NowerWin = 97
+	newTuning.Progression.XPBase = 101
+	restarted := NewTextValueStore(db, newTuning)
+	for i := 0; i < 2; i++ {
+		if err := restarted.Prepare(ctx, m, at); err != nil {
+			t.Fatal("prepare replay changed policy identity", err)
+		}
+		if err := restarted.Start(ctx, m.Contract.MatchID, m.Owner, 1, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	award := TextAward{MatchID: m.Contract.MatchID, Owner: m.Owner, Epoch: 1, AccountID: accounts[0], Kind: "correct_vote", Ordinal: 1, Amount: historical.Noin.CorrectVote, At: at.Add(time.Second)}
+	for i := 0; i < 2; i++ {
+		credited, err := restarted.Award(ctx, award)
+		if err != nil || credited != historical.Noin.CorrectVote {
+			t.Fatalf("historical award changed: %d %v", credited, err)
+		}
+	}
+	outcome := TextOutcome{MatchID: m.Contract.MatchID, Owner: m.Owner, Epoch: 1, Kind: "completed", Winner: "nower", At: at.Add(time.Minute)}
+	for seat, id := range accounts {
+		role := "nower"
+		if seat == 3 {
+			role = "donower"
+		}
+		outcome.Players = append(outcome.Players, TextPlayerResult{AccountID: id, Seat: seat, Role: role, Points: 20, CorrectVotes: 1, VotesCast: 1})
+	}
+	for i := 0; i < 2; i++ {
+		if err := restarted.Finish(ctx, outcome); err != nil {
+			t.Fatal(err)
+		}
+		if err := restarted.SettlePending(ctx, m.Contract.MatchID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var after []byte
+	if err := db.QueryRow(`SELECT contract FROM text_matches WHERE id=$1`, m.Contract.MatchID).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if string(before) != string(after) {
+		t.Fatal("stored historical contract bytes changed")
+	}
+	if got := valueCount(t, db, `SELECT count(*) FROM text_award_receipts WHERE match_id=$1 AND kind='correct_vote'`, m.Contract.MatchID); got != 1 {
+		t.Fatalf("award receipt duplicated: %d", got)
+	}
+	// Original values: 5 immediate correct-vote + 5 completion +30 win +25 first win.
+	if got := valueCount(t, db, `SELECT balance FROM noin_wallets WHERE account_id=$1`, accounts[0]); got != 65 {
+		t.Fatalf("replay used new price or duplicated value: %d", got)
+	}
+	if got := valueCount(t, db, `SELECT overall_points FROM profiles WHERE account_id=$1`, accounts[0]); got != 20 {
+		t.Fatalf("points duplicated: %d", got)
 	}
 }
 
@@ -504,5 +585,89 @@ func TestTextConcurrentFirstWinAcrossCompletedMatches(t *testing.T) {
 	}
 	if n := valueCount(t, db, `SELECT count FROM leaderboard_daily_counts WHERE account_id=$1`, ids[0]); n != 2 {
 		t.Fatal(n)
+	}
+}
+
+// Retained permanent Premium uses NULL, while a provider projection without
+// current access uses an expired sentinel. Admission must distinguish them at
+// both reservation and the final start recheck.
+func TestTextAdmissionRetainsPermanentPremiumWithoutFreeQuota(t *testing.T) {
+	for _, grantBeforeReserve := range []bool{true, false} {
+		t.Run(fmt.Sprintf("grant_before_reserve_%t", grantBeforeReserve), func(t *testing.T) {
+			db, s := textValueDB(t)
+			ctx := context.Background()
+			now := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
+			m, ids := valueUnpreparedMatch(t, s, db, now, false)
+			for i, id := range ids {
+				var expiry any
+				kind := "premium_monthly"
+				if i == 1 {
+					kind = "premium_yearly"
+				}
+				if i == 2 {
+					expiry = time.Unix(0, 0).UTC()
+				}
+				if i == 3 {
+					expiry = now
+				}
+				if _, err := db.Exec(`INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,$2,$3)`, id, kind, expiry); err != nil {
+					t.Fatal(err)
+				}
+				if i < 2 {
+					if _, err := db.Exec(`INSERT INTO daily_quickplay_counts(account_id,server_day,count) VALUES($1,$2,$3)`, id, valueDay(now), s.tuning.Economy.FreeDailyQuickplayMatches); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if grantBeforeReserve {
+					if err := s.CancelReservation(ctx, m.AdmissionIDs[i], id); err != nil {
+						t.Fatal(err)
+					}
+					m.AdmissionIDs[i] = uuid.NewString()
+					if err := s.Reserve(ctx, TextReservation{ID: m.AdmissionIDs[i], AccountID: id, EntryPath: "quick_play", At: now}); err != nil {
+						t.Fatalf("retained entitlement reservation seat%d: %v", i, err)
+					}
+					var access string
+					if err := db.QueryRow(`SELECT access_kind FROM text_admissions WHERE id=$1`, m.AdmissionIDs[i]).Scan(&access); err != nil {
+						t.Fatal(err)
+					}
+					want := "free"
+					if i < 2 {
+						want = "premium"
+					}
+					if access != want {
+						t.Fatalf("reserved seat%d access=%s want=%s", i, access, want)
+					}
+				}
+			}
+			if err := s.Prepare(ctx, m, now); err != nil {
+				t.Fatal(err)
+			}
+			for retry := 0; retry < 2; retry++ {
+				if err := s.Start(ctx, m.Contract.MatchID, m.Owner, m.Epoch, now); err != nil {
+					t.Fatalf("retained Premium start: %v", err)
+				}
+			}
+			for i, id := range ids {
+				var access, state string
+				if err := db.QueryRow(`SELECT access_kind,state FROM text_admissions WHERE id=$1`, m.AdmissionIDs[i]).Scan(&access, &state); err != nil {
+					t.Fatal(err)
+				}
+				want := "free"
+				count := int64(1)
+				if i < 2 {
+					want = "premium"
+					count = int64(s.tuning.Economy.FreeDailyQuickplayMatches)
+				}
+				if access != want || state != "started" {
+					t.Fatalf("started seat%d access/state=%s/%s want=%s/started", i, access, state, want)
+				}
+				if got := valueCount(t, db, `SELECT count FROM daily_quickplay_counts WHERE account_id=$1 AND server_day=$2`, id, valueDay(now)); got != count {
+					t.Fatalf("seat%d free count=%d want=%d", i, got, count)
+				}
+			}
+			if n := valueCount(t, db, `SELECT count(*) FROM noin_ledger`); n != 0 {
+				t.Fatalf("admission changed currency: %d", n)
+			}
+		})
 	}
 }

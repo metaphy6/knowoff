@@ -4,12 +4,13 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final files = Directory('lib/l10n')
-      .listSync()
-      .whereType<File>()
-      .where((file) => file.path.endsWith('.arb'))
-      .toList()
-    ..sort((a, b) => a.path.compareTo(b.path));
+  final files =
+      Directory('lib/l10n')
+          .listSync()
+          .whereType<File>()
+          .where((file) => file.path.endsWith('.arb'))
+          .toList()
+        ..sort((a, b) => a.path.compareTo(b.path));
   final source = _readArb(File('lib/l10n/app_en.arb'));
 
   test('localization resources are present', () {
@@ -30,8 +31,11 @@ void main() {
         final description = (metadata as Map<String, dynamic>)['description'];
         expect(
           description,
-          isA<String>()
-              .having((value) => value.trim(), 'description', isNotEmpty),
+          isA<String>().having(
+            (value) => value.trim(),
+            'description',
+            isNotEmpty,
+          ),
           reason: '@${entry.key} needs translator context in ${file.path}',
         );
       }
@@ -66,5 +70,5 @@ Map<String, dynamic> _readArb(File file) =>
     jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
 
 Set<String> _arguments(String message) => RegExp(
-      r'\{([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*[,}])',
-    ).allMatches(message).map((match) => match.group(1)!).toSet();
+  r'\{([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*[,}])',
+).allMatches(message).map((match) => match.group(1)!).toSet();

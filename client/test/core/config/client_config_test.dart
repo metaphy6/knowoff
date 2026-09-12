@@ -4,11 +4,12 @@ import 'package:knowoff_client/core/config/client_config.dart';
 
 void main() {
   test(
-      'new client defaults and bundled config use incompatible text generation',
-      () async {
-    expect(ClientConfig.defaultConfig().protocolVersion, 2);
-    expect(ClientConfig.defaultConfig().websocketUrl, endsWith('/ws/v2'));
-  });
+    'new client defaults and bundled config use incompatible text generation',
+    () async {
+      expect(ClientConfig.defaultConfig().protocolVersion, 2);
+      expect(ClientConfig.defaultConfig().websocketUrl, endsWith('/ws/v2'));
+    },
+  );
 
   tearDown(() {
     debugDefaultTargetPlatformOverride = null;

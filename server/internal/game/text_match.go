@@ -5,9 +5,10 @@ import (
 	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
+	"maps"
 	"math/rand"
+	"slices"
 	"sync"
 	"time"
 
@@ -53,8 +54,17 @@ type TextResult struct {
 
 type TextHooks struct {
 	ModerateChat func(context.Context, int, v2.Action) (v2.Action, error)
+	Abandon      func(context.Context, TextAbandonEvent) error
 	Award        func(context.Context, TextAwardEvent) error
 	Finish       func(context.Context, TextResult) error
+}
+
+// TextAbandonEvent is server-private durable work for a first expired grace.
+// It carries no cards, role, or client-supplied clock.
+type TextAbandonEvent struct {
+	MatchID    string
+	Seat       int
+	OccurredAt time.Time
 }
 
 // Callers supply a validated, pinned catalog deal; no roles enter its dealing
@@ -90,6 +100,7 @@ type TextMatch struct {
 	noin            config.NoinTuning
 	minRewardHumans int
 	grace           time.Duration
+	penalizeAbandon bool
 	seed            int64
 	now             func() time.Time
 	hooks           TextHooks
@@ -112,6 +123,7 @@ type textPlayer struct {
 	Role                                              string
 	Connected, Eliminated, Absent                     bool
 	GraceDeadline                                     int64
+	AbandonRecorded                                   bool
 	PointsBeforeResult                                int
 	Hand, Reserve                                     []v2.CopyID
 	Points, CorrectVotes, VotesCast, Survivals, Pokes int
@@ -141,12 +153,13 @@ type textState struct {
 	Result         *TextResult
 }
 type textPending struct {
-	State  *textState
-	Key    string
-	Hash   string
-	Awards []TextAwardEvent
-	Result *TextResult
-	Events []v2.PublicAction
+	State    *textState
+	Key      string
+	Hash     string
+	Awards   []TextAwardEvent
+	Abandons []TextAbandonEvent
+	Result   *TextResult
+	Events   []v2.PublicAction
 }
 
 func NewTextMatch(o TextOptions) (*TextMatch, error) {
@@ -191,6 +204,9 @@ func NewTextMatch(o TextOptions) (*TextMatch, error) {
 	if o.Prototype && (o.Contract.Eligibility.Rewards || o.Contract.Eligibility.Leaderboard) {
 		return nil, fmt.Errorf("prototype cannot earn live value")
 	}
+	if !o.Prototype && o.Contract.Eligibility.EntryPath == "quick_play" && o.Hooks.Abandon == nil {
+		return nil, fmt.Errorf("live Quick Play requires durable abandonment hook")
+	}
 	if o.Contract.Eligibility.Rewards && (o.Hooks.Award == nil || o.Hooks.Finish == nil) {
 		return nil, fmt.Errorf("reward-eligible match requires durable hooks")
 	}
@@ -205,6 +221,7 @@ func NewTextMatch(o TextOptions) (*TextMatch, error) {
 		o.Now = time.Now
 	}
 	m := &TextMatch{contract: o.Contract, limits: limits, timers: c.Tuning.Timers, points: c.Tuning.Points, noin: c.Tuning.Noin, minRewardHumans: c.Tuning.Liquidity.NoinMinHumans, grace: time.Duration(c.Tuning.Game.ReconnectGraceS) * time.Second, seed: o.Seed, now: o.Now, hooks: o.Hooks, seq: make([]uint64, size), epoch: make([]string, size)}
+	m.penalizeAbandon = !o.Prototype && o.Contract.Eligibility.EntryPath == "quick_play"
 	s := &textState{Round: 1, Board: v2.Board{ModeID: o.Contract.ModeID, Cards: []v2.BoardCard{}}, Players: make([]textPlayer, size), Copies: map[v2.CopyID]textCopy{}, RemainingVotes: size / 2, Ready: map[int]bool{}, Pokes: map[string]bool{}, Votes: map[int]int{}, History: []v2.PublicAction{}, Requests: map[string]v2.RequestRecord{}}
 	m.allCopies = map[v2.CopyID]v2.Card{}
 	m.initialCopies = size * (c.Tuning.Hand.Size + c.Tuning.Hand.DrawPile)
@@ -290,13 +307,35 @@ func (m *TextMatch) Limits() v2.Limits { return m.limits }
 func (m *TextMatch) cloneState() (*textState, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	data, e := json.Marshal(m.state)
-	if e != nil {
-		return nil, e
+	s := *m.state
+	s.Board = s.Board.Clone()
+	s.Players = slices.Clone(s.Players)
+	for i := range s.Players {
+		s.Players[i].Hand = slices.Clone(s.Players[i].Hand)
+		s.Players[i].Reserve = slices.Clone(s.Players[i].Reserve)
 	}
-	var s textState
-	e = json.Unmarshal(data, &s)
-	return &s, e
+	s.Copies = maps.Clone(s.Copies)
+	s.Order = slices.Clone(s.Order)
+	s.Ready = maps.Clone(s.Ready)
+	s.Pokes = maps.Clone(s.Pokes)
+	s.Votes = maps.Clone(s.Votes)
+	s.Candidates = slices.Clone(s.Candidates)
+	if s.BallotResult != nil {
+		result := s.BallotResult.Clone()
+		s.BallotResult = &result
+	}
+	if s.Offer != nil {
+		offer := *s.Offer
+		s.Offer = &offer
+	}
+	s.History = v2.ClonePublicActions(s.History)
+	s.Requests = maps.Clone(s.Requests)
+	if s.Result != nil {
+		result := *s.Result
+		result.Players = slices.Clone(result.Players)
+		s.Result = &result
+	}
+	return &s, nil
 }
 func textError(code v2.ErrorCode, field string) error {
 	return &v2.ContractError{Code: code, Field: field}
@@ -304,6 +343,13 @@ func textError(code v2.ErrorCode, field string) error {
 
 func (m *TextMatch) persist(ctx context.Context, p *textPending) (TextActionResult, error) {
 	m.pending = p
+	for _, incident := range p.Abandons {
+		if m.hooks.Abandon != nil {
+			if err := m.hooks.Abandon(ctx, incident); err != nil {
+				return TextActionResult{}, err
+			}
+		}
+	}
 	for _, award := range p.Awards {
 		if m.hooks.Award != nil {
 			if e := m.hooks.Award(ctx, award); e != nil {
@@ -325,10 +371,7 @@ func (m *TextMatch) persist(ctx context.Context, p *textPending) (TextActionResu
 	return TextActionResult{Changed: true, Public: clonePublic(p.Events)}, nil
 }
 func clonePublic(in []v2.PublicAction) []v2.PublicAction {
-	data, _ := json.Marshal(in)
-	out := []v2.PublicAction{}
-	_ = json.Unmarshal(data, &out)
-	return out
+	return v2.ClonePublicActions(in)
 }
 
 func (m *TextMatch) Apply(ctx context.Context, seat int, r v2.ActionRequest) (TextActionResult, error) {
@@ -421,6 +464,13 @@ func (m *TextMatch) SetConnected(ctx context.Context, seat int, connected bool) 
 		}
 		now := m.now()
 		player := &s.Players[seat]
+		// An expired grace is an occurrence even if the reconnect arrives before
+		// the periodic timer. Process due work before replacing the binding state.
+		if connected && !player.Connected && player.GraceDeadline > 0 && now.UnixMilli() >= player.GraceDeadline {
+			if err := m.advance(s, now, p); err != nil {
+				return err
+			}
+		}
 		if player.Connected == connected {
 			return nil
 		}

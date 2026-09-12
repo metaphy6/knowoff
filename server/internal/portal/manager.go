@@ -6,15 +6,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/profile"
-	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/lib/pq"
 )
 
@@ -196,10 +198,11 @@ type AuditLogger interface {
 	LogAction(ctx context.Context, adminID, action, entityType, entityID string, before, after map[string]any) error
 }
 
-// AuthClient validates bearer tokens and revokes sessions. Implemented by auth.Manager.
+// AuthClient validates bearer tokens, including derived-session issuance under
+// the canonical account lock. Implemented by auth.Manager.
 type AuthClient interface {
 	ValidateAccessToken(ctx context.Context, token string) (string, error)
-	RevokeAccount(ctx context.Context, accountID string) error
+	ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token string) (string, error)
 }
 
 // Deps bundles the dependencies needed by the portal manager.
@@ -210,24 +213,29 @@ type Deps struct {
 	Profile  *profile.Manager
 	Economy  *economy.Manager
 	Admin    AuditLogger
-	Media    *media.Manager
 	Screener TextScreener
+	Now      func() time.Time
 }
 
 // Manager is the portal service.
 type Manager struct {
-	db       *sql.DB
-	cfg      *config.Config
-	auth     AuthClient
-	profile  *profile.Manager
-	economy  *economy.Manager
-	admin    AuditLogger
-	media    *media.Manager
-	screener TextScreener
+	disconnectMu sync.RWMutex
+	disconnect   func(context.Context, string) error
+	db           *sql.DB
+	cfg          *config.Config
+	auth         AuthClient
+	profile      *profile.Manager
+	economy      *economy.Manager
+	admin        AuditLogger
+	screener     TextScreener
+	nowFn        func() time.Time
 }
 
 // NewManager returns a portal manager.
 func NewManager(deps Deps) *Manager {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
 	return &Manager{
 		db:       deps.DB,
 		cfg:      deps.Config,
@@ -235,8 +243,8 @@ func NewManager(deps Deps) *Manager {
 		profile:  deps.Profile,
 		economy:  deps.Economy,
 		admin:    deps.Admin,
-		media:    deps.Media,
 		screener: deps.Screener,
+		nowFn:    deps.Now,
 	}
 }
 
@@ -265,16 +273,21 @@ func (m *Manager) ApplyForRole(ctx context.Context, accountID string, role Role)
 	if p.Level < m.cfg.Tuning.Portal.MinAccountLevelToApply {
 		return fmt.Errorf("account level %d below required %d", p.Level, m.cfg.Tuning.Portal.MinAccountLevelToApply)
 	}
-	_, err = m.db.ExecContext(ctx,
-		`INSERT INTO portal_role_applications (account_id, role, status, applied_at)
+	return store.WithValueTransaction(ctx, m.db, func(tx *sql.Tx) error {
+		if err := m.authorizePortalWriteTx(ctx, tx, accountID, "", false); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx,
+			`INSERT INTO portal_role_applications (account_id, role, status, applied_at)
 		 VALUES ($1, $2, 'pending', now())
 		 ON CONFLICT (account_id, role) WHERE status = 'pending' DO NOTHING`,
-		accountID, string(role),
-	)
-	if err != nil {
-		return fmt.Errorf("insert application: %w", err)
-	}
-	return nil
+			accountID, string(role),
+		)
+		if err != nil {
+			return fmt.Errorf("insert application: %w", err)
+		}
+		return nil
+	})
 }
 
 // ListApplications returns pending (or all) role applications.
@@ -340,11 +353,17 @@ func (m *Manager) GrantRole(ctx context.Context, adminID, accountID string, role
 	}
 	defer tx.Rollback()
 
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now(), accountID); err != nil {
+		return err
+	}
 	var oldRole sql.NullString
-	_ = tx.QueryRowContext(ctx,
+	err = tx.QueryRowContext(ctx,
 		"SELECT role FROM portal_roles WHERE account_id = $1 AND role = $2 AND revoked_at IS NULL",
 		accountID, string(role),
 	).Scan(&oldRole)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
 
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO portal_roles (account_id, role, granted_by, granted_at, created_at, updated_at)
@@ -374,6 +393,9 @@ func (m *Manager) GrantRole(ctx context.Context, adminID, accountID string, role
 		before["role"] = oldRole.String
 	}
 	if err := auditTx(ctx, tx, adminID, "portal_role_grant", "portal_role", accountID, before, map[string]any{"role": string(role)}); err != nil {
+		return err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -421,10 +443,16 @@ func (m *Manager) CreateTermsVersion(ctx context.Context, adminID, version, titl
 		return err
 	}
 	defer tx.Rollback()
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
+		return err
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO portal_terms(version,title,body,active_from) VALUES($1,$2,$3,$4)`, version, title, body, activeFrom); err != nil {
 		return err
 	}
 	if err = auditTx(ctx, tx, adminID, "portal_terms_create", "portal_terms", version, map[string]any{}, map[string]any{"title": title, "body": body, "active_from": activeFrom}); err != nil {
+		return err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -441,15 +469,28 @@ func (m *Manager) RejectApplication(ctx context.Context, adminID, applicationID,
 		return err
 	}
 	defer tx.Rollback()
-	res, err := tx.ExecContext(ctx, `UPDATE portal_role_applications SET status='rejected',decided_at=now(),decided_by=$2,reason=$3,updated_at=now() WHERE id=$1 AND status='pending'`, applicationID, adminID, reason)
+	var account string
+	if err = tx.QueryRowContext(ctx, `SELECT account_id FROM portal_role_applications WHERE id=$1`, applicationID).Scan(&account); err != nil {
+		return fmt.Errorf("application unavailable")
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now(), account); err != nil {
+		return err
+	}
+	res, err := tx.ExecContext(ctx, `UPDATE portal_role_applications SET status='rejected',decided_at=now(),decided_by=$2,reason=$3,updated_at=now() WHERE id=$1 AND status='pending' AND account_id=$4`, applicationID, adminID, reason, account)
 	if err != nil {
 		return err
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
 	if n != 1 {
 		return fmt.Errorf("application not found or already decided")
 	}
 	if err = auditTx(ctx, tx, adminID, "portal_application_reject", "portal_role_application", applicationID, map[string]any{"status": "pending"}, map[string]any{"status": "rejected", "reason": reason}); err != nil {
+		return err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -465,15 +506,24 @@ func (m *Manager) RevokeRole(ctx context.Context, adminID, accountID string, rol
 		return err
 	}
 	defer tx.Rollback()
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now(), accountID); err != nil {
+		return err
+	}
 	res, err := tx.ExecContext(ctx, `UPDATE portal_roles SET revoked_at=now(),revoked_by=$3,updated_at=now() WHERE account_id=$1 AND role=$2 AND revoked_at IS NULL`, accountID, string(role), adminID)
 	if err != nil {
 		return err
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
 	if n != 1 {
 		return fmt.Errorf("no active role")
 	}
 	if err = auditTx(ctx, tx, adminID, "portal_role_revoke", "portal_role", accountID, map[string]any{"status": "active", "role": string(role)}, map[string]any{"status": "revoked", "role": string(role)}); err != nil {
+		return err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -533,8 +583,9 @@ func (m *Manager) ActiveRole(ctx context.Context, accountID string) (Role, error
 
 // CreateDraft creates a draft submission.
 func (m *Manager) CreateDraft(ctx context.Context, accountID string, mediaType MediaType, content string, consent ...ContributionConsent) (*Submission, error) {
-	content = strings.TrimSpace(content)
-	if mediaType != MediaText || content == "" || len(content) > m.MaxTextBytes() {
+	normalized, validationErr := m.normalizedContribution(content)
+	content = normalized
+	if mediaType != MediaText || validationErr != nil {
 		return nil, fmt.Errorf("text content must contain 1 to %d bytes", m.MaxTextBytes())
 	}
 	if len(consent) != 1 || !consent[0].Accepted {
@@ -552,6 +603,9 @@ func (m *Manager) CreateDraft(ctx context.Context, accountID string, mediaType M
 		return nil, err
 	}
 	defer tx.Rollback()
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, RoleContributor, true); err != nil {
+		return nil, err
+	}
 	var version string
 	if err = tx.QueryRowContext(ctx, `SELECT version FROM portal_terms WHERE active_from<=now() ORDER BY active_from DESC,version DESC LIMIT 1 FOR SHARE`).Scan(&version); err != nil {
 		return nil, err
@@ -576,8 +630,9 @@ func (m *Manager) CreateDraft(ctx context.Context, accountID string, mediaType M
 // EditDraft can change only the owner's unsubmitted text. Submitted revisions
 // require a withdrawal and another counted submission.
 func (m *Manager) EditDraft(ctx context.Context, accountID, id, content string) error {
-	content = strings.TrimSpace(content)
-	if content == "" || len(content) > m.MaxTextBytes() {
+	normalized, validationErr := m.normalizedContribution(content)
+	content = normalized
+	if validationErr != nil {
 		return fmt.Errorf("text content must contain 1 to %d bytes", m.MaxTextBytes())
 	}
 	has, err := m.HasRole(ctx, accountID, RoleContributor)
@@ -592,6 +647,9 @@ func (m *Manager) EditDraft(ctx context.Context, accountID, id, content string) 
 		return err
 	}
 	defer tx.Rollback()
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, RoleContributor, true); err != nil {
+		return err
+	}
 	var old string
 	if err = tx.QueryRowContext(ctx, `SELECT content FROM portal_submissions WHERE id=$1 AND account_id=$2 AND status='draft' AND media_type='text' FOR UPDATE`, id, accountID).Scan(&old); err != nil {
 		return fmt.Errorf("only your own draft can be edited")
@@ -620,14 +678,11 @@ func (m *Manager) SubmitDraft(ctx context.Context, accountID, submissionID strin
 		return err
 	}
 	defer tx.Rollback()
-	// A stable account row exists before the first counter row. Lock it first so
-	// two first submissions cannot both observe an absent daily counter.
-	var locked string
-	if err = tx.QueryRowContext(ctx, `SELECT id FROM accounts WHERE id=$1 AND banned_at IS NULL FOR UPDATE`, accountID).Scan(&locked); err != nil {
-		return fmt.Errorf("account unavailable")
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, RoleContributor, true); err != nil {
+		return err
 	}
-	var owner, status, terms string
-	if err = tx.QueryRowContext(ctx, `SELECT account_id,status,terms_version FROM portal_submissions WHERE id=$1 FOR UPDATE`, submissionID).Scan(&owner, &status, &terms); err != nil {
+	var owner, status, terms, content string
+	if err = tx.QueryRowContext(ctx, `SELECT account_id,status,terms_version,content FROM portal_submissions WHERE id=$1 FOR UPDATE`, submissionID).Scan(&owner, &status, &terms, &content); err != nil {
 		return fmt.Errorf("submission unavailable")
 	}
 	if owner != accountID {
@@ -635,6 +690,9 @@ func (m *Manager) SubmitDraft(ctx context.Context, accountID, submissionID strin
 	}
 	if status != "draft" {
 		return fmt.Errorf("submission not draft")
+	}
+	if normalized, err := m.normalizedContribution(content); err != nil || normalized != content {
+		return fmt.Errorf("text content requires a reviewed new draft")
 	}
 	var current string
 	if err = tx.QueryRowContext(ctx, `SELECT version FROM portal_terms WHERE active_from<=now() ORDER BY active_from DESC,version DESC LIMIT 1`).Scan(&current); err != nil {
@@ -667,14 +725,14 @@ func (m *Manager) SubmitDraft(ctx context.Context, accountID, submissionID strin
 	return tx.Commit()
 }
 
-// DecideSubmission approves or rejects a submission. Only curators/admins may decide.
+// DecideSubmission approves or rejects a submission through the admin workflow.
 func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID string, approve bool, reason string, revision ...string) error {
+	pending, err := m.GetSubmission(ctx, submissionID)
+	if err != nil {
+		return err
+	}
 	var screenedContent string
 	if approve {
-		pending, err := m.GetSubmission(ctx, submissionID)
-		if err != nil {
-			return err
-		}
 		if pending.Status != StatusSubmitted && pending.Status != StatusInReview {
 			return fmt.Errorf("submission not in reviewable state")
 		}
@@ -698,6 +756,11 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
+	// Screening stays outside the transaction. Lock the observed contributor
+	// alongside the actor before submission, wallet and profile rows.
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now(), pending.AccountID); err != nil {
+		return err
+	}
 
 	var s Submission
 	var assetRef sql.NullString
@@ -711,6 +774,9 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 	}
 	s.AssetRef = assetRef.String
 	s.ToneBucket = toneBucket.String
+	if s.AccountID != pending.AccountID {
+		return fmt.Errorf("submission owner changed during review")
+	}
 	if approve && s.Content != screenedContent {
 		return fmt.Errorf("submission changed during screening; review again")
 	}
@@ -750,6 +816,9 @@ func (m *Manager) DecideSubmission(ctx context.Context, adminID, submissionID st
 	if err := auditTx(ctx, tx, adminID, "submission_decide", "submission", submissionID, before, after); err != nil {
 		return err
 	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -783,6 +852,9 @@ func (m *Manager) WithdrawSubmission(ctx context.Context, accountID, submissionI
 		return err
 	}
 	defer tx.Rollback()
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, "", false); err != nil {
+		return err
+	}
 	var old string
 	if err = tx.QueryRowContext(ctx, `SELECT status FROM portal_submissions WHERE id=$1 AND account_id=$2 AND status IN ('submitted','in_review') FOR UPDATE`, submissionID, accountID).Scan(&old); err != nil {
 		return fmt.Errorf("submission not withdrawable")
@@ -862,224 +934,22 @@ func (m *Manager) ListSubmissions(ctx context.Context, accountID, status string)
 	return scanSubmissions(rows)
 }
 
-// ── Guard freezes ──────────────────────────────────────────────────────────
-
-// FreezeAccount creates a timeboxed Guard freeze. It immediately revokes the
-// account's sessions by setting banned_at, which drops live connections.
-func (m *Manager) FreezeAccount(ctx context.Context, guardAdminID, accountID, reason string) error {
-	maxH := m.cfg.Tuning.Portal.GuardFreezeMaxH
-	if maxH <= 0 {
-		maxH = 48
-	}
-	expires := time.Now().UTC().Add(time.Duration(maxH) * time.Hour)
-
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	// One active freeze per Guard per target.
-	var active int
-	if err := tx.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM guard_freezes
-		 WHERE account_id = $1 AND frozen_by = $2
-		   AND dismissed_at IS NULL AND converted_to_ban_at IS NULL
-		   AND expires_at > now()`,
-		accountID, guardAdminID,
-	).Scan(&active); err != nil {
-		return fmt.Errorf("check active freeze: %w", err)
-	}
-	if active > 0 {
-		return fmt.Errorf("guard already has active freeze on target")
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		`INSERT INTO guard_freezes (account_id, frozen_by, reason, frozen_at, expires_at, created_at, updated_at)
-		 VALUES ($1, $2, $3, now(), $4, now(), now())`,
-		accountID, guardAdminID, reason, expires,
-	); err != nil {
-		return fmt.Errorf("insert freeze: %w", err)
-	}
-
-	if _, err := tx.ExecContext(ctx,
-		"UPDATE accounts SET banned_at = now(), updated_at = now() WHERE id = $1",
-		accountID,
-	); err != nil {
-		return fmt.Errorf("ban account: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("commit freeze: %w", err)
-	}
-
-	_ = m.auth.RevokeAccount(ctx, accountID)
-	_ = m.admin.LogAction(ctx, guardAdminID, "guard_freeze", "account", accountID,
-		map[string]any{"banned_at": nil},
-		map[string]any{"banned_at": time.Now().UTC(), "expires_at": expires, "reason": reason},
-	)
-	return nil
-}
-
-// DismissFreeze clears a Guard freeze and unbans the account.
-func (m *Manager) DismissFreeze(ctx context.Context, adminID, freezeID string) error {
-	var accountID string
-	err := m.db.QueryRowContext(ctx,
-		`UPDATE guard_freezes
-		 SET dismissed_at = now(), dismissed_by = $2, updated_at = now()
-		 WHERE id = $1 AND dismissed_at IS NULL AND converted_to_ban_at IS NULL
-		 RETURNING account_id`,
-		freezeID, adminID,
-	).Scan(&accountID)
-	if err != nil {
-		return fmt.Errorf("dismiss freeze: %w", err)
-	}
-	if _, err := m.db.ExecContext(ctx,
-		"UPDATE accounts SET banned_at = NULL, updated_at = now() WHERE id = $1 AND banned_at IS NOT NULL",
-		accountID,
-	); err != nil {
-		return fmt.Errorf("unban account: %w", err)
-	}
-	_ = m.admin.LogAction(ctx, adminID, "guard_freeze_dismiss", "account", accountID,
-		map[string]any{"status": "frozen"},
-		map[string]any{"status": "dismissed"},
-	)
-	return nil
-}
-
-// ConvertFreezeToBan makes a Guard freeze permanent.
-func (m *Manager) ConvertFreezeToBan(ctx context.Context, adminID, freezeID, banReason string) error {
-	var accountID string
-	err := m.db.QueryRowContext(ctx,
-		`UPDATE guard_freezes
-		 SET converted_to_ban_at = now(), converted_to_ban_by = $2, updated_at = now()
-		 WHERE id = $1 AND dismissed_at IS NULL AND converted_to_ban_at IS NULL
-		 RETURNING account_id`,
-		freezeID, adminID,
-	).Scan(&accountID)
-	if err != nil {
-		return fmt.Errorf("convert freeze: %w", err)
-	}
-	if _, err := m.db.ExecContext(ctx,
-		"UPDATE accounts SET banned_at = now(), updated_at = now() WHERE id = $1",
-		accountID,
-	); err != nil {
-		return fmt.Errorf("ban account: %w", err)
-	}
-	_ = m.auth.RevokeAccount(ctx, accountID)
-	_ = m.admin.LogAction(ctx, adminID, "guard_freeze_convert_ban", "account", accountID,
-		map[string]any{"status": "frozen"},
-		map[string]any{"status": "banned", "reason": banReason},
-	)
-	return nil
-}
-
-// ListActiveFreezes returns freezes that have not expired, been dismissed, or converted.
-func (m *Manager) ListActiveFreezes(ctx context.Context) ([]map[string]any, error) {
-	rows, err := m.db.QueryContext(ctx,
-		`SELECT id, account_id, frozen_by, reason, frozen_at, expires_at
-		 FROM guard_freezes
-		 WHERE dismissed_at IS NULL AND converted_to_ban_at IS NULL AND expires_at > now()
-		 ORDER BY frozen_at DESC`)
-	if err != nil {
-		return nil, fmt.Errorf("query freezes: %w", err)
-	}
-	defer rows.Close()
-	var out []map[string]any
-	for rows.Next() {
-		var id, accountID, frozenBy, reason string
-		var frozenAt, expiresAt time.Time
-		if err := rows.Scan(&id, &accountID, &frozenBy, &reason, &frozenAt, &expiresAt); err != nil {
-			return nil, fmt.Errorf("scan freeze: %w", err)
-		}
-		out = append(out, map[string]any{
-			"id": id, "account_id": accountID, "frozen_by": frozenBy,
-			"reason": reason, "frozen_at": frozenAt, "expires_at": expiresAt,
-		})
-	}
-	return out, rows.Err()
-}
-
-// ExpireFreezes clears any freezes past their expiry and unbans the account if
-// no other active freeze exists. Safe to call on startup and periodically.
-func (m *Manager) ExpireFreezes(ctx context.Context) error {
-	tx, err := m.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
-	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
-	}
-	defer tx.Rollback()
-
-	rows, err := tx.QueryContext(ctx,
-		`SELECT id, account_id FROM guard_freezes
-		 WHERE dismissed_at IS NULL AND converted_to_ban_at IS NULL
-		   AND expires_at <= now() FOR UPDATE`)
-	if err != nil {
-		return fmt.Errorf("query expired freezes: %w", err)
-	}
-	type freezeRef struct {
-		id        string
-		accountID string
-	}
-	var refs []freezeRef
-	for rows.Next() {
-		var r freezeRef
-		if err := rows.Scan(&r.id, &r.accountID); err != nil {
-			rows.Close()
-			return fmt.Errorf("scan expired freeze: %w", err)
-		}
-		refs = append(refs, r)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	for _, r := range refs {
-		if _, err := tx.ExecContext(ctx,
-			"UPDATE guard_freezes SET updated_at = now() WHERE id = $1",
-			r.id,
-		); err != nil {
-			return fmt.Errorf("touch expired freeze: %w", err)
-		}
-		var active int
-		if err := tx.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM guard_freezes
-			 WHERE account_id = $1 AND dismissed_at IS NULL AND converted_to_ban_at IS NULL
-			   AND expires_at > now()`,
-			r.accountID,
-		).Scan(&active); err != nil {
-			return fmt.Errorf("check remaining freezes: %w", err)
-		}
-		if active == 0 {
-			if _, err := tx.ExecContext(ctx,
-				"UPDATE accounts SET banned_at = NULL, updated_at = now() WHERE id = $1",
-				r.accountID,
-			); err != nil {
-				return fmt.Errorf("unban on expiry: %w", err)
-			}
-		}
-	}
-	return tx.Commit()
-}
-
 // ── Weekly Nown Challenge ──────────────────────────────────────────────────
 
 // CreateChallengeTopic publishes a new weekly topic.
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-// EnsureActiveTermsVersion creates a portal_terms row for the configured active
-// version if one does not already exist. This lets deployments start from a
-// fresh database without an admin first creating the terms record.
+// EnsureActiveTermsVersion only validates a configured, published terms record.
+// Legal text must be supplied explicitly; startup must never manufacture consent.
 func (m *Manager) EnsureActiveTermsVersion(ctx context.Context) error {
 	version := m.activeTermsVersion()
-	_, err := m.db.ExecContext(ctx,
-		`INSERT INTO portal_terms (version, title, body, active_from)
-		 VALUES ($1, $2, $3, now())
-		 ON CONFLICT (version) DO NOTHING`,
-		version, "Contribution Terms "+version, "Terms body for "+version,
-	)
+	var exists bool
+	err := m.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM portal_terms WHERE version=$1 AND active_from<=now() AND length(btrim(title))>0 AND length(btrim(body))>0)`, version).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("ensure portal terms %s: %w", version, err)
+	}
+	if !exists {
+		return fmt.Errorf("published contribution terms required")
 	}
 	return nil
 }
@@ -1220,9 +1090,19 @@ func (m *Manager) ApproveApplication(ctx context.Context, adminID, applicationID
 		return err
 	}
 	defer tx.Rollback()
+	var target string
+	if err = tx.QueryRowContext(ctx, `SELECT account_id FROM portal_role_applications WHERE id=$1`, applicationID).Scan(&target); err != nil {
+		return fmt.Errorf("application unavailable")
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now(), target); err != nil {
+		return err
+	}
 	var account, role, status string
 	if err = tx.QueryRowContext(ctx, `SELECT account_id,role,status FROM portal_role_applications WHERE id=$1 FOR UPDATE`, applicationID).Scan(&account, &role, &status); err != nil {
 		return fmt.Errorf("application unavailable")
+	}
+	if account != target {
+		return fmt.Errorf("application changed during review")
 	}
 	if status != "pending" {
 		return fmt.Errorf("application already decided")
@@ -1237,6 +1117,9 @@ func (m *Manager) ApproveApplication(ctx context.Context, adminID, applicationID
 		return err
 	}
 	if err = auditTx(ctx, tx, adminID, "portal_application_approve", "portal_role_application", applicationID, map[string]any{"status": "pending"}, map[string]any{"status": "approved", "role": role, "account_id": account}); err != nil {
+		return err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return err
 	}
 	return tx.Commit()

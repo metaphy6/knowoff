@@ -40,6 +40,32 @@ func TestTextRuntimeRecoveryMustDrainBeforeAdmission(t *testing.T) {
 	}
 }
 
+func TestTextRuntimeRoomRecoveryBatchesBeforeAdmission(t *testing.T) {
+	calls := 0
+	err := recoverRoomRuntime(t.Context(), func(ctx context.Context, limit int) (int, error) {
+		calls++
+		if limit != 100 || ctx.Err() != nil {
+			t.Fatal("unbounded or canceled recovery")
+		}
+		if calls < 3 {
+			return limit, nil
+		}
+		return 17, nil
+	})
+	if err != nil || calls != 3 {
+		t.Fatal("pending room recovery not drained", calls, err)
+	}
+	expected := errors.New("receipt unavailable")
+	if err := recoverRoomRuntime(t.Context(), func(context.Context, int) (int, error) { return 0, expected }); !errors.Is(err, expected) {
+		t.Fatal("startup recovery failure swallowed", err)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	if err := recoverRoomRuntime(ctx, func(context.Context, int) (int, error) { t.Error("canceled startup queried receipts"); return 0, nil }); !errors.Is(err, context.Canceled) {
+		t.Fatal(err)
+	}
+}
+
 type fakeTextDrain struct {
 	drained           bool
 	active            int
@@ -47,8 +73,8 @@ type fakeTextDrain struct {
 	closeContextAlive bool
 }
 
-func (f *fakeTextDrain) Drain()             { f.drained = true }
-func (f *fakeTextDrain) ActiveMatches() int { return f.active }
+func (f *fakeTextDrain) DrainContext(context.Context) error                { f.drained = true; return nil }
+func (f *fakeTextDrain) ActiveMatchesContext(context.Context) (int, error) { return f.active, nil }
 func (f *fakeTextDrain) Close(ctx context.Context) error {
 	f.closed = true
 	f.closeContextAlive = ctx.Err() == nil

@@ -3,18 +3,17 @@
 Containerized nginx in front of the Flutter web client and the Go game
 server, publishing everything under friendly `*.knowoff.local` names with
 TLS and a strong security-header baseline. This is a **local-development**
-convenience layer — it is not the public ingress (that's Cloudflare Tunnel;
-see `infra/compose/config/cloudflared/` and BLUEPRINT.md 📦 §2).
+convenience layer. Public ingress remains an operator-selected deployment step;
+Cloudflare Tunnel is currently commented out in Compose (see BLUEPRINT.md 📦 §2).
 
 ## Domains
 
 | Domain | Proxies to | Notes |
 |---|---|---|
-| `app.knowoff.local` | `client-web:8000` | The Flutter web client (dev live-reload container). |
-| `api.knowoff.local` | `server:8080` | The public game server — REST + `/ws` WebSocket. |
-| `admin.knowoff.local` | `server:9090` | The Admin Console / Contributor Portal admin routes / Media Workbench. Never expose this vhost outside your dev machine. |
+| `app.knowoff.local` | `client-web:8000` | Requires explicitly enabling the currently commented-out client service. |
+| `api.knowoff.local` | `server:8080` | The public game server — REST + `/ws/v2` WebSocket. |
+| `admin.knowoff.local` | `server:9090` | The Admin Console / Contributor Portal admin routes / text content operations. Never expose this vhost outside your dev machine. |
 | `adminer.knowoff.local` | `adminer:8080` | Postgres browser UI. |
-| `minio.knowoff.local` | `minio:9001` | MinIO console (bucket browser). The S3 API port (9000) is intentionally not proxied — see `conf.d/minio.knowoff.local.conf`. |
 
 Resolve these names to `127.0.0.1` with:
 
@@ -73,15 +72,15 @@ subdomains can still talk to each other).
 `Content-Security-Policy` is set per-vhost instead, because the right
 policy differs by surface:
 
-- `api.knowoff.local` — `default-src 'none'`. Pure JSON/WebSocket, no HTML.
+- `api.knowoff.local` — `default-src 'none'`. JSON/WebSocket plus the
+  resource-free OAuth confirmation page.
 - `admin.knowoff.local` — `default-src 'self'`, server-rendered HTML.
 - `app.knowoff.local` — `'self'` plus `'wasm-unsafe-eval'` and `worker-src blob:`,
   which the Flutter web engine's CanvasKit/skwasm renderer needs to compile
   and run its WASM payload in a worker. Loosen further only if your
   browser's devtools console logs a CSP violation for your specific build.
-- `adminer.knowoff.local` / `minio.knowoff.local` — no CSP. Both are
-  third-party bundled UIs with inline script/style; a strict CSP would
-  break them, and they're dev conveniences, not a Knowoff product surface.
+- `adminer.knowoff.local` — no CSP. This third-party bundled UI needs inline
+  script/style; it is a dev convenience, not a Knowoff product surface.
 
 ## Performance
 
@@ -100,3 +99,18 @@ make label.version SERVICE=nginx VERSION=0.2.0
 ```
 
 See [`xops/makefile/labels_ops.py`](../xops/makefile/labels_ops.py).
+
+## Verified infrastructure boundary
+
+The active proxy has no object-store upstream, console vhost, or playable-image
+CSP origin. Avatar/blob images, web icons, Flutter assets and font origins remain.
+Removing the old vhost does not remove any previously created archive volume.
+
+`python3 -m unittest discover -s xops/test -p test_infra.py -v` (repository root)
+builds this Dockerfile and exercises actual TLS/config syntax plus callback
+success and stopped-upstream failure. Synthetic code/state/Referer sentinels must
+be absent from access/error logs; ordinary path/status errors remain observable.
+The test uses private temporary certificates and an isolated synthetic upstream,
+not real provider credentials or a deployed game server. Callback access/error
+logs are disabled in its exact location because nginx upstream error messages can
+otherwise repeat sensitive query values even with a sanitized access format.

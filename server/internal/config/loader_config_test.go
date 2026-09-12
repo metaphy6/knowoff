@@ -6,6 +6,7 @@ import (
 )
 
 func TestLoadLocalCap(t *testing.T) {
+	textConfigSecrets(t)
 	cfg, err := Load("../../../configs/base.yaml", "../../../configs/local.yaml")
 	if err != nil {
 		t.Fatalf("load: %v", err)

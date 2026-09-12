@@ -42,14 +42,7 @@ func (s *TextReleaseStore) dealing() media.TextDealTuning {
 	return media.TextDealTuning{HandSize: t.Hand.Size, ReserveSize: t.Hand.DrawPile, MinHigh: t.Dealing.MinHighPerNown, MinDistant: t.Dealing.MinDistantPerNown, MaxSearchNodes: t.TextCatalog.MaxSearchNodes}
 }
 func textAdmin(ctx context.Context, tx *sql.Tx, id string) error {
-	var role string
-	if err := tx.QueryRowContext(ctx, `SELECT ad.role FROM admin_accounts ad JOIN accounts a ON a.id=ad.account_id WHERE ad.id=$1 AND a.deleted_at IS NULL AND a.banned_at IS NULL FOR SHARE OF ad,a`, id).Scan(&role); err != nil {
-		return err
-	}
-	if role != "admin" && role != "superadmin" {
-		return errors.New("text.admin_required")
-	}
-	return nil
+	return LockAdminTx(ctx, tx, id, []string{"admin", "superadmin"})
 }
 func textReleaseAudit(ctx context.Context, tx *sql.Tx, admin, action, id string, detail any) error {
 	raw, err := json.Marshal(detail)
@@ -57,7 +50,10 @@ func textReleaseAudit(ctx context.Context, tx *sql.Tx, admin, action, id string,
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO admin_audit_log(admin_id,action,target_type,target_id,after_state) VALUES($1,$2,'text_release',$3,$4)`, admin, action, id, string(raw))
-	return err
+	if err != nil {
+		return err
+	}
+	return textAdmin(ctx, tx, admin)
 }
 
 type acceptedSource struct {
@@ -139,12 +135,15 @@ func (s *TextReleaseStore) CaptureAccepted(ctx context.Context, admin, kind, id 
 			return err
 		}
 		out.SourceID = old.SourceID
+		// Credit is frozen with the first accepted-input capture. A public profile
+		// rename does not alter consent, reviewed wording or existing attribution.
+		out.Attribution = old.Attribution
 		if oldText != current.text || old != out {
 			return ErrTextArchiveConflict
 		}
 		out = old
 		if old.SourceID != inputID {
-			return nil
+			return textAdmin(ctx, tx, admin)
 		}
 		return textReleaseAudit(ctx, tx, admin, "text_input_capture", inputID, map[string]string{"source_kind": kind, "source_id": id})
 	})
@@ -187,7 +186,7 @@ func (s *TextReleaseStore) Publish(ctx context.Context, admin string, candidate 
 			if oldHash != lineage.ManifestSHA256 || oldSnapshot != lineage.SnapshotSHA256 || oldClass != access.Class || oldKey != access.EntitlementKey {
 				return ErrTextArchiveConflict
 			}
-			return nil
+			return textAdmin(ctx, tx, admin)
 		}
 		if err != sql.ErrNoRows {
 			return err
@@ -286,7 +285,7 @@ func (s *TextReleaseStore) Activate(ctx context.Context, admin, id string) error
 			return err
 		}
 		if old == id {
-			return nil
+			return textAdmin(ctx, tx, admin)
 		}
 		if _, err = tx.ExecContext(ctx, `INSERT INTO text_active_releases(language,rules_version,access_key,release_id) VALUES($1,$2,$3,$4) ON CONFLICT(language,rules_version,access_key) DO UPDATE SET release_id=EXCLUDED.release_id,activated_at=now()`, m.Language, m.RulesVersion, key, id); err != nil {
 			return err
@@ -295,32 +294,35 @@ func (s *TextReleaseStore) Activate(ctx context.Context, admin, id string) error
 	})
 }
 func (s *TextReleaseStore) Takedown(ctx context.Context, admin, id, reason string) error {
-	if reason == "" || len(reason) > 1024 {
+	return WithValueTransaction(ctx, s.db, func(tx *sql.Tx) error { return s.TakedownTx(ctx, tx, admin, id, reason) })
+}
+
+// TakedownTx lets a moderation case share the release withdrawal transaction.
+// Caller commits or rolls back; no notices or public match state are mutated.
+func (s *TextReleaseStore) TakedownTx(ctx context.Context, tx *sql.Tx, admin, id, reason string) error {
+	if tx == nil || reason == "" || len(reason) > 1024 {
 		return ErrTextArchiveConflict
 	}
-	return WithValueTransaction(ctx, s.db, func(tx *sql.Tx) error {
-		if err := textAdmin(ctx, tx, admin); err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `LOCK TABLE text_releases IN SHARE ROW EXCLUSIVE MODE`); err != nil {
-			return err
-		}
-		result, err := tx.ExecContext(ctx, `UPDATE text_releases SET withdrawn_at=now() WHERE release_id=$1 AND withdrawn_at IS NULL`, id)
-		if err != nil {
-			return err
-		}
-		n, err := result.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			return nil
-		}
-		if _, err = tx.ExecContext(ctx, `DELETE FROM text_active_releases WHERE release_id=$1`, id); err != nil {
-			return err
-		}
-		return textReleaseAudit(ctx, tx, admin, "text_release_takedown", id, map[string]string{"reason": reason})
-	})
+	if err := textAdmin(ctx, tx, admin); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `LOCK TABLE text_releases IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return err
+	}
+	var withdrawn sql.NullTime
+	if err := tx.QueryRowContext(ctx, `SELECT withdrawn_at FROM text_releases WHERE release_id=$1`, id).Scan(&withdrawn); err != nil {
+		return ErrTextReleaseUnavailable
+	}
+	if withdrawn.Valid {
+		return textAdmin(ctx, tx, admin)
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE text_releases SET withdrawn_at=now() WHERE release_id=$1`, id); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM text_active_releases WHERE release_id=$1`, id); err != nil {
+		return err
+	}
+	return textReleaseAudit(ctx, tx, admin, "text_release_takedown", id, map[string]string{"reason": reason})
 }
 
 // Resolve chooses the active free core release. Explicit pack choices use ResolveRelease.
@@ -470,7 +472,8 @@ func (s *TextReleaseStore) checkPackAccess(ctx context.Context, tx *sql.Tx, spon
 		return ErrTextReleaseUnavailable
 	}
 	var owns bool
-	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type='theme_pack' AND value=$2 AND (active_until IS NULL OR active_until>$3))`, sponsor, access.EntitlementKey, valueTime(at)).Scan(&owns)
+	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM entitlements WHERE account_id=$1 AND entitlement_type='theme_pack' AND value=$2 AND (active_until IS NULL OR active_until>$3))
+	 OR EXISTS(SELECT 1 FROM named_entitlement_items WHERE account_id=$1 AND entitlement_type='theme_pack' AND value=$2)`, sponsor, access.EntitlementKey, valueTime(at)).Scan(&owns)
 	if err != nil {
 		return err
 	}

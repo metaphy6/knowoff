@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/knowoff/knowoff/server/internal/economy"
 )
 
 // ContributionConsent records the exact terms shown and explicitly accepted.
@@ -55,14 +54,19 @@ func (m *Manager) maxChallengeEntries() int {
 	return n
 }
 func (m *Manager) MaxTextBytes() int {
-	n := m.cfg.Tuning.Portal.MaxTextSubmissionLength
-	if n <= 0 {
-		return 2000
+	portalMax := m.cfg.Tuning.Portal.MaxTextSubmissionLength
+	contractMax := m.cfg.Tuning.Contract.MaxTextBytes
+	if portalMax < 1 || contractMax < 1 {
+		return 0
 	}
-	return n
+	if portalMax < contractMax {
+		return portalMax
+	}
+	return contractMax
 }
+
 func weekMonday(t time.Time) time.Time {
-	day := serverDay(t)
+	day := serverDay(t.UTC())
 	return day.AddDate(0, 0, -(int(day.Weekday())+6)%7)
 }
 func topicOpen(t *ChallengeTopic, now time.Time) bool {
@@ -78,6 +82,9 @@ func (m *Manager) CreateChallengeTopic(ctx context.Context, adminID string, week
 	if err := m.db.QueryRowContext(ctx, `SELECT content FROM portal_submissions WHERE id=$1 AND status IN ('approved','published') AND media_type='text'`, nownMediaID).Scan(&screenedText); err != nil {
 		return nil, errors.New("approved text topic required")
 	}
+	if normalized, err := m.normalizedContribution(screenedText); err != nil || normalized != screenedText {
+		return nil, errors.New("approved short text topic required")
+	}
 	if err := m.screenText(ctx, screenedText); err != nil {
 		return nil, err
 	}
@@ -86,6 +93,9 @@ func (m *Manager) CreateChallengeTopic(ctx context.Context, adminID string, week
 		return nil, err
 	}
 	defer tx.Rollback()
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
+		return nil, err
+	}
 	var status, kind, content string
 	if err = tx.QueryRowContext(ctx, `SELECT status,media_type,content FROM portal_submissions WHERE id=$1 FOR SHARE`, nownMediaID).Scan(&status, &kind, &content); err != nil {
 		return nil, errors.New("approved topic submission required")
@@ -98,11 +108,18 @@ func (m *Manager) CreateChallengeTopic(ctx context.Context, adminID string, week
 	}
 	id := uuid.NewString()
 	end := weekStart.AddDate(0, 0, 6)
-	_, err = tx.ExecContext(ctx, `INSERT INTO challenge_topics(id,week_start,week_end,nown_media_id,published_at) VALUES($1,$2::date,$3::date,$4,$5)`, id, weekStart, end, nownMediaID, weekStart)
+	var activated any
+	if !m.now().Before(weekStart) && m.now().Before(end.AddDate(0, 0, 1)) {
+		activated = m.now()
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO challenge_topics(id,week_start,week_end,nown_media_id,published_at,activated_at,source_revision) VALUES($1,$2::date,$3::date,$4,$5,$6,$7)`, id, weekStart, end, nownMediaID, weekStart, activated, ContentRevision(screenedText))
 	if err != nil {
 		return nil, err
 	}
 	if err = auditTx(ctx, tx, adminID, "challenge_topic_create", "challenge_topic", id, map[string]any{}, map[string]any{"week_start": weekStart, "nown_media_id": nownMediaID}); err != nil {
+		return nil, err
+	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -113,11 +130,11 @@ func (m *Manager) CreateChallengeTopic(ctx context.Context, adminID string, week
 
 // CurrentChallengeTopic includes a closed current week so its result stays visible.
 func (m *Manager) CurrentChallengeTopic(ctx context.Context) (*ChallengeTopic, error) {
-	return m.currentChallengeTopicAt(ctx, time.Now().UTC())
+	return m.currentChallengeTopicAt(ctx, m.now())
 }
 func (m *Manager) currentChallengeTopicAt(ctx context.Context, now time.Time) (*ChallengeTopic, error) {
 	var id string
-	err := m.db.QueryRowContext(ctx, `SELECT id FROM challenge_topics WHERE week_start<=$1::date AND week_end>=$1::date ORDER BY week_start DESC LIMIT 1`, serverDay(now.UTC())).Scan(&id)
+	err := m.db.QueryRowContext(ctx, `SELECT id FROM challenge_topics WHERE activated_at IS NOT NULL AND week_start<=$1::date AND week_end>=$1::date ORDER BY week_start DESC LIMIT 1`, serverDay(now.UTC())).Scan(&id)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -131,7 +148,7 @@ func (m *Manager) ActiveChallengeTopic(ctx context.Context) (*ChallengeTopic, er
 	if err != nil || t == nil {
 		return t, err
 	}
-	if !topicOpen(t, time.Now().UTC()) {
+	if !topicOpen(t, m.now()) {
 		return nil, nil
 	}
 	return t, nil
@@ -153,8 +170,9 @@ func (m *Manager) SubmitChallengeEntry(ctx context.Context, accountID, topicID s
 	if !m.portalAccountAllowed(ctx, accountID) {
 		return nil, errors.New("challenge_forbidden")
 	}
-	content = strings.TrimSpace(content)
-	if entryType != MediaText || content == "" || len(content) > m.MaxTextBytes() {
+	normalized, validationErr := m.normalizedContribution(content)
+	content = normalized
+	if entryType != MediaText || validationErr != nil {
 		return nil, errors.New("invalid_request")
 	}
 	if len(consent) != 1 || !consent[0].Accepted {
@@ -169,7 +187,10 @@ func (m *Manager) SubmitChallengeEntry(ctx context.Context, accountID, topicID s
 	if err != nil {
 		return nil, err
 	}
-	if !topicOpen(topic, time.Now().UTC()) {
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, "", true); err != nil {
+		return nil, err
+	}
+	if !topicOpen(topic, m.now()) {
 		return nil, errors.New("challenge_not_open")
 	}
 	var terms string
@@ -234,7 +255,10 @@ func (m *Manager) VoteChallengeEntry(ctx context.Context, accountID, topicID, en
 	if err != nil {
 		return err
 	}
-	if !topicOpen(topic, time.Now().UTC()) {
+	if err = m.authorizePortalWriteTx(ctx, tx, accountID, "", false); err != nil {
+		return err
+	}
+	if !topicOpen(topic, m.now()) {
 		return errors.New("challenge_not_open")
 	}
 	var owner, status string
@@ -245,6 +269,15 @@ func (m *Manager) VoteChallengeEntry(ctx context.Context, accountID, topicID, en
 		return errors.New("challenge_self_vote")
 	}
 	if status != "approved" {
+		return errors.New("challenge_entry_unavailable")
+	}
+	// The voter account lock also serializes either direction of a block write.
+	// Existing votes remain immutable; only new interaction with hidden UGC stops.
+	var blocked bool
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM player_blocks WHERE (actor_id=$1 AND target_id=$2) OR (actor_id=$2 AND target_id=$1))`, accountID, owner).Scan(&blocked); err != nil {
+		return err
+	}
+	if blocked {
 		return errors.New("challenge_entry_unavailable")
 	}
 	var id string
@@ -302,7 +335,10 @@ func (m *Manager) decideChallengeEntry(ctx context.Context, adminID, entryID str
 	if err != nil {
 		return err
 	}
-	if !topicOpen(topic, time.Now().UTC()) {
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
+		return err
+	}
+	if !topicOpen(topic, m.now()) {
 		return errors.New("challenge_not_open")
 	}
 	var status, content string
@@ -330,65 +366,19 @@ func (m *Manager) decideChallengeEntry(ctx context.Context, adminID, entryID str
 			nextSlot = n
 		}
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE challenge_entries SET status=$2,slot_number=$3,screen_decided_at=now(),screen_decided_by=$4,rejection_reason=$5,updated_at=now() WHERE id=$1`, entryID, next, nextSlot, adminID, reason)
+	_, err = tx.ExecContext(ctx, `UPDATE challenge_entries SET status=$2,slot_number=$3,screen_decided_at=COALESCE(screen_decided_at,now()),screen_decided_by=COALESCE(screen_decided_by,$4),rejection_reason=$5,updated_at=now() WHERE id=$1`, entryID, next, nextSlot, adminID, reason)
 	if err != nil {
 		return err
 	}
 	if err = auditTx(ctx, tx, adminID, "challenge_entry_"+next, "challenge_entry", entryID, map[string]any{"status": status}, map[string]any{"status": next, "reason": reason}); err != nil {
 		return err
 	}
+	if err = lockPortalAdmin(ctx, tx, adminID, m.now()); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
-func (m *Manager) CloseChallengeWeek(ctx context.Context, adminID, topicID string) (*ChallengeEntry, error) {
-	tx, err := m.db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	topic, err := lockTopic(ctx, tx, topicID)
-	if err != nil {
-		return nil, err
-	}
-	if time.Now().UTC().Before(topic.WeekStart) {
-		return nil, errors.New("challenge_not_open")
-	}
-	if topic.ClosedAt != nil {
-		var winner sql.NullString
-		if err = tx.QueryRowContext(ctx, `SELECT winner_entry_id FROM challenge_topics WHERE id=$1`, topicID).Scan(&winner); err != nil {
-			return nil, err
-		}
-		if !winner.Valid {
-			return nil, nil
-		}
-		return scanChallengeEntry(tx.QueryRowContext(ctx, `SELECT id,account_id,topic_id,entry_type,content,asset_ref,status,vote_count,slot_number,rejection_reason FROM challenge_entries WHERE id=$1`, winner.String))
-	}
-	winner, err := scanChallengeEntry(tx.QueryRowContext(ctx, `SELECT id,account_id,topic_id,entry_type,content,asset_ref,status,vote_count,slot_number,rejection_reason FROM challenge_entries WHERE topic_id=$1 AND status='approved' ORDER BY vote_count DESC,slot_number ASC,created_at,id LIMIT 1`, topicID))
-	if err != nil && err != sql.ErrNoRows {
-		return nil, err
-	}
-	if _, err = tx.ExecContext(ctx, `UPDATE challenge_topics SET closed_at=now(),winner_entry_id=$2,updated_at=now() WHERE id=$1`, topicID, nullableWinnerID(winner)); err != nil {
-		return nil, err
-	}
-	if winner != nil {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO challenge_winners(topic_id,entry_id,account_id,title_granted_at) VALUES($1,$2,$3,now())`, topicID, winner.ID, winner.AccountID); err != nil {
-			return nil, err
-		}
-		if _, err = m.economy.Wallet.GrantTx(ctx, tx, winner.AccountID, economy.LedgerChallengeWinner, m.cfg.Tuning.Noin.ChallengeWinner, "weekly nown challenge winner", 0); err != nil {
-			return nil, err
-		}
-		if err = m.profile.AddWeekWinnerTitleTx(ctx, tx, winner.AccountID); err != nil {
-			return nil, err
-		}
-	}
-	if err = auditTx(ctx, tx, adminID, "challenge_week_close", "challenge_topic", topicID, map[string]any{"closed_at": nil}, map[string]any{"winner_entry_id": nullableWinnerID(winner)}); err != nil {
-		return nil, err
-	}
-	if err = tx.Commit(); err != nil {
-		return nil, err
-	}
-	return winner, nil
-}
 func (m *Manager) GetChallengeTopic(ctx context.Context, id string) (*ChallengeTopic, error) {
 	var t ChallengeTopic
 	var closedAt sql.NullTime
@@ -463,7 +453,9 @@ func (m *Manager) ChallengeSnapshot(ctx context.Context, accountID string) (map[
 	if err != nil {
 		return nil, err
 	}
-	rows, err := m.db.QueryContext(ctx, `SELECT e.id,e.account_id,e.entry_type,e.content,e.vote_count,COALESCE(a.nickname,'') FROM challenge_entries e JOIN accounts a ON a.id=e.account_id WHERE e.topic_id=$1 AND e.status='approved' ORDER BY e.slot_number,e.created_at,e.id`, topic.ID)
+	rows, err := m.db.QueryContext(ctx, `SELECT e.id,e.account_id,e.entry_type,e.content,e.vote_count,COALESCE(a.nickname,'') FROM challenge_entries e JOIN accounts a ON a.id=e.account_id WHERE e.topic_id=$1 AND e.status='approved'
+	 AND NOT EXISTS(SELECT 1 FROM player_blocks b WHERE (b.actor_id=$2 AND b.target_id=e.account_id) OR (b.actor_id=e.account_id AND b.target_id=$2))
+	 ORDER BY e.slot_number,e.created_at,e.id LIMIT $3`, topic.ID, accountID, m.maxChallengeEntries())
 	if err != nil {
 		return nil, err
 	}
@@ -508,6 +500,6 @@ func (m *Manager) ChallengeSnapshot(ctx context.Context, accountID string) (map[
 		return nil, err
 	}
 	remaining := max(0, m.maxChallengeEntries()-admitted)
-	open := topicOpen(topic, time.Now().UTC())
+	open := topicOpen(topic, m.now())
 	return map[string]any{"topic": map[string]any{"id": topic.ID, "week_start": topic.WeekStart, "week_end": topic.WeekEnd, "closed_at": topic.ClosedAt, "winner_entry_id": topic.WinnerEntryID, "nown": map[string]any{"type": "text", "content": nown.Content}}, "entries": public, "own_entry": own, "voted_entry_id": vote, "terms": map[string]any{"version": terms.Version, "title": terms.Title, "body": terms.Body}, "intake_remaining": remaining, "can_submit": open && ownID == "" && remaining > 0, "can_vote": open && votedID == "", "max_text_bytes": m.MaxTextBytes()}, nil
 }

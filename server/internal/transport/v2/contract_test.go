@@ -6,8 +6,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/knowoff/knowoff/server/internal/transport"
 )
 
 var testLimits = Limits{MaxFrameBytes: 65536, MaxHistoryEvents: 1024, MaxHistoryPageEvents: 32, MaxTextBytes: 512, MaxRequestsPerSeat: 512}
@@ -105,12 +103,28 @@ func TestStrictJSONAndFrameBounds(t *testing.T) {
 	if err := Decode([]byte(valid), &ActionRequest{}, limits); errorCode(err) != ErrFrameTooLarge {
 		t.Fatalf("frame bound: %v", err)
 	}
-	if transport.ProtocolVersion != 1 {
-		t.Fatal("Phase 1 must not activate live v2")
+	// The retired Phase 1 boundary is now inverted: v2 is active and a v1
+	// action cannot enter the authoritative decoder even with otherwise valid IDs.
+	for _, f := range fixtures(t) {
+		if f.Kind != "action" || f.Code != "" {
+			continue
+		}
+		var fields map[string]any
+		if err := json.Unmarshal(f.Wire, &fields); err != nil {
+			t.Fatal(err)
+		}
+		fields["v"] = 1
+		legacy, err := json.Marshal(fields)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := Decode(legacy, &ActionRequest{}, testLimits); errorCode(err) != ErrVersion {
+			t.Fatalf("legacy version accepted or misclassified: %v", err)
+		}
+		return
 	}
-	if _, err := transport.DecodeEnvelope([]byte(valid), testLimits.MaxFrameBytes); err == nil {
-		t.Fatal("legacy decoder accepted v2")
-	}
+	t.Fatal("missing valid action fixture")
+
 }
 
 func TestRequestBudgetPreservesRetries(t *testing.T) {

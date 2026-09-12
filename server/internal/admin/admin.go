@@ -44,11 +44,12 @@ type Manager struct {
 
 // Admin is a row from admin_accounts.
 type Admin struct {
-	ID         string
-	AccountID  string
-	Email      string
-	Role       string
-	TOTPSecret string
+	ID           string
+	AccountID    string
+	Email        string
+	Role         string
+	TOTPSecret   string
+	SessionEpoch int64
 }
 
 // NewManager returns an admin console manager.
@@ -103,9 +104,12 @@ func (m *Manager) Authenticate(ctx context.Context, email, password string) (*Ad
 	var hash string
 	var a Admin
 	err := m.db.QueryRowContext(ctx,
-		`SELECT id, account_id, email, role, password_hash, totp_secret FROM admin_accounts WHERE email = $1`,
+		`SELECT a.id, a.account_id, a.email, a.role, a.password_hash, a.totp_secret, p.session_epoch
+		 FROM admin_accounts a JOIN accounts p ON p.id=a.account_id
+		 WHERE a.email=$1 AND p.deleted_at IS NULL AND p.banned_at IS NULL
+		 AND (p.suspended_until IS NULL OR p.suspended_until<=clock_timestamp())`,
 		email,
-	).Scan(&a.ID, &a.AccountID, &a.Email, &a.Role, &hash, &a.TOTPSecret)
+	).Scan(&a.ID, &a.AccountID, &a.Email, &a.Role, &hash, &a.TOTPSecret, &a.SessionEpoch)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("invalid credentials")
@@ -153,8 +157,30 @@ func (m *Manager) TOTPSecretForEmail(ctx context.Context, email string) (secret,
 	return secret, otpauthURL, nil
 }
 
-// CreateSession issues a new admin session and CSRF token.
+// CreateSession issues a session for trusted internal callers. Interactive login
+// must use CreateSessionForEpoch with the password verification's captured epoch.
 func (m *Manager) CreateSession(ctx context.Context, adminID string) (sessionID, csrfToken, cookieValue string, err error) {
+	return m.createSession(ctx, adminID, nil)
+}
+
+func (m *Manager) CreateSessionForEpoch(ctx context.Context, adminID string, epoch int64) (sessionID, csrfToken, cookieValue string, err error) {
+	return m.createSession(ctx, adminID, &epoch)
+}
+
+func (m *Manager) createSession(ctx context.Context, adminID string, expectedEpoch *int64) (sessionID, csrfToken, cookieValue string, err error) {
+	tx, err := m.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer tx.Rollback()
+	var epoch int64
+	err = tx.QueryRowContext(ctx, `SELECT p.session_epoch FROM accounts p
+		JOIN admin_accounts a ON a.account_id=p.id WHERE a.id=$1
+		AND p.deleted_at IS NULL AND p.banned_at IS NULL
+		AND (p.suspended_until IS NULL OR p.suspended_until<=clock_timestamp()) FOR UPDATE OF p`, adminID).Scan(&epoch)
+	if err != nil || expectedEpoch != nil && *expectedEpoch != epoch {
+		return "", "", "", fmt.Errorf("account session unavailable")
+	}
 	sessionID = uuid.NewString()
 	csrfToken, err = randomHex(32)
 	if err != nil {
@@ -162,13 +188,16 @@ func (m *Manager) CreateSession(ctx context.Context, adminID string) (sessionID,
 	}
 	ttl := time.Duration(m.cfg.Security.AdminSessionTTLH) * time.Hour
 	expiresAt := time.Now().UTC().Add(ttl)
-	_, err = m.db.ExecContext(ctx,
+	_, err = tx.ExecContext(ctx,
 		`INSERT INTO admin_sessions (id, admin_id, csrf_token, expires_at, last_activity)
 		 VALUES ($1, $2, $3, $4, now())`,
 		sessionID, adminID, csrfToken, expiresAt,
 	)
 	if err != nil {
 		return "", "", "", fmt.Errorf("insert session: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return "", "", "", err
 	}
 	return sessionID, csrfToken, sessionID, nil
 }
@@ -183,7 +212,7 @@ func (m *Manager) sessionDetails(ctx context.Context, sessionID string) (adminID
 		`SELECT a.id, a.role, s.csrf_token FROM admin_sessions s
 	   JOIN admin_accounts a ON a.id = s.admin_id
 	   JOIN accounts p ON p.id=a.account_id
-	   WHERE s.id = $1 AND s.expires_at > now() AND p.deleted_at IS NULL AND p.banned_at IS NULL`, sessionID).Scan(&adminID, &role, &csrf)
+	   WHERE s.id = $1 AND s.expires_at > now() AND p.deleted_at IS NULL AND p.banned_at IS NULL AND (p.suspended_until IS NULL OR p.suspended_until<=now())`, sessionID).Scan(&adminID, &role, &csrf)
 	if err != nil {
 		return "", "", "", fmt.Errorf("invalid session: %w", err)
 	}
@@ -303,8 +332,9 @@ func ClearSessionCookie(w http.ResponseWriter, secure ...bool) {
 	})
 }
 
-// TakedownAvatar removes a custom avatar and its entitlement.
-func (m *Manager) TakedownAvatar(ctx context.Context, accountID string) error {
+// TakedownAvatar removes the asset, cancels pending uploads and restores a preset.
+// The permanent upload entitlement is retained; takedown never grants a refund.
+func (m *Manager) TakedownAvatar(ctx context.Context, adminID, accountID string) error {
 	if _, err := uuid.Parse(accountID); err != nil {
 		return fmt.Errorf("invalid account id: %w", err)
 	}
@@ -313,13 +343,20 @@ func (m *Manager) TakedownAvatar(ctx context.Context, accountID string) error {
 		return fmt.Errorf("begin takedown tx: %w", err)
 	}
 	defer tx.Rollback()
+	if err = store.LockAdminTx(ctx, tx, adminID, []string{"admin"}, accountID); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM custom_avatars WHERE account_id = $1`, accountID); err != nil {
 		return fmt.Errorf("delete avatar: %w", err)
 	}
-	if _, err := tx.ExecContext(ctx,
-		`DELETE FROM entitlements WHERE account_id = $1 AND entitlement_type = 'custom_avatar'`,
-		accountID); err != nil {
-		return fmt.Errorf("delete entitlement: %w", err)
+	if _, err := tx.ExecContext(ctx, `UPDATE accounts SET avatar='default',avatar_revision=avatar_revision+1,updated_at=clock_timestamp() WHERE id=$1`, accountID); err != nil {
+		return fmt.Errorf("reset avatar: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `INSERT INTO admin_audit_log(admin_id,action,target_type,target_id,before_state,after_state) VALUES($1,'avatar_takedown','custom_avatar',$2,jsonb_build_object('account_id',$2::text),'{"status":"removed"}')`, adminID, accountID); err != nil {
+		return err
+	}
+	if err = store.LockAdminTx(ctx, tx, adminID, []string{"admin"}); err != nil {
+		return err
 	}
 	return tx.Commit()
 }

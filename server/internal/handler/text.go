@@ -16,6 +16,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/ratelimit"
 	"github.com/knowoff/knowoff/server/internal/store"
 	v2 "github.com/knowoff/knowoff/server/internal/transport/v2"
+	"github.com/knowoff/knowoff/server/pkg/gamecontract"
 )
 
 type TextAuth interface {
@@ -24,14 +25,43 @@ type TextAuth interface {
 type TextDeliveryAcker interface {
 	AcknowledgeDelivery(context.Context, int64, string, string, time.Time) error
 }
-type TextHandlerDeps struct {
-	Config         *config.Config
-	Lobby          *lobby.TextManager
-	Auth           TextAuth
-	ConnLimiter    *ratelimit.ConnLimiter
-	Deliveries     TextDeliveryAcker
-	DeliveryWorker string
+type TextConnectionGauge interface {
+	Inc()
+	Dec()
 }
+type TextConnectionCounter interface{ Inc() }
+type TextHandlerDeps struct {
+	Config               *config.Config
+	Lobby                *lobby.TextManager
+	Auth                 TextAuth
+	ConnLimiter          *ratelimit.ConnLimiter
+	Deliveries           TextDeliveryAcker
+	DeliveryWorker       string
+	Connections          TextConnectionGauge
+	ConnectionRejections TextConnectionCounter
+	// ObserveAcceptedAction measures full-frame receipt through accepted action
+	// persistence and outbound enqueue, including authorization and room waits.
+	// Successful retries count as requests. This optional in-process callback
+	// must not block; it receives no account, match, request or content identifiers.
+	ObserveAcceptedAction func(gamecontract.ModeID, time.Duration)
+}
+
+// RegisterTextRealtimeRoutes is the executable's only gameplay route set.
+// Obsolete clients fail before authentication, socket allocation or admission.
+func RegisterTextRealtimeRoutes(mux *http.ServeMux, d TextHandlerDeps) {
+	mux.HandleFunc("/ws/v2", TextRealtimeHandler(d))
+	mux.HandleFunc("/api/text/availability", TextAvailabilityHandler(d))
+	obsolete := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUpgradeRequired)
+		_ = json.NewEncoder(w).Encode(map[string]string{"code": "protocol.upgrade_required"})
+	}
+	mux.HandleFunc("/ws", obsolete)
+	mux.HandleFunc("/rooms/create", obsolete)
+	mux.HandleFunc("/join/", obsolete)
+}
+
 type textFrame[T any] struct {
 	Version   int    `json:"v"`
 	Type      string `json:"type"`
@@ -78,7 +108,7 @@ func textErrorCode(err error) string {
 	if errors.As(err, &contract) {
 		return string(contract.Code)
 	}
-	for _, known := range []error{lobby.ErrTextUnavailable, lobby.ErrTextMembership, lobby.ErrTextReady, lobby.ErrTextHost, lobby.ErrTextRevision, lobby.ErrTextSlowConsumer, store.ErrQuotaExhausted, store.ErrValueConflict, store.ErrValueFence} {
+	for _, known := range []error{lobby.ErrTextUnavailable, lobby.ErrTextMembership, lobby.ErrTextReady, lobby.ErrTextHost, lobby.ErrTextRevision, lobby.ErrTextSlowConsumer, store.ErrQuotaExhausted, store.ErrTextCooldown, store.ErrValueConflict, store.ErrValueFence} {
 		if errors.Is(err, known) {
 			return known.Error()
 		}
@@ -144,6 +174,9 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 		}
 		if d.ConnLimiter != nil {
 			if !d.ConnLimiter.TryAcquire() {
+				if d.ConnectionRejections != nil {
+					d.ConnectionRejections.Inc()
+				}
 				http.Error(w, "connection.capacity", http.StatusServiceUnavailable)
 				return
 			}
@@ -153,6 +186,10 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 		conn, e := upgrade.Upgrade(w, r, nil)
 		if e != nil {
 			return
+		}
+		if d.Connections != nil {
+			d.Connections.Inc()
+			defer d.Connections.Dec()
 		}
 		defer conn.Close()
 		conn.SetReadLimit(int64(d.Lobby.Limits().MaxFrameBytes))
@@ -196,6 +233,18 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 			reject(textErrorCode(e))
 			return
 		}
+		// A final sanction can revoke the token after its first check but before
+		// registration. Recheck once the peer is visible to live enforcement.
+		authCtx, authCancel = context.WithTimeout(ctx, 5*time.Second)
+		current, authErr := d.Auth.ValidateAccessToken(authCtx, hello.Payload.Token)
+		authCancel()
+		if authErr != nil || current != account {
+			reject("auth.required")
+			cleanup, done := context.WithTimeout(context.Background(), 5*time.Second)
+			defer done()
+			_ = d.Lobby.Disconnect(cleanup, peer)
+			return
+		}
 		writerDone := make(chan struct{})
 		go textWriteLoop(ctx, conn, d, peer, hello.Payload.Token, writerDone, cancel)
 		defer func() {
@@ -228,13 +277,19 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 				_ = d.Lobby.Send(peer, "error", "", textErrorPayload{Code: "protocol.malformed"})
 				continue
 			}
-			allowed := d.Lobby.AllowRequest(peer)
+			intentStarted := time.Now()
+			work, done := context.WithTimeout(ctx, 5*time.Second)
+			allowed := d.Lobby.AllowRequest(work, peer)
+			if work.Err() != nil {
+				done()
+				return
+			}
 			frame, e := textDecode[map[string]json.RawMessage](raw, d)
 			if e != nil {
+				done()
 				_ = d.Lobby.Send(peer, "error", "", textErrorPayload{Code: textErrorCode(e)})
 				continue
 			}
-			work, done := context.WithTimeout(ctx, 5*time.Second)
 			current, authErr := d.Auth.ValidateAccessToken(work, hello.Payload.Token)
 			if authErr != nil || current != account {
 				done()
@@ -261,6 +316,9 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 					}
 					if e == nil {
 						e = d.Lobby.Action(work, peer, action.Payload)
+						if e == nil && d.ObserveAcceptedAction != nil {
+							d.ObserveAcceptedAction(action.Payload.ModeID, time.Since(intentStarted))
+						}
 					}
 				}
 			} else if frame.RequestID == "" {
@@ -286,18 +344,19 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 					}
 				}
 			}
-			done()
 			if e != nil {
 				var sendErr error
 				if frame.Type == "action" {
-					sendErr = d.Lobby.RejectAction(peer, frame.RequestID, textActionErrorCode(e))
+					sendErr = d.Lobby.RejectAction(work, peer, frame.RequestID, textActionErrorCode(e))
 				} else {
 					sendErr = d.Lobby.Send(peer, "error", frame.RequestID, textErrorPayload{Code: textErrorCode(e), RequestID: frame.RequestID})
 				}
 				if sendErr != nil {
+					done()
 					return
 				}
 			}
+			done()
 		}
 	}
 }

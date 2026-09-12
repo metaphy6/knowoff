@@ -9,17 +9,24 @@ import 'package:knowoff_client/core/network/game_transport.dart';
 // exists. Both languages consume one corpus; this test proves Dart JSON fidelity
 // and the role/copy/locale boundaries without enabling v2 in the live client.
 void main() {
-  final fixtures = (jsonDecode(File(
-    '../server/internal/transport/v2/testdata/contracts.json',
-  ).readAsStringSync()) as List)
-      .cast<Map<String, dynamic>>();
+  final fixtures =
+      (jsonDecode(
+                File(
+                  '../server/internal/transport/v2/testdata/contracts.json',
+                ).readAsStringSync(),
+              )
+              as List)
+          .cast<Map<String, dynamic>>();
   final accepted = fixtures.where((fixture) => fixture['code'] == '');
 
   test('v2 shared golden records survive the client transport codec', () {
     for (final fixture in accepted) {
       final wire = fixture['wire'] as Map<String, dynamic>;
-      expect(TransportCodec.decode(TransportCodec.encode(wire)), wire,
-          reason: fixture['name'] as String);
+      expect(
+        TransportCodec.decode(TransportCodec.encode(wire)),
+        wire,
+        reason: fixture['name'] as String,
+      );
     }
   });
 
@@ -32,9 +39,11 @@ void main() {
       'top_that': 'top',
     };
     for (final entry in modes.entries) {
-      final wire = fixtures
-              .singleWhere((fixture) => fixture['name'] == entry.value)['wire']
-          as Map<String, dynamic>;
+      final wire =
+          fixtures.singleWhere(
+                (fixture) => fixture['name'] == entry.value,
+              )['wire']
+              as Map<String, dynamic>;
       expect(wire['mode_id'], entry.key);
       expect(wire['v'], 2);
       expect(wire['action']['copy_id'], 'copy-1');
@@ -44,24 +53,30 @@ void main() {
   });
 
   test('snapshots preserve recipient secrecy and complete history cursors', () {
-    for (final fixture
-        in accepted.where((fixture) => fixture['kind'] == 'snapshot')) {
+    for (final fixture in accepted.where(
+      (fixture) => fixture['kind'] == 'snapshot',
+    )) {
       final wire = fixture['wire'] as Map<String, dynamic>;
       final private = wire['private'] as Map<String, dynamic>;
       final seats = (wire['seats'] as List).cast<Map<String, dynamic>>();
-      final recipient =
-          seats.singleWhere((seat) => seat['seat'] == private['seat']);
+      final recipient = seats.singleWhere(
+        (seat) => seat['seat'] == private['seat'],
+      );
       if (private['role'] == 'donower' || recipient['eliminated'] == true) {
-        expect(private.containsKey('nown'), isFalse,
-            reason: fixture['name'] as String);
+        expect(
+          private.containsKey('nown'),
+          isFalse,
+          reason: fixture['name'] as String,
+        );
       }
       expect(private.containsKey('reserve'), isFalse);
       expect(private.containsKey('schedule'), isFalse);
       final historyPages = wire['history_pages'] as Map<String, dynamic>?;
       expect(
-          wire['cursor']['evidence_seq'],
-          historyPages?['through_evidence_seq'] ??
-              (wire['history'] as List).length);
+        wire['cursor']['evidence_seq'],
+        historyPages?['through_evidence_seq'] ??
+            (wire['history'] as List).length,
+      );
       expect(wire['cursor']['recipient_seq'], isA<int>());
       expect(wire['deadline_ms'], isA<int>());
       expect(wire['contract']['content_language'], 'tr');
@@ -70,43 +85,57 @@ void main() {
         expect(card['copy_id'], isNot(card['content']['content_id']));
       }
     }
-    final chat =
-        fixtures.singleWhere((f) => f['name'] == 'chat-phrase')['wire'];
+    final chat = fixtures.singleWhere(
+      (f) => f['name'] == 'chat-phrase',
+    )['wire'];
     expect(chat['action']['ui_locale'], 'en-US');
   });
 
-  test('public draw evidence contains counts without private card identities',
-      () {
-    final page = fixtures
-        .singleWhere((fixture) => fixture['name'] == 'public-history-page');
-    final event = page['wire']['events'][0];
-    expect(event['kind'], 'draw');
-    expect(event['count'], 1);
-    expect(event['cards'], isEmpty);
-    expect(event.containsKey('hand'), isFalse);
-  });
+  test(
+    'public draw evidence contains counts without private card identities',
+    () {
+      final page = fixtures.singleWhere(
+        (fixture) => fixture['name'] == 'public-history-page',
+      );
+      final event = page['wire']['events'][0];
+      expect(event['kind'], 'draw');
+      expect(event['count'], 1);
+      expect(event['cards'], isEmpty);
+      expect(event.containsKey('hand'), isFalse);
+    },
+  );
 
-  test('Dart reproduces the canonical page and root hashes including Unicode',
-      () {
-    for (final fixture
-        in accepted.where((fixture) => fixture['kind'] == 'history_page')) {
-      final page = fixture['wire'] as Map<String, dynamic>;
-      final digest = sha256.convert(utf8.encode(_canonical(page['events'])));
-      expect(digest.toString(), page['sha256'],
-          reason: fixture['name'] as String);
-    }
-    final page = fixtures
-        .singleWhere((fixture) => fixture['name'] == 'public-history-page');
-    final hash = page['wire']['sha256'] as String;
-    final bytes = [
-      for (var i = 0; i < hash.length; i += 2)
-        int.parse(hash.substring(i, i + 2), radix: 16),
-    ];
-    final snapshot = fixtures
-        .singleWhere((fixture) => fixture['name'] == 'snapshot-paged-history');
-    expect(sha256.convert(bytes).toString(),
-        snapshot['wire']['history_pages']['root_sha256']);
-  });
+  test(
+    'Dart reproduces the canonical page and root hashes including Unicode',
+    () {
+      for (final fixture in accepted.where(
+        (fixture) => fixture['kind'] == 'history_page',
+      )) {
+        final page = fixture['wire'] as Map<String, dynamic>;
+        final digest = sha256.convert(utf8.encode(_canonical(page['events'])));
+        expect(
+          digest.toString(),
+          page['sha256'],
+          reason: fixture['name'] as String,
+        );
+      }
+      final page = fixtures.singleWhere(
+        (fixture) => fixture['name'] == 'public-history-page',
+      );
+      final hash = page['wire']['sha256'] as String;
+      final bytes = [
+        for (var i = 0; i < hash.length; i += 2)
+          int.parse(hash.substring(i, i + 2), radix: 16),
+      ];
+      final snapshot = fixtures.singleWhere(
+        (fixture) => fixture['name'] == 'snapshot-paged-history',
+      );
+      expect(
+        sha256.convert(bytes).toString(),
+        snapshot['wire']['history_pages']['root_sha256'],
+      );
+    },
+  );
 }
 
 // Independent fixture-side encoding of the documented canonical hash format;

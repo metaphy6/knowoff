@@ -51,11 +51,11 @@ websocket:
   write_wait_s: 10
 
 protocol:
-  # Active legacy wire version; pre-admission v2 negotiation is Phase 4 work.
-  version: 1
+  # Active text wire; legacy clients are refused before admission.
+  version: 2
 
 # Frozen v2 policy; no mode is exposed before engine/content/client release gates.
-# This is separate from the active legacy protocol above.
+# Runtime release certification is additionally required for each enabled cell.
 text:
   version: 2
   rules_version: text-v1
@@ -93,6 +93,13 @@ moderation:
     model: omni-moderation-latest
     api_key: ""
     timeout_s: 10
+  # Custom uploads remain unavailable until image screening is configured.
+  avatar_upload_slots: 2
+  avatar_screening:
+    provider: disabled
+    model: omni-moderation-latest
+    api_key: ""
+    timeout_s: 10
   default_language: en
   word_lists:
     en: [arse, arsehole, ass, asshole, bastard, bitch, bollocks, bullshit, crap, cunt, damn, dick, douchebag, fuck, fucker, fucking, fucks, goddamn, jackass, motherfucker, motherfucking, motherfucks, piss, pissed, pissing, prick, scumbag, shit, shits, shitting, shitty, slut, twat, wanker, whore]
@@ -121,26 +128,6 @@ redis:
   db: 0
   pool_size: 50
 
-storage:
-  driver: s3
-  endpoint: http://minio:9000
-  region: us-east-1
-  bucket: knowoff
-  access_key_id: ${KNOWOFF_STORAGE_ACCESS_KEY}
-  secret_access_key: ${KNOWOFF_STORAGE_SECRET_KEY}
-  use_path_style: true
-  assets_url: http://localhost:9000/knowoff
-
-media:
-  active_pack_tag: dev-placeholder
-  pack_check_interval_s: 60
-  signed_url_ttl_s: 300
-  # Local path for pack bundles during development. Overrides object storage when set.
-  local_bundle_path: ""
-  url_signing_key: ${KNOWOFF_MEDIA_URL_KEY}
-  # Ingest folder watched by the dev-only Media Workbench. Empty disables watching.
-  workbench_ingest_path: ""
-
 security:
   dev_bot_key: ""                  # optional KNOWOFF_DEV_BOT_KEY; non-production prototype only
   jwt_signing_key: ${KNOWOFF_JWT_KEY}
@@ -151,17 +138,17 @@ security:
   bcrypt_cost: 10
   admin_totp_issuer: Knowoff Admin
   admin_session_ttl_h: 24
-  ssv_callback_key: ${KNOWOFF_SSV_CALLBACK_KEY}
-  ssv_allowed_senders: ""
   oauth:
+    trusted_proxy_cidrs: [] # Only actual reverse-proxy peers; forwarding is ignored by default.
     google:
-      client_id: ${KNOWOFF_OAUTH_GOOGLE_CLIENT_ID}
-      client_secret: ${KNOWOFF_OAUTH_GOOGLE_CLIENT_SECRET}
+      client_id: ""
+      client_secret: ""
       redirect_url: ""
     facebook:
-      client_id: ${KNOWOFF_OAUTH_FACEBOOK_CLIENT_ID}
-      client_secret: ${KNOWOFF_OAUTH_FACEBOOK_CLIENT_SECRET}
+      client_id: ""
+      client_secret: ""
       redirect_url: ""
+      graph_version: "" # Explicit provider-reviewed version required before enabling.
 
 rate_limit:
   enabled: true
@@ -170,3 +157,42 @@ rate_limit:
   max_bytes_per_frame: 65536
 
 # Tunable gameplay constants live in gameplay/tuning.yaml and are merged under "tuning".
+
+# Real billing stays closed until platform credentials and exact provider product
+# IDs are supplied through a private overlay. These are bounded retry budgets.
+billing:
+  max_subscription_entries: 64
+  max_receipt_bytes: 16384
+  max_response_bytes: 262144
+  http_timeout_s: 10
+  task_poll_interval_s: 60
+  task_batch_size: 20
+  max_concurrent_requests: 4
+  google:
+    enabled: false
+    package_name: ""
+    service_account_email: ""
+    private_key: ""
+    allow_test_purchases: false
+    products: {}
+  apple:
+    enabled: false
+    bundle_id: ""
+    app_apple_id: 0
+    issuer_id: ""
+    key_id: ""
+    private_key: ""
+    environment: Production
+    products: {}
+
+# Off until the exact AdMob callback identities and client consent journey exist.
+rewarded_ads:
+  enabled: false
+  max_query_bytes: 16384
+  max_response_bytes: 262144
+  http_timeout_s: 10
+  key_cache_s: 3600
+  key_refresh_min_s: 60
+  max_concurrent_requests: 4
+  claim_ttl_s: 1800
+  ad_units: {}

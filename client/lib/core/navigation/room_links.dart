@@ -37,10 +37,10 @@ String roomShareLink(String code, {required Uri base, required bool web}) {
   }
   if (!web) return 'knowoff://join/$normalized';
   return Uri(
-          scheme: base.scheme,
-          host: base.host,
-          port: base.hasPort ? base.port : null,
-          path: base.path,
-          fragment: '/join/$normalized')
-      .toString();
+    scheme: base.scheme,
+    host: base.host,
+    port: base.hasPort ? base.port : null,
+    path: base.path,
+    fragment: '/join/$normalized',
+  ).toString();
 }

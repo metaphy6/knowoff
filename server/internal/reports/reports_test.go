@@ -3,7 +3,10 @@ package reports
 import (
 	"context"
 	"database/sql"
+	"net/url"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,20 +17,34 @@ import (
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	token := os.Getenv("KNOWOFF_TEST_DB_TOKEN")
+	u, parseErr := url.Parse(dsn)
+	if parseErr != nil || !regexp.MustCompile(`^[0-9a-f]{12}$`).MatchString(token) || u == nil || u.Scheme != "postgres" || u.Path != "/knowoff_test_"+token || (u.Hostname() != "postgres" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") || u.Fragment != "" {
+		t.Fatal("disposable runner PostgreSQL target required")
+	}
+	for key := range u.Query() {
+		if key != "sslmode" {
+			t.Fatal("unexpected disposable DSN parameter")
+		}
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		t.Fatalf("open db: %v", err)
+		t.Fatal(err)
 	}
-	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available: %v", err)
+	if err = db.Ping(); err != nil {
+		t.Fatal(err)
 	}
-	if err := store.MigrateUp(db, "../../migrations"); err != nil {
-		t.Fatalf("migrate: %v", err)
+	var actual string
+	if err = db.QueryRow(`SELECT current_database()`).Scan(&actual); err != nil || actual != "knowoff_test_"+token {
+		db.Close()
+		t.Fatal("refusing non-disposable database")
 	}
-	_, _ = db.Exec("TRUNCATE TABLE reports, feedback RESTART IDENTITY CASCADE")
+	if err = store.MigrateUp(db, "../../migrations"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("TRUNCATE TABLE reports, feedback, report_cases, report_rate_limits RESTART IDENTITY CASCADE"); err != nil {
+		t.Fatal(err)
+	}
 	return db
 }
 
@@ -142,4 +159,71 @@ func TestListReportsAndFeedback(t *testing.T) {
 	if len(feedback) != 1 {
 		t.Fatalf("expected 1 feedback, got %d", len(feedback))
 	}
+}
+
+func TestReportRateAndExactRetrySurviveManagerRestart(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	reporter, target := newAccount(t, db), newAccount(t, db)
+	if err := NewManager(db).CreateReport(ctx, reporter, ReportConduct, target, "", "first", "observed"); err != nil {
+		t.Fatal(err)
+	}
+	if err := NewManager(db).CreateReport(ctx, reporter, ReportConduct, target, "", "first", "observed"); err != nil {
+		t.Fatalf("exact retry: %v", err)
+	}
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM reports WHERE reporter_id=$1`, reporter).Scan(&count); err != nil || count != 1 {
+		t.Fatalf("exact retry rows=%d err=%v", count, err)
+	}
+	if err := NewManager(db).CreateReport(ctx, reporter, ReportConduct, target, "", "changed", "observed"); err == nil {
+		t.Fatal("restart bypassed durable rate limit")
+	}
+}
+func TestReportAndFeedbackRejectPrivateOrUnboundedInput(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	m := NewManager(db)
+	target := newAccount(t, db)
+	for _, bad := range []string{strings.Repeat("x", 4097), "bad\x00text", string([]byte{0xff})} {
+		if err := m.CreateReport(ctx, newAccount(t, db), ReportConduct, target, "", bad, ""); err == nil {
+			t.Errorf("invalid report text accepted length=%d", len(bad))
+		}
+	}
+	for _, private := range []map[string]any{{"role": "donower"}, {"hand": []string{"private"}}, {"version": map[string]string{"seed": "private"}}} {
+		if err := m.CreateFeedback(ctx, newAccount(t, db), "bug", "title", "message", private); err == nil {
+			t.Error("private or structured feedback context accepted")
+		}
+	}
+}
+
+func TestReportsAndFeedbackPagesAreBoundedAndStable(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	m := NewManager(db)
+	if _, err := db.Exec(`INSERT INTO feedback(type,title,message,created_at) SELECT 'bug','','message',now() FROM generate_series(1,105); INSERT INTO reports(report_type,reason,description,created_at) SELECT 'media','legacy unresolved','',now() FROM generate_series(1,105)`); err != nil {
+		t.Fatal(err)
+	}
+	list, err := m.ListReports(ctx, "")
+	if err != nil || len(list) != 100 {
+		t.Fatalf("report bound=%d %v", len(list), err)
+	}
+	feedback, err := m.ListFeedback(ctx, "")
+	if err != nil || len(feedback) != 100 {
+		t.Fatalf("feedback bound=%d %v", len(feedback), err)
+	}
+	more, next, err := m.ListReportsPage(ctx, "", list[len(list)-1].ID.String(), "", 100)
+	if err != nil || len(more) != 5 || next != "" {
+		t.Fatalf("report continuation %d %q %v", len(more), next, err)
+	}
+	moreFeedback, next, err := m.ListFeedbackPage(ctx, "", feedback[len(feedback)-1].ID.String(), 100)
+	if err != nil || len(moreFeedback) != 5 || next != "" {
+		t.Fatalf("feedback continuation %d %q %v", len(moreFeedback), next, err)
+	}
+	if _, _, err = m.ListReportsPage(ctx, "", "invalid", "", 100); err == nil {
+		t.Fatal("invalid report cursor")
+	}
+
 }

@@ -7,7 +7,7 @@ Future<void> retireLegacyPlayableCache() async {
   for (final key in [
     'media.active_tag',
     'media.manifest',
-    'media.media_jsonl'
+    'media.media_jsonl',
   ]) {
     await prefs.remove(key);
   }

@@ -23,13 +23,15 @@ func privateTextSeed() (int64, error) {
 	return int64(binary.LittleEndian.Uint64(b[:])), e
 }
 func (m *TextManager) Start(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	r := m.members[p.AccountID]
 	if !m.current(p) || r == nil || r.match != nil {
 		return ErrTextMembership
 	}
-	if m.draining || r.pendingAbort != "" {
+	if m.admissionPaused() || r.pendingAbort != "" || r.pendingOperator != nil {
 		return ErrTextUnavailable
 	}
 	seat, _ := m.member(r, p.AccountID)
@@ -115,6 +117,7 @@ func (m *TextManager) start(ctx context.Context, r *textRoom) (err error) {
 		admissions[i] = s.admission
 	}
 	hooks := TextValueHooks(m.deps.Values, m.owner, 1, accounts)
+	hooks.Finish = m.operatorFinish(r, hooks.Finish)
 	if m.deps.ModerateChat != nil {
 		hooks.ModerateChat = func(ctx context.Context, seat int, a v2.Action) (v2.Action, error) {
 			return m.deps.ModerateChat(ctx, accounts[seat], a)
@@ -160,6 +163,12 @@ func (m *TextManager) start(ctx context.Context, r *textRoom) (err error) {
 func TextValueHooks(values TextValues, owner string, epoch int64, accounts []string) game.TextHooks {
 	accounts = append([]string(nil), accounts...)
 	return game.TextHooks{
+		Abandon: func(ctx context.Context, e game.TextAbandonEvent) error {
+			if e.Seat < 0 || e.Seat >= len(accounts) {
+				return store.ErrValueConflict
+			}
+			return values.Abandon(ctx, store.TextAbandon{MatchID: e.MatchID, Owner: owner, Epoch: epoch, AccountID: accounts[e.Seat], Seat: e.Seat, At: e.OccurredAt})
+		},
 		Award: func(ctx context.Context, e game.TextAwardEvent) error {
 			if e.Seat < 0 || e.Seat >= len(accounts) {
 				return store.ErrValueConflict
@@ -190,14 +199,11 @@ func TextValueHooks(values TextValues, owner string, epoch int64, accounts []str
 	}
 }
 func (m *TextManager) snapshot(ctx context.Context, r *textRoom, seat int, p *TextPeer) error {
-	s, pages, e := r.match.SnapshotPages(seat)
+	s, e := r.match.SnapshotProjection(seat)
 	if e != nil {
 		return e
 	}
 	history := s.History
-	for _, page := range pages {
-		history = append(history, page.Events...)
-	}
 	hidden := map[int]bool{}
 	for _, event := range history {
 		if event.Kind != "chat" || event.Text == "" || event.Actor.Seat == nil {
@@ -231,7 +237,7 @@ func (m *TextManager) snapshot(ctx context.Context, r *textRoom, seat int, p *Te
 	if e != nil {
 		return e
 	}
-	pages = nil
+	var pages []v2.HistoryPage
 	if len(encoded) > m.Limits().MaxFrameBytes {
 		limits := m.wireLimits()
 		overhead, _ := json.Marshal(TextEnvelope{Version: 2, Type: "history_page", Payload: json.RawMessage("null")})
@@ -260,6 +266,12 @@ func (m *TextManager) snapshot(ctx context.Context, r *textRoom, seat int, p *Te
 func mustTextJSON(v any) json.RawMessage { b, _ := json.Marshal(v); return b }
 func (m *TextManager) broadcastMatch(ctx context.Context, r *textRoom) error {
 	defer m.pruneFinishedRoom(r)
+	return m.broadcastMatchFrames(ctx, r)
+}
+
+// Caller holds either the manager write lock, or its read lock plus runtimeMu.
+// Closing a slow peer is safe here; membership pruning belongs to a writer.
+func (m *TextManager) broadcastMatchFrames(ctx context.Context, r *textRoom) error {
 	var result error
 	for seat := 0; seat < r.settings.Size; seat++ {
 		member := r.seats[seat]
@@ -273,15 +285,11 @@ func (m *TextManager) broadcastMatch(ctx context.Context, r *textRoom) error {
 	return result
 }
 func (m *TextManager) Resync(ctx context.Context, p *TextPeer) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if e := m.checkAuthority(ctx); e != nil {
-		return e
+	r, unlock, err := m.lockRuntime(ctx, p)
+	if err != nil {
+		return err
 	}
-	r := m.members[p.AccountID]
-	if !m.current(p) || r == nil {
-		return ErrTextMembership
-	}
+	defer unlock()
 	if r.match == nil {
 		return m.lobby(r, p)
 	}
@@ -295,13 +303,26 @@ func (m *TextManager) Resync(ctx context.Context, p *TextPeer) error {
 	return nil
 }
 func (m *TextManager) Action(ctx context.Context, p *TextPeer, req v2.ActionRequest) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if e := m.checkAuthority(ctx); e != nil {
-		return e
+	r, unlock, err := m.lockRuntime(ctx, p)
+	if err != nil {
+		return err
 	}
-	r := m.members[p.AccountID]
-	if !m.current(p) || r == nil || r.match == nil {
+	defer func() {
+		terminal := false
+		if r.match != nil {
+			phase, _ := r.match.Clock()
+			terminal = phase == v2.PhaseVerdict
+		}
+		unlock()
+		// Tick retries terminal pruning if this request has no lock budget left.
+		if terminal && m.lockDrain(ctx) == nil {
+			if m.rooms[r.code] == r {
+				m.pruneFinishedRoom(r)
+			}
+			m.mu.Unlock()
+		}
+	}()
+	if r.match == nil {
 		return ErrTextMembership
 	}
 	seat, member := m.member(r, p.AccountID)
@@ -313,7 +334,7 @@ func (m *TextManager) Action(ctx context.Context, p *TextPeer, req v2.ActionRequ
 		return e
 	}
 	if result.Changed {
-		if e = m.broadcastMatch(ctx, r); e != nil {
+		if e = m.broadcastMatchFrames(ctx, r); e != nil {
 			return e
 		}
 	} else if e = m.snapshot(ctx, r, seat, p); e != nil {
@@ -321,17 +342,91 @@ func (m *TextManager) Action(ctx context.Context, p *TextPeer, req v2.ActionRequ
 	}
 	return m.emit(p, "action_ack", req.RequestID, map[string]any{"request_id": req.RequestID, "duplicate": result.Duplicate})
 }
+
+// Keep membership stable throughout a room operation, while permitting other
+// rooms to run. Both waits are cancellable; there is no read-to-write upgrade.
+func (m *TextManager) lockRuntime(ctx context.Context, p *TextPeer) (*textRoom, func(), error) {
+	if err := waitTextLock(ctx, m.mu.TryRLock); err != nil {
+		return nil, nil, err
+	}
+	if !m.current(p) {
+		m.mu.RUnlock()
+		return nil, nil, ErrTextMembership
+	}
+	r := m.members[p.AccountID]
+	if r == nil {
+		m.mu.RUnlock()
+		return nil, nil, ErrTextMembership
+	}
+	if err := waitTextLock(ctx, r.runtimeMu.TryLock); err != nil {
+		m.mu.RUnlock()
+		return nil, nil, err
+	}
+	unlock := func() { r.runtimeMu.Unlock(); m.mu.RUnlock() }
+	if err := m.checkAuthority(ctx); err != nil {
+		unlock()
+		return nil, nil, err
+	}
+	if !m.current(p) {
+		unlock()
+		return nil, nil, ErrTextMembership
+	}
+	if r.pendingOperator != nil || r.excludedAccounts[p.AccountID] {
+		unlock()
+		return nil, nil, ErrTextUnavailable
+	}
+	return r, unlock, nil
+}
+
+func waitTextLock(ctx context.Context, acquire func() bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if acquire() {
+		return nil
+	}
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			if acquire() {
+				return nil
+			}
+		}
+	}
+}
 func (m *TextManager) Tick(ctx context.Context) error {
-	m.mu.Lock()
+	result := m.tick(ctx)
+	if ctx.Err() == nil {
+		result = errors.Join(result, m.retryRoomOperations(ctx))
+	}
+	return result
+}
+func (m *TextManager) tick(ctx context.Context) error {
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if e := m.checkAuthority(ctx); e != nil {
 		return e
 	}
 	var result error
 	now := m.deps.Now()
+	if m.draining.Load() {
+		result = errors.Join(result, m.cleanupDrain(ctx))
+	}
 	m.pruneRequestRates(now)
 	for _, p := range m.peers {
-		if p.closed {
+		if room := m.members[p.AccountID]; room != nil && room.pendingOperator != nil {
+			continue
+		}
+		if p.closed.Load() {
 			result = errors.Join(result, m.disconnect(ctx, p))
 		}
 	}
@@ -342,6 +437,9 @@ func (m *TextManager) Tick(ctx context.Context) error {
 		}
 	}
 	for _, r := range m.rooms {
+		if r.pendingOperator != nil {
+			continue
+		}
 		if r.pendingAbort != "" {
 			result = errors.Join(result, m.abortPrepared(ctx, r))
 			continue
@@ -381,7 +479,7 @@ func (m *TextManager) pruneFinishedRoom(r *textRoom) {
 		return
 	}
 	for seat, member := range r.seats {
-		if member.peer == nil || member.peer.closed {
+		if member.peer == nil || member.peer.closed.Load() {
 			if m.members[member.account] == r {
 				delete(m.members, member.account)
 			}
@@ -392,10 +490,14 @@ func (m *TextManager) pruneFinishedRoom(r *textRoom) {
 		delete(m.rooms, r.code)
 	}
 }
-func (m *TextManager) Drain() { m.mu.Lock(); defer m.mu.Unlock(); m.draining = true }
-func (m *TextManager) ActiveMatches() int {
-	m.mu.Lock()
+func (m *TextManager) Drain() {
+	_ = waitTextLock(context.Background(), m.mu.TryLock)
 	defer m.mu.Unlock()
+	m.draining.Store(true)
+}
+func (m *TextManager) ActiveMatches() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 	n := 0
 	for _, r := range m.rooms {
 		if r.pendingAbort != "" {
@@ -412,14 +514,21 @@ func (m *TextManager) ActiveMatches() int {
 	return n
 }
 func (m *TextManager) Close(ctx context.Context) error {
-	m.mu.Lock()
+	pendingErr := m.retryRoomOperations(ctx)
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
 	defer m.mu.Unlock()
 	if e := m.checkAuthority(ctx); e != nil {
 		return e
 	}
-	m.draining = true
-	var result error
+	m.draining.Store(true)
+	result := pendingErr
 	for _, r := range m.rooms {
+		if r.pendingOperator != nil {
+			result = errors.Join(result, ErrTextUnavailable)
+			continue
+		}
 		if r.pendingAbort != "" {
 			result = errors.Join(result, m.abortPrepared(ctx, r))
 			continue
@@ -491,15 +600,27 @@ func (m *TextManager) abortPrepared(ctx context.Context, r *textRoom) error {
 
 // RejectAction keeps admitted action errors in the same serialized recipient
 // stream. Authentication and pre-admission controls have no match cursor.
-func (m *TextManager) RejectAction(p *TextPeer, requestID string, code v2.ErrorCode) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *TextManager) RejectAction(ctx context.Context, p *TextPeer, requestID string, code v2.ErrorCode) error {
+	if err := waitTextLock(ctx, m.mu.TryRLock); err != nil {
+		return err
+	}
+	defer m.mu.RUnlock()
 	if !m.current(p) {
 		return ErrTextMembership
 	}
 	r := m.members[p.AccountID]
 	if r == nil || r.match == nil {
 		return m.emit(p, "error", requestID, map[string]any{"code": code, "request_id": requestID})
+	}
+	if err := waitTextLock(ctx, r.runtimeMu.TryLock); err != nil {
+		return err
+	}
+	defer r.runtimeMu.Unlock()
+	if err := m.checkAuthority(ctx); err != nil {
+		return err
+	}
+	if !m.current(p) {
+		return ErrTextMembership
 	}
 	seat, _ := m.member(r, p.AccountID)
 	event, err := r.match.ActionError(seat, requestID, code)

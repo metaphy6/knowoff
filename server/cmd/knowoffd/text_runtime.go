@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/game"
 	"github.com/knowoff/knowoff/server/internal/lobby"
@@ -31,6 +32,9 @@ type textRuntime struct {
 func newTextRuntime(ctx context.Context, db *sql.DB, cfg *config.Config, prototypePath string) (out *textRuntime, err error) {
 	if cfg == nil || cfg.Text == nil || db == nil {
 		return nil, lobby.ErrTextUnavailable
+	}
+	if err := store.CheckRuntimeSchema(ctx, db); err != nil {
+		return nil, err
 	}
 	prototype, err := loadTextPrototype(cfg, prototypePath)
 	if err != nil {
@@ -62,10 +66,14 @@ func newTextRuntime(ctx context.Context, db *sql.DB, cfg *config.Config, prototy
 	}); err != nil {
 		return nil, err
 	}
+	if err = recoverRoomRuntime(ctx, values.RecoverRoomOperations); err != nil {
+		return nil, err
+	}
 	trust := store.NewTextTrustStore(db)
 	manager, err := lobby.NewTextManager(lobby.TextDeps{
 		Owner: owner.Token().IncarnationID, Authority: owner, Config: cfg, Values: values, Prototype: prototype,
-		Resolve: releases.Resolve, ResolveRelease: releases.ResolveRelease,
+		Operations: store.NewAdminOperationStore(db),
+		Resolve:    releases.Resolve, ResolveRelease: releases.ResolveRelease,
 		CanMatch: func(ctx context.Context, accounts []string) error { return trust.CanMatch(ctx, accounts, time.Now()) },
 		CheckAccess: func(ctx context.Context, account string, settings v2.LobbySettings, path string) error {
 			return releases.CheckAccess(ctx, account, settings, path, time.Now())
@@ -98,17 +106,48 @@ func recoverTextRuntime(ctx context.Context, batch func(context.Context, int) (s
 	}
 }
 
+func recoverRoomRuntime(ctx context.Context, batch func(context.Context, int) (int, error)) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		n, err := batch(ctx, 100)
+		if err != nil {
+			return err
+		}
+		if n < 100 {
+			return nil
+		}
+	}
+}
+
 type textDrainer interface {
-	Drain()
-	ActiveMatches() int
+	DrainContext(context.Context) error
+	ActiveMatchesContext(context.Context) (int, error)
 	Close(context.Context) error
 }
 
 func drainTextRuntime(ctx context.Context, m textDrainer) error {
-	m.Drain()
+	drainErr := m.DrainContext(ctx)
+	entered := drainErr == nil
+	if ctx.Err() != nil && errors.Is(drainErr, ctx.Err()) {
+		// Grace expiration still permits the existing independently bounded
+		// compensation/closure path. Its successful completion is authoritative.
+		drainErr = nil
+	}
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	for m.ActiveMatches() > 0 {
+	for entered && drainErr == nil {
+		active, err := m.ActiveMatchesContext(ctx)
+		if err != nil {
+			if ctx.Err() == nil {
+				drainErr = err
+			}
+			break
+		}
+		if active == 0 {
+			break
+		}
 		select {
 		case <-ctx.Done():
 			goto close
@@ -118,7 +157,7 @@ func drainTextRuntime(ctx context.Context, m textDrainer) error {
 close:
 	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 	defer cancel()
-	return m.Close(cleanup)
+	return errors.Join(drainErr, m.Close(cleanup))
 }
 func (r *textRuntime) Close(ctx context.Context) error {
 	r.closeOnce.Do(func() {
@@ -126,6 +165,7 @@ func (r *textRuntime) Close(ctx context.Context) error {
 		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		r.closeErr = errors.Join(r.closeErr, r.Owner.Release(cleanup))
+		r.closeErr = errors.Join(r.closeErr, r.Owner.Wait(cleanup))
 	})
 	return r.closeErr
 }
@@ -149,4 +189,12 @@ func loadTextPrototype(cfg *config.Config, path string) (*media.TextSnapshot, er
 		return nil, lobby.ErrTextUnavailable
 	}
 	return prototype, nil
+}
+
+// Install before listeners open. The lobby serializes peer admission/closure
+// around the durable sanction check; the callback commits before socket cleanup.
+func (r *textRuntime) bindModeration(pm *portal.Manager, am *auth.Manager) {
+	pm.SetAccountDisconnect(func(ctx context.Context, account string) error {
+		return r.Lobby.EnforceAccount(ctx, account, am.RevokeEnforcedSessions)
+	})
 }

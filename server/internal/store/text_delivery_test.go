@@ -233,6 +233,9 @@ func TestTextRealEngineDurableHooksAndFinishRetry(t *testing.T) {
 			failAfterOutcome := true
 			finishCalls := 0
 			hooks := game.TextHooks{
+				Abandon: func(ctx context.Context, e game.TextAbandonEvent) error {
+					return store.Abandon(ctx, TextAbandon{MatchID: e.MatchID, Owner: record.Owner, Epoch: 1, AccountID: accounts[e.Seat], Seat: e.Seat, At: e.OccurredAt})
+				},
 				Award: func(ctx context.Context, a game.TextAwardEvent) error {
 					_, err := store.Award(ctx, TextAward{MatchID: a.MatchID, Owner: record.Owner, Epoch: 1, AccountID: accounts[a.Seat], Kind: a.Kind, Ordinal: a.Ordinal, Amount: a.Amount, At: a.OccurredAt})
 					return err
