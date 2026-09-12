@@ -1,20 +1,23 @@
 # Knowoff
 
-> An online social deduction party game for exactly 4 or 6 players: one
-> media item — **Nown** — appears on every phone except the Donowers', who
-> must pretend they see it. Play a card that relates, argue, vote them out.
+> A text-based social deduction party game for exactly 4 or 6 players.
+> Nowers know the secret context; Donowers infer it from the table and bluff.
+> Play, argue and vote before the Knowoff budget runs out.
 
-**Nowers** (who see Nown) win by voting out every **Donower**; Donowers win
-— together — if the votes run out first. Matches run ~5–8 minutes in
-**Quick Play** with strangers worldwide (the main product) or in **Local
-Rooms** with the people around your table. Role secrecy is enforced
-server-side: a Donower's device is never sent Nown at all, so there's
-nothing to leak even if you inspect the traffic yourself.
+The target app has five selectable modes: **Missed the Briefing**, **Secret
+Scale**, **Make Room**, **Bad Bargains** and **Top That**. Quick Play and Local
+Rooms assemble the table; they are separate from gameplay mode and content
+language. Missed the Briefing is the initial default, with each mode exposed
+only after its release checks pass.
 
-Nowns and cards use **static images and plain text only**; see
-[ADR-011](docs/design/ADR-011-static-image-and-text-content.md). Content work
-automatically follows the [High/Distant/Chaos server and client source map](content/curator-guide.md#read-the-dealing-path-before-authoring)
-alongside the existing humor, tone and cultural-adaptation guides.
+**Planning adopted, implementation pending (2026-09-12).** The checked-in app
+still runs the previous association game with image/text content, specialties
+and bot backfill. This documentation change starts none of the migration or
+cleanup. [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the
+text pivot; the [transition design](docs/design/DESIGN-text-transition.md)
+maps source gaps, data preservation, compatibility and retirement proofs.
+The [business plan](docs/product/BUSINESS_PLAN.md) records customer, content,
+liquidity and financial assumptions and their validation gates.
 
 📖 The normative spec lives in [`BLUEPRINT.md`](BLUEPRINT.md) — game rules,
 tech stack, architecture, economy, and the product baseline. The sequenced
@@ -27,19 +30,17 @@ build plan — phases, checkboxes, proof tests — lives in
 |---|---|
 | Client | Flutter — one codebase: native Android/iOS + Web PWA |
 | Game server | Go — authoritative WebSocket server (rooms, roles, dealing, votes, economy) |
-| Data | PostgreSQL (durable), Redis (queues/presence), MinIO (media assets) |
+| Data | PostgreSQL and Redis retained; current MinIO/game-content dependency retires only after consumer and backup proofs |
 | Infra | Docker Compose on a home server behind Cloudflare Tunnel → VPS at launch |
 
 ## Status
 
-The Flutter client has a complete new card-table interface: Quick Play/local
-rooms, private roles, hands and specialties, live voting, results, profiles,
-leaderboard, store, notices and feedback. Bold cream/lavender panels, doodles
-and comic copy follow the blueprint's design matrix. Motion is finite and
-respects reduced-motion preferences; gameplay and rewards remain server-owned.
-See [`client/README.md`](client/README.md) for the client structure and current
-integration limits, and [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md)
-for verification evidence and remaining product roadmap work.
+The current Flutter UI, account/economy/community services and static text
+rendering are reusable foundations. The audit reopened draw privacy, full-match
+history, sequence/snapshot recovery, content pinning, settlement and operational
+proofs. Existing tests and historical completion checkmarks are not text-mode
+readiness evidence. See [client documentation](client/README.md) for current
+implementation and the [Roadmap](docs/planning/ROADMAP.md) for new proof gates.
 
 ## Quickstart
 

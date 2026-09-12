@@ -13,19 +13,77 @@ actually done, in what order, with which tools, and what went wrong.
 **Audience:** any agent (or human) about to do a large, cross-cutting UI change
 in this repo.
 **Companion docs:** [`neo-brutalism-ui-design`](../../.agents/skills/neo-brutalism-ui-design/SKILL.md)
-(the normative *rules*), [🎨 Visual Identity](../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
+(implementation practice; Blueprint wins product conflicts), [🎨 Visual Identity](../../BLUEPRINT.md#-visual-identity-soft-neo-brutalism-design-matrix)
 (the *spec*), [ADR-007](../design/ADR-007-display-typeface.md) and
 [ADR-008](../design/ADR-008-support-accents.md) (the locked-token *decisions*).
 
 This file is the third leg: the **method and the scar tissue**.
 
-Its rules apply to interface chrome. For the Nown/card media inside those
-surfaces, use the Blueprint's [lo-fi static-image and text direction](../../BLUEPRINT.md#playable-media-direction)
-and [content creation skill](../../.agents/skills/knowoff-content-create/SKILL.md).
-Keep rough crops, compression and candid reactions; do not render pack
-content as polished illustrations matching the UI palette. Nown and card media
-remain static under [ADR-011](../design/ADR-011-static-image-and-text-content.md).
-Interface transitions and reduced-motion rules are unchanged.
+Interface rules apply to chrome around **plain-text Nowns and cards** under the
+[Blueprint text direction](../../BLUEPRINT.md#playable-media-direction) and
+[ADR-012](../design/ADR-012-text-only-selectable-modes.md). The five modes preserve
+Knowoff's visual grammar and require distinct legal controls/public boards.
+Avatars, icons and promotional assets remain separate. Old playable-image
+rendering/prefetch and specialty surfaces retire; preserving visual identity does
+not require preserving those code paths.
+
+## 2026-09-12 text-transition proof requirements
+
+This section is current planning guidance. The execution records below are dated
+historical evidence, including superseded image/specialty/blind-ballot/bot behavior
+and old tool recipes. They do not certify the text modes or instruct agents to
+restore retired architecture. [Blueprint](../../BLUEPRINT.md),
+[transition design](../design/DESIGN-text-transition.md) and
+[Roadmap](../planning/ROADMAP.md) are the current authorities. No implementation,
+new benchmark or release result is claimed by this docs-only change.
+
+- Keep shared tokens, literal rules/errors, accessible buttons, private role
+  shutter, people/chat, ballots and verdict. Build each mode on the shared
+  state contract with explicit confirmation: response, card+rating, remove/add,
+  offer+recipient response, or comparison against the current target.
+- Treat all readable text, scale buckets, occupied bag slots, trade previews and
+  history entries as fairness-critical: aligned, attributed, reachable by touch,
+  keyboard and screen reader. Dragging and free typing are never prerequisites.
+  Public scale labels and system seeds must not reveal the hidden prompt.
+- Whole-match evidence survives a new round and overwritten board state. Equal
+  wording on different copies must render and mutate independently. Pending
+  trade controls remain discoverable for the recipient even outside their turn.
+  Ordinary updates do not steal focus or switch unrelated phone workspaces.
+- Draft selection is not server commitment. Revalidate board-dependent previews
+  on changes/reconnect; do not inherit legacy out-of-turn locked auto-play for
+  ratings, replacements, trades or comparisons. Duplicate events/requests must
+  not remove another copy or animate an already applied action as new evidence.
+- Verify mode/language selection, queue Keep waiting/Change mode/Leave, host
+  transfer, settings/membership Ready reset and rematch settings before roles
+  redeal. No implicit bot fill or mode substitution can stand in for a test table.
+- Test elimination/sign-out/restart clearing private prompt state and semantics;
+  reconnect restores only authorized history/hand with original absolute
+  deadlines. Screenshot correctness alone cannot establish wire privacy.
+- Refresh 4/6-seat and all-five-mode fixtures, narrow/large phones, landscape,
+  tablet/split-screen and desktop layouts, 2x text, launch scripts/pseudo-locale,
+  contrast/semantics and reduced-motion tests. Run real server/client matches
+  and race/reconnect scenarios with scripted nonrewarding clients.
+- Run `python3 xops/test/tests-lints.py` from the verified repository root,
+  then required release builds/live-client checks. Use the available browser
+  tool's current documentation; old selectors, coordinates, cached builds and
+  tool APIs below are historical examples, not reusable evidence.
+- Measure foreground mode-specific action/history/pending-trade layouts on
+  representative low-end devices. Record build/raster latency, dropped frames,
+  history/snapshot size and cold-start behavior. The 2026-09-10 desktop timings
+  below cannot certify the new boards or physical mobile behavior.
+- Finish retirement with dependency, source, localization, fixture, asset and
+  build-output audits. Keep dated measurements/ADRs and necessary avatar/brand
+  assets; remove unused gameplay image/specialty paths rather than leave an
+  unused alternate screen or hidden feature-flag branch.
+
+## Historical execution record
+
+The following sections preserve earlier decisions, observations and limitations.
+Where they mention blind ballots, automatic bot fill, image-card checks or
+specialty interactions, use them only to understand the old implementation.
+Today's ballots are open and attributed; the planned first text release excludes
+production backfill and specialties. Use isolated baseline comparison for unrelated failures; do not
+stash or restore another collaborator's working changes using old recipes.
 
 ---
 
@@ -401,9 +459,10 @@ feed and the countdown deadline.
 > *doesn't* carry need an explicit `current.x` line. A `copyWith` would have
 > made this impossible; a hand-rolled constructor made it invisible.
 
-### 5.9 Optimistic local state is correct when the server deliberately won't echo
+### 5.9 Historical blind-ballot feedback (superseded)
 
-The Knowoff ballot is blind by design (Rules §4), so the server never echoes
+At that checkpoint the Knowoff ballot was blind; ADR-009 later replaced it
+with the current open, attributed ballot. The historical server never echoed
 your vote back. Without a local lock the voter got *no feedback at all* and
 could tap every row in turn.
 
@@ -489,7 +548,7 @@ await page.mouse.click(1064, 356);   // vote
 
 ---
 
-## 8. Deliberately left open
+## 8. Deliberately left open at that historical checkpoint
 
 - **Bot seat names** — server-side plumbing (§5.11).
 - **Body typeface** — still the platform sans. Inter or DM Sans would be the

@@ -9,7 +9,7 @@
 - Over-eager file creation (will recreate a config that already exists at a
   slightly different path). → §1 of [`AGENTS.md`](../../AGENTS.md).
 - Quietly skipping the test write. → Hold the line: tests move with code.
-- "Should I continue?" mid-phase. → [`phase-persistence.prompt.md`](../skills/planning/phase-persistence.prompt.md).
+- "Should I continue?" mid-phase. → [`phase-persistence.prompt.md`](../../.agents/skills/phase-persistence/SKILL.md).
 
 ## Claude (Sonnet / Opus / Haiku)
 
@@ -27,7 +27,7 @@ once it's in context.
 **Strengths.** Strong long-context reasoning.
 **Watch for.**
 - Partial work + "should I keep going?" → Violates
-  [`phase-persistence`](../skills/planning/phase-persistence.prompt.md).
+  [`phase-persistence`](../../.agents/skills/phase-persistence/SKILL.md).
   Drain the scope, then hand back.
 - Re-planning mid-implementation. → The plan is in `docs/planning/`; if it's
   wrong, switch to `planner` mode and update it, don't free-form drift.

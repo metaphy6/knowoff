@@ -93,7 +93,7 @@ re-index in the tracking log.
 ## Adding a project-scoped server
 
 If you have an MCP server that is specific to this project (e.g. a custom
-tool server living under `xops/`), add it to all three files:
+tool server living under `xops/`), update the two configuration files and their documentation:
 
 1. Add the server block to `.mcp.json` and `.vscode/mcp.json`.
 2. Document its purpose + when to use it in this file.

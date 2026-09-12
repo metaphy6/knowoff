@@ -7,7 +7,7 @@ this doc because they only ever unlock a throwaway local Docker stack.
 
 ## Postgres / Adminer
 
-Open `https://adminer.knowoff.local`https://adminer.knowoff.local` (or `http://localhost:8081` without the
+Open `https://adminer.knowoff.local` (or `http://localhost:8081` without the
 proxy) after `make localhostfile.add` + `docker compose --profile core up`.
 
 | Field | Value |
@@ -18,7 +18,12 @@ proxy) after `make localhostfile.add` + `docker compose --profile core up`.
 | Password | `knowoff` |
 | Database | `knowoff` |
 
-## MinIO console
+## MinIO console (current legacy stack)
+
+Text gameplay retires this dependency only after consumer/backup proofs in the
+[Roadmap](../planning/ROADMAP.md); this planning change leaves local services
+and credentials unchanged. These local defaults are never deployment evidence.
+
 
 Open `https://minio.knowoff.local` (or `http://localhost:9001`).
 

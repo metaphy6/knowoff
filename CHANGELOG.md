@@ -2,6 +2,17 @@
 
 All notable changes to Knowoff are documented in this file.
 
+## Text-only transition planning — 2026-09-12
+
+- Adopt text-only five-mode Blueprint and seven-phase Roadmap; preserve earlier
+  roadmap/ADR evidence as explicitly historical.
+- Add source-backed protocol, card ownership, secrecy, migration, settlement,
+  compatibility, test coverage and complete retirement contracts.
+- Add business/content/liquidity/economics validation plan and align active
+  guides, glossary, launch materials and documentation indexes.
+- No runtime, SQL migration, tuning, pack activation, test deletion or deployment
+  implemented; live release remains gated on the new proof matrix.
+
 ## [Unreleased]
 
 ### Removed
@@ -21,10 +32,11 @@ All notable changes to Knowoff are documented in this file.
 
 ### Added
 
-- Documented five shortlisted text game modes as a potential project divergence,
-  with the intended direction of player selection in one Knowoff app. The
-  proposal records examples and open design questions; the modes are not yet
-  implemented.
+- Documented the confirmed move to text-based Knowoff with five selectable
+  modes and proposed answers for turns, card ownership, evidence, dealing,
+  queues and fair rollout. Missed the Briefing is the proposed default; the
+  detailed rules are now adopted in Blueprint/Roadmap, while the modes remain
+  unimplemented.
 
 - Recorded the static-image-and-text decision in ADR-011 and made the content
   skills automatically consult High/Distant/Chaos tuning, server dealing and

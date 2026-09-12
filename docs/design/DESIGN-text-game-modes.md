@@ -1,28 +1,40 @@
-# Potential project divergence: selectable text game modes
+# Text-based Knowoff: selectable game modes
 
-- **Status:** Draft — owner-selected concepts for future implementation.
+- **Status:** Text-based product direction and planning defaults adopted in
+  Blueprint/Roadmap on 2026-09-12; implementation and playtest validation pending.
 - **Author:** Knowoff owner and Codex, from the concept exploration in this task.
-- **Date:** 2026-09-11.
-- **Supersedes:** None. This proposal does not change the current game rules.
+- **Date:** 2026-09-11; design answers added 2026-09-12.
+- **Supersedes:** The undecided text-versus-image product direction in this
+  document. ADR-012 supersedes the playable-image product plan; current runtime remains unchanged until implementation/cutover.
 
 ## Product direction
 
 The owner selected five concepts to keep for Knowoff: **Missed the Briefing**,
 **Secret Scale**, **Make Room**, **Bad Bargains**, and **Top That**. The intended
 direction is to implement all five in the app and let players choose which
-Knowoff gameplay mode to play. A later decision could make one of them the
-project's main identity; no single-mode pivot or default has been selected.
+Knowoff gameplay mode to play. On 2026-09-12 the owner confirmed the switch to
+text-based play. This carries forward the five-mode selection; it does not
+choose a single-mode pivot.
 
-This document keeps the five concepts together as a potential project
-divergence. It records their gameplay, examples, appeal and outstanding design
-questions. It is a concept proposal, not an implemented feature, a certified
-content pack or a second implementation roadmap. The examples are illustrative
-drafts; player fun, comprehension and balance have not been playtested.
+The adopted planning default is **Missed the Briefing**, because its single response
+play requires the fewest new controls. The target offering uses text Nowns and
+text cards throughout; the current image/text association game leaves the
+player-facing selector when the text migration is ready. Existing image assets,
+loaders and historical records are not deleted by this design change.
+
+This document records gameplay, examples and concrete answers to the design
+questions. The owner's text-based direction is confirmed; the detailed defaults
+are now the Blueprint implementation-planning contract. This is not a claim of
+playtest validation or separate owner sign-off on every technical detail. The examples remain illustrative drafts; player
+fun, comprehension and balance have not been playtested.
 
 The current [Blueprint](../../BLUEPRINT.md) remains normative and the
 [Roadmap](../planning/ROADMAP.md) remains the sequenced implementation plan.
-When this direction becomes an implementation scope, put the adopted rules in
-the Blueprint and their ordered delivery work and proof tests in the Roadmap.
+The adopted rules now live in the Blueprint and their ordered delivery work
+and proof tests in the Roadmap; where this explanatory design differs, follow
+the Blueprint. The [transition design](DESIGN-text-transition.md) records the
+source audit, compatibility, data retention and retirement contracts. This document is not a second
+roadmap and does not claim that the current app already supports these modes.
 
 ## Goals and common principles
 
@@ -61,9 +73,9 @@ about afterward.**
   Short wording must remain understandable in each language. Mode controls
   need accessible labels and touch/keyboard alternatives to dragging.
 
-The current game already supports static images and plain text under
-[ADR-011](ADR-011-static-image-and-text-content.md). These concepts explore
-text-only interactions; they do not restore animated content. Their design
+The current runtime supports static images and plain text under historical
+[ADR-011](ADR-011-static-image-and-text-content.md). The target in
+[ADR-012](ADR-012-text-only-selectable-modes.md) uses text-only interactions. Their design
 scope also excludes a new theme, renamed roles or a replacement economy.
 
 ## The five modes at a glance
@@ -243,7 +255,7 @@ away.** There is no predefined winning bag or automatic usefulness score.
 ### What players see and do
 
 Nowers privately receive a shared plan. Everyone has short item cards and
-puts one item face up as an offer. On your turn, offer a card from your hand
+starts with one server-seeded face-up offer. On your turn, offer a card from your hand
 for another player's face-up item. That player accepts or refuses.
 
 The public evidence includes the offered exchange, its owner and the response.
@@ -350,52 +362,273 @@ table size, language, theme packs or specialty cards.
 
 The proposed selection behavior is:
 
-- Choose a gameplay mode before a match and show it clearly to every player.
-  Mode descriptions can use the one-line turn actions from the comparison
-  table above.
-- Keep Quick Play and Local Rooms as the existing ways to assemble a table.
-  For Quick Play, match players with compatible mode choices and table sizes;
-  the queue design and possible multi-mode preferences need separate design.
-- In a Local Room, make the selected mode visible and agreed before the match
-  starts. Host controls and any group-selection mechanism remain open.
-- Keep the selected mode fixed during a match. A rematch can offer a mode
-  change before the next match begins; exact rematch consent and readiness
-  behavior still need specification.
-- Reuse shared identity, roles, people/chat, ballots, verdicts and economy
-  surfaces where their rules remain applicable. Give each mode its own legal
-  actions and public table state rather than presenting every mode's controls
-  during every match.
+- Start new players on **Missed the Briefing**; remember a returning player's
+  last available choice. Show each mode's one-line action before joining.
+- Keep Quick Play and Local Rooms as the ways to assemble a table. Quick Play
+  uses one explicit mode preference, with FIFO matching among compatible mode,
+  table-size and content-language choices. No multi-mode preference in v1.
+- After `liquidity.queue_timeout_s`, show that the selected queue is still
+  waiting and offer **Keep waiting**, **Change mode** or **Leave queue**. A mode
+  change leaves the old queue and joins the new one; never silently substitute
+  another mode, table size, language or bot. Text-mode bot backfill starts off.
+- In a Local Room, the host selects an available mode, size and content
+  language. Everyone sees the same settings and explicitly marks Ready. Any
+  setting or membership change clears readiness; start requires a full table
+  of connected, ready players. If the host leaves, the longest-present
+  connected member becomes host.
+- A rematch returns to a settings/Ready lobby. Local Rooms retain their host;
+  a Quick Play rematch uses the lowest original seat among returning players
+  as host. Leaving the rematch is always available. The same readiness and
+  full-table checks apply; new roles are assigned only at the next start.
+- Lock mode, content pack/language and rule version for the whole match.
+  Reconnect restores that contract; a new app default cannot change it.
+- Reuse identity, people/chat, ballots, verdicts and applicable economy
+  surfaces. Show only the current mode's legal actions and public table state.
 
-Whether the current image/text association game remains an additional option,
-becomes the default or is eventually replaced is unresolved. The five selected
-concepts are all intended candidates for implementation; this document does
-not select a winner or authorize retiring the existing game.
+All five remain in the intended offering. Expose a mode only after its release
+checks pass; keep unfinished modes out of matchmaking rather than suggesting
+that selecting them starts a playable match.
 
-## Design questions to resolve before implementation
+## Design questions adopted for planning
 
-These are open decisions, not extra rules players must learn now.
+These concrete defaults have been adopted in the Blueprint for implementation
+planning. They replace the former open-question list; playtesting must validate
+them before release.
 
-| Area | Decisions needed |
+| Area | Proposed answer |
 |---|---|
-| Shared match rules | Confirm mode-specific turn completion, timeouts, draws, disconnects, elimination and specialty behavior against the existing match loop. Specify any deliberate departure from current rules in the Blueprint. |
-| Missed the Briefing | Build reusable response pools with enough implication to provide evidence without making the situation obvious from one card. |
-| Secret Scale | Specify placement confirmation and correction, compact display of shared ratings, and how earlier placements remain accessible. |
-| Make Room | Specify how the first three items are seeded, where removed cards go, hand replenishment, and which recovery/restoration moves are legal. |
-| Bad Bargains | Specify face-up offer seeding, ownership and card destinations after acceptance, refused-offer handling, response timeouts and pending trades when a player leaves. |
-| Top That | Specify the first comparison card, replenishment and history; preserve the distinction between a legal card play and a disputed semantic escalation. |
-| Evidence and secrecy | Keep an attributed history of placements, replacements, offers, refusals and comparisons through reconnects and later Knowoffs without leaking private prompts or hands. |
-| Dealing and content | Reassess the current five-card hand plus three-card draw pile and High/Distant/Chaos model for each action type. Do not assume similarity to a prompt alone balances a trade, replacement or comparison. |
-| Mode choice and queues | Decide the default, Local Room selection, Quick Play queue organization, optional mode preferences and clear behavior when a chosen mode has too few players. |
-| Fairness and rollout | Assess whether current specialties, bots, scoring, rewards and access policies remain suitable across modes. Preserve no-paid-advantage principles and avoid selecting a mode merely to farm easier rewards. |
+| Shared match rules | Retain one turn per active seat, fresh Nown each round, existing Knowoff/victory/disconnect rules, and 5-card hand plus 3-card reserve; use the action completion rules below. |
+| Missed the Briefing | Consume one response card; use reusable, situation-tested response pools without universal safe answers. |
+| Secret Scale | Confirm card and 1–5 rating together; allow edits before confirmation, then keep the placement immutable. |
+| Make Room | Seed three neutral items; replace one with a hand card, discard the removed copy, and retain the complete swap history. |
+| Bad Bargains | Seed one public offer per seat; an accepted trade moves the requested card into the proposer’s hand and the offered card onto the recipient’s display. A refusal returns the offered card to the proposer’s hand. |
+| Top That | Seed one neutral comparison card; any owned card is a legal next play. Players dispute meaning through discussion and voting. |
+| Evidence and secrecy | Keep ordered public action history for the whole match; reconnect receives only public evidence plus the recipient’s authorized private state. |
+| Dealing and content | Retain 5+3 as the prototype budget, without automatic refill; certify viable actions across complete schedules and each mode’s changing public state. |
+| Mode choice and queues | Default to Missed the Briefing; host settings plus unanimous readiness locally; explicit single-mode Quick Play queues with no silent fallback. |
+| Fairness and rollout | No specialties or production bot backfill in the first text release; preserve existing access/reward rules and gate each mode on balance and abuse checks. |
 
-All five use shared-pool content with multiple defensible relationships.
-Illustrative examples here are not measured High/Distant/Chaos assignments or
-evidence that the existing dealer supports these rule sets. The
-[Curator Guide](../../content/curator-guide.md) documents the current relevance
-and review requirements; implementation planning must inspect the actual
-server/client paths before claiming compatibility.
+### Shared match rules and card budget
 
-## Evaluation and possible project divergence
+- Keep 4/6-player roles, the 2/3-Knowoff budget, early victory when remaining
+  votes cannot catch surviving Donowers, open ballots/runoffs, elimination,
+  Ready and match-verdict reveal. A tied runoff consumes a vote without an
+  elimination; it does not create a new kind of mode-specific tie.
+- Assign a fresh secret text Nown and randomized active-seat order every
+  round. Reset that round's board and system seeds; preserve earlier evidence
+  under its original round. Hands and reserves carry across rounds.
+- Retain `hand.size` and `hand.draw_pile` (currently 5 and 3) for each mode.
+  Drawing is optional, current-turn-only and does not end the turn; announce
+  player/count publicly and send new card identities only to the owner. Keep
+  `points.draw_penalty`. There is no automatic replenishment or discard
+  recycling, including between rounds.
+- Completing a response, placement, replacement or comparison ends the turn.
+  In Bad Bargains, submitting an offer locks the action; its response or
+  cancellation finishes the turn before the next seat starts.
+- Use the existing tuning keys for turn/discussion/vote/grace clocks. A turn
+  with no submitted action expires into an attributed auto-pass and one
+  random hand-card discard, without changing the bag, scale or comparison
+  target. Record the discarded card as penalty evidence, not an intentional
+  play. If there is no card, record the pass without inventing one.
+- A disconnected human keeps their seat/role and uses the existing auto-pass,
+  abstention, grace, forfeiture and low-population endings. No bot takes over
+  that hand. Reconnect never restarts a deadline. Eliminated players retain
+  public evidence but cannot act, receive new secret prompts, chat or vote.
+
+### Missed the Briefing: reusable responses
+
+Play one response from the hand, then consume that copy. The public table
+keeps the response and its player in turn order. No typed answer is required.
+
+Build response pools by language and mode, shared across situations. Review
+each response against multiple unrelated situations: it should support
+different defensible readings while still having contexts where it is an
+awkward choice. Exclude lines that quote the secret, identify it uniquely, or
+work as a safe answer to almost everything. Test whole hands, including a
+Donower opening the round; a good standalone joke is insufficient evidence
+that a pool is playable. These are editorial acceptance rules, not claims
+that a production response pool already exists.
+
+### Secret Scale: confirmation and readable history
+
+The player selects a card and a labeled rating button, previews the choice,
+then taps **Place**. Card and rating commit atomically. Both can change before
+confirmation; after server acceptance neither can be edited or moved. A late
+or invalid submission leaves the current state intact and explains the error.
+Duplicate submissions must not spend another card or produce another turn.
+
+Ratings run from low (1) to high (5) along the private criterion. Use neutral
+public endpoint labels; do not reveal the criterion to label the scale.
+Several cards may share a rating. On a phone, show the five rating groups
+with short cards and player attribution, plus a chronological evidence view.
+Earlier rounds remain selectable. Dragging is optional; touch, keyboard and
+screen-reader controls perform the same confirmed action. Ratings never
+produce correctness points.
+
+### Make Room: seed, replacement and restoration
+
+At each round start, the server places three distinct item texts from the
+mode/language pool into the bag as separate system-owned card copies. Seed
+selection is independent of Nown and roles, uses neither hands nor reserves,
+and is labeled **Starting bag**. It must not encode a suggested solution.
+
+Select one hand card and one occupied bag slot, preview the before/after
+pair, then confirm one atomic replacement. The incoming copy leaves the
+hand; the outgoing copy enters a public discard history. It never enters
+another hand or the reserve. The bag always contains three cards. Record
+player, slot, removed card and added card even after later replacements.
+
+There is no undo, free retrieval or restoration from history. A later player
+may restore the same *idea* by spending a different copy of that item already
+in their hand. For example, replacing Car keys with Cake consumes Cake and
+discards that Car keys copy; restoring Car keys requires another playable
+copy. At a new round, retire the old bag into history and seed a fresh bag.
+
+### Bad Bargains: ownership and a bounded response
+
+At each round start, give every active seat one face-up offer, drawn as a
+separate system seed from the shared item pool independently of Nown/roles.
+These are additional public copies, not cards taken from the player's 5+3.
+Players own their display for that round; they cannot refresh it freely.
+Copies need distinct instance identities even when their text is identical.
+
+On the proposer's turn, choose one owned hand card and another connected
+active player's displayed card, preview the swap, then submit. Only one
+trade can be pending. Reserve the offered hand copy and the requested display
+copy; publish both cards and participants. No further draw or action is legal
+for the proposer while the offer awaits its response. Only that recipient
+may accept or refuse, and responding does not consume their own later turn.
+
+| Resolution | Offered hand card | Requested display card | Turn result |
+|---|---|---|---|
+| Accepted | Becomes the recipient's new face-up offer | Moves into the proposer's hand | Proposer's turn ends |
+| Refused or response expired | Unreserved in the proposer's hand | Stays on the recipient's display | Proposer's turn ends |
+| Either participant disconnects/leaves before resolution | Unreserved in the proposer's hand | Stays on the recipient's display | Cancel publicly; proposer's turn ends |
+
+For example, offering Gold watch for Can opener puts Gold watch on the
+recipient's display and Can opener in the proposer's hand on acceptance.
+The proposer's own display and recipient's private hand are unchanged.
+Transferred cards remain known from public history even when now in a hand.
+Refused cards also stay public in the offer history; refusal cannot erase
+evidence. A refused card may be offered again on a later turn, not this turn.
+
+Propose a new, configurable **10-second response window**, starting when the
+server publishes the offer; this is a proposed tuning addition, not an
+existing key. The normal turn clock governs submission only. Response expiry
+counts as refusal, with no hand discard for either participant. Before an
+offer exists, ordinary turn expiry still auto-passes/discards. If no connected
+eligible recipient exists, auto-pass without a card penalty and run the
+shared disconnect checks; never wait forever or allow a self-trade.
+
+Acceptance must validate the pending offer, participants, exact copies and
+board revision, then transfer both copies atomically. The first server-ordered
+resolution wins; late/repeated responses cannot transfer twice. End-of-match
+or administrative phase transitions cancel an unresolved offer before the
+transition; normal discussion/Knowoff waits for resolution. No pending trade
+crosses a round or elimination. Retire displays to history and reseed at the
+next round; acquired hand cards carry over. There is no automatic refill.
+
+### Top That: a legal play is not an agreed comparison
+
+Seed one system comparison card independently of Nown/roles, outside the
+5+3 budget, at each round start. Mark it **Starting card** with no player
+attribution. A player previews the current target and a hand card, then
+confirms. The hand copy becomes the new target; retain the old target and
+the attributed link in the chronological chain. No refill or chain rollback.
+
+Validate turn, ownership and current target revision, not semantic superiority.
+An absurd or unconvincing escalation still commits and ends the turn. No veto,
+AI judge, automatic rank or mandatory explanation. Discussion and Knowoff
+handle disagreement. A timeout leaves the target unchanged; a fresh round
+starts a new labeled chain while older chains remain readable.
+
+### Evidence, secrecy and dealing
+
+Keep a server-ordered history with match/round/action identity, seat, public
+card copies, before/after board state and resolution reason. Include system
+seeds, draws by count, timeout discards, placements, replacements, offers,
+acceptances, refusals and cancellations. Reconnect restores the current board,
+pending action/deadline and the same complete public history without replaying
+actions as new ones. Pin content versions so past cards cannot change wording.
+
+Public history never contains private Nown, the future prompt schedule, reserve
+identities, unrevealed hand cards or relevance-band annotations. Send each
+hand privately and Nown only to active Nowers. The client must not receive
+secrets merely to hide them visually; elimination clears private prompt views.
+At match verdict, reveal only Nowns from rounds that actually began.
+
+Use separate response and item pools, with explicit mode/language suitability.
+Retain High/Distant/Chaos as candidate relevance evidence where useful; those
+labels must not become a required rating, winning bag, trade price or verdict
+on an escalation. Deal using the same procedure for both roles. Public seeds
+must be chosen independently of the secret, and failed content validation
+must reject the pack/match setup rather than fall back to revealing clues.
+
+Certify the full 2/3-round schedule and public-state transitions: useful but
+non-obvious responses, several defensible rating placements, meaningful
+remove/add choices, plausible exchanges and arguable comparison pairs. Retain
+5+3 provisionally because one action per round fits that budget; explicitly
+measure draw pressure, especially since accepted trades preserve hand size
+while the other modes consume cards. Do not claim prompt cosine similarity
+alone balances these actions. The existing synthetic pack and the illustrative
+examples are not production content evidence; follow the
+[Curator Guide](../../content/curator-guide.md) for review and certification.
+
+### Fairness and release policy
+
+Disable all five specialties for the first text release, for every role and
+mode, and show that rule before Ready. This deliberately simplifies the shared
+rules: no specialty dealing, Reveal, free draw, Pass card, Shuffle or Revote.
+Ordinary draws, timeout passes and tied-ballot runoffs still work. Reintroducing
+a specialty later requires its own per-mode interaction and secrecy tests;
+particularly, Shuffle cannot safely inherit undefined trade/board rollback.
+
+Keep the existing match-point, Noin, access and no-paid-advantage rules. Modes
+have no individual unlock fee; daily Quick Play allowances, earning caps and
+leaderboard limits are shared across modes, not reset on switching. Local
+Rooms remain uncapped. Add no rewards for ratings, trades, accepted offers,
+item collections or allegedly correct responses. Preserve private role-linked
+reward settlement and the existing human-count eligibility checks.
+
+Prototype/playtest matches earn no live rewards or leaderboard credit.
+Production bot backfill remains disabled until policies are tested for each
+mode's legal actions and role-scoped observations; bots never receive extra
+secrets, replace a disconnected human or earn rewards. If enabled later, keep
+visible bot labels and human-count reward gates. Before enabling rewards for a
+mode, check win rates by role and first seat, draws, completion time, repeat
+pairings and earnings per minute. Fix material balance or farming problems
+before rollout rather than adding a lucrative mode-specific multiplier.
+
+### Implementation handoff and known compatibility gaps
+
+The [current dealing audit](../code/MODULE-media-engine.md),
+[match engine](../../server/internal/game/match.go),
+[payload renderer](../../server/internal/game/payload.go) and
+[tuning](../../configs/gameplay/tuning.yaml) are the implementation starting
+points. The current engine's per-round seat-to-card map is insufficient for
+whole-match action history. The existing draw path also needs turn-ownership
+and private-card delivery fixes; describing desired secrecy is not evidence
+that the current handler enforces it.
+
+The selected contract is adopted in Blueprint game rules, content/dealing,
+protocol, bots and product baseline. The active Roadmap now orders the transition;
+its predecessor is a labeled historical snapshot. Deliberate departures include
+text-only play, mode-aware queues, disabled specialties/backfill and the trade
+response phase. Timer baselines are reconciled against current tuning (20-second
+turns, five seconds of discussion per original table seat). This planning change
+does not edit tuning, runtime, content activation or historical proof records.
+The [technical transition design](DESIGN-text-transition.md) also covers copy
+identity, actual sequence/snapshot gaps, durable settlement, schema migration,
+compatibility and complete retirement. [Business planning](../product/BUSINESS_PLAN.md)
+covers adoption, liquidity, content labor, value preservation and launch evidence.
+
+Required proofs include atomic action/copy ownership, idempotent confirmation,
+timeouts and trade/disconnect races, fresh-round resets with retained history,
+role-scoped reconnect/elimination/verdict payloads, correct Knowoff budgets,
+mode/locale/readiness isolation, shared reward caps, and mobile/accessibility
+behavior. Recheck actual server and client paths during implementation.
+
+## Evaluation of the text-based direction
 
 Prototype and playtest the modes with actual 4- and 6-player groups. Evaluate
 the same questions for each mode:
@@ -413,11 +646,8 @@ the same questions for each mode:
   unacceptable matchmaking delays?
 
 No playtest, balance result, implemented mode selector or release readiness is
-claimed here. The next planning step is to translate the chosen delivery scope
-into the normative Blueprint and the existing Roadmap, with meaningful tests
-for each new action and its secrecy boundary.
-
-The owner can later use those results to retain all five as player-selectable
-modes, emphasize a subset or make one mode the central Knowoff experience.
-That decision remains open; the current intent is to build the five-mode
-offering and let players choose.
+claimed here. The text-based direction is confirmed and the former design
+questions have proposed answers. The contract is now adopted in the normative Blueprint and active Roadmap.
+Implementation starts only under a subsequent implementation request; changing
+the five-mode offering or planning defaults requires a recorded decision
+supported by the results above.

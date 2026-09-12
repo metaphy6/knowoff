@@ -1,196 +1,225 @@
 # Curator Guide
 
-This guide is the rulebook for Knowoff **Curators**: players who create Nowns and the cards that relate to them, test hands in the deal simulator, and screen Weekly Nown Challenge entries before they go public.
+This guide describes how Knowoff Curators prepare text Nowns, reusable response
+and item pools, verify full matches, and screen Weekly Nown Challenge entries.
+It follows the [Blueprint](../BLUEPRINT.md) and the text-only five-mode decision
+adopted on 2026-09-12 in
+[ADR-012](../docs/design/ADR-012-text-only-selectable-modes.md).
 
-It describes the target curation and pack-release workflow. The current
-Contributor Studio supports text submission and review; Nown/deck authoring,
-editorial planning fields and pack publishing are not implemented there.
-Accepted text is an input to curation, not a certified or deployed game pack.
-See [Community operations](../docs/guides/COMMUNITY_OPERATIONS.md) for the
-available operations.
+This is the target curation/release workflow. The current Contributor Studio
+supports text submission and review; mode-aware Nown/pool authoring, editorial
+planning fields and production pack activation remain transition work.
+Accepted text is curation input, not a certified or deployed game pack.
+See [Community operations](../docs/guides/COMMUNITY_OPERATIONS.md) for available
+operations and the [transition design](../docs/design/DESIGN-text-transition.md)
+for implementation dependencies. No pack or runtime changes in this guide edit.
 
 ## What a Curator does
 
-- Create media submissions that become **Nowns** (the round's secret item).
-- Author **cards** — static images and plain text — against candidate Nowns
-  in the shared pool.
-- Use the **deal simulator** to verify that every Nown has full band coverage at both 4- and 6-player table sizes.
-- Screen Weekly Nown Challenge entries before they become publicly visible and votable.
+- Write short text **Nowns**: situations for Missed the Briefing, criteria for
+  Secret Scale/Top That, and plans for Make Room/Bad Bargains.
+- Author reusable **response** or **item** cards in explicit language/mode
+  pools; keep several defensible readings without uniquely exposing a Nown.
+- Review legal actions and actual retained hands/reserves across complete
+  2/3-round schedules at both 4- and 6-player sizes, including changed boards.
+- Screen Weekly Nown Challenge text before it becomes public and votable.
+- Preserve exact revisions, language, rights/terms, human decisions and evidence
+  separately from automated screening, certification, publication and activation.
 
 ## The relevance mesh
 
-Every Nown and card carries an embedding in one shared multimodal space. Similarity, not tag intersection, is the balance mechanism.
+High/Distant/Chaos are candidate relationship evidence, not correct answers,
+role clues, rating targets, item prices or automatic rewards. A card can support
+several Nowns; writing against one prompt does not give it exclusive ownership
+of that card. Tone buckets, tags, callbacks and the `chaos` humor bucket remain
+separate from relevance bands.
 
-A card's band is relative to a particular Nown, so it can be high for one Nown
-and distant or chaos for another. Writing cards "against" a Nown is an
-authoring method, not exclusive ownership of those cards by that Nown. Tone
-buckets, editorial dimensions and recurring-character callbacks do not replace
-these relationships; the `chaos` tone bucket is not the chaos relevance band.
+The **current association runtime** computes cosine bands from embeddings:
 
-Relevance bands (cosine similarity):
+- **High** ≥ `dealing.band_high`.
+- **Distant** in [`dealing.band_low`, `dealing.band_high`).
+- **Chaos** < `dealing.band_low`.
 
-- **High** ≥ `dealing.band_high`
-- **Distant** in [`dealing.band_low`, `dealing.band_high`)
-- **Chaos** < `dealing.band_low`
+Read actual values in [tuning](../configs/gameplay/tuning.yaml). Those definitions
+explain the existing dealer; they are not a sufficient text-mode release gate.
+The target retires mandatory multimodal embeddings and synthetic geometry as
+production evidence. Optional text embeddings may assist search; when used,
+record compatible model/evaluator versions and thresholds. Never manufacture
+vectors or alter thresholds to make a weak batch appear playable.
 
-A certifiable pack must support the Blueprint's constraint deal against every
-scheduled Nown: at least `dealing.min_high_per_nown` high cards and
-`dealing.min_distant_per_nown` distant cards per player across the initial
-5-card hand and 3-card personal draw pile. Certification must establish
-feasibility at 6 players as well as test the 4-player deal.
+Reviewed mode suitability, legal-action simulation and human full-match pilots
+must establish that the actual retained 5+3 budget remains usable through every
+scheduled Nown and public-state change. Roles use the same dealing procedure;
+public seeds are selected independently of the secret prompt/role. No similarity
+score judges whether an action is funny, correct or superior.
 
 ## Read the dealing path before authoring
 
-For every Nown/card creation, review or integration task, automatically read
-the following sources before labeling **High, Distant or Chaos** relationships.
-Do not wait for the user to ask about game logic. Reuse a reading within a task
-only while the sources remain unchanged; record consulted revisions and open
-checks in the editorial record. Use CodeGraph first for indexed source files.
+For every Nown/card creation, review or integration task, automatically consult
+this map before making High/Distant/Chaos or gameplay-readiness claims. Reuse a
+reading only while sources remain unchanged; record revisions and open checks.
+Use CodeGraph first for indexed source. These are **audited starting paths**,
+not evidence that text-mode contracts already exist.
 
 | Source | What to inspect |
 |---|---|
-| [Blueprint Game Rules §§2–5 and Media Engine §2](../BLUEPRINT.md) | Target 5-card hand plus 3-card reserve, all-scheduled-Nown coverage, draws, Shuffle and role secrecy. |
-| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current `dealing.band_high`, `band_low`, `min_high_per_nown`, `min_distant_per_nown`, `hand` and relevant game/point settings. Read values here rather than copying remembered constants. |
-| [Server mesh and dealer](../server/pkg/media/dealing.go) | `Cosine`, `BandFor`, `BuildCandidates`, `Dealer.Deal` and `DealFeasible`: vector comparison, band lists, sampling, retained hands/reserves and what simulation actually proves. |
-| [Pack loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack` and `Certify`: valid image/text data, compatible embedding declarations, candidate construction and certification coverage. |
-| [Server match](../server/internal/game/match.go) | `buildNownSchedule`, `dealHands`, `handleDrawCards`, `useShuffle`, `sendHandDealt`, `viewFor` and `playedNowns`: secret schedule, actual mutations, recipient scopes and final reveals. |
-| [Server payload renderer](../server/internal/game/payload.go) | `NownPayload`, `CardPayload` and `mediaItemPayload`: decoy versus Nown payloads, inline text, signed image URLs and absence of relevance scores from player payloads. |
-| [Client DTOs](../client/lib/data/models/game_state_dto.dart) and [session state](../client/lib/presentation/state/game_session_provider.dart) | `CardDto`, `NownRefDto`, `HandDto` and `GameSessionNotifier._onMessage`/`_mergeState`: consume the server's hand/round events; no client band assignment or local dealing. |
-| [Client role view](../client/lib/domain/entities/game_session.dart), [game screen](../client/lib/presentation/screens/game_screen.dart) and [media surfaces](../client/lib/presentation/widgets/game_surfaces.dart) | `showNown`/`showDecoy`, `GameScreen`, `GameMediaWell` and `GameCardTile`: image/text rendering and placeholders. Display guards supplement server secrecy; they cannot establish it alone. |
-| [Client media engine](../client/lib/media/media_engine.dart) | `MediaEngine.syncPack` and `prefetchNown`: metadata sync, server-issued asset URLs and cache behavior, not a second relevance engine. Check live call sites before claiming the separate prefetch service is wired into a screen. |
-| [Current mechanics and gaps](../docs/code/MODULE-media-engine.md) and [roadmap](../docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11) | Reconcile the target with the verified implementation, including retained-hand coverage, Shuffle, draw privacy and pack isolation. Confirm source/tests before calling an audited gap closed. |
+| [Blueprint Game Rules §§2–5 and Media Engine §2](../BLUEPRINT.md) | Five mode actions, provisional 5+3, full-schedule viability, copy ownership, ordinary draws and role secrecy; specialties absent from the first text release. |
+| [Gameplay tuning](../configs/gameplay/tuning.yaml) | Current hand/dealing/timer/point values and legacy specialty/backfill settings. This docs-only transition has not changed those values. |
+| [Server mesh and dealer](../server/pkg/media/dealing.go) | `Cosine`, `BandFor`, `BuildCandidates`, `Dealer.Deal`, `DealFeasible`: existing vector bands, sampled versus retained cards, and actual simulation coverage. |
+| [Loader](../server/pkg/media/loader.go) and [certifier](../server/pkg/media/certify.go) | `LoadPack`/`Certify` currently validate the old image/text schema and embeddings; planned text-only mode/language/action certificates are additional work. |
+| [Server match](../server/internal/game/match.go) | `buildNownSchedule`, `dealHands`, `handleDrawCards`, `sendHandDealt`, `viewFor`, `playedNowns`: schedule, mutation, recipient scopes and verdict. `useShuffle` is a legacy retirement surface, not a required text action. |
+| [Payload renderer](../server/internal/game/payload.go) and [active manager](../server/pkg/media/manager.go) | Nown/decoy and inline-text projections; current signed-image branch retires. Ensure existing matches resolve pinned bytes instead of looking up the newest active pack. |
+| [Client DTOs](../client/lib/data/models/game_state_dto.dart) and [session state](../client/lib/presentation/state/game_session_provider.dart) | Instance-aware hand/board/history consumption, duplicate request/event handling and snapshot restore. Current content-ID plays maps cannot model all five modes. |
+| [Role view](../client/lib/domain/entities/game_session.dart), [game screen](../client/lib/presentation/screens/game_screen.dart) and [surfaces](../client/lib/presentation/widgets/game_surfaces.dart) | Authorized prompt visibility, plain-text readability and five confirmed action controls. Visual hiding does not establish wire secrecy; elimination must clear stale private state. |
+| [Client media engine](../client/lib/media/media_engine.dart) | Legacy metadata/prefetch/cache path to inventory and retire. Its constructor had only a test caller in the 2026-09-12 CodeGraph audit; do not claim it is the live text renderer. |
+| [Current mechanics](../docs/code/MODULE-media-engine.md), [transition design](../docs/design/DESIGN-text-transition.md) and [Roadmap](../docs/planning/ROADMAP.md) | Reconcile target contracts with actual capability and required proofs before declaring any gap closed. |
 
-The server constructs many-to-many Nown/card bands using cosine similarity;
-the client receives display data and sends player intents. Neither player
-payloads nor card faces should disclose a High/Distant/Chaos answer label.
-One card may be High for one Nown and Chaos for another. Tone, shared tags,
-format, callbacks and editorial counts do not set the band's value, and an
-editor's proposed band remains a hypothesis until compatible real embeddings
-measure it. Do not manufacture vectors or tune thresholds to make a batch fit.
+The 2026-09-11 dealer audit found first-Nown hand retention and partial later-Nown
+reserve retention, not verification of the final eight cards against the complete
+schedule. Per-player content-ID uniqueness does not prevent the same content
+appearing in different hands. The target explicitly permits equal wording on
+separate copies; fairness/certification must inspect those cases rather than
+assume global uniqueness or use duplicate text as duplicate ownership.
 
-The 2026-09-11 audit found that the dealer retains its first Nown's selected
-hand, then fills the reserve from later selections; its filler draws from all
-bands, and it does not verify the final eight cards against every scheduled
-Nown. Its per-player uniqueness check does not prevent the same card appearing
-in different players' hands. Successful sampling alone therefore does not prove
-the Blueprint's complete guarantee. Recheck this behavior for a new task rather
-than treating this dated description as permanent implementation truth.
-
-During rounds, the server sends the real Nown only to active Nowers; Donowers
-and eliminated players receive a decoy. The final reveal includes only Nowns
-from rounds actually begun. Initial hands/reserves go to their owner. Inspect
-the existing draw-privacy gap separately instead of claiming all current card
-delivery is private. Preserve these rules and report gaps while creating content;
-content work does not implicitly authorize changing the algorithm.
+The 2026-09-12 runtime audit also found out-of-turn draws and public drawn-card
+payloads, current-round-only plays, incomplete pack pinning, and no authoritative
+snapshot path in the observed rejoin handler. Existing scope tests do show
+Nower/decoy routing and started-Nowns-only verdict behavior; those partial proofs
+do not close the other gaps. Recheck source/tests during implementation. Content
+planning does not authorize repairing runtime, changing packs or activating data.
 
 ## Coverage checklist
 
-Before submitting a Nown for certification:
+Before certifying a candidate release:
 
-1. Run the deal simulator at both table sizes.
-2. Confirm every player hand has strong, stretchy, and garbage options.
-3. Confirm every band has enough candidates so the RNG does not fall back to duplicates.
-4. Give every Nown and card exactly one tag from the
-   [four-bucket tone rubric](tone-matrix.md).
-5. Playtest real 4- and 6-player hands with target-language players. Record
-   recognition, laughter, plausible alternative explanations and references
-   that needed explanation. Check that a joke neither exposes Nown by itself
-   nor removes the ambiguity needed for Donowers to bluff.
+1. Identify exact Nown/card revisions, response/item pools, intended modes,
+   canonical content language and compatible rules version. Keep role and future
+   prompt schedule out of player-facing catalogs, IDs and metadata.
+2. Verify complete feasible schedules with sufficient distinct Nowns, both table
+   sizes and the actual retained hand/reserve budget. Invalid setup rejects before
+   access is consumed; no repeat-last-Nown or revealing fallback rescues a pack.
+3. Test each mode's evidence-producing choices and neutral public seeds:
 
-Simulation proves deal feasibility; human playtests judge whether that deal
-is recognizable, funny and ambiguous enough to play. Neither replaces the other.
-The current dealer and simulator do not yet prove the full requirement across
-every scheduled Nown. Treat a successful current simulation as a partial
-technical check, not proof of that guarantee; the remaining work is tracked in
-the [roadmap](../docs/planning/ROADMAP.md).
+   | Mode | Content/action proof |
+   |---|---|
+   | Missed the Briefing | Responses work across unrelated situations and have awkward contexts; no universal safe line or uniquely identifying response; test Donower opening first. |
+   | Secret Scale | Several defensible 1–5 placements from real hands; public endpoints never name the hidden criterion; no automatic correct-rating score. |
+   | Make Room | Three distinct-text system seeds independent of Nown; meaningful remove/add options after each replacement; history preserves removed cards and later restoration needs a different owned copy. |
+   | Bad Bargains | Plausible exchanges across evolving displays and hands; acceptance preserves proposer hand size; refusal leaves offered copy playable later but permanently public in evidence. |
+   | Top That | Arguable comparison pairs through complete chains, including awkward hands; any owned card remains legal without an AI judge or veto. |
 
-## Visual review and media mix
+4. Test optional draws, depletion, timeout penalty evidence, no refill/recycling,
+   fresh-board resets and full historical evidence. Specialties/backfill are off
+   for every first-release mode; test drivers must not depend on them.
+5. Give each Nown and card exactly one [tone bucket](tone-matrix.md), separately
+   from mode suitability, optional relevance evidence and freshness mix.
+6. Conduct actual 4/6-player target-language full-match pilots. Record recognition,
+   laughter, defensible alternatives, explanations needed, comprehension, opening
+   and late-seat effects, draw pressure, completion times and repeat exposure.
+   Record tested revisions and participant observations; never invent them.
+7. Verify readable small-screen/expanded-text/assistive-technology presentation,
+   mode confirmation controls, role-scoped snapshot/history, immutable pack
+   wording and started-Nowns-only verdict with implementation evidence.
 
-Apply the Blueprint's [playable media direction](../BLUEPRINT.md#playable-media-direction)
-and the [historical context and briefs](humor-development.md#visual-direction-and-history).
-Use static images and plain text only, choosing the format that carries the
-joke. Record completed image/text counts for Nown and playable-card pools
-separately from concepts. There is no required format ratio or hand quota;
-format counts do not change draw weights.
+Simulation addresses the cases it actually checks; exhaustive small fixtures and
+property tests complement sampled production schedules. Monte Carlo cannot alone
+prove every reachable state, and human playtests cannot prove wire secrecy.
+The current synthetic builder/certifier does not establish this complete contract.
+A green current simulation is partial evidence, not a text release certificate.
 
-Review the **actual compressed static image at card size**: does the everyday
-situation read, does the awkward gesture or crop supply an abrupt visual joke,
-and does it leave room to argue? Preserve rough framing,
-modest detail and compression while keeping the premise recognizable. Rework
-polished studio/cinematic/illustrated output even when it fits the pixel cap;
-do not prescribe upscaling, smoothing or beautification as the default fix.
-The UI palette, doodles and chrome effects are not a pack-media template.
+## Text review and evidence
 
-Record source/output dimensions, encoding, bytes, single-frame validation and
-visual review against the Blueprint limits. GIFs, animated WebP and video are
-unsupported game formats. Missing or unviewed media remains an unresolved
-check; metadata and an AI description do not prove visual fit. Captions and
-planning prose are not extra text cards.
+Apply the [text direction](../BLUEPRINT.md#playable-media-direction) and
+[humor briefs/history](humor-development.md#visual-direction-and-history).
+Prompts roughly 5–10 words and cards roughly 1–4 words are editorial targets,
+not universal limits. Use the versioned configurable UTF-8 bound, appropriate
+Unicode normalization/control-character validation and grapheme-aware layout.
+Render escaped plain text; no executable HTML/Markdown or external asset URL.
+
+Inspect actual text in hand and evidence views: legibility, script coverage,
+recognizable premise, concise wording and multiple plausible interpretations.
+Record completed Nown/response/item counts per mode/language separately from
+concepts, duplicate localizations and physical runtime copies. A caption,
+image alt-text or planning description is not an extra approved card.
+
+New playable releases contain no image/GIF/video assets. Preserve historical
+image/source/license/moderation records according to the transition retention
+plan; do not delete provenance or generate substitute text from filenames.
+Avatars, store art and the how-to clip have separate non-playable requirements.
 
 ## Editorial planning and freshness
 
-Use [Humor development](humor-development.md) for the writing loop. Begin the
-pilot with three themes and two target cultures/languages, then draft image/text
-mechanisms per theme for a human editor to select, trim or rewrite. The pilot
-is planned; the guide's example lines are not created or published assets.
+Use [Humor development](humor-development.md) for a bounded pilot with three
+themes and two cultural/language contexts. Draft mode-suitable text mechanisms
+for a human editor to select, trim or rewrite. This is a pilot plan, not evidence
+of finished candidates or a commitment to multiple public launch queues.
 
 Record human situation, comic mechanism, cultural reach, shelf life and
-accessibility alongside each candidate and its human decisions in planning
-records. These are editorial dimensions, not additional tone buckets or
-runtime/dealing fields. Aim initially for a **70% evergreen / 20% seasonal or
-cultural / 10% topical** release mix, independently of tone balance. It is a
-playtest hypothesis to revise with feedback and reuse data, not a quota or a
-sampling weight.
+accessibility alongside each exact candidate revision and human decision.
+These are editorial dimensions, not additional tone buckets or dealing weights.
+The **70% evergreen / 20% seasonal or cultural / 10% topical** release mix is an
+experiment, independent of tone balance; revise it from feedback/reuse data.
 
-For every topical candidate, retain its source, observation date, intended
-regions/languages, one-sentence context, review date and expiry date. Verify
-factual premises through original sources or reliable reporting; trend
-popularity is not verification. A human editor reviews these candidates
-weekly and decides whether to retain, rewrite or retire them, including at
-expiry. No automated scheduling, expiry or deployed-pack removal is implied.
+Retain each topical candidate's source, observation date, region/language,
+one-sentence context, review date and expiry date. Verify factual premises
+through original sources or reliable reporting; popularity is not verification.
+A human editor reviews topical candidates weekly and decides whether to retain,
+rewrite or retire them. No automatic schedule/expiry/removal job is implied.
 
-Ask regional contributors to recreate jokes for their audience and repeat
-playtests in each culture/language; literal translation is not enough. Use
-recurring characters and callbacks sparingly, and preserve clear language for
-rules, consent, errors and moderation decisions.
+Ask regional contributors to recreate jokes and repeat full-match pilots in their
+culture/language; literal translation does not establish ambiguity. Rotate
+callbacks and keep rules, consent, errors and moderation decisions clear.
 
 ## Tone and content standard
 
-- Humor may be suggestive/erotic within app-store rules — cartoon, drawn, abstract.
-- Never pornographic or explicit.
-- Erotic-leaning media ships only in adult-rated, age-gated packs.
-- Record license and attribution for every asset.
-- A human checks sources, rights, originality, age suitability and local
-  meaning before release; write original material rather than copying a trend.
-- Require both automated screening and human review. A safety provider does
-  not determine funniness, ownership, factual accuracy or cultural fit.
+- Humor may be suggestive within the existing content policy; never pornographic
+  or explicit. Adult-oriented text remains restricted to adult-rated, age-gated
+  packs under the product baseline.
+- Record rights, source, license/attribution and contribution terms for every
+  accepted revision. Human review checks originality, age suitability and local
+  meaning; write original material rather than copying a trend.
+- Require automated screening plus human review. Screening does not determine
+  funniness, ownership, factual accuracy or cultural fit.
 - Satire may target institutions, powerful figures and everyday frustrations;
   do not make victims of a current tragedy the punchline.
 
 ## Submission rules
 
-- A submission is **immutable once submitted**.
-- Withdraw and resubmit costs the queue slot.
-- Every upload requires explicit acceptance of the contribution terms; the accepted version and timestamp are stored with the submission.
+- A submission is immutable once submitted; edits create a separately reviewed
+  revision through the supported workflow.
+- Withdraw and resubmit costs the queue slot. Pack preparation cannot invent
+  a new approval or contribution reward.
+- Every contribution requires explicit terms acceptance, with accepted version
+  and timestamp retained. Editorial planning supplements that durable history.
 
 ## Challenge screening
+
+The Weekly Nown Challenge remains a separate text contribution event, not a
+sixth gameplay mode or an action-correctness contest inside a match.
 
 - Screen entries before they become visible or votable.
 - Rejected entries never appear and reopen a slot.
 - One active vote per player per week; self-votes are forbidden.
+- Challenge approval/winner records remain distinct from reusable response/item
+  certification; winning does not automatically put a card into a live pack.
 
 ## Certification
 
-A pack version is publishable only when:
+A new text release requires immutable schema/release/content revisions; explicit
+mode/language/rules compatibility; source/rights/age evidence; hashes and valid
+plain text; full-schedule/action viability at both sizes; human review and
+full-match pilots; recipient-scoped delivery and match-isolation proofs.
+Optional embedding checks carry evaluator versions but cannot replace these.
 
-- It declares its BCP 47 language tag.
-- Every Nown has full band coverage for a 6-player deal.
-- Every card is reachable in some band.
-- Monte Carlo `simulate` confirms deal feasibility at both table sizes.
-- Human review and real-hand playtests satisfy the editorial checks above.
+Record separate states: prepared, screened, human-reviewed, playtested,
+technically certified, published and activated. Missing evidence remains **not
+run** or pending. The checked-in synthetic fixture and directory-copy publish
+command do not complete the production workflow. Prototype matches receive no
+live rewards/progression/leaderboard credit. Release readiness follows the
+[Roadmap](../docs/planning/ROADMAP.md), not an aggregate content-count target.
 
-Complete the media pipeline's certification, bundling, publication and runtime
-activation for the reviewed version before calling it available in the app.
-Submission approval and contribution credit alone do not establish any of
-those release states. Revise or retire weak cards using player feedback; a
-planning decision to retire a card is not evidence that a deployed pack changed.
+Before declaring a release available, verify the actual activated version,
+new-match eligibility and role-scoped text rendering; existing matches retain
+pinned wording through history/reconnect/verdict. Keep a compatible certified
+text release for rollback. Approval/contribution credit alone proves none of
+these states, and a planning retirement date does not alter a deployed pack.

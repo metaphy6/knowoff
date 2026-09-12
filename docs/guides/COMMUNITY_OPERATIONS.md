@@ -4,6 +4,13 @@ This first working slice supports text contributions and the Weekly Nown
 Challenge. The player interface is Flutter; Contributor Studio is web-only and
 the Admin Console remains on the separate internal listener.
 
+The [Blueprint](../../BLUEPRINT.md) now adopts five text-only gameplay modes.
+The operations below describe the existing working text slice; mode/language
+catalog authoring, certification and activation remain planned in the
+[transition design](../design/DESIGN-text-transition.md) and
+[Roadmap](../planning/ROADMAP.md). A working contribution form does not mean the
+new gameplay or complete release pipeline exists.
+
 ## Open the studio
 
 1. In the game, open **Profile → Contributor Portal → Open portal**.
@@ -46,16 +53,18 @@ review form, requires human confirmation and automated screening, and records
 the decision, profile credit and reward atomically. Rejection requires a reason.
 
 Approval means accepted for curation. Building, certifying and deploying a real
-media pack is a separate pipeline; the old status-only publish action is
+text bundle is a separate pipeline; the old status-only publish action is
 disabled instead of pretending a pack was deployed.
 
 ## Prepare the humor pilot
 
 Follow the adopted [Humor development guide](../../content/humor-development.md)
-and [Curator guide](../../content/curator-guide.md): choose three themes and two
-target cultures/languages, draft several comic mechanisms per theme, and have
-human editors select and culturally rewrite the candidates. The illustrative
-lines in the guide are drafts, not submitted, certified or deployed assets.
+and [Curator guide](../../content/curator-guide.md): start with bounded text
+pilots for the selected modes, with at least three themes and two cultural/
+language pilots to test transferability. This is not a commitment to launch
+both languages. Draft situations/plans/criteria and reusable response/item
+pools, then have human editors select and culturally rewrite the candidates.
+Illustrative examples are drafts, not submitted, certified or deployed cards.
 
 Keep human situation, comic mechanism, cultural reach, shelf life and
 accessibility in editorial planning records alongside source links and human
@@ -75,6 +84,11 @@ rights, originality, age suitability and local meaning, then playtest actual
 4- and 6-player hands. Record recognition, laughter, alternative explanations
 and references that need explaining. Deal simulation and certification must
 pass separately: a funny card must also preserve ambiguity around Nown.
+Each mode also needs complete 2/3-round schedules and its changing public
+board: response choices, ratings, removed/added bag items, offers and comparison
+chains. Evaluate draw pressure and already-public card knowledge after trades.
+Prompt cosine similarity alone is not that proof; any optional text embeddings
+must declare compatible model/version evidence.
 Record editorial decisions in the planning record and submission decisions in
 the existing review workflow; do not duplicate approval state in a separate
 calendar. A successful pilot still needs a built, certified, published and
@@ -107,13 +121,32 @@ entitlement lookup. Triage records supported status changes with an audit; it
 does not claim that closing a report removes media or bans an account.
 
 Guard enforcement, arbitrary grants/refunds, complete leaderboard controls,
-static-image processing, pack calls and Nown/deck authoring, avatar approval and
-activation are still open deliverables in the [roadmap](../planning/ROADMAP.md).
-Playable content is limited to static images and text by
-[ADR-011](../design/ADR-011-static-image-and-text-content.md); animated formats
-are not a future upload option in this scope.
+reviewed text catalog authoring/certification/activation, and avatar approval
+and activation remain open work in the [roadmap](../planning/ROADMAP.md).
+The text target supersedes gameplay-image processing and
+[ADR-011](../design/ADR-011-static-image-and-text-content.md) through
+[ADR-012](../design/ADR-012-text-only-selectable-modes.md); image/GIF/video
+submissions are not future playable formats. Preserve separate avatar support.
 The legacy non-production workbench is a separate development surface; this
 slice does not certify its authentication or production readiness.
+
+## Preserve contributions during transition
+
+Keep accepted terms/version/timestamps, original text, creator and decision
+history, contributor credits, rewards, report targets and challenge references.
+Current tables can contain historical image records: do not relabel bytes,
+filenames or captions as approved text, delete them in place or edit applied
+SQL migrations. Use the reviewed archive/backfill plan with verified reference
+mapping before enforcing text-only active-content constraints.
+
+New catalog records need stable content IDs/revisions, response/item or prompt
+kind, mode suitability, canonical language and rights/review evidence. Those
+fields are a target contract, not fields already available in Contributor
+Studio. Content publication must preserve approval reward idempotency; importing
+or republishing previously rewarded work never pays it again. Closing a report
+still does not deactivate a catalog: a takedown needs a separately verified
+replacement release, with existing matches pinned to their recorded contract
+or explicitly ended under the operational policy.
 
 ## API and verification
 
@@ -123,8 +156,10 @@ returns 204 on successful pairing. Browser GET `/portal/login` and POST
 
 The existing challenge endpoints are `GET /api/challenge/active`,
 `POST /api/challenge/entry` and `POST /api/challenge/vote`. Their response shape,
-consent fields and stable error codes are documented in the roadmap's
-**Challenge API handoff**. No current-week topic returns 204.
+consent fields and stable error codes are retained in the
+[historical roadmap's community slice](../planning/ROADMAP-pre-text-20260912.md#community-and-operations-source-audit-and-first-working-slice--2026-09-10),
+under **Challenge API handoff**. It documents the current slice, not protocol
+v2 mode actions. No current-week topic returns 204.
 
 Use a dedicated disposable database for integration tests: several suites
 truncate fixtures. Set `KNOWOFF_TEST_DSN` to that database before running

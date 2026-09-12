@@ -15,9 +15,27 @@
 > per the lockstep rule in `ROADMAP.md`'s Appendix A and `AGENTS.md` §1.
 > Need a fast, high-level orientation first? → [`README.md`](README.md).
 
+> **Text transition adopted for planning — 2026-09-12.** The owner selected
+> text-only Knowoff with five selectable gameplay modes. This document now
+> specifies the target; the checked-in runtime still implements the older
+> association game. No mode, migration, content release or cleanup is claimed
+> implemented by this documentation change. [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md)
+> records the decision; the [transition design](docs/design/DESIGN-text-transition.md)
+> maps source gaps, data preservation and retirement proofs. Previous roadmap
+> checkmarks remain historical evidence only.
+
 ## 🎲 The Game at a Glance
 
-Knowoff is an online social deduction party game for **exactly 4 or 6 players** — matched with people around the world in **Quick Play** (the main product), or gathered in person in a **Local Room**. Each round, one media item — **Nown** — appears on every phone except the Donowers'; Donowers must pretend they see it. In a randomly ordered sequence of timed turns, everyone plays one card that supposedly relates to Nown — each play revealed the moment it lands — the table argues, then votes. **The most-voted player is eliminated and their role is revealed** — eliminating a Nower wastes the vote. **Nowers win by voting out every Donower. Donowers win — together — if the votes run out first.**
+Knowoff is an online social deduction party game for **exactly 4 or 6 players**.
+Active Nowers privately see a short text **Nown**; Donowers infer its hidden
+context from public choices and try to blend in. Players choose one of five
+modes: **Missed the Briefing**, **Secret Scale**, **Make Room**, **Bad Bargains**,
+or **Top That**. Each has one simple card action; all share discussion and
+Knowoff. Nowers win by eliminating every Donower before the vote budget runs
+out; Donowers win together if they survive. Quick Play assembles compatible
+strangers; Local Rooms assemble invited players. These are table-entry paths,
+not gameplay modes. Missed the Briefing is the initial default; each mode is
+exposed only after its own engineering, content and playtest gates pass.
 
 There is deliberately no separate rulebook: the **Game Rules** section below is the single source of truth, and all player-facing help text, store copy, and the how-to-play clip are derived from it.
 
@@ -27,9 +45,9 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 |---|---|
 | **Nower(s)** | Players who see Nown |
 | **Donower(s)** | Players who can't see Nown; nobody knows who they are |
-| **Nown** | The media item of a round — static image or text (no animated media, audio or video) |
+| **Nown** | The private text situation, plan or criterion for a round |
 | **Knowoff** | The vote at the end of every round |
-| **Round** | Card play + discussion + one Knowoff |
+| **Round** | Mode-specific turns + discussion + one Knowoff |
 | **Match** | Up to 2 votings at 4 players, up to 3 at 6 — until a team wins |
 | **Session** | Matches played in one room; keeps a running scoreboard |
 | **Noin** | The game currency — earned by playing, sold in bulks (💰) |
@@ -38,21 +56,27 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 
 ## 🧱 Tech Stack
 
-| Layer | Technology | Role |
+| Layer | Technology | Target responsibility |
 |---|---|---|
-| Client | Flutter — one codebase: native Android/iOS apps + Flutter Web **PWA** (desktop, and app-less guest fallback on any phone browser) | UI, WebSocket client, client `MediaEngine` (pack metadata sync, asset prefetch & cache, Donower placeholder renderer) |
-| Backend | Go | Authoritative game server: matchmaking, rooms, timers, roles, media dealing, votes, scoring, economy — plus the Admin Console and Contributor Portal (server-rendered) |
-| Database | PostgreSQL | Durable data: profiles, match results, Noin wallet & ledger, entitlements, leaderboards, media metadata & contribution workflow |
-| Cache / Pub-Sub | Redis | Matchmaking queues, room→node routing, session presence, cross-node pub-sub, rate limiting |
-| Assets | MinIO (S3-compatible) on the home server, fronted by **Cloudflare Tunnel + CDN cache** | Media-pack assets — content-hashed and immutable, so the edge cache absorbs nearly all traffic |
-| Transport | WebSocket (JSON messages) | Single realtime channel between client and server |
-| Infrastructure | Docker Compose on the home server (now) → small VPS at public launch, then Kubernetes + Terraform (later) | Everything containerized from day one |
+| Client | Flutter Android/iOS + Web PWA | Accessible mode controls, public history, private owner state and localized interface |
+| Backend | Go | Authoritative lobby/match/actions, secrecy, votes, rewards, Portal/Admin |
+| Durable data | PostgreSQL | Accounts, ledger, entitlements, results, audit, contributions and immutable content-release metadata |
+| Coordination | Redis | Presence/routing/rate limits; mode/size/content-language queues where durable coordination is implemented |
+| Playable content | Versioned server-local text bundles | Validated, immutable prompt/response/item catalogs; no public prompt catalog or signed playable-image delivery |
+| Non-playable assets | Existing application assets and PostgreSQL avatar blobs | Fonts, icons, store art and moderated avatars remain; text-only does not mean image-free UI |
+| Transport | WebSocket JSON | Versioned intents and per-recipient events/snapshots |
+| Infrastructure | Docker Compose; VPS for public launch | PostgreSQL/Redis retained; MinIO/CDN game-content wiring retires after dependency and retention proofs |
 
-Architecture decision records:
+Retain server authority (ADR-001), Flutter (ADR-002) and the public shared Go
+content-library boundary in `server/pkg/media` (ADR-004). The historical package
+name may remain: a name is not dead code; unused image/specialty behavior is.
+The current Compose stack still includes MinIO. Retire its mandatory readiness,
+credentials, routes and volume only after the transition inventory proves no
+retained consumer needs them. Keep authorized historical backups separately.
+Hosting cost and availability require current operator quotes and measurements;
+old zero-cost, VPS-price and CDN-free-tier examples are not business evidence.
 
-* **Server-authoritative over P2P** — a trusted authority owns role secrecy, the phase clock, blind-window resolution, and the currency ledger.
-* **Flutter everywhere** — native haptics for Poke, one codebase for three surfaces, and the web build keeps a zero-install join path.
-* **Home-server-first hosting behind Cloudflare (≈ $0 infra pre-launch)** — `cloudflared` tunnels the game server and asset host out with no open ports, no exposed home IP, TLS at the edge; content-hashed assets get "Cache Everything" with long TTLs, so the edge serves media after first fetch. Low/medium media quality (⚙️ §3) keeps assets tiny, which is what makes this viable. Accepted trade: home uptime is service uptime — fine for development and beta; **the same Compose stack lifts to a ~€5/mo VPS at public launch** (an online-first product can't ride a home ISP into the stores), with Cloudflare R2's free tier (10 GB, zero egress) as the asset offload if needed.
+---
 
 ## 🕹️ Game Rules
 
@@ -66,50 +90,103 @@ Architecture decision records:
   * 4 players: Donower survives both votings → Donowers win.
   * 6 players: **if neither of the first two votings catches a Donower, the match ends right after the second Knowoff — one vote can't catch two Donowers — and Donowers win.** Otherwise it runs to the third voting, and any Donower still uncaught after it wins.
 * **Donowers win and lose together**: a caught Donower still wins if their partner survives. Donowers don't know each other at match start; quietly working out who your partner is, and covering for them, is intended strategy.
-* One voting per match can be re-run by a Revote card (§5).
-* Match length: roughly **5 minutes** at 4 players, **8 minutes** at 6. Acting early and Ready (§8) can only shorten a match.
+* No specialty can reset a ballot in the first text release (§5).
+* Match duration is a playtest metric by mode and size, not a verified 5/8-minute promise. Acting early and Ready (§8) can shorten phase ceilings.
 
 ### 2. Roles, Nown & Hands
 
-* The server assigns roles randomly and secretly at match start. Players check their role privately: **press and hold to show it, release to hide it** — everyone performs the same check, so nothing about it stands out.
-* **Nown**: one item per round from the room's media pack — **static image or text**. GIFs, animated images, audio and video are excluded. Assets stay small and rounds remain silent, preserving local-room secrecy.
-* Donowers simply can't see Nown — their screen shows a basic placeholder prompt instead (designed and implemented during development), and that's all.
-* Secrecy is enforced server-side: a Donower's device is never sent Nown at all (⚙️ §4). Nobody knows who is Donower or Nower until votes reveal roles.
-* **Hands**: every player gets **5 cards** plus a personal **3-card draw pile**. Cards are prompts — **text or static image** — dealt by the relevance mesh (⚙️ §2) so every hand always holds a mix of strong, stretchy, and garbage options against every Nown in the match. That guaranteed ambiguity is what lets Donowers blend in and makes Nowers doubt each other.
-* A match can never use more than those 8 cards, so a player always has a card to play.
+* Roles are assigned randomly and privately at match start; the press-and-hold
+  check is identical for all seats. Roles never move between seats.
+* Every round starts a fresh text Nown, independently randomized active-seat
+  order and fresh mode board. Hands/reserves carry across rounds; earlier
+  public evidence remains accessible under its original round.
+* Send Nown only to active Nowers. Donowers receive a neutral placeholder;
+  eliminated players receive no new prompt. Never send the future schedule,
+  prompt lookup catalog or relevance annotations to any player device.
+* Start each player with `hand.size` cards and `hand.draw_pile` reserve cards
+  (currently 5+3), dealt identically for both roles. Use separate response and
+  item pools with explicit mode/language suitability. Budget and viability
+  across complete schedules and changing boards must be certified (⚙️).
+* Give every physical copy a match-unique instance identity separate from its
+  content ID. Equal wording may exist on different copies; ownership, transfer,
+  reservation and discard operate on instances. System seeds are extra copies
+  outside 5+3, chosen independently of Nown and roles.
+* No automatic refill, discard recycling or per-round new hand. Bad Bargains
+  accepted trades preserve hand size; refusal preserves the offered card.
+  Other mode actions consume one hand copy. Depletion still has a defined pass
+  path; certification cannot be replaced by claiming eight cards always suffice.
 
 ### 3. The Round: Turn-Based Play
 
-* **Turns, not a blind window:** at round start the server randomly assigns a turn order (re-randomized every round, role-blind). On your turn you have **20 seconds** (`timers.play_turn`) to take **one action** — play a card, or use a specialty (§5) — and your play is **revealed to the whole table immediately, with your name attached**; then the next turn begins. Building on what's already on the table is the point: a Donower is expected to read the earlier plays and put down something that relates. The random start seat is part of the tension — whoever opens the round, Nower or Donower, gets no earlier plays to lean on.
-* Played cards stay on the table for the whole match — the evidence the votes are argued over.
-* **Draws**: during your turn, you may draw from your 3-card pile — all at once or in parts — without ending the turn; you may then play a card from your hand. **Every draw is announced to the table** (who, how many), and **every pile draw costs match points** (−5 each, `points.draw_penalty`) — drawing is sometimes right, but panic-drawing is priced. The One More Free Card specialty (§5) is the one exception: its draw costs nothing, so spending it as your first draw makes that draw free. Drawing tells everyone your hand doesn't fit.
-* **Timeout**: a player whose turn expires with no action auto-passes and loses one random card. Stalling costs.
+The normal turn deadline is `timers.play_turn` (currently 20 seconds). Only the
+current connected active seat can draw or submit its mode action. A valid
+confirmed action is immutable, public and attributed; it ends the turn, except
+that an offer enters Bad Bargains' bounded response phase. The next turn starts
+only after resolution/cancellation. Invalid or stale actions change nothing.
+
+| Mode (stable ID) | Private Nown / pool | Atomic action and public board |
+|---|---|---|
+| Missed the Briefing (`missed_the_briefing`) | Situation / reusable responses | Spend one hand response; append the attributed response to ordered evidence. |
+| Secret Scale (`secret_scale`) | Criterion / items | Confirm one hand copy and integer rating 1–5 together; spend the copy and append placement. Several cards may share a rating; neutral public endpoints never name the secret criterion. |
+| Make Room (`make_room`) | Plan / items | Start with three distinct-text system copies; confirm hand copy + occupied slot. Incoming leaves hand, removed copy enters public discard history. Bag stays size three. Restoring an idea requires another owned copy. |
+| Bad Bargains (`bad_bargains`) | Plan / items | Each active seat gets one public system display. Propose an owned hand copy for another connected active seat's display. Reserve both copies until that recipient accepts/refuses or the server cancels/expires. |
+| Top That (`top_that`) | Criterion / items | Start with one neutral system target. Confirm owned hand copy against current target revision; consume it into the chain as new target, retaining every prior attributed link. |
+
+No semantic correctness check, AI judge, automatic rank, veto or reward decides
+whether a response fits, a rating is right, a trade is profitable or a card tops
+the last. Players discuss and vote. Previews may change before confirmation;
+accepted actions cannot be undone. Touch, keyboard and screen-reader controls
+must provide the same confirmed action without requiring drag or free typing.
+
+**Draws.** Optional, current-turn-only; draw from the remaining personal reserve,
+without ending the turn. Charge `points.draw_penalty` per card (currently 5).
+Publish only player and count; deliver new instances privately to the owner.
+No draw while an offer is pending; no free-draw specialty exception.
+
+**Timeout.** No action before deadline produces attributed auto-pass and one
+random hand-copy discard. Show that copy as penalty evidence, not intentional
+play; no card means pass with no invented copy. The mode board stays unchanged.
+Disconnected human turns use the same evidence/penalty path immediately.
+
+**Bad Bargains resolution.** Only one offer can be pending. Its server-owned
+10-second response window is a planned `timers.trade_response_s` addition;
+normal turn time limits submission only. No further action/draw by the proposer.
+The recipient's response does not consume their later scheduled turn.
+
+| Resolution | Offered hand copy | Requested display copy |
+|---|---|---|
+| Accept | Becomes recipient's display | Moves to proposer's hand |
+| Refuse / response deadline | Returns unreserved to proposer's hand | Stays displayed |
+| Either participant leaves/disconnects; forced phase/match close | Unreserve to proposer; public cancellation | Stays displayed |
+
+All resolutions end the proposer's turn. Proposer's own display and recipient's
+private hand stay unchanged. Publicly exposed cards stay known in history even
+when transferred or returned to a hand. Validate offer ID, participants, both
+instances and board revision atomically; first server-ordered resolution wins.
+If no connected eligible recipient exists before proposing, auto-pass without
+card loss and evaluate disconnect endings. Ordinary discussion/voting waits;
+forced transitions cancel first. No pending offer crosses a round/elimination.
+At each new round retire displays/bag/chain into history, reseed, and keep hands.
 
 ### 4. Discussion & Knowoff (every round)
 
-* After the round's final turn, a discussion window opens (`10 s × players`; ends early when everyone is Ready).
+* After the round's final turn, a discussion window opens (`timers.discussion_per_player × table size`, currently 5 s × 4/6; ends early when everyone is Ready).
   * **Local rooms:** talk happens out loud at the table.
   * **Online rooms:** players argue through **Quick Chat** — canned phrases and reactions plus moderated free text. Every typed message carries the player's selected client language; the server masks configured English words for every message and additionally masks the configured list for that language before broadcasting it. The client never performs the authoritative moderation decision.
 * Then **Knowoff**: a 20-second open ballot. Everyone still in the match votes for one player (never themselves); every cast lands live and attributed for the whole table to see, and a voter may change their target as many times as they like right up until the ballot resolves. The most-voted player is eliminated and their role revealed (§1). A tie triggers one 15-second **runoff** among the tied players only; if the runoff is still tied, the vote is a miss: it counts as one survived voting for the Donowers, eliminates nobody, and reveals no role.
-* **Result window:** every vote's outcome is displayed for 8 seconds before it becomes final — a 4-second falling reveal followed by 4 seconds on the role-result poster. A Revote can no longer land here: once the eliminated player's role is exposed, the result stands (§5). Ends early once every connected active player marks Ready. Then it applies.
+* **Result window:** every vote's outcome is displayed for 8 seconds before it becomes final — a 4-second falling reveal followed by 4 seconds on the role-result poster. No specialty can undo an exposed result (§5). Ends early once every connected active player marks Ready. Then it applies.
 * An eliminated player — Nower or Donower — watches the rest of the match: no plays, no votes, no chat, no pokes. Their screen no longer shows Nown (a revealed Donower could otherwise feed it to a surviving partner). Staying connected to the end collects their points as normal (§6, §7).
-* After the match, the verdict screen shows all Nowns to everyone; Donowers finally see what they survived.
+* After the match, the verdict screen shows only Nowns from rounds that actually began to everyone; Donowers finally see what they survived.
 
 ### 5. Card Specialties
 
-Five specialties in two types. **Dealing is role-blind: any specialty can land in any player's hand.** Shuffle and Revote are restricted only in *use* — a Nower dealt Shuffle, or a Donower dealt Revote, simply holds a dead card (still usable as discard fodder). Deal frequencies are tuned in `tuning.yaml`.
-
-**Type A — Standard (except Pass, using one leaves the turn open for the normal hand card play):**
-
-* **Pass** (occasional): skip playing a card this round. Only the Pass card is spent.
-* **Reveal** (rare): expose another active player's entire hand — media and specialty cards alike. It cannot target its owner or an eliminated player, and it cannot be played during the final `timers.reveal_lockout` seconds of the owner's turn. The table gets a public announcement and an eye doodle on the exposed player's avatar for the rest of that round; each player may tap it once, receiving a private `timers.reveal_view`-second view before it closes. The exposed cards never ride the public announcement event. Safe by design: since any specialty can sit in any hand (dealing is role-blind), seeing a Shuffle or a Revote proves nothing about its holder's role. After using it, the owner plays their normal hand card through the regular hand interaction.
-* **One More Free Card** (occasional): usable during your turn without spending your action — it banks a round-scoped token so your **next pile draw this round is free of the draw penalty** (§3): the pile's price chip flips to FREE and the table gets a loud announcement. An unspent token expires when the round ends, and the turn's action card can't be played while the free draw is still pending — spend it, then play a normal hand card, or lose it.
-
-**Type B — Unique (free, use restricted by role, once per match):**
-
-* **Shuffle** (rare — **usable by Donowers only**): usable at any point in the round, in or out of turn. Every card already on the table goes back and every player's unplayed hand is re-dealt fresh (draw piles untouched); the round's turn order restarts from the first seat with `timers.shuffle_bonus_seconds` added to the clock. The table gets a brief, dramatic anonymous alert, and everyone's hand visibly changes. Its owner then plays a normal hand card through the regular hand interaction when their turn comes. It wipes out the plans Nowers built around saved cards.
-* **Revote** (rare — **usable by Nowers only**): playable only while a Knowoff ballot or runoff is open — never after the ballot has resolved and the eliminated player's role is on the poster. It resets the current ballot without consuming a vote; a fresh ballot runs immediately with the full time, and only its result counts. Played after the reveal it would erase a known outcome and gut the Donowers' odds, so the window closes with the ballot. The table sees who played the card — only a Nower can use it, so playing it publicly half-clears you; that's the price.
-* **Unique cards fire once per match, total.** The same card can be dealt to two players (rare, since these cards are rare); only the first use works — later copies are dead cards, still usable as discard fodder.
+All five old specialties — Pass, Reveal, One More Free Card, Shuffle and Revote —
+are absent from the first text release for every role and mode. Show this rule
+before Ready. Remove their dealing, handlers, wire variants, client controls,
+debug grant paths, localization, sole-use assets/config and obsolete tests only
+with replacement proof and the retirement process. Ordinary draws, timeout
+passes and tied-ballot runoffs remain. Reintroduction is a new design decision
+with per-mode interaction/secrecy proofs, not dormant enabled-by-config code.
 
 ### 6. Match Points & Noin Earnings
 
@@ -122,7 +199,7 @@ Two separate rewards come out of every match:
 | Your vote names a Donower | +10 |
 | Nower team win | +10 each Nower |
 | Donower team win | +30 each Donower — caught Donowers included (they win together) |
-| Each card drawn from your pile | −5 (a One More Free Card draw is exempt — §5) |
+| Each card drawn from your pile | −5 (`points.draw_penalty`) |
 
 **Noin** — the currency (💰 §1). Noin grants are **per-event and credited to the profile instantly**, so they survive disconnects and abandons: what you earned is yours the moment you earned it. Values in `tuning.yaml → noin:`.
 
@@ -151,8 +228,8 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 
 ### 8. Pace Controls: Ready & Poke
 
-* **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends the moment its player acts, and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. The 8 s result window works the same way: Ready counts you in, and once every connected active player has, it finalizes early instead of waiting out the timer. Fast tables play fast; the 15 s turn, `10 s × players` discussion, and 8 s result timers are only ceilings. **The Knowoff ballot and any runoff work the same way, and only the same way** — casting a vote does not by itself count you in; the ballot always runs its full window unless every active connected seat also marks Ready, which is what actually leaves a voter room to change their mind before it closes (see ADR-009).
-* **Poke**: once per target per phase, you may poke a player — the turn player sitting on the clock during play, anyone not yet Ready during discussion, or anyone during voting. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. The three phases are independent: you can poke the same player once in play, once in discussion, and once in voting. No score effect; the cap is enforced server-side.
+* **Ready** — for every player, in every room type (4 or 6, local or online): a play turn ends when its mode action resolves (a submitted Bad Bargains offer waits for its response/cancellation), and in discussion, marking Ready (or having nothing left to do) counts you in — when everyone is Ready the discussion window ends early. The 8 s result window works the same way: Ready counts you in, and once every connected active player has, it finalizes early instead of waiting out the timer. Fast tables play fast; the configured turn, discussion, and result timers are only ceilings. **The Knowoff ballot and any runoff work the same way, and only the same way** — casting a vote does not by itself count you in; the ballot always runs its full window unless every active connected seat also marks Ready, which is what actually leaves a voter room to change their mind before it closes (see ADR-009).
+* **Poke**: once per target per phase, you may poke a player — the turn player sitting on the clock during play, anyone not yet Ready during discussion, or anyone during voting. Their phone buzzes (native apps) and their screen shakes (everywhere — the web PWA has no vibration). Pokes show who poked whom. The three phases are independent: you can poke the same player once in play, once in discussion, and once in voting. No score effect; the cap is enforced server-side. During a pending trade, the recipient is the only Poke target; this shares the play-phase per-target budget, creates no extra Poke allowance, and cannot extend the response deadline.
 
 ---
 
@@ -160,20 +237,55 @@ Backstops: except for the scored low-population ending above, an absent-at-end p
 
 ### 1. Online Quick Play (the main product)
 
-* One FIFO queue per room size (4 or 6), running on the core pack plus a rotating featured pack. Tap Play, get a table of strangers, argue in Quick Chat, vote.
-* **Launch liquidity — labeled backfill bots:** when a queue can't fill a room within `liquidity.queue_timeout_s` (default 25 s), the server tops it up with bots — server-side (`server/internal/bots`, reusing the `gamebot` policy engine), every seat acting through the same validated intent pipeline as humans. Every bot seat carries a visible 🤖 badge and a reserved bot nickname — in a game about reading people, a disguised bot would be a scandal; a labeled one is a practice partner. Humans always outrank bots for seats, and a room never starts below `liquidity.min_humans`.
-* Guardrails: bot seats earn nothing; matches count for the Weekly Leaderboard only with ≥ `liquidity.leaderboard_min_humans` humans, and grant team-win Noin only with ≥ `liquidity.noin_min_humans` humans — a bot table can never become a Noin farm. Backfill sunsets per queue automatically once fill times stay healthy.
-* Free accounts play `economy.free_daily_quickplay_matches` per server day (**3 at launch** — a daily taster; regular play runs on earnable Play Passes or Premium); a Play Pass or Premium (💰 §2) removes the cap entirely — **a pass holder or Premium subscriber never hits it**. **Local Rooms are never capped.**
+* One explicit mode preference per queue join. Match FIFO within the compatible
+  tuple **mode + size + content language + rules/protocol compatibility** and
+  pack eligibility. No multi-mode preference or silent substitution in v1.
+* Default new players to Missed the Briefing; remember a returning player's last
+  available mode. If it is withdrawn, explain before presenting the default.
+* At `liquidity.queue_timeout_s` (currently 25 s), show Keep waiting, Change mode,
+  Leave queue. Keep waiting retains FIFO position. Change atomically leaves the
+  old queue before joining the new one at its tail. Never charge a second
+  allowance or reserve two seats during retry/change/disconnect races.
+* Text production backfill is **off**, even though current tuning enables it.
+  Require full human tables. Release modes/languages in measured cohorts so
+  selection does not fragment queues beyond viable fill times. All five remain
+  the intended offering; unreleased modes never enter matchmaking.
+* Free accounts share `economy.free_daily_quickplay_matches` across every mode
+  (currently 3/server day); active Play Pass/Premium removes this cap. Reserve
+  eligibility at join, consume once on actual match start, release on canceled
+  queue/start. Existing implementation needs reconciliation before this proof.
+  Noin/leaderboard daily caps and human eligibility also remain shared.
 
-### 2. Local Rooms
+### 2. Local Rooms and rematches
 
-Private rooms for people in the same physical place: the host shares a QR code (or 6-character code); the QR deep-links into the native app if installed, the web PWA otherwise — a guest without the app is never blocked. Discussion happens out loud; everything else plays identically to Quick Play. Uncapped, always.
+Host shares the existing QR/six-character code. Host selects an available mode,
+4/6 size, eligible pack and content language; all members see settings and mark
+Ready. Start requires a full table of connected ready players; settings or
+membership changes clear readiness. Host departure elects longest-present
+connected member (seat order breaks a timestamp tie), then clears readiness.
+Local Rooms remain uncapped and use spoken discussion if co-located.
+
+A rematch returns to settings/Ready, never automatically restarts or backfills.
+Local host persists when present; Quick Play rematch host is lowest original
+seat among returners. Replacements enter as unready and see the full contract;
+leaving is always possible. Quick Play rematches remain Quick Play: shared allowance/reward/leaderboard rules
+and free core/featured packs apply. Returning host may choose only eligible
+Quick Play settings. Replacement humans join through the matching FIFO tuple
+and must Ready; no paid private pack, hidden bot or free-allowance bypass.
+A Local Room rematch remains Local. Reducing size below current membership
+is rejected until players explicitly leave; no automatic seat eviction. A
+setting change cancels outstanding replacement reservations before the new
+queue tuple is published.
+
+A started match pins mode, rules, language, content
+version and reward eligibility. No lobby change or app-default update mutates
+it; new roles are assigned at the next start only.
 
 ### 3. Weekly Nown Challenge (Community Event)
 
-The game itself, stretched into a week-long social event for the whole community:
+A separate text contribution/community event, not a sixth gameplay mode or a source of match correctness:
 
-* **The topic is a Nown:** every Monday the server publishes the week's topic — a static image or text, exactly like a round's Nown. Players respond the way they play cards in a match: upload the one entry (static image or text) that best matches the topic.
+* **The topic is a Nown:** every Monday the server publishes the week's topic — a short public text prompt. Players respond the way they play cards in a match: submit one short text entry inspired by the topic.
 * **Open to all players, in-app** — no portal role needed. One entry per player, **immutable once submitted** — no edits, no replacements. **The system accepts the first 100 entries**, then intake auto-closes; a slot reopens each time screening rejects an earlier entry.
 * **Screening before visibility:** every entry passes the automated screen plus a human check (curators or admin) before it becomes publicly visible and votable. Rejected entries never appear.
 * **Voting:** open to all players — one vote each, never for your own entry, **immutable once cast**. Tallies are public and live.
@@ -192,7 +304,7 @@ Players are never surprised by downtime:
 ### 5. Weekly Leaderboard
 
 * Cycle: Monday–Sunday on the server clock; Monday announces last week's podium alongside the new Week Winner.
-* Score: the sum of a player's match points for the week — **Quick Play matches only** (private and local rooms are collusion-trivial and stay off the board), with backfilled matches counting only at ≥ `liquidity.leaderboard_min_humans` humans, and a daily cap on counted matches to blunt pure grind.
+* Score: the sum of a player's match points for the week — **Quick Play matches only** (private and local rooms are collusion-trivial and stay off the board), with the retained ≥ `liquidity.leaderboard_min_humans` human eligibility guard (text backfill is off), and a daily cap on counted matches to blunt pure grind.
 * Display: top 100 plus the viewer's own rank; ties share a rank. Every weekly close snapshots into an immutable history table; podium finishes show on profiles.
 * Ops: Admin Console — standings inspection, cheat exclusion/reinstatement with reasons, manual re-run of the weekly close, history browsing.
 * Infrastructure: pure PostgreSQL aggregation over the audit stream; no new stores.
@@ -238,12 +350,12 @@ Any player may **apply for a role** from their portal profile; applications are 
 | **Guard** | Community safety: review flagged accounts and **freeze** them — a timeboxed suspension (up to 48 h) from matchmaking and the portal, pending admin review. **Final action is always the admin's**: dismiss, timed ban, or permanent ban. One active freeze per Guard per target; freezes auto-expire if no admin acts |
 | **Admin** | Everything: role grants, bans, pack publishing, challenge scheduling, takedowns |
 
-* **Rewards:** contributors and curators earn **credits (name in the pack manifest and on the profile) and Noin** for accepted work — `portal.noin_per_accepted_asset` per published asset; the Weekly Nown Challenge pays its Week Winner from the same rails (🎮 §3). Attribution is stored per asset, so richer reward schemes later are an economy change, not a migration.
+* **Rewards:** contributors and curators earn **credits (name in the pack manifest and on the profile) and Noin** for accepted work — `noin.contributor_accepted_asset` once per approved contribution; the Weekly Nown Challenge pays its Week Winner from the same rails (🎮 §3). Attribution is stored per asset, so richer reward schemes later are an economy change, not a migration.
 * **Submission terms:** every upload requires explicit acceptance of the contribution terms — perpetual, non-exclusive license, **commercial use and modification permitted** — with the accepted terms version and timestamp stored per submission (🎮 §3).
 
 ### 2. Submission Pipeline
 
-* Flow: upload or write media (**static image or text** only) → automated processing (transcode to quality targets ⚙️ §3, perceptual-hash dedupe, auto-tag, embedding, automated content screen) → **submit** → screening/curation → accepted media enters the next pack version.
+* Flow: write plain text → bounded UTF-8 validation and normalization, exact/near-duplicate review, mode/language labeling and automated text screen → **submit** → screening/curation → accepted media enters the next pack version.
 * Workflow states: `draft → submitted → in_review → approved | rejected → published(pack-tag)` — every transition audited. **Submissions are immutable once submitted** — no edits; withdraw and resubmit is the only correction path, and it costs the queue slot.
 * Moderation: everything passes the automated screen *and* human review before any player sees it; published media stays reportable (👤 §3) and takedown-able, with removals shipping in the next pack version.
 * **Acceptance and release are separate:** approval accepts a contribution for curation. Playable release requires a versioned pack, technical certification, editorial playtests and activation through the media pipeline. Editorial source/expiry records supplement the approval history; they do not replace it. Current text-only capabilities and remaining integration work are described in [Community operations](docs/guides/COMMUNITY_OPERATIONS.md).
@@ -252,15 +364,15 @@ Any player may **apply for a role** from their portal profile; applications are 
 
 The same application pointed at dev/staging, where the owner curates the AI generation pipeline before the community exists:
 
-* **Batch ingestion:** issues generation batches to **GPT-6 Astra** for static images and text cards; every returned asset auto-processed on arrival.
-* **Bulk curation grid:** keep/kill at keyboard speed with tone-bucket and rating assignment; keep-rate measured per batch (the pipeline's core KPI — expect 10–30% at this humor bar).
-* **Embedding sanity view:** nearest-neighbor browser for any asset — catches mis-embedded media before it corrupts dealing.
+* **Batch drafting:** human authors and optional AI produce short text candidates. Persist exact input/output, model/version when used, language, rights and review history; no generation result is automatically accepted. External generation is not assumed deterministic or implemented.
+* **Bulk curation grid:** keep/kill at keyboard speed with tone-bucket and rating assignment; keep-rate measured per batch (the pipeline's core KPI — treat the historical 10–30% expectation as an unvalidated staffing assumption).
+* **Suitability review:** compare reusable responses/items across unrelated prompts and whole schedules. Optional versioned text embeddings assist retrieval, never certify humor or action viability alone.
 * **Deal simulator:** for any candidate Nown, render the hands the mesh would actually deal at both table sizes — the same tool Curators later use, per the Curator Guide.
 * **Editorial review:** use the dimensions and pilot process in ⚙️ §3 alongside the tone bucket. Retain source context, cultural adaptation, human decisions and real-hand playtest observations in the editorial record; keep-rate and automated scores alone do not establish comic quality or fair ambiguity.
 
 ### 4. Architecture
 
-Server-rendered from the Go binary (same pattern as the Admin Console) on a public subdomain — no separate SPA build chain. Role and workflow state in PostgreSQL; binaries in object storage; the automated moderation screen is provider-swappable.
+Server-rendered from the Go binary (same pattern as the Admin Console) on a public subdomain — no separate SPA build chain. Role, text, consent and workflow state remain in PostgreSQL; immutable text bundles deploy to servers. The automated moderation screen is provider-swappable. Publishing and approval have distinct durable states and idempotency keys; publishing never repeats the approval reward.
 
 ---
 
@@ -285,13 +397,13 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 
 * Format: real UI capture only; silent-autoplay friendly — big captions carry the story; one idea per beat; readable at phone size.
 * Storyboard (7 beats, 4–6 s each):
-  1. Hook — "One of you can't see this." A meme cuts to static on one phone among four.
+  1. Hook — "One of you can't see this." A short secret situation is missing on one phone among four.
   2. Roles — the press-and-hold role check; one card whispers *you're Donower*.
   3. Nown appears on every screen at once; a Donower's screen shows only a plain placeholder — and nobody can tell.
   4. Play — cards hit the table one turn at a time, each revealed instantly with a name; caption "whose card doesn't get it?"
-  5. Pressure — a draw announcement, a poke shake, a Shuffle alert, Quick Chat accusations flying.
+  5. Pressure — a draw announcement, a poke shake, Quick Chat accusations flying.
   6. Knowoff — votes land; the loser is out, role face-up… a Nower. The table groans; one vote left.
-  7. Verdict — the Donower grins; "Donowers win together." Noin rains onto the scoreboard. Logo out.
+  7. Verdict — the Donower grins; "Donowers win together." Public team verdict and points; private reward settlement stays private. Logo out.
 * Ship gate: produced on final production UI, released with prod — no clip work while gameplay, engine, and netcode remain open.
 
 ---
@@ -300,10 +412,10 @@ A ≤45-second, watch-don't-read onboarding clip: a first-timer should follow th
 
 Direction locked: **pastel neo-brutalism, illustration-light**. A brutalist skeleton — thick ink borders, hard zero-blur shadows, chunky type, flat fills — wearing a soft candy palette; personality comes from tiles, type, and color, not mascots or scene art.
 
-This matrix styles the **interface around media**. Playable Nowns and cards follow
-the [lo-fi, static-image-and-text media direction](#playable-media-direction) in ⚙️ §3:
-rough everyday captures, compressed memes and concise text. Do not turn them
-into matching pastel illustrations, brand doodles or polished scene art.
+This matrix styles the interface around short text Nowns and cards. Keep the
+[lo-fi text direction](#playable-media-direction): everyday, concise and
+speakable. Fonts, icons, avatars, illustration policy and accessible finite
+interface motion remain; playable-image loaders do not.
 
 > **Implementing or redesigning any client UI against this chapter?** Load
 > [`.agents/skills/neo-brutalism-ui-design/SKILL.md`](.agents/skills/neo-brutalism-ui-design/SKILL.md)
@@ -318,7 +430,7 @@ into matching pastel illustrations, brand doodles or polished scene art.
   * `violet` `#B49AF5` — the neutral interactive: buttons, selected tiles, timers, progress fills.
   * `lime` `#D4F04C` — the truth/reward signal: Nower catches, match points, Noin grants.
   * `pink` `#FF9ED2` — the risk/accusation signal: votes, the Knowoff board, Donower reveals. The palette's single permitted gradient (`#FFD9EC → #FF9ED2`) is reserved for the Knowoff reveal header.
-  * **Support accents** (ADR-008) — categorical only, never a verdict signal: `canvasDeep` `#C4A8F0` for header bands and rails, `tangerine` `#FFB020` for currency, streaks and heat, `aqua` `#7FE7DC` for time, connection and neutral information, and `sky` `#8FCBF5` as the Shuffle specialty's identity (ADR-010). Eleven colours total is the ceiling; a further hue is another ADR.
+  * **Support accents** (ADR-008) — categorical only, never a verdict signal: `canvasDeep` `#C4A8F0` for header bands and rails, `tangerine` `#FFB020` for currency, streaks and heat, `aqua` `#7FE7DC` for time, connection and neutral information, and historically `sky` `#8FCBF5` for Shuffle (ADR-010; retire sole-use wiring after consumer audit). Eleven colours total is the ceiling; a further hue is another ADR.
 * Structure: every container carries `Border.all(width: 3, color: ink)` and a hard shadow `BoxShadow(color: ink, offset: Offset(4, 4), blurRadius: 0)`. Corners rounded — radius 16 for cards and sheets, 12 for buttons, full pill for stat chips. Pressing a control collapses its shadow to zero offset while the control translates onto its own shadow footprint: the signature brutalist click. Shadows come from a **named tier scale** — `sm` (3,3) for chips and badges, `md` (4,4) for cards and buttons, `lg` (8,8) for overlays and hero moments, `lift` (7,7) for pointer hover — plus tinted `limeGlow`/`pinkGlow`/`violetGlow` reserved for celebration. Blur is always `0`.
 * **Structured disruption:** decorative and celebratory surfaces (the hand fan, the evidence table, empty-state stickers, verdict banners) sit at a small rotation drawn from a closed set (`KoTilt`: ~1.1°, ~2°, ~2.9°). Ballots, timers, forms, and anything a fairness rule depends on stay mechanically aligned — never rotated.
 * Typography: **Baloo 2** (SIL OFL, bundled under `client/assets/fonts/` — ADR-007) is the locked display face for headings, timers, room codes, tallies, and Noin numbers; body copy stays on a plain geometric sans. **Highlighter emphasis is the house style:** the revealed role, a Noin delta, the clip caption — key phrases sit on a lime marker sweep, not bold-only.
@@ -332,245 +444,229 @@ into matching pastel illustrations, brand doodles or polished scene art.
 
 ## 🏛️ Codebase Taxonomy & Separation of Concerns
 
-```text
-knowoff/
-├── client/                      # Flutter — one codebase: Android, iOS, Web (PWA)
-│   └── lib/
-│       ├── core/
-│       │   ├── config/          # Client config loader (server URL, feature flags)
-│       │   └── network/         # GameTransport abstraction + WebSocket implementation
-│       ├── data/
-│       │   ├── models/          # GameState, Player, Card, NownRef DTOs (mirror server protocol)
-│       │   └── repositories/
-│       ├── domain/
-│       │   ├── entities/
-│       │   ├── repositories/
-│       │   └── usecases/        # QuickPlay, JoinRoom, PlayCard, DrawCards, CastVote, SendQuickChat, ConvertPoints
-│       ├── presentation/
-│       │   ├── state/           # Riverpod state for the server-driven phases
-│       │   ├── screens/         # MainMenu, Queue, Lobby, Round, Discussion, Knowoff, Verdict, Profile, Leaderboard, Store, NoticeInbox
-│       │   └── widgets/         # NownStage, HandFan, PlayTable, VoteBoard, QuickChatBar, AccusationBanner, ReadyButton, RoleCard, NoinBadge
-│       └── media/               # Client MediaEngine: pack metadata sync, signed-URL prefetch, LRU asset cache, Donower placeholder renderer
-├── server/                      # Go authoritative game server
-│   ├── cmd/knowoffd/            # main.go — wiring, config load, graceful shutdown
-│   ├── internal/
-│   │   ├── config/              # Single typed config struct from layered YAML
-│   │   ├── transport/           # WebSocket handling, codec, connection lifecycle
-│   │   ├── lobby/               # Quick Play queues, room lifecycle, QR/room codes, reconnect grace
-│   │   ├── game/                # Phase state machine, timers, roles, votes, forfeits, scoring
-│   │   ├── bots/                # Quick Play backfill bots (labeled; reuses gamebot policy engine)
-│   │   ├── media/               # Pack loader, relevance mesh, dealing, signed-URL issuing, role-scoped payloads
-│   │   ├── economy/             # Noin wallet, ledger, play passes, entitlements
-│   │   ├── portal/              # Contributor Portal + Media Workbench (server-rendered) + Admin Console
-│   │   └── store/               # Postgres repositories, Redis queues/presence/routing, object-storage client
-│   └── migrations/
-├── infra/
-│   ├── compose/                 # server + postgres + redis + minio + cloudflared — one command up
-│   ├── k8s/                     # Future — scaffolded, not required to run
-│   └── terraform/               # Future — provider-agnostic modules
-├── tools/
-│   ├── mediapack/               # Go CLI: ingest → tag → embed → certify → bundle → simulate (⚙️ §3)
-│   └── gamebot/                 # Go CLI: protocol-level dev/test bots
-├── content/                     # Generation-side inputs: prompt templates, tone matrix, style presets, curation overlays
-└── configs/                     # base.yaml + <env>.yaml overlays (incl. gameplay/tuning.yaml)
-```
+Boundary map for the transition; comments distinguish target from current paths.
+Actual source inventory in the transition design takes precedence over schematic
+filenames here (some former blueprint paths were aspirational).
 
-Separation rule: `server/internal/game`, `server/internal/media`, and `server/internal/economy` contain **all** rules, dealing, secrecy, and currency logic — the client renders state and sends intents; it never decides an outcome, never computes a balance, and never receives data its role shouldn't see.
+| Path / boundary | Responsibility and disposition |
+|---|---|
+| `client/lib/core/` | Config, transport, logging and shared services retained; v2 network handling added. |
+| `client/lib/data/` | API/auth and DTOs retained/adapted to copy IDs, contract and sequence snapshots. |
+| `client/lib/presentation/` | Shared theme/screens/state retained; five mode controls added, specialty/image gameplay views retired. |
+| `client/lib/media/` | Existing catalog/cache/prefetch path audited for removal; do not download secret prompt catalogs. |
+| `server/cmd/knowoffd/` | Wiring, health, graceful drain and config, with obsolete storage/bot entry points removed. |
+| `server/internal/{game,lobby,handler,transport}/` | One authoritative shared engine, compatible queues/readiness, role-scoped v2 protocol. |
+| `server/pkg/media/` | Shared versioned text catalog/dealing/certification library (ADR-004); no client dealer. |
+| `server/internal/{economy,profiles,leaderboard,store}/` | Durable value, stable match/admission/settlement identity and shared caps. |
+| `server/internal/{portal,admin,workbench}/` | Text contribution/review/activation and secure operations; retire obsolete image-only workbench code. |
+| `server/internal/{avatar,reports,notices}/` | Retained non-playable imagery, conduct/content cases and truthful drain notices. |
+| `server/migrations/` | Applied history preserved; additive migration/backfill before contract cleanup. |
+| `tools/mediapack/`, `tools/gamebot/` | Existing command surfaces adapted to text releases and v2 scripted test matches. |
+| `infra/`, `nginx/`, `configs/` | Current stack adapted with verified backups and consumer-specific dependency retirement. |
+| `content/` | Text editorial inputs and versioned packs; synthetic fixtures distinct from production. |
+
+Separation rule: `server/internal/game`, `server/pkg/media`, and `server/internal/economy` contain **all** rules, dealing, secrecy, and currency logic — the client renders state and sends intents; it never decides an outcome, never computes a balance, and never receives data its role shouldn't see.
 
 ---
 
 ## ⚙️ Media Engine Specification
 
-The Media Engine owns what media exists, how hands are dealt against it, and who is allowed to see what. It lives **server-side in Go**; the client carries a thin mirror for pack sync, prefetch, and placeholder rendering only.
+The historical “Media Engine” name denotes the shared content/dealing library.
+The text target has no playable image format, image prefetch, signed prompt URL
+or public secret catalog. Server-deployed bundles contain plain text; clients
+receive only authorized instances through role-scoped events.
 
-### 1. Media-Pack Bundle Format
+### 1. Text bundle and release contract
 
-* A pack is a versioned bundle: `manifest.json` (pack tag e.g. `core-2026.10`, checksums, license & credits, age rating, BCP 47 language tag — packs are language-scoped, so new languages ship as new packs, never format changes), `media.jsonl` (per Nown: id, type `image|text`, asset ref, embedding vector, tags, tone bucket, rating), `cards.jsonl` (per hand card: id, type `text|image`, asset ref, embedding, tags), plus assets in object storage addressed by content hash.
-* Version discipline: the server embeds the active pack tag in `phase_started`; clients sync **metadata** OTA on app start and on unrecognized tags, verify checksums, and hot-swap between matches — never mid-match. Assets stream on demand via the prefetch protocol (§4) with an LRU cache.
-* Theme packs are additional bundles in the same format; pack updates and takedowns ship as version bumps the server hot-swaps without redeploying.
+Retain immutable manifest + `media.jsonl` (Nowns) + `cards.jsonl` conventions
+unless a versioned migration requires a rename. The planned new format declares
+schema version, release ID, mode suitability, canonical BCP 47 language, rules
+compatibility, per-file hashes, license/attribution, age policy and certification
+artifact hashes. Nowns distinguish situation/plan/criterion; cards distinguish
+response/item pool. These are target fields, not current loader capabilities.
+Reject unknown types, blank/oversized text, invalid Unicode, missing coverage,
+duplicate IDs or incompatible versions before activation. Never reinterpret an
+old image alt-text/filename as approved playable text.
 
-### 2. The Relevance Mesh
+Use a stable content ID and immutable revision for wording/provenance, plus a
+separate match-unique copy ID for every dealt/system card. Pin the complete
+validated bundle and rules for each match. A new release affects only new
+matches. Reconnect and evidence use the pinned bytes; activation cannot reword
+history. Archived records may preserve old types, with explicit legacy status;
+new active content must be text. Build/publish/activate/takedown remain separate
+reviewed steps with audit and rollback to a compatible certified text release.
 
-* Every Nown and card carries an **embedding** in one shared multimodal space (local SigLIP/CLIP at build time; Gemini Embedding 2 as the API alternative). Tags remain human-facing metadata and theme filters — **similarity, not tag intersection, is the balance mechanism**, because tag vocabularies rot and noisy tags silently break dealing.
-* Relevance bands over cosine similarity (thresholds in `tuning.yaml → dealing:`): **high** ≥ `band_high`, **distant** in [`band_low`, `band_high`), **chaos** < `band_low`.
-* Dealing guarantee: the server picks the match's Nowns up front (secret, RNG seed logged) and deals each 5+3 hand as a constraint deal: against **every** scheduled Nown, each player holds ≥ `min_high_per_nown` high cards and ≥ `min_distant_per_nown` distant cards, with the remainder chaos. Every hand always has a good answer, a stretch, and garbage — for Nower and Donower alike.
-* Shuffle re-deals are dealt *against the current Nown schedule* so the guarantee survives mid-match mutation.
-* Per-media candidate lists for all bands are precomputed at pack build; runtime dealing is array sampling, zero embedding math in the hot path.
-* **Relationships are many-to-many:** a card can be high for one Nown, distant for another and chaos for a third. These Nown-to-card bands guide dealing; they are not a correct-answer key, a funniness score or a card-to-card dependency tree. Players may connect cards to earlier plays when arguing; votes determine the outcome. The `chaos` similarity band is independent of the `chaos` humor bucket.
+### 2. Dealing and action viability
 
-These are the target dealing guarantees. The [current server mechanics](docs/code/MODULE-media-engine.md) and [roadmap](docs/planning/ROADMAP.md#content-readiness-audit--2026-09-11) record implementation gaps that must be closed before a real pack can claim these guarantees.
+Choose the secret full 2/3-round schedule before dealing, role-blind and without
+repeating a Nown merely to fill an undersized pack. Reject infeasible setup
+before consuming access. Retain 5+3 provisionally, but certify the **actual
+retained cards** across every scheduled prompt, both sizes, and reachable mode
+board/trade states. No empty candidate fallback that reveals the prompt.
 
-### 3. Media Pipeline (`tools/mediapack`) & Content Production
+High/Distant/Chaos remain useful candidate evidence, not a correctness oracle.
+When used, preserve multiple defensible relations per scheduled prompt and
+version the evaluator/thresholds. Mandatory multimodal embeddings and synthetic
+fixture geometry are retired as production requirements. Text embeddings may
+assist editorial search; explicit reviewed suitability plus legal-action and
+whole-hand simulation form release evidence. Role-blind dealing must not encode
+which seat knows the secret. Public seeds are independent of prompt/role,
+drawn from the mode/language item pool outside player 5+3.
 
-* Pipeline stages (CLI + Workbench/Portal UI over the same code): `ingest` (transcode, EXIF strip, perceptual-hash dedupe) → `screen` (automated moderation) → `tag` + `embed` → human curation (🧑‍🎨) → `certify` → `bundle` → `publish`.
-* **Quality targets — deliberately medium/low:** static images ≤ 720 px longest side, compressed single-frame WebP; text plain. GIF, animated WebP, APNG, video and audio are not supported game-content formats. Image preparation accepts non-animated PNG, JPEG or WebP sources and rejects animation rather than silently selecting a frame. Two reasons: small assets keep prefetch instant and the edge-cache path cheap, and lo-fi *is* the meme aesthetic.
-* **Content standard:** humor may include sexuality within the bounds of eroticism — suggestive, cartoon, drawn, abstract — but **never pornographic or explicit content**, and always within app-store content rules. Erotic-leaning media carries an adult rating and ships only in age-gated packs (Product Baseline); the automated screen and human curation both enforce the line.
-* Certification (the anti-dead-content gate): a pack version is publishable only if it declares its language tag (§1), every Nown has full band coverage for a 6-player deal, every card is reachable in some band, and Monte Carlo `simulate` confirms deal feasibility at both table sizes. Uncertifiable media stays in draft. The same checks back the Curator Guide's testing workflow (🧑‍🎨 §1).
-* `mediapack simulate` also answers balance questions offline: band-threshold sweeps, Donower-survival proxy rates under bot policies, Shuffle and Revote impact — tune `tuning.yaml` until distributions look right, then spend scarce playtests on feel.
-* Production stack: **GPT-6 Astra** is the planned AI generation lane for static-image and text candidates; human-authored contributions and human rewrites enter the same curation process. Images use single-frame WebP per the quality targets above; text remains plain text. Local on-device generation (diffusion models, local LLMs) is out of scope for v1. Generation produces candidates, not approved material; human judgment is the binding constraint. The synthetic development builder is not evidence that this production lane is implemented.
-* Tone rubric: the [four-bucket humor matrix](content/tone-matrix.md) retains exactly one bucket per asset: `millennial-cope`, `gen-z-absurdism`, `social-awkwardness`, or `chaos`. Aim for a roughly even release mix, keeping chaos under roughly 30%. These editorial targets are separate from similarity bands and runtime draw probabilities.
+Response pools must work across unrelated situations, with awkward contexts as
+well as plausible ones; exclude universal safe answers and unique prompt clues.
+Item pools need defensible ratings, bag substitutions, exchanges and chains.
+Record opening-seat disadvantage, late-seat imitation, exhaustion, draw pressure
+and public-card knowledge after trades. Monte Carlo alone cannot prove every
+reachable state; combine exhaustive small fixtures/property tests with sampled
+production schedules and human playtests. No pack may claim all-schedule proof
+from testing only first-Nown band counts.
+
+### 3. Text pipeline and content production
+
+Current `tools/mediapack` has `build`, `certify`, `simulate`, `publish`;
+`build` makes synthetic fixtures and `publish` copies directories. They do not
+yet implement the production workflow below. New commands must be documented
+only once actually implemented; the Roadmap orders the work.
+
+Target workflow: draft → normalize/validate → automated text screen → human
+editorial/rights/locale review → versioned bundle → technical/action certification
+→ human full-match pilot → approved activation. Capture exact accepted text,
+source/terms version, editor and consent provenance. Approving a submission is
+not deploying a pack. A repeated publish cannot pay approval rewards twice.
 
 #### Playable media direction
 
-* **Caught moments:** favor candid, ordinary, awkward images that feel caught or shared: imperfect framing, rough crops, visible compression, modest detail and an unexpected frozen gesture. Preserve enough clarity to recognize the situation and argue about it. Low fidelity is an aesthetic choice from the start; merely shrinking a polished illustration does not satisfy it.
-* **Usually below the ceiling:** 720 px is the still-image maximum longest side, not a target or a minimum, and not 1280×720. Start images around 360–640 px on the longest side when the premise remains readable. Preserve source aspect ratio; never upscale or enhance a candidate just to make it look premium. Review the delivered compressed image at card size.
-* **Two supported formats:** Nowns and cards use static images or plain text. Choose the format that carries the premise; no image/text quota or format-based dealing weight is introduced. Captions, planning descriptions and translations do not count as extra text cards. GIF, animated WebP and other animation are excluded, including animations relabeled as `image`.
-* **Brief for the moment:** describe the everyday situation, frozen reaction, awkward crop and source texture before tools or rendering polish. For generated candidates, explicitly request the same lo-fi result; avoid default prompts for cinematic lighting, studio photography, glossy 3D, high detail, immaculate vector art or consistent branded illustration. Real or contributed image sources still require provenance and rights checks; a found appearance is not proof of a real source.
-* **Wording can carry the joke:** text-only cards remain first-class content. Keep the line concise and open to multiple interpretations; a visual asset's alt text or production description is not itself a playable text card.
+Plain text only for Nowns, cards and Weekly Nown Challenge content. Target short
+prompts (roughly 5–10 words) and cards (roughly 1–4 words); these are editorial
+budgets, not byte limits. Some languages need different lengths. Use a validated
+configurable UTF-8 bound, grapheme-aware UI, plain escaped rendering, no HTML,
+Markdown execution, external asset URL or bidi/control-character spoofing.
+Retain lo-fi everyday humor, multiple readings and speakable defenses. Preserve
+four tone buckets and the distinction between chaos humor and Chaos relevance.
+Keep topical source/observation/region/language/review/expiry records, human
+weekly review, and cultural rewriting. The 70/20/10 freshness mix is an experiment,
+not runtime weights. Respect the existing no-explicit-content policy, provenance,
+rights and automated-plus-human screening. Avatars/store art are separate assets.
 
-The owner's 2026-09-11 decision in [ADR-011](docs/design/ADR-011-static-image-and-text-content.md)
-removes GIF and animated game content while retaining the lo-fi aesthetic,
-humor context, tone matrix, cultural adaptation and relevance mesh.
-[Humor development](content/humor-development.md#visual-direction-and-history)
-records the historical source and practical examples.
+Start with a bounded mode/language pilot; all five intended modes need their own
+4/6-player proof. At least three themes and two cultural/language pilots test
+transferability, without promising both languages at public launch. The old
+150-Nown/1,500-card aggregate goal and current 150/5,400 synthetic fixture are
+not release capacity proofs; publish sufficient certified content based on
+full-schedule viability and repeat-exposure measurements. Record recognition,
+laughter, defensible alternatives, comprehension and reference explanations.
 
-#### Humor development and editorial release
+### 4. Secrecy, history and anti-cheat
 
-The owner-adopted [humor development guide](content/humor-development.md) supplies the working method for this standard; the [Curator Guide](content/curator-guide.md) applies it to pack review.
+Render every outbound event/snapshot per recipient at a single audited boundary.
+Active Nower receives current private Nown text; Donower/eliminated receives a
+neutral placeholder. Public history contains match/round/action IDs, monotonic
+sequence, seat, public card instances, before/after state and reason: system
+seeds, draws by count, penalties, actions and offer outcomes. It never includes
+future prompts, hidden hand/reserve identities or relevance annotations.
 
-* **Make the table funny:** combine a recognizable human situation with an unexpected reaction, action, image or short line. A still image can carry the joke without a caption; the interpretation players defend should be speakable. Give players something plausible to defend without identifying Nown or a role by itself. Rotate recurring characters and callbacks so familiarity does not become repetition.
-* **Editorial dimensions:** record human situation, comic mechanism, cultural reach, shelf life and accessibility in the planning record. These supplement the existing tone bucket; they are not new pack fields, server filters or inferred demographic labels.
-* **Freshness hypothesis:** start by testing a release mix of **70% evergreen, 20% seasonal or cultural, 10% topical**. It is an experiment to revise using feedback and reuse observations, not a fixed quota, runtime tuning parameter or change to the roughly balanced tone mix.
-* **Topical records:** retain the source, observation date, intended regions/languages, one-sentence context, review date and expiry date for each topical candidate. Trends identify possible topics; verify factual premises separately against the original event/announcement or reliable reporting. An editor reviews topical material weekly and at expiry, deciding whether to retain, rewrite or retire it; retirements ship through a new pack version. Dates are editorial obligations, not an implemented automatic scheduler.
-* **Cultural fit and care:** regional contributors recreate jokes in their own voice rather than translating literally. Check rights, originality, age suitability, reference accessibility and local meaning. Satire can address institutions, powerful figures and everyday frustrations; victims of a current tragedy are not punchlines.
-* **Pilot and proof:** begin with three themes and two target cultures/languages, develop lo-fi static images and concise text candidates under the media direction above, explore several comic mechanisms per theme, then have a human select, crop or rewrite. Apply automated screening and human review, and playtest actual 4- and 6-player hands across all scheduled Nowns. Record recognition, laughter, plausible alternative explanations and references needing explanation. Neither popularity, an AI score nor a technically feasible deal replaces this evidence. Release a small certified pack, inspect feedback and revise or retire weak cards; language variants remain separate language-scoped packs.
-
-### 4. Secrecy, Sync & Anti-Cheat
-
-* Role-scoped payloads: every gameplay event is rendered per-recipient. During a round, Nower clients receive `{nown: {id, signed_url, type}}`; Donower clients — and every eliminated player — receive `{decoy: true}`. **Nown never crosses the wire to a device that shouldn't have it.**
-* Signed URLs are short-lived and single-round; Nowers prefetch during the inter-round countdown and every screen flips on one synchronized `show` tick. A still-loading Nower renders the same placeholder a Donower sees, so loading state leaks nothing either.
-* The server owns the phase clock; client timers are display-only; late intents are rejected. All match-deciding events — plays, specialty uses, votes, Revotes — are intents resolved exclusively server-side. All Noin movement happens in the server ledger; the client only renders balances.
-* Every scoring, role, and currency event lands in the append-only audit stream — the same stream that feeds stats, the leaderboard, KPIs, and report replays.
+Reconnect restores the same board, owner hand, pending offer/deadline and complete
+public history without re-executing actions or extending clocks. A previously
+informed human cannot unlearn a prompt; elimination clears app state/semantics
+and blocks future delivery. Verdict reveals only begun-round Nowns. Keep
+secret schedules, RNG seeds and privileged replay scripts out of general logs,
+client catalogs, analytics dashboards and public pack endpoints. Privileged
+diagnostics require explicit authorization, retention and audit.
 
 #### Designer Workbench & Tuning
 
-Every number a playtest could question lives in one versioned file, `configs/gameplay/tuning.yaml`; structure is code, values are keys:
+`configs/gameplay/tuning.yaml` is the only runtime numeric source. This planning
+change does not edit it. Resolve its comments and add typed validation in Phase 1:
 
-```yaml
-seed: 42                            # reproducible dealing — same seed, same match
-
-game:
-  room_sizes: [4, 6]                # the only valid room sizes
-  donowers_by_size: {4: 1, 6: 2}      # public knowledge at the table
-  votes_by_size: {4: 2, 6: 3}       # one Knowoff per round; match ends early when votes can't catch remaining Donowers
-  min_connected: 3                  # below this, the match waits for grace then ends scored (Rules §7)
-  reconnect_grace_s: 20             # also the team-forfeit grace (Rules §7)
-  pokes_per_target_per_round: 1
-  abandon_cooldowns_s: [60, 300, 900]   # escalating Quick Play matchmaking cooldowns
-
-timers:                             # seconds; which windows may fast-forward is structure (§8)
-  play_turn: 10                     # each player's turn; the play reveals immediately, the turn ends on action
-  discussion_per_player: 5          # 20s in a 4-player room; Ready ends it early
-  knowoff_ballot: 20                # always runs full
-  knowoff_runoff: 15                # tie-break among tied players; always runs full
-  vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
-  reveal_lockout: 5                 # Reveal cannot be played in the final seconds of a turn
-  reveal_view: 3                    # each player may view an exposed hand for this many seconds
-  prefetch_countdown: 5             # inter-round countdown = Nower prefetch budget
-
-hand:
-  size: 5
-  draw_pile: 3
-  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_free_card: 0.08, shuffle: 0.05, revote: 0.05}
-  # dealing is role-blind: any specialty can land in any hand; shuffle is usable by Donowers,
-  # revote by Nowers — off-role copies are dead cards (Rules §5)
-  # unique specialties (shuffle, revote) fire once per match — later copies are dead cards
-
-dealing:                            # relevance mesh (⚙️ §2) — v1 placeholders, tuned via simulate
-  band_high: 0.55
-  band_low: 0.30
-  min_high_per_nown: 2
-  min_distant_per_nown: 2
-
-points:                             # match points — leaderboard, session scoreboard, Overall/Non-Converted accrual (Rules §6)
-  correct_vote: 10
-  nower_win_bonus: 10
-  donower_team_win: 30
-  draw_penalty: 5                   # per pile card drawn; a One More Free Card draw is exempt (Rules §3, §5)
-  # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
-
-noin:                              # currency earnings — instant, kept on disconnect (Rules §6)
-  match_completed: 5
-  nower_win: 30
-  donower_team_win: 50
-  correct_vote: 5
-  donower_vote_survived: 10           # credited discreetly — never shown on any public surface (Rules §6)
-  daily_first_win: 25
-  daily_earn_cap: 300               # anti-farm ceiling on play earnings
-  challenge_winner: 1000            # the Week Winner award (🎮 §3)
-  contributor_accepted_asset: 100
-
-economy:
-  free_daily_quickplay_matches: 3   # per free account per server day; never applies under a Play Pass or Premium; local rooms never capped
-  points_to_noin: 100              # Non-Converted Points per 1 Noin — one-way, multiples of 100, counts toward daily_earn_cap
-  play_pass_prices: {day_1: 250, day_3: 600, day_7: 1200}    # Noin; passes never remove ads
-  premium_yearly_discount_pct: 20   # Premium subscription (sole ad-removal path); monthly/yearly store products mapped at launch
-  unlock_prices: {custom_avatar: 1000, poke_style: 400, theme_pack: 1500}   # Noin
-  noin_bundles: [500, 1200, 3000, 8000]   # bulk IAP sizes; store price tiers mapped at launch
-
-liquidity:                          # Quick Play backfill bots (🎮 §1)
-  backfill_enabled: true
-  queue_timeout_s: 25
-  min_humans: 1
-  leaderboard_min_humans: 3
-  noin_min_humans: 2               # team-win Noin requires this many humans
-  bot_think_min_s: 1.5             # a bot pauses before acting, so its move is visible to watch
-  bot_think_max_s: 4               # upper bound of that randomized pause
-
-liveops:
-  leaderboard_daily_counted_matches: 10
-  challenge_max_entries: 100        # intake auto-closes; rejections reopen slots
-  challenge_votes_per_player: 1     # immutable once cast
-
-portal:
-  min_account_level_to_apply: 2
-  submissions_per_contributor_per_day: 10
-  guard_freeze_max_h: 48
-```
-
-**Economy balance protocol** — targets first, numbers second (all placeholders above are tuned against these):
-
-| Target | Healthy band | The one lever |
+| Concern | Current value / key | Text target |
 |---|---|---|
-| Active free player affords a 1-day Play Pass | every ~2 days of play | `noin.*` earn values |
-| 7-day Play Pass for a committed free player | every ~8–10 days | `play_pass_prices` |
-| Earned vs purchased Noin in circulation | ≥ 70% earned | bundle sizes/prices |
-| Point-conversion share of Noin income | ≤ ~25% | `points_to_noin` rate |
-| Draws per player per match | ~1 (drawing is a choice, not a habit) | `points.draw_penalty` |
-| Free daily cap as the pass/Premium nudge | felt by regular free players, while a 1-day pass stays ~2 play-days of earnings away; casual once-a-day players untouched | `free_daily_quickplay_matches` |
+| Turn | `timers.play_turn: 20` | Retain; measured by mode |
+| Discussion | `timers.discussion_per_player: 5` | Target × original configured table size, Ready shortcut; current code uses active-connected count and must change explicitly |
+| Ballot/runoff/result | 20 / 15 / 8 seconds | Retain; unanimous active-connected Ready may end early |
+| Grace | `game.reconnect_grace_s: 20` | Retain; reconnect never resets it |
+| Inter-round countdown | `timers.prefetch_countdown: 5` | Replace with neutral round-start countdown in versioned config; no asset prefetch dependency |
+| Hand/reserve | `hand.size: 5`, `hand.draw_pile: 3` | Provisional, certify before release |
+| Trade response | Absent | Planned `timers.trade_response_s: 10`, positive bounded validation |
+| Specialties | Nonzero weights + timers | Remove all first-release dealing/use/debug/config paths |
+| Backfill | `liquidity.backfill_enabled: true` | Off for text; remove production scheduler after cutover |
+| Queue timeout | `liquidity.queue_timeout_s: 25` | Offer explicit waiting/change/leave; no silent expiry/substitution |
+| Draw penalty | `points.draw_penalty: 5` | Every ordinary drawn card, no free-card exemption |
+| Economy/progression | Existing `points/noin/economy/liveops/progression` | Preserve values and account-wide caps; measure, do not invent mode multipliers |
 
-`mediapack simulate` reports expected per-match Noin under bot policies at both table sizes; the nightly KPI jobs report the real numbers, and the levers above move one at a time.
+Economy hypotheses remain: active free player affords a one-day pass in roughly
+2 play-days; seven-day pass in 8–10; ≥70% circulation earned; conversion ≤25% of
+income; roughly one draw per player/match. These are unvalidated targets, not
+claims from the synthetic simulator. [Business plan](docs/product/BUSINESS_PLAN.md)
+defines measurement, costs, cohort and rollout decisions.
 
 ---
 
 ## 🌐 Network Architecture: Server-Authoritative WebSocket
 
-```text
-[ Flutter app  (Android/iOS) ] ─┐                        ┌──────────────────┐
-[ Flutter PWA  (any browser) ] ─┼─( WSS / JSON intents )►│  GO GAME SERVER  │◄──►[ Redis ]
-[ Flutter app / PWA … seat N ] ─┘  ◄─(role-scoped events)│  - Queues & auth │      queues/presence
-              ▲                                          │  - Phase timers  │◄──►[ PostgreSQL ]
-              │ signed GETs (Nowers only)               │  - Role secrecy  │      profiles/ledger/
-[ Cloudflare edge cache ]◄──[ MinIO on home server ]     │  - Media dealing │      leaderboard/media
-  (tunnel: cloudflared — no open ports, TLS at edge)     │  - Votes/economy │◄──►[ MinIO (assets) ]
-                                                         └──────────────────┘
-```
+Client intents go to one authoritative Go match owner; role-scoped events go
+back to each seat. PostgreSQL stores durable results/ledger/audit; Redis handles
+coordination where implemented. Live match state remains in one process.
 
-* Protocol: one persistent WebSocket per client. Intents: `queue_quickplay`, `join_room`, `play_card`, `use_specialty` (covers Shuffle and Revote), `view_revealed_hand` (one private view per player during the exposed round), `draw_cards`, `cast_vote`, `quick_chat` (canned `phrase_id`, or free `text` plus BCP 47 `language`), `ready`, `poke`, `report_media`, `convert_points` (100:1, outside matches). Events: `phase_started`, `role_assigned` (private), `round_started` (role-scoped Nown/decoy payload + the round's randomized turn order), `show`, `turn_started` (seat + deadline + Reveal lockout), `play_revealed` (attributed, immediate), `hand_reveal_available` (public target metadata, never cards), `hand_reveal_viewed` (private cards + view duration), `round_resolved` (play-phase summary), `shuffle_occurred` (anonymous), `vote_result_pending` (opens the ballot window), `vote_cast` (attributed, live — every Knowoff/runoff cast or change of mind, ahead of the window closing), `vote_nullified` (attributed Revote), `knowoff_resolved` (elimination + role reveal), `match_verdict`, `points_scored`, `points_converted` (private), `noin_granted` (private, per-recipient — Rules §6 discreet crediting), `quick_chat` (broadcast), `system_notice` (broadcast — 🎮 §4). Versioned JSON with sequence numbers for ordered replay. Free-chat text is server-masked before broadcast; the selected language is a filtering hint, not trusted authorization data. **No display strings on the wire:** events and rejections carry stable ids/codes plus parameters; the client localizes them (Product Baseline).
-* Fair arbitration: the Knowoff ballot and any runoff are open and live — every cast is attributed and broadcast to the whole table immediately, and a voter may change their target until the ballot resolves (ADR-009). Play is sequential by server-enforced turn order with immediate attributed reveals; turn deadlines are server-owned. No match-deciding event is a speed race.
-* Reconnect: session-token snapshot rejoin (Rules §7), role-scoped like everything else.
-* Room→node affinity: every room lives on exactly one node (Redis maps `room_id → node`); no cross-node game state — the property that makes horizontal scaling trivial later.
-* Live match state in server memory only; PostgreSQL for durable outcomes and the Noin ledger; Redis for queues/presence/routing; object storage for assets.
+**Planned protocol revision 2** is deliberately incompatible with legacy v1.
+Negotiate before binding a seat or charging access. V1 clients receive an
+explicit upgrade-required response after cutover; no silent conversion of old
+`play_card`/specialty intents to new mode actions. Deployment drains v1 matches
+before switching, rather than promising mixed-version live matches.
+
+The match contract contains `match_id`, `mode_id`, `rules_version`,
+`content_language`, `pack_release_id`, `protocol_version`, original table size
+and server-owned reward eligibility. Queue/lobby settings carry a revision;
+Ready acknowledges that revision. Intents carry action/request ID, expected
+match/round/phase and board revision plus exact owned instance/target fields.
+Proposed action discriminators are `respond`, `place`, `replace`, `offer`,
+`resolve_offer`, `top`; their schema is frozen with fixtures in Phase 1 before
+handlers are written. Common draw/vote/chat/Ready/Poke behavior remains.
+
+Idempotency is per match/seat/request: the same ID and body returns the original
+result without another mutation; conflicting reuse is rejected. Validate and
+mutate under match serialization; timer/leave/accept races have one winner.
+Sequence gaps trigger a role-scoped snapshot; requests to resync do not replay
+mutations. Stale boards/actions/deadlines fail with stable localized error codes.
+Limit frames, request frequency, action-history size and slow consumers; preserve
+complete bounded match evidence without exposing a private raw event log.
+
+System UI copy uses stable IDs/codes and parameters. Authorized authored card/
+Nown text, moderated chat, localized operator notices and consented user content
+are explicitly permitted display data; “no display text” must not prohibit
+text gameplay. Content language is pinned separately from interface locale.
+
+There is no durable live-match recovery claim. On process loss, fail cleanly to
+menu; terminate pending offers and mark interrupted match. Already durable
+Noin grants survive; no fabricated completion, result or replacement hand.
+For a confirmed server/process interruption, persist `interrupted` once and
+release/refund any consumed free-Quick-Play allowance once using a compensating
+admission record. Do not extend a paid pass/Premium expiry automatically. Grant
+no completion/team/first-win reward, points, XP or leaderboard result from lost
+in-memory state; already committed grants/accruals remain and reconcile by
+idempotent event key. A client disconnect alone cannot trigger this policy.
+No interruption compensation is payable twice on worker restart/retry.
+Use durable idempotent outbox/settlement records so partial persistence retries
+cannot double-pay points, XP, leaderboard or currency. Planned drain closes
+admission and waits for actual active rooms; multi-node routing is separate
+future work, not implemented merely by retaining Redis.
 
 ---
 
-## 🤖 Bots: Development, Testing & Launch Liquidity
+## 🤖 Bots: Development and Testing
 
-Bots fill seats in two sharply separated roles — dev/test bots that never meet the public, and the labeled Quick Play backfill bots (🎮 §1). In neither role does a bot take over a human's mid-match seat, and no bot is ever disguised as a human.
+Production text backfill is disabled and retired from active wiring. No bot
+replaces a disconnected human. Future production bots require a separate
+approved per-mode rollout, visible labels, role-scoped observations and existing
+human reward thresholds; do not retain untested dormant production code.
 
-* **Dev/test bots:** `tools/gamebot` (Go CLI) spawns N bot players over the real WebSocket protocol — same intents, same timers, no server backdoors. Policy reuses `server/internal/media` as a library: play by noisy embedding preference as a Nower; play plausible-band cards that relate to the table's earlier plays as a Donower; draw when the hand scores badly (accepting the point penalty); vote by a noisy suspicion heuristic; occasionally Shuffle/Revote when held. Seeded — a failing match replays exactly. Bots act early and Ready immediately: a 6-seat dev match crosses every phase in well under a minute. Solo development against 5 bots is the daily loop.
-* **Backfill bots:** run inside the server (`server/internal/bots`), reusing the same policy engine with per-match randomized personality parameters so regulars can't farm a fixed tell. Labeled 🤖 always; humans outrank bots for seats; economy and leaderboard guardrails in 🎮 §1. Sunset by measurement: per queue, once p50 time-to-fill stays under the timeout for a sustained window, the scheduler stops adding bots there.
-* Configuration: a `bots:` block exists only in `local.yaml`/`staging.yaml`; the key is absent from `prod.yaml` and the server refuses external bot connections when unset. Backfill bots are configured separately (`liquidity:` in `tuning.yaml`) and are in-process, so the connection-refusal rule is untouched.
+Adapt `tools/gamebot` to protocol v2 for reproducible dev/test scripts in all
+five modes, including recipient replies and race schedules. Policies consume
+only what that role receives over the real WebSocket; no global pack/schedule
+or other hand as a hidden shortcut. Reproducibility means saved seed plus ordered
+intents/clock inputs and pinned rules/content, not seed alone. Test matches
+never earn live rewards or leaderboard credit. Production must reject dev
+identities/overrides through authenticated environment policy, not a client flag.
 
 ---
 
@@ -578,46 +674,77 @@ Bots fill seats in two sharply separated roles — dev/test bots that never meet
 
 ### 1. Containerization Principles
 
-* Every runnable ships as a container from day one: `server` (distroless static Go binary), `postgres`, `redis`, `minio`, `cloudflared`, dev tooling (migrations runner, adminer). Multi-arch images, environment-agnostic — the same images run on the home server now, a VPS later, Kubernetes after that; behavior differs only by mounted config.
-* **Every backend service is stateless except the data stores — PostgreSQL and Redis.** The Go server writes nothing to local disk: durable state in PostgreSQL, coordination in Redis, assets in object storage (MinIO holds only immutable, re-publishable pack assets), live matches in ephemeral memory with room→node affinity — any server instance can be replaced at will.
+Keep Go/Flutter build boundaries, Docker Compose, PostgreSQL and Redis. Current
+images and tooling still depend on the older content path; Phase 6 removes
+playable-image-only native libraries, storage clients and readiness checks after
+consumer proof. The avatar WebP encoder remains a legitimate native consumer;
+text-only gameplay does not by itself remove CGO/compiler needs. Build each
+supported artifact in a verified toolchain; do not claim static/distroless or
+multi-arch success without build/runtime evidence.
 
-### 2. Hosting: Home Server + Cloudflare (dev/beta), VPS at Launch
+### 2. Hosting, transition and rollback
 
-* Dev and beta run entirely on the owner's home machine under Docker Compose. **Cloudflare Tunnel** (`cloudflared`, free) publishes `play.<domain>` (game server — WebSockets pass through) and `cdn.<domain>` (MinIO assets) with no open ports, no exposed home IP, TLS at the edge.
-* **Edge caching does the heavy lifting:** assets are content-hashed and immutable, so `cdn.<domain>/*` gets a Cache-Everything rule with a long edge TTL; after first request Cloudflare serves the media and the home uplink sees near-zero asset traffic. Low/medium media quality (⚙️ §3) keeps objects small; a round's prefetch is a few hundred KB across a table. Playable media is static images and text only; small objects suit the edge-cache path. CDN policy must be checked at deployment.
-* **Public launch moves the stack to a small VPS** (~€5/mo class): an online-first product can't ride a home ISP's uptime into the stores. It's a lift-and-shift — same images, same config model; assets can offload to Cloudflare R2's free tier (10 GB, zero egress) if the home box retires completely.
-* **Volume-portable data from day one:** every stateful service pins a named Docker volume (`pg_data`, `redis_data`, `minio_data`); containers never write outside them. Cloud migration is a rehearsed runbook, not a project: stop writes, snapshot (`pg_dump`/base backup for PostgreSQL, RDB snapshot for Redis, `mc mirror` for MinIO), restore onto the target volumes, re-point the tunnel/DNS — no schema changes, no path changes.
-* Secrets that leave the machine: the tunnel token and API keys — injected via env into the config layer below, never committed.
+Home-hosted development/beta can remain behind Cloudflare; public launch needs
+an operator-selected reliable host and measured costs. Use the corrected
+[VPS migration runbook](docs/launch/VPS_MIGRATION_RUNBOOK.md) and transition
+schema/retirement design. Rehearse old-schema restore, forward migration and
+new-schema restore separately. Match state is ephemeral; Redis backup does not
+recover in-memory rooms. Quiesce admission, drain matches and settlement work,
+then capture coherent durable data and verify restored contents/ledger sums.
 
-### 3. Centralized Configuration (No Scattered Env Vars)
+Do not delete legacy data, object volumes or old binaries during expand/backfill.
+Before contract cleanup, record retained data/rights, compatibility floor,
+rollback window and last restorable snapshot. After target writes begin, DNS
+rollback alone loses data: stop writes, reconcile/replay durable changes or
+restore the agreed recovery point with an explicit loss decision. Never overwrite
+new purchases or earned balances using an old snapshot as routine rollback.
 
-* All config in `configs/` as layered YAML: `base.yaml` holds every key with sane defaults; `local/staging/prod.yaml` are thin overlays. The server loads one merged typed struct at boot and fails fast listing missing/invalid keys. `moderation.word_lists` holds the maintained language-specific free-chat lists; English is the mandatory fallback list for every selected language.
-* Environment variables do exactly two jobs: selecting the config file (`KNOWOFF_CONFIG=…`) and injecting secrets (DB password, JWT key, storage credentials, tunnel token, moderation/embedding API keys) via `${VAR}` interpolation. Secrets never live in YAML files or images.
-* Maps 1:1 onto Compose volumes now, ConfigMaps + Secrets later, Terraform templating after that.
+### 3. Centralized Configuration
 
-### 4. Local Development — Docker Compose
+Retain layered `configs/base.yaml` + local/staging/prod overlays and typed,
+fail-fast validation. Environment variables select the config and inject secrets.
+Text-mode availability, rules and content-language eligibility are server-owned.
+Reject unknown keys; old specialty/image keys receive an explicit migration
+error at the version boundary, then leave examples/overlays/tests too.
 
-* `infra/compose/docker-compose.yaml` brings up the full stack in one command: server (live-reload in dev profile), PostgreSQL with auto-migrations, Redis, MinIO with seeded dev pack, adminer. Profiles: `core`, `tools`, `test`, `edge` (adds `cloudflared` — beta-at-home only; dev needs no tunnel).
-* A full 6-player match — four `gamebot` seats plus two real clients (one native, one PWA) — must be playable against the local stack with zero cloud dependencies, including media prefetch from MinIO.
+### 4. Local Development
 
-### 5. Kubernetes & Terraform Readiness (Future, Designed-For Now)
+Current `make up` remains the existing full Compose stack until implementation.
+Target fresh-clone proof starts PostgreSQL/Redis/server/client with a certified
+synthetic text fixture and no cloud key or playable object store. Run real
+4/6-seat scripted mode matches over WebSocket, native/PWA smoke tests and
+reconnect checks. The unified runner plus explicit standalone-module and real-DB
+checks must execute without silent skips. Do not install host OS packages as
+part of this documentation task.
 
-* `/healthz`, `/readyz` (checks Postgres/Redis/storage), Prometheus metrics on a separate port; graceful shutdown drains in-flight matches on SIGTERM; WebSocket routing later uses sticky sessions at the ingress — rooms never span nodes, so no mesh, no distributed state layer.
-* `infra/terraform/` as provider-agnostic modules; hosting strategy: home server → small VPS → orchestration, each step a config change, not a rewrite.
-* Rule: no k8s/TF-blocking decisions in application code — no local file writes, no in-container state, no hardcoded hostnames.
+### 5. Readiness and future scaling
+
+Readiness checks required dependencies only; liveness remains healthy during a
+recoverable dependency outage. SIGTERM marks unready and drains before closing.
+Use initial engineering acceptance budgets (test assumptions to verify, not
+current measurements): client p95 frame total ≤16.7 ms at 60 Hz on the recorded
+low-end device, server p95 accepted intent-to-event ≤200 ms/p99 ≤500 ms in a
+100-concurrent-room 4/6-seat test with network latency reported separately;
+zero corrupted matches or leaks. After a 100-match soak and completed cleanup/GC,
+retained heap stays within 10% of a warmed baseline and room/socket/goroutine
+counts return to baseline. Worst-case history stays within configured frame
+bounds or the tested paging contract. Freeze host/network/build inputs before
+measuring; report desktop-only evidence as such. Also measure per-mode queue fill. Redis/room affinity is a future multi-node contract
+until proven in code. Kubernetes/Terraform remain deferred; do not expand this
+transition into orchestration work.
 
 ---
 
 ## 💰 Monetization: The Noin Economy
 
-One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on play passes, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to reach everything), and monetize impatience, identity, and commitment — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
+One currency sits at the center of the business: **Noin**. Players earn it by playing well, buy it in bulks when they want more, and spend it on play passes, packs, and cosmetics. Design goals, in order: keep free players playing daily, make earned progress feel meaningful (a free player must be able to earn every Noin-priced item; Premium remains a cash subscription), and monetize impatience, identity, and commitment — never gameplay advantage. **No pay-to-win: nothing purchasable affects dealing, roles, votes, or scoring.**
 
 ### 1. Earning Noin
 
 * Play rewards (Rules §6): completing matches, winning as either team, correct votes, surviving votes as a Donower (credited discreetly — Rules §6), first win of the day — credited instantly and kept even on disconnect. A daily earn cap (`noin.daily_earn_cap`) blunts farming, and team-win Noin requires ≥ `liquidity.noin_min_humans` humans in the match.
 * Contribution rewards (🧑‍🎨 §1): Noin per accepted asset, and the Week Winner award of the Weekly Nown Challenge (🎮 §3).
 * **Point conversion:** every match's net points land on the profile as **Overall Points** (lifetime, never decreases) and **Non-Converted Points** (a balance). The owner may convert Non-Converted Points to Noin at **100 points → 1 Noin** (`economy.points_to_noin`), in multiples of 100. Conversion is **one-way and irreversible**: converted points are subtracted from the Non-Converted balance forever, and Overall Points never change. Converted Noin counts toward `noin.daily_earn_cap`, so points can never bypass the anti-farm ceiling.
-* Balance target: an active free player earns a 1-day Play Pass every ~2 days of play (protocol table in ⚙️ Tuning) — collecting is deliberately *not hard*; the sink structure below is what makes the economy work.
+* Balance target: an active free player earns a 1-day Play Pass every ~2 days of play (protocol table in ⚙️ Tuning) — this is an unvalidated target; measure it against actual shared allowances, earnings and sinks before promising affordability.
 
 ### 2. Play Passes (Noin) & the Premium Subscription
 
@@ -627,13 +754,13 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 
 ### 3. Noin Bulks (the cash lane)
 
-* Bulk packs via platform billing (Play Billing / StoreKit): sizes in `economy.noin_bundles`, store price tiers mapped at launch. This is the only place money enters; everything money can get, play can also get — slower.
+* Bulk packs via platform billing (Play Billing / StoreKit): sizes in `economy.noin_bundles`, store price tiers mapped at launch. Noin bundles and Premium are the two cash lanes. Every Noin-priced item is earnable; Premium's ad removal is a subscription benefit.
 * Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Premium subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Premium subscription (💰 §2)** — Noin Play Passes never remove ads.
 
 ### 4. Theme Packs
 
-* Curated media packs (humor verticals, seasonal, community highlights, age-gated adult-humor packs) priced in Noin (`economy.unlock_prices.theme_pack`).
-* In private and local rooms, the **Host Pass** rule applies: only the room creator needs the pack; the whole table plays it, guests never pay. Quick Play runs the core pack plus a free rotating featured pack.
+* Curated text content packs (humor verticals, seasonal, community highlights, age-gated adult-humor packs) priced in Noin (`economy.unlock_prices.theme_pack`).
+* In private and local rooms, the **Host Pass** rule applies: only the current host sponsoring the next match needs the pack; the whole table plays it, guests never pay. Host transfer preserves any already-started match contract; before the next start revalidate the new host's entitlement. If unavailable, clear Ready and require an explicit eligible pack choice, never silently substitute or charge guests. Quick Play runs the core pack plus a free rotating featured pack.
 
 ### 5. Cosmetics & Identity
 
@@ -644,16 +771,18 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 
 ## 🧾 Product Baseline (v1 Decisions)
 
-* Modes & discovery: Quick Play queues per room size (4/6) as the main surface; private/local rooms via 6-character codes + QR deep links. No public room browser, no skill rating at v1.
+* Modes & discovery: five selectable gameplay modes, initially defaulting to Missed the Briefing; explicit mode/size/content-language Quick Play and settings/Ready Local Rooms via code/QR. Each mode is release-gated. No public browser or skill rating.
 * **Communication: canned Quick Chat, reactions, and moderated free text.** Voice and video remain out of scope. Typed text rides the existing WebSocket relay with the active client locale; server-side moderation applies English by default and the configured matching language list before any broadcast. Word lists live in `configs/base.yaml → moderation.word_lists`, are data rather than code, and can add a language without a client release. Harassment reports and account enforcement remain the path for conduct that masking cannot address. Local rooms talk out loud anyway.
-* **Localization & language neutrality (day one):** the game ships in multiple languages, and the whole system is language-neutral even while the launch-locale list is short. No user-facing string is hardcoded anywhere: the client renders all text through Flutter localization catalogs (ARB/`intl` — ICU plurals, locale-aware numbers and dates), layouts tolerate text expansion, and the display faces carry a script-capable font fallback (the diacritics render check runs across launch locales — 🎨). **The server never sends display text except server-masked user-generated free-chat text:** system messages cross the wire as a stable id/code plus parameters — Quick Chat phrase ids, rejection/error codes, event fields — localized client-side (🌐). System notices are authored per locale with an English fallback chain (🎮 §4, 🛡️); media packs declare a BCP 47 language tag in the manifest (⚙️ §1) so content ships per language without a format change; the supported-locale list is config (`configs/base.yaml → localization:`), so adding a language is new translation catalogs plus localized store assets — never a code change. A pseudo-locale CI gate keeps hardcoded strings out from Phase 1 onward.
+* **Localization and content language:** the architecture supports multiple languages from day one; public exposure may start with one certified language. Add others only after editorial, interface and queue gates; the two-culture pilot is not a public-language promise. No user-facing string is hardcoded anywhere: the client renders all text through Flutter localization catalogs (ARB/`intl` — ICU plurals, locale-aware numbers and dates), layouts tolerate text expansion, and the display faces carry a script-capable font fallback (the diacritics render check runs across launch locales — 🎨). **System UI messages use IDs/codes; authored text content, moderated chat and localized notices are display-data exceptions:** system messages cross the wire as a stable id/code plus parameters — Quick Chat phrase ids, rejection/error codes, event fields — localized client-side (🌐). System notices are authored per locale with an English fallback chain (🎮 §4, 🛡️); text content packs declare a BCP 47 language tag in the manifest (⚙️ §1) so content ships per language without a format change; the supported-locale list is config (`configs/base.yaml → localization:`), so adding a language is new translation catalogs plus localized store assets — never a code change. A pseudo-locale CI gate keeps hardcoded strings out from Phase 1 onward.
 * Progression: one server-side XP track (matches completed, correct votes, Donower survivals); levels gate portal role applications and cosmetic unlocks. Values in `tuning.yaml`.
-* **Content policy:** humor may be suggestive/erotic within store rules — cartoon, drawn, abstract — **never pornographic or explicit**. Erotic-leaning media ships only in adult-rated, age-gated packs; store age ratings set accordingly (17+/18+ where such packs are available), and the age obligation sits on the user's declared age at the gate. Enforced twice: automated screen + human curation (⚙️ §3).
-* Compliance: anonymous device accounts by default, with **one-tap registration via Google Sign-In or Facebook Login** (OAuth 2.0 / OpenID Connect) to carry progress, Noin, and entitlements across devices — the linked identity stores only the provider subject id and email, never shown publicly; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
+* **Content policy:** text humor may be suggestive within the existing content policy — **never pornographic or explicit**. Erotic-leaning media ships only in adult-rated, age-gated packs; store age ratings and age-assurance/consent behavior must be reviewed for each intended platform/market; self-declared age is not assumed sufficient evidence of compliance. Enforced twice: automated screen + human curation (⚙️ §3).
+* Compliance: capture versioned user-terms acceptance before authored chat/UGC as well as contribution-specific consent; anonymous device accounts by default, with **one-tap registration via Google Sign-In or Facebook Login** (OAuth 2.0 / OpenID Connect) to carry progress, Noin, and entitlements across devices — the linked identity stores only the provider subject id and email, never shown publicly; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
 * Analytics: no third-party client SDK — the authoritative server witnesses every event; nightly jobs derive KPIs (retention, queue fill times, matches/day, Donower win rate by table size, Noin earn/spend flows, premium conversion, pack attach rate) from the audit stream.
-* Moderation & admin: locale-aware nickname profanity filter, conduct + media reports, Guard freezes with admin-final bans, Admin Console actions (kick, ban, close room, avatar/media takedown) — all live before public launch.
-* Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. App-size budget enforced in CI: packs stream, binaries stay lean.
+* Moderation & admin: locale-aware nickname filtering, player-facing report/block capability, published support contact, Guard freezes with admin-final bans and audited admin actions (kick, ban, close room, avatar/content takedown) — tested before public launch. Blocking hides user-authored chat/UGC and prevents future co-matching/invites; it never hides required public card/vote evidence, reveals a private block relation, removes a player mid-match or changes scoring. Leaving/reporting remains available. Serialize block changes with future queue reservations and test symmetric exclusion without public disclosure; live safety intervention remains an admin action. See the business plan's sourced platform checkpoints; no store acceptance is implied.
+* Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. App-size budget enforced in CI: authorized text arrives through role-scoped state; binaries stay lean.
 
-Do not paste spec content back into this file. If this file has drifted
-into a second monolith again, trim it back to this stub in the same change.
+The technical transition design expands operational contracts and evidence; the
+Roadmap alone orders implementation. The business plan records assumptions and
+commercial gates. Neither historical completion rows nor this spec imply that
+the text transition has shipped.
 

@@ -13,7 +13,11 @@ humans on **the project's design and history**.
 | [`code/`](code/) | Module-level documentation (architecture, modules, APIs). | Devs joining the codebase. |
 | [`project/`](project/) | The project's charter, decision log, glossary — [`GLOSSARY.md`](project/GLOSSARY.md) holds the normative Knowoff terminology. | New contributors. |
 | [`design/`](design/) | Design docs (DESIGN.md) and ADRs. | Reviewers + future-you. |
-| [`design/DESIGN-text-game-modes.md`](design/DESIGN-text-game-modes.md) | Draft project divergence: five short-text, player-selectable Knowoff modes. | Product planning + playtesting. |
+| [`design/DESIGN-text-game-modes.md`](design/DESIGN-text-game-modes.md) | Adopted five-mode planning rationale and illustrative examples; runtime pending. | Product planning + playtesting. |
+| [`design/DESIGN-text-transition.md`](design/DESIGN-text-transition.md) | Source audit, protocol/data contracts, migration, retirement and verification. | Engineering + operations. |
+| [`product/BUSINESS_PLAN.md`](product/BUSINESS_PLAN.md) | Customer strategy, content operations, economics assumptions and launch gates. | Product + business. |
+| [`reports/2026-09-12-text-transition-doc-audit.md`](reports/2026-09-12-text-transition-doc-audit.md) | Complete documentation coverage and retained historical exceptions. | Reviewers. |
+| [`launch/`](launch/) | Release-gated copy, clip brief and migration runbook. | Launch operators. |
 | [`planning/`](planning/) | The **ROADMAP** — single source of truth for sequenced work. | Agents + humans. |
 | [`tracking/`](tracking/) | How the `docs/tracking/tracking.csv` workflow is used; [`context.md`](tracking/context.md) is the project context pack. | Agents. |
 | [`guides/`](guides/) | Cross-cutting how-tos: agent operating model, model profiles, MCP usage. | Agents + ops. |
@@ -26,12 +30,13 @@ For content work, start with the Blueprint's Media Engine chapter, the
 [humor development guide](../content/humor-development.md),
 [Curator Guide](../content/curator-guide.md) and
 [current server content mechanics](code/MODULE-media-engine.md).
-Nowns and cards use static images and text only; see
-[ADR-011](design/ADR-011-static-image-and-text-content.md). The content skills
-remain the entry points for authoring, review and integration, including the
-source-backed High/Distant/Chaos dealing guidance.
-The [readiness audit](planning/ROADMAP.md#content-readiness-audit--2026-09-11)
-separates editorial preparation from pending production integration.
+The target uses plain text only under [ADR-012](design/ADR-012-text-only-selectable-modes.md).
+Current implementation still has the old image/text paths; source audits label
+that difference. Authoring/review/integration skills follow the current Blueprint
+and content guides; old static-image guidance cannot re-enable retired gameplay.
+The [active Roadmap](planning/ROADMAP.md) holds transition work. Historical proof
+and the September 11 content audit remain in the
+[pre-text snapshot](planning/ROADMAP-pre-text-20260912.md#content-readiness-audit--2026-09-11).
 
 Before creating a new doc, search for an existing one. Templates live next
 to their READMEs (e.g. [`code/MODULE.template.md`](code/MODULE.template.md)).

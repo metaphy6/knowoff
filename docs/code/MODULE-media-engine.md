@@ -1,5 +1,14 @@
 # Module: Server content and dealing
 
+> **Current-runtime audit, not the text target.** The source observations below
+> were recorded on 2026-09-11 and cross-checked for transition planning on
+> 2026-09-12. The [Blueprint](../../BLUEPRINT.md) now specifies five text-only
+> modes under [ADR-012](../design/ADR-012-text-only-selectable-modes.md).
+> Image delivery, specialties and association-game dealing described here
+> remain in the checked-in runtime; this documentation change fixes none of
+> those paths. Use the [transition design](../design/DESIGN-text-transition.md)
+> and current [Roadmap](../planning/ROADMAP.md) for replacement work.
+
 ## Purpose
 
 Explain the current path from a content pack to Nowns and player hands before
@@ -35,9 +44,10 @@ flowchart LR
 `manifest.json` identifies the pack, language, embedding model/version and
 checksums; `media.jsonl` contains Nowns; `cards.jsonl` contains playable prompts.
 Text lives in the item data; static images use asset references. These are the
-only playable media formats under
-[ADR-011](../design/ADR-011-static-image-and-text-content.md). The intended asset
-store is MinIO, with content-addressed objects.
+only playable media formats in the current loader under the historical
+[ADR-011](../design/ADR-011-static-image-and-text-content.md) contract. MinIO is
+still configured in the current stack; the text target uses server-local
+versioned bundles and retires playable object-storage delivery.
 
 The candidate preparation tool accepts static PNG/JPEG/WebP inputs and writes
 static WebP. Pack validation accepts only image/text item types and fully
@@ -135,16 +145,19 @@ not refreshed. Its defaults are normalized weights, not independent drop chances
 
 The CLI's `build` command invokes `SyntheticPack`; `certify` and `simulate`
 check that format/dealing implementation; `publish` copies a directory.
-They do not yet provide the Blueprint's complete ingest, moderation,
-generation, real embedding and production activation pipeline. The current
+They do not provide the adopted text production workflow or the previous
+image/text production pipeline. The current
 Admin submission-publish operation returns HTTP 501. Editing or approving a
 text submission therefore does not add it to the active game pack.
 
-Real candidates need editorial review, compatible semantic embeddings, bundle
-validation, complete match-schedule certification and actual activation before
-they can be presented as released content. A small language-scoped pilot can
-precede the full production seed-pack target; a synthetic build is not that
-pilot. See the [content readiness audit](../planning/ROADMAP.md#content-readiness-audit--2026-09-11).
+The current loader requires embeddings, including for text. Under the adopted
+target, reviewed mode suitability and full-schedule/action viability replace
+mandatory multimodal geometry as the production requirement; optional text
+embeddings must be versioned and validated when used. Editorial review, bundle
+validation, human playtests and verified activation remain separate gates.
+A synthetic build is not a production pilot. The original
+[content readiness audit](../planning/ROADMAP-pre-text-20260912.md#content-readiness-audit--2026-09-11)
+is retained as historical evidence.
 
 ## Invariants and current gaps
 
@@ -153,14 +166,16 @@ and Donowers/eliminated players receive `{decoy: true}`; text is inline and
 static-image media uses signed URLs. The final verdict reveals Nowns from rounds
 actually begun.
 
-The following target guarantees are **not yet fully implemented**:
+The following gaps were found against the earlier contract; the transition
+must resolve or retire them with replacement proofs:
 
 - **All-Nown balance:** the eight retained cards are not checked for the
   required coverage against every scheduled Nown. Certification checks band
   availability and repeated deal success, not final retained-hand coverage.
-- **Shuffle preservation:** Shuffle replaces the whole `PlayerHand`, including
-  the reserve, and clears specialties. The Blueprint requires reserves to
-  remain untouched.
+- **Shuffle preservation (historical):** Shuffle replaces the whole
+  `PlayerHand`, including the reserve, and clears specialties. The earlier
+  contract required reserves to remain untouched. The text target removes
+  Shuffle and all other specialties rather than completing this old mechanic.
 - **Draw timing and privacy:** the draw handler accepts active connected
   players during the play phase without requiring their turn, and broadcasts
   actual drawn cards to everyone. The intended announcement is who/how many,
@@ -169,9 +184,9 @@ The following target guarantees are **not yet fully implemented**:
 - **Pack isolation:** the match retains its original pack for dealing, but
   payload rendering resolves IDs through the global active manager. A hot swap
   can therefore break rendering in a running match.
-- **Production pipeline:** real semantic embeddings, complete editorial/media
-  processing and a verified activation path remain open. Replacing fixture
-  text while retaining synthetic vectors is insufficient.
+- **Production pipeline:** complete reviewed text ingestion, mode suitability,
+  action certification and activation remain open. Replacing fixture text while
+  retaining synthetic vectors is insufficient production evidence.
 
 These are pending engineering work, not new game rules. A passing current
 test suite or simulator does not prove the missing guarantees. Human playtests
@@ -189,7 +204,12 @@ must also judge recognition, laughter and plausible alternative explanations.
   [match tests](../../server/internal/game/match_test.go) cover role scoping,
   draws, specialties and turns, subject to the gaps above.
 
-Run the repository gate with `python3 xops/test/tests-lints.py`.
+Run the repository gate with `python3 xops/test/tests-lints.py`. Its current
+coverage does not include the separate `tools/mediapack` Go module, candidate
+preparation Python tests or `tools/gamebot` module. Required PostgreSQL suites
+can skip if their disposable database is unavailable. Record those limits;
+the transition gate must include every retained module and required integration
+proof, with no missing service mistaken for success.
 
 ## Dependencies
 
@@ -197,3 +217,30 @@ The game and CLI share `server/pkg/media` ([ADR-004](../design/ADR-004-media-pac
 Gameplay values come from `configs/gameplay/tuning.yaml`; source records and
 editorial decisions accompany content curation; role and contribution review
 state remains in the existing Portal/Admin workflow.
+
+## Additional transition boundaries — 2026-09-12
+
+- **Pinned text:** the match renderer must resolve content through the same
+  immutable pack snapshot as its dealer. New activation cannot change earlier
+  wording, current hands, system seeds, history or reconnect payloads.
+- **No bulk prompt metadata:** the existing
+  [pack sync service](../../client/lib/media/pack_sync_service.dart) fetches and
+  persists `media.jsonl`, which contains literal text Nowns and metadata. Its
+  parsing/format-version check is not checksum verification. Do not connect
+  this service to text gameplay; authorized inline text replaces the playable
+  metadata/prefetch route. Retire the three `media.*` preference keys and old
+  asset caches while preserving account credentials.
+- **Distinct copies and evidence:** current string card IDs and per-round
+  seat-to-card plays cannot express reserved trades, replacement destinations
+  or complete match history. Separate content revision from instance identity;
+  certify conservation, atomic actions, role-scoped history and bounded frames.
+- **Storage and builds:** current startup only loads `media.local_bundle_path`,
+  while readiness still probes MinIO. A storage configuration is not an
+  implemented S3 publisher. Remove game-only storage prerequisites after
+  dependency proof. Preserve avatar encoding in
+  [avatar.go](../../server/internal/avatar/avatar.go), which still requires
+  native WebP/CGO; text gameplay does not eliminate that build prerequisite.
+- **Safe retirement:** applied SQL, licensed historical material, consent,
+  reports and entitlement references remain auditable. Remove obsolete image,
+  specialty and backfill execution paths through the transition inventory;
+  replacing a current regression test requires equivalent new-contract proof.

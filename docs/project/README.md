@@ -4,6 +4,8 @@ Charter, decision log, glossary. The "what is this project even" docs.
 
 ## Files
 
+- [`GLOSSARY.md`](GLOSSARY.md) — normative Knowoff terminology, including the five text gameplay modes.
+- [`../product/BUSINESS_PLAN.md`](../product/BUSINESS_PLAN.md) — product audience, commercial assumptions, launch experiments, economics and operating gates for the text transition. The [Blueprint](../../BLUEPRINT.md) owns product rules and the [Roadmap](../planning/ROADMAP.md) owns implementation order.
 - [`CHARTER.template.md`](CHARTER.template.md) — vision, scope, audience, success criteria.
 - [`DECISION_LOG.template.md`](DECISION_LOG.template.md) — append-only log of meta-decisions (not code-level ADRs — those live in `docs/design/`).
 - [`GLOSSARY.template.md`](GLOSSARY.template.md) — terminology used across this repo.

@@ -4,7 +4,7 @@ The **roadmap** lives here. It is the single source of truth for sequenced
 work, and the only place where "phases" and `[ ]` bullets are authoritative.
 
 - [`ROADMAP.md`](ROADMAP.md) — the roadmap chapter only ("🗺 Roadmap —
-  Step-by-Step Implementation Lifecycle"): the six phases and their
+  Step-by-Step Implementation Lifecycle"): the seven text-transition phases and their
   checkboxes, Proof tests, and gates. The normative spec chapters live in
   [`BLUEPRINT.md`](../../BLUEPRINT.md), not here.
 
@@ -14,3 +14,7 @@ bullet in that phase before handing back. First read the phase's **Spec
 those are normative, while `ROADMAP.md` controls sequence, checkboxes,
 Proof tests, and gates. See
 [`phase-persistence`](../../.agents/skills/phase-persistence/SKILL.md).
+
+[ROADMAP-pre-text-20260912.md](ROADMAP-pre-text-20260912.md) preserves the previous
+roadmap and its evidence verbatim behind a superseded banner. It is historical,
+not an alternative implementation queue.

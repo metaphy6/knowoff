@@ -1,128 +1,121 @@
-# 📈 Scaling concurrent connections
+# Scaling concurrent connections
 
-How to raise Knowoff's concurrent-connection ceiling as the user base grows,
-and when tuning one box stops being enough. Read this before touching any
-of the knobs below — they interact, and raising one without the others is a
-no-op (e.g. raising a container's `ulimit -n` does nothing if nginx's
-`worker_rlimit_nofile` still caps it lower).
+The [Blueprint](../../BLUEPRINT.md) targets five text-only modes. This guide
+separates current configured limits from the measurements required before
+raising them. Text removes playable image transfers after migration, but adds
+mode-specific boards, action history, trade responses and partitioned queues.
+Lower asset bandwidth alone does not establish higher match capacity.
 
-## The knobs, in the order the fix has to happen
+## Current configuration baseline
 
-Each layer's ceiling is only real if every layer below it is raised too.
-From the wire inward:
+Values below come from checked-in config, not a benchmark or a claim that a
+particular host can sustain that load. Verify effective values on the selected
+host before making a capacity decision.
 
-| Layer | Knob | File | Current value |
-|---|---|---|---|
-| Host kernel | `net.core.somaxconn` (listen backlog) | `/etc/sysctl.d/99-knowoff.conf` (not in this repo — host-local) | `16384` |
-| Host kernel | `net.ipv4.ip_local_port_range` (ephemeral ports for outbound legs) | same | `1024-65535` |
-| Container | `ulimits.nofile` (open-file/fd ceiling per container) | [`infra/compose/docker-compose.yaml`](../../infra/compose/docker-compose.yaml) — `server` and `nginx` services | `65536` soft/hard |
-| nginx process | `worker_rlimit_nofile` (must match or be ≤ the container ulimit) | [`nginx/nginx.conf`](../../nginx/nginx.conf) | `65536` |
-| nginx worker | `worker_connections` (per worker; a proxied WebSocket costs 2 fds — client leg + upstream leg) | same, inside `events {}` | `8192` |
-| nginx worker | `worker_processes` | same | `auto` (one per host core) |
-| nginx vhost | `limit_conn` / `limit_req` (per-IP abuse guard, **not** a global cap) | [`nginx/conf.d/api.knowoff.local.conf`](../../nginx/conf.d/api.knowoff.local.conf) | `limit_conn knowoff_conn 100;` |
-| App | `server.max_connections` (global WS cap; upgrade rejected with 503 above it) | [`configs/base.yaml`](../../configs/base.yaml) | `20000` |
-| App | Docker resource limits (`deploy.resources.limits.cpus/memory`) | `docker-compose.yaml`, `server`/`nginx` services | server: 8 CPU/8GB, nginx: 2 CPU/1GB |
+| Layer | Knob / source | Configured value |
+|---|---|---|
+| Server WebSockets | `server.max_connections`, [base.yaml](../../configs/base.yaml) | 20,000; admission ceiling, not proved capacity |
+| Container descriptors | `ulimits.nofile`, server/nginx in [Compose](../../infra/compose/docker-compose.yaml) | 65,536 soft/hard |
+| nginx descriptors | `worker_rlimit_nofile`, [nginx.conf](../../nginx/nginx.conf) | 65,536 |
+| nginx worker connections | `worker_connections` / `worker_processes`, same file | 8,192 / auto |
+| Per-IP guard | `limit_conn knowoff_conn`, [API vhost](../../nginx/conf.d/api.knowoff.local.conf) | 100; abuse guard, not total service capacity |
+| Container resources | Server / nginx limits in Compose | 8 CPU + 8 GiB / 2 CPU + 1 GiB |
+| PostgreSQL | Server `max_open_conns` / Compose `max_connections` | 50 / 200; leave room for jobs/migrations/admin |
+| WebSocket frame | `websocket.max_message_bytes` / rate-limit frame limit | 65,536 bytes; validate new history snapshots against this bound |
 
-Container `ulimits` and nginx's `worker_rlimit_nofile`/`worker_connections`
-were raised together on 2026-08-25 after finding Docker's default 1024-fd
-container limit — not the app-level `max_connections`, which was already
-set generously — was the real bottleneck. See
-[`docs/tracking/tracking.csv`](../tracking/tracking.csv) run ids
-`run-20260825103548-878377` and `run-20260825103635-880084` for that change.
+The 2026-08-25 descriptor changes are historical work recorded in
+[tracking.csv](../tracking/tracking.csv), runs `run-20260825103548-878377` and
+`run-20260825103635-880084`. Host-local sysctl values and hardware descriptions
+from that session are not current portable defaults.
 
-## Raising the ceiling further on this box
+## Verify the selected environment
 
-1. **Container fds**: bump `ulimits.nofile.soft`/`.hard` in `docker-compose.yaml`
-   for `server` and `nginx`. Keep both numbers equal; Docker won't raise the
-   hard limit above the host's own `ulimit -n` (check with `ulimit -Hn` on
-   the host first).
-2. **nginx**: raise `worker_rlimit_nofile` to match, and raise
-   `worker_connections` so `worker_processes × worker_connections × (fds per
-   connection)` doesn't self-limit below the container ceiling. Leave
-   `worker_processes auto` — more event-driven workers cost little idle CPU
-   and use the container's CPU quota more evenly than pinning a low count.
-3. **App**: raise `server.max_connections` in `configs/base.yaml`, leaving
-   headroom under the container fd ceiling for the DB pool, Redis pool, and
-   nginx's own upstream-leg fds (don't set it equal to `ulimits.nofile`).
-4. **Docker resource limits**: give `server`/`nginx` more CPU/memory in
-   `docker-compose.yaml` if `docker stats` shows either approaching its
-   limit under load — memory scales roughly linearly with steady open
-   connections (a few KB each) plus active-match state.
-5. **Host kernel**: only needed once you're pushing thousands of
-   simultaneous new connections per second — raise
-   `net.core.somaxconn` and widen `net.ipv4.ip_local_port_range` via a file
-   under `/etc/sysctl.d/`, then `sudo sysctl --system`. This is a host-level
-   change outside the repo — per [`AGENTS.md`](../../AGENTS.md) §4, always
-   get explicit user confirmation before applying it, and record it as a
-   tracking `note` row (the host file itself isn't version-controlled).
-
-### Verifying a change actually took effect
+Use Compose service names instead of generated container names. These are
+read-only checks for the currently selected local Compose project:
 
 ```bash
-# container fd ceiling
-docker exec knowoff-server-1 sh -c 'ulimit -n'
-docker exec knowoff-nginx-1 sh -c 'ulimit -n'
-
-# nginx picked up the new directives
-docker exec knowoff-nginx-1 nginx -T 2>&1 | grep -E 'worker_rlimit_nofile|worker_connections'
-
-# host kernel values
+pwd
+docker compose -f infra/compose/docker-compose.yaml --profile core ps
+docker compose -f infra/compose/docker-compose.yaml --profile core exec -T server sh -c 'ulimit -n'
+docker compose -f infra/compose/docker-compose.yaml --profile core exec -T nginx sh -c 'ulimit -n'
+docker compose -f infra/compose/docker-compose.yaml --profile core exec -T nginx nginx -T
 sysctl net.core.somaxconn net.ipv4.ip_local_port_range
 ```
 
-Then load-test past the *old* ceiling to prove the fix, not just past the
-new one. `tools/gamebot` connects sequentially within one process (each bot
-does a real device-auth round trip, which is intentionally
-compute/latency-costly — see 🛡️ auth in `BLUEPRINT.md`), so a single
-gamebot process is a poor concurrency generator. Launch several in
-parallel instead:
+Resolve production host/project/overlays explicitly before using the same
+procedure there. Inspect configuration output locally; do not publish secrets
+or private deployment details. A command/configuration result does not replace
+a traffic test. No host sysctl, package or daemon change is part of this guide's
+documentation update; such changes follow [AGENTS.md](../../AGENTS.md) §4.
 
-```bash
-for i in $(seq 1 12); do
-  (timeout -k 3 45 /tmp/gamebot -server ws://localhost:8080/ws -queue 6 -count 150 > /tmp/gb_$i.log 2>&1 &)
-done
-sleep 25
-PID=$(docker exec knowoff-server-1 sh -c "ps aux | grep '[k]nowoffd' | awk '{print \$1}'")
-docker exec knowoff-server-1 sh -c "ls /proc/$PID/fd | wc -l"   # should exceed the old ceiling
-docker logs --since 60s knowoff-server-1 | grep -ciE 'too many open files|panic'  # must be 0
-```
+## Text-mode capacity proof
 
-## When tuning this box stops being enough
+The current `tools/gamebot` speaks the older protocol. Update its mode-aware
+legal actions and role-scoped observations before using it as a text load
+generator. Use a dedicated test environment and accounts with live rewards
+and leaderboard credit disabled. Do not flood production or let an outdated
+bot's rejected intents masquerade as completed matches.
 
-Every knob above is **vertical** — it makes one box handle more. That has a
-hard ceiling: one process, one set of CPU cores, one NIC. Rough guidance:
+Define the workload, expected peak, headroom, duration and pass/fail budgets
+before the run, then preserve tool/config/content versions and replay inputs.
+Exercise all five modes at four and six seats, including:
 
-- **Tens of thousands of concurrent connections on capable hardware
-  (16 cores / 30GB, this box's class)**: vertical tuning as above is
-  sufficient. `server.max_connections` in the tens of thousands is realistic.
-- **Hundreds of thousands to millions of concurrent connections**: requires
-  **horizontal scaling** — this is an architecture change, not a config
-  change, and is not solved by any knob in this file.
+- Connection/authentication bursts, steady matches, mode/size/language queue
+  partitions, explicit queue changes and compatible Local Room starts.
+- Maximum legal history, draws, timeout discards, repeated refusals, trade
+  response/disconnect races, result transitions and rematch settings/Ready.
+- Mobile/PWA reconnect and snapshot bursts, large localized text, slow clients,
+  sequence-gap resync and malformed/oversized request rejection.
+- PostgreSQL settlement, daily-counter contention, account/profile traffic and
+  moderation/Portal work at the same time as play. External screening uses a
+  controlled fake or explicitly planned provider test, not accidental paid calls.
+- Dependency loss, admission drain and process restart. Verify no fake resumed
+  matches, duplicate grants or lingering room/routing state after recovery.
 
-## What horizontal scaling requires (not yet built)
+Record p50/p95/p99 action-to-event latency, join/queue latency by compatible
+partition, throughput and error counts; server CPU/RSS/GC/goroutines/descriptors;
+DB pool waits/query/settlement lag; Redis behavior; snapshot/frame bytes and
+retained history per room. Measure client frame time and memory on target
+low-end native/PWA devices. Use bounded, secret-free metrics under
+[LOGGING.md](LOGGING.md#text-transition-observability-contract).
 
-Per [`BLUEPRINT.md` § Infrastructure & Deployment](../../BLUEPRINT.md) item
-5 and [ADR-001](../design/ADR-001-server-authoritative-over-p2p.md), the
-design already anticipates this:
+A single sequential bot process can bottleneck on account creation rather than
+the match server. Use enough controlled generators to separate client limits
+from server limits and verify they actually complete legal matches. Increase
+load in bounded steps; terminate and record the cause at an agreed failure
+threshold. Repeat only to test a specific correction or unresolved measurement.
 
-- **Multiple `server` replicas** behind a load balancer/ingress instead of
-  one nginx → one server container.
-- **Room→node affinity with sticky routing**: a live match's authoritative
-  state stays in one node's memory (ADR-001) — the ingress must route every
-  WebSocket for a given room to the same replica (consistent hashing on
-  room id, or a lookup table in Redis), not round-robin per connection.
-- **Shared coordination state in Redis** (already the plan for
-  matchmaking/session coordination) so any replica can look up which node
-  owns a room, instead of every replica needing full in-memory state.
-- **Postgres/Redis connection pool sizing per replica**: pools bound query
-  *throughput*, not WebSocket connection count — multiply per-replica pool
-  size by replica count when sizing Postgres's own `max_connections`.
-- **Kubernetes readiness already designed for**: `/healthz`/`/readyz`
-  (Postgres/Redis/storage checks), Prometheus metrics on a separate port,
-  graceful SIGTERM draining of in-flight matches — see `BLUEPRINT.md` item
-  5 for the full list.
+## Tune only the measured bottleneck
 
-This is roadmap-phase-sized work, not a config tweak — plan it with
-`/plan` or the [`planner`](../../.github/agents/planner.agent.md) agent
-rather than improvising knob changes when the numbers above are actually
-being approached.
+A proxied WebSocket normally uses two nginx connections/descriptors, plus
+headroom for listeners, upstreams and ordinary requests. Sustainable connections
+are bounded by worker connection limits, per-worker descriptor limits, container
+limits, host limits and CPU/memory; multiplying all configured numbers is not a
+capacity estimate. Keep app admission below the proved safe limit.
+
+Raise container/nginx/app limits together only where measurement supports it.
+Account for all running services and host workloads when sizing memory; never
+turn an admission limit into an OOM policy. Size PostgreSQL pools for aggregate
+query load and leave maintenance headroom. Validate configuration, rerun the
+relevant workload and record before/after evidence.
+
+Retire MinIO-prefetch load tests when gameplay storage delivery is removed;
+replace them with text snapshot/history/activation workloads. Keep tests for
+retained avatar assets, web application delivery and any justified archive
+service. Readiness must check required dependencies only, as specified in the
+[transition design](../design/DESIGN-text-transition.md).
+
+## Horizontal scaling remains future work
+
+One process owns each live match. Higher configured ceilings do not make that
+state portable or provide multi-node recovery. Before introducing replicas,
+prove room-to-node affinity for initial join/reconnect, shared compatible queue
+coordination, node failure cleanup, per-replica admission/drain and aggregate
+PostgreSQL/Redis pool budgets. Redis mapping methods alone are not complete
+sticky routing or durable live-game storage.
+
+Keep Kubernetes/Terraform deferred under the [Roadmap](../planning/ROADMAP.md).
+Use measured demand to open a separate architecture scope. The current text
+transition is complete only with its own single-node capacity and
+[recovery rehearsal](../launch/VPS_MIGRATION_RUNBOOK.md) evidence; it does not
+claim a verified tens-of-thousands or million-player capacity.

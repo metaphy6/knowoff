@@ -10,9 +10,9 @@
 ## Project identity
 
 - **Name**: Knowoff
-- **One-liner**: Online social deduction party game — 4/6 players; Donowers bluff about media they can't see.
+- **One-liner**: Online social deduction party game — 4/6 players; Donowers infer a hidden text situation/criterion through five selectable modes.
 - **Primary languages**: Go (authoritative game server), Dart/Flutter (client — Android, iOS, Web PWA)
-- **Data**: PostgreSQL + Redis + MinIO; Docker Compose; Cloudflare Tunnel (dev/beta) → VPS (launch)
+- **Data**: PostgreSQL + Redis retained; current MinIO gameplay path scheduled for consumer-verified retirement; Compose/Cloudflare → public host
 
 ## Key paths
 
@@ -20,7 +20,7 @@
 |---|---|
 | **Normative product + tech spec** | `BLUEPRINT.md` — game rules, tech stack, architecture, economy, product baseline |
 | Master rulebook (agents) | `AGENTS.md` |
-| Project plan | `docs/planning/ROADMAP.md` — roadmap chapter only, 6 phases |
+| Project plan | `docs/planning/ROADMAP.md` — seven text-transition phases; previous phases archived |
 | Terminology | `docs/project/GLOSSARY.md` |
 | Tracking log | `docs/tracking/tracking.csv` |
 | Skills library | `.agents/skills/` |
@@ -35,15 +35,20 @@ treating this context pack as a completion snapshot. For content work, read the
 [content skills](../../.agents/skills/README.md#knowoff-content). Drafting,
 human acceptance, certification and activation are separate states.
 
-Playable media uses **static images and plain text only**, per
-[ADR-011](../design/ADR-011-static-image-and-text-content.md) and the
-[lo-fi media direction](../../BLUEPRINT.md#playable-media-direction). Keep rough,
-everyday framing and modest detail; GIF and animated-image formats are removed.
-Humor themes, cultural adaptation, tone buckets and relevance bands remain.
-For every content task, follow the [dealing source checklist](../../content/curator-guide.md#read-the-dealing-path-before-authoring)
-automatically: inspect the authoritative server dealer, tuning and client
-state/rendering path before proposing High, Distant or Chaos relationships.
-Editorial band labels are hypotheses until measured and certified.
+The owner adopted **text-only Nowns/cards and five selectable modes** on
+2026-09-12: [ADR-012](../design/ADR-012-text-only-selectable-modes.md),
+[Blueprint](../../BLUEPRINT.md), [transition design](../design/DESIGN-text-transition.md),
+[business plan](../product/BUSINESS_PLAN.md). These are plans; runtime still has
+the older image/text association game. Initial text specialties and production
+backfill are off. Preserve no-paid-advantage, shared caps, roles/votes, identity,
+community and the visual brand. Follow the current content source checklist;
+High/Distant/Chaos evidence does not automatically certify stateful mode actions.
+
+Existing hand privacy, history, snapshot/sequence, pack pinning, locking,
+settlement and backup proofs need repair in the active Roadmap. Applied SQL,
+ADRs and tracking remain historical records. No code/migration/asset cleanup is
+authorized by this planning pass. Do not automatically apply older image/CGO
+retirement advice: avatars still consume WebP.
 
 ## Project-specific conventions
 
@@ -81,8 +86,8 @@ Editorial band labels are hypotheses until measured and certified.
 |---|---|---|
 | Cloudflare Tunnel | `TUNNEL_TOKEN` | dev/beta ingress; injected via env, never committed |
 | Google Sign-In / Facebook Login | (client ids/secrets via config `${VAR}` interpolation) | Phase 4 — OAuth registration/linking |
-| GPT-6 Astra | (API key via `${VAR}`) | planned AI candidate-generation lane per Blueprint ⚙️ §3; human-authored contributions and rewrites use the same curation process; also planned for offline raster batches |
-| Gemini Embedding 2 | (API key via `${VAR}`) | optional API lane; local SigLIP/CLIP is default |
+| GPT-6 Astra | (API key via `${VAR}`) | planned AI candidate-generation lane per Blueprint ⚙️ §3; human-authored contributions and rewrites use the same curation process; non-playable brand raster batches remain separate |
+| Gemini Embedding 2 | (API key via `${VAR}`) | historical multimodal option; text evaluator/provider selection requires current evidence |
 | Platform billing (Play Billing / StoreKit) | — | Noin bulks + Premium subscription, Phase 5 |
 | Ad network with SSV | (keys via `${VAR}`) | rewarded post-match doubler; server-side verification only |
 
