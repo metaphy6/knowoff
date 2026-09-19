@@ -85,6 +85,44 @@ func TestTextNetworkEndpointRefusesRemoteAndCredentialURLs(t *testing.T) {
 	}
 }
 
+func TestTextNetworkControlFailureIdentifiesRequestWithoutPrivateState(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		var request lobby.TextEnvelope
+		if err := conn.ReadJSON(&request); err != nil {
+			return
+		}
+		payload, _ := json.Marshal(map[string]string{"code": "request.unavailable", "request_id": request.RequestID})
+		if err := conn.WriteJSON(lobby.TextEnvelope{Version: 2, Type: "error", RequestID: request.RequestID, Payload: payload}); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer server.Close()
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	conn, _, err := websocket.DefaultDialer.DialContext(ctx, "ws"+strings.TrimPrefix(server.URL, "http"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	peer := &textNetworkBot{conn: conn, seed: 42, token: "private-access-token", availability: lobby.TextAvailability{Prototype: true}}
+	err = peer.control(ctx, "resync", struct{}{})
+	if err == nil || !strings.Contains(err.Error(), "control resync request network-42-1") || !strings.Contains(err.Error(), "request.unavailable") {
+		t.Fatalf("control failure lost operation/request identity: %v", err)
+	}
+	if strings.Contains(err.Error(), peer.token) {
+		t.Fatal("control failure exposed credential")
+	}
+	cancel()
+	if err := peer.control(ctx, "resync", struct{}{}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("control failure lost cancellation cause: %v", err)
+	}
+}
+
 type networkFixture struct {
 	server      *httptest.Server
 	db          *sql.DB

@@ -48,6 +48,7 @@ xops/
 | [`agent/tracking_append.sh`](agent/tracking_append.sh) | Validated, atomic CSV appender for `docs/tracking/tracking.csv`. |
 | [`agent/run-with-retry.sh`](agent/run-with-retry.sh) | Wrap a flaky command in bounded retries with backoff. |
 | [`test/tests-lints.py`](test/tests-lints.py) | Run all retained Go/Python and Flutter checks with disposable integration services and explicit skip accounting. |
+| [`test/cutover_integration.py`](test/cutover_integration.py) | Mandatory synthetic controller/capture/restore proof on two owned, unpublished PostgreSQL clusters; invoked by the Python test suite. |
 | [`makefile/_common.py`](makefile/_common.py) | Shared helpers for the Python make dispatchers. |
 | [`makefile/git_ops.py`](makefile/git_ops.py) | `make git` / `make git.dry`. |
 | [`makefile/track_ops.py`](makefile/track_ops.py) | `make track.add` / `make track.list`. |
@@ -70,6 +71,13 @@ dedicated PostgreSQL/Redis containers; caller database addresses are not used.
 The native Go toolchain is used when CGO and a C compiler are available,
 otherwise the existing server development Dockerfile supplies them. No host
 packages are installed.
+
+Client checks require a Flutter/Dart SDK satisfying `client/pubspec.yaml`
+(currently Flutter ≥3.44.0 and Dart ≥3.12.0). Select that SDK on `PATH`, then
+run `flutter gen-l10n` from `client/` after checkout or ARB changes: generated
+localization files are ignored and may otherwise be stale. CI performs this
+preparation explicitly. A dependency-resolution failure with an older SDK is
+an environment failure, not evidence that client tests passed.
 
 Use `--suite python`, `--suite go` or `--suite client` for a clearly labeled
 partial gate; `--report-json /tmp/agent-runs/result.json` retains machine-readable

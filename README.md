@@ -10,11 +10,13 @@ Rooms assemble the table; they are separate from gameplay mode and content
 language. Missed the Briefing is the initial default, with each mode exposed
 only after its release checks pass.
 
-**Phase 1 verified complete (2026-09-12).** Versioned text contracts, closed
-mode-availability config, inventory and migration design proofs passed independent
-review and full validation. Catalog/dealing and mode engines are next. The app
-still runs the previous association game with image/text
-content, specialties and bot backfill; no text mode is playable yet.
+**Development resumed (2026-09-19).** Phase 1 is complete. The saved runtime
+implements protocol v2, five text modes, compatible lobbies and role-scoped
+client views. Durable value, content, trust and retirement work has targeted
+test evidence; the full repository gate passed 2,404 tests/subtests with zero
+failures or skips. Phase 3's technical gate is complete; release gates remain open. Public
+mode availability stays closed pending certified content and human evidence.
+See the [current recovery record](docs/reports/2026-09-19-text-transition-resumption.md).
 [ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the
 text pivot; the [transition design](docs/design/DESIGN-text-transition.md)
 maps source gaps, data preservation, compatibility and retirement proofs.
@@ -32,7 +34,7 @@ build plan — phases, checkboxes, proof tests — lives in
 |---|---|
 | Client | Flutter — one codebase: native Android/iOS + Web PWA |
 | Game server | Go — authoritative WebSocket server (rooms, roles, dealing, votes, economy) |
-| Data | PostgreSQL and Redis retained; current MinIO/game-content dependency retires only after consumer and backup proofs |
+| Data | PostgreSQL and Redis; historical object archives have a separate restore path |
 | Infra | Docker Compose on a home server behind Cloudflare Tunnel → VPS at launch |
 
 ## Status
@@ -64,7 +66,7 @@ python3 xops/makefile/roadmap_ops.py status
 
 ## Local stack
 
-`make up` brings up server + postgres + redis + minio + adminer +
+`make up` brings up server + postgres + redis + adminer +
 client-web, fronted by a local **nginx** reverse proxy that terminates TLS
 and publishes friendly `*.knowoff.local` names (dev convenience only — the
 public ingress is a Cloudflare Tunnel, see [`nginx/README.md`](nginx/README.md)).
@@ -76,11 +78,10 @@ Run `make localhostfile.add` once to resolve those names, then:
 | `https://api.knowoff.local` | Game server — REST + `/ws` WebSocket |
 | `https://admin.knowoff.local` | Admin Console / Contributor Portal (dev-only, never expose this) |
 | `https://adminer.knowoff.local` | Postgres browser |
-| `https://minio.knowoff.local` | MinIO console |
 
 Prefer to skip nginx? Every service also publishes straight to
 `127.0.0.1`: server `8080`/`9090`/`9091`, postgres `5432`, redis `6379`,
-minio `9000`/`9001`, adminer `8081`. See [`infra/README.md`](infra/README.md)
+adminer `8081`. See [`infra/README.md`](infra/README.md)
 for Compose profiles, volume snapshots, and per-service config.
 
 ## Repository layout

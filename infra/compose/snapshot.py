@@ -431,7 +431,10 @@ class Fixture:
             raise SnapshotError("fixture database identity changed")
 
     def pg(self, sql, data=None, database=None):
-        command = ["exec", "-i", self.receipt["containers"]["postgres"], "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1",
+        # The image's temporary initialization server accepts only Unix sockets.
+        # TCP refuses that server, so readiness cannot race its later shutdown.
+        command = ["exec", "-i", "-e", "PGPASSWORD=snapshot-fixture-only",
+                   self.receipt["containers"]["postgres"], "psql", "-h", "127.0.0.1", "-X", "-qAt", "-v", "ON_ERROR_STOP=1",
                    "-U", "postgres", "-d", database or self.receipt["database"]]
         return self.docker(*command, data=(SQL_FORMAT + sql).encode() if data is None else data)
 

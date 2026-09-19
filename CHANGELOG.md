@@ -15,6 +15,36 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Physical cutover controller — 2026-09-19
+
+- Add an offline controller that records closing, disables runtime/migrator
+  logins, terminates matching existing writer sessions, and seals only after
+  durable pending-work and physical database checks pass.
+- Bind a sealed source to one independent target cluster and verify restored
+  data, schema, sequence and authority parity before enabling target writers.
+  Exact committed handoff recovery remains available after lease expiry;
+  failed operations never automatically reopen source writers.
+- Add a bounded, redacted JSON command and mandatory disposable two-cluster
+  capture/restore tests with synthetic once-only value replay. Live callback
+  holding, process-drain and release evidence remain separate requirements.
+
+### Recovery continuation — 2026-09-19
+
+- Refuse runtime startup against an incomplete or mismatched cutover registry
+  before acquiring match ownership or recovering value; database identity reads
+  require no additional runtime privileges.
+- Add request and load-step context to development gamebot failures while
+  preserving error causes and keeping private state out of diagnostics.
+- Repair isolated notice tests so retained audit protections cannot silently
+  leave data from earlier fixtures; production audit history remains immutable.
+- Make shutdown-test clients finish their HTTP responses and close idle
+  connections before asserting bounded server shutdown.
+- Wait for the final PostgreSQL listener before disposable snapshot/restore
+  rehearsal, avoiding false readiness during database initialization.
+- Add a synthetic-only offline cohort calculator with explicit missing-data
+  and observation-window reporting; it does not collect live user data or
+  establish retention or release readiness.
+
 ### Runtime retirement and operational proofs — 2026-09-12
 
 - Remove the association engine, specialty/dev-grant APIs, production bot

@@ -923,3 +923,70 @@ func TestTextRuntimeRejectsIncompatibleSchemaBeforeOwnership(t *testing.T) {
 		})
 	}
 }
+
+func TestTextRuntimeCutoverRefusesBeforeOwnershipAndRecovery(t *testing.T) {
+	for _, lostOwner := range []bool{false, true} {
+		t.Run(fmt.Sprintf("lost_owner_%t", lostOwner), func(t *testing.T) {
+			db, cfg := textRuntimeProofDB(t)
+			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			defer cancel()
+			if lostOwner {
+				prior, err := newTextRuntime(ctx, db, cfg, "../../pkg/media/testdata/text-en")
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					stop, cancel := context.WithCancel(context.Background())
+					cancel()
+					prior.Close(stop)
+				})
+				match := startTextRuntimeProofMatch(t, ctx, prior, db, cfg)
+				var terminated bool
+				if err := db.QueryRowContext(ctx, `SELECT pg_terminate_backend(backend_pid) FROM text_process_owners WHERE incarnation_id=$1`, prior.Owner.Token().IncarnationID).Scan(&terminated); err != nil || !terminated {
+					t.Fatal("owner-loss fixture", err)
+				}
+				if err := prior.Owner.Wait(ctx); err != nil {
+					t.Fatal("owner heartbeat did not stop", err)
+				}
+				var state string
+				if err := db.QueryRowContext(ctx, `SELECT state FROM text_matches WHERE id=$1`, match).Scan(&state); err != nil || state != "started" {
+					t.Fatal("fixture must retain unrecovered match", state, err)
+				}
+			}
+			if _, err := db.ExecContext(ctx, `INSERT INTO cutover_instances(id,cluster_system_identifier,database_oid,database_name) SELECT $1,system_identifier,d.oid,d.datname FROM pg_control_system(),pg_database d WHERE d.datname=current_database()`, uuid.NewString()); err != nil {
+				t.Fatal(err)
+			}
+			// Isolated restored-but-unbootstrapped registry simulation. Only the
+			// fixture bypasses the immutable identity trigger; this is no handoff.
+			if _, err := db.ExecContext(ctx, `BEGIN; ALTER TABLE cutover_instances DISABLE TRIGGER cutover_instance_guard; UPDATE cutover_instances SET cluster_system_identifier=1; ALTER TABLE cutover_instances ENABLE TRIGGER cutover_instance_guard; COMMIT`); err != nil {
+				t.Fatal(err)
+			}
+			snapshot := func() string {
+				t.Helper()
+				var state string
+				if err := db.QueryRowContext(ctx, `SELECT jsonb_build_object(
+'current',(SELECT jsonb_agg(to_jsonb(r)) FROM text_process_current r),
+'owners',(SELECT jsonb_agg(to_jsonb(r) ORDER BY incarnation_id) FROM text_process_owners r),
+'matches',(SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM text_matches r),
+'admissions',(SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM text_admissions r),
+'settlements',(SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM text_settlements r),
+'outbox',(SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM text_outbox r),
+'cutover',(SELECT jsonb_agg(to_jsonb(r) ORDER BY id) FROM cutover_instances r))::text`).Scan(&state); err != nil {
+					t.Fatal(err)
+				}
+				return state
+			}
+			before := snapshot()
+			next, err := newTextRuntime(ctx, db, cfg, "../../pkg/media/testdata/text-en")
+			if next != nil {
+				next.Close(ctx)
+			}
+			if !errors.Is(err, store.ErrRuntimeCutover) || next != nil {
+				t.Errorf("cutover refusal did not precede runtime startup: %v", err)
+			}
+			if snapshot() != before {
+				t.Error("cutover refusal changed ownership or recovery rows")
+			}
+		})
+	}
+}

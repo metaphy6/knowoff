@@ -3,10 +3,98 @@
 ```text
 tools/
 ├── mediapack/    # Go CLI: reviewed text preparation → certify → publish → simulate
-└── gamebot/      # Go CLI: protocol-level dev/test bots
+├── gamebot/      # Go CLI: protocol-level dev/test bots
+└── cohort_report.py # Python stdlib: synthetic offline cohort calculations
 ```
 
-Both tools are standalone Go modules that build against the same protocol and media libraries used by the server.
+`mediapack` and `gamebot` are standalone Go modules that build against the same protocol and media libraries used by the server.
+
+`cohort_report.py` implements the bounded offline calculation slice of Phase
+7.6a. It accepts synthetic fixtures only; it has no live-data option, collector,
+database access or analytics SDK. A true `synthetic` flag is an author assertion,
+not a detector: never relabel real people's data as fixtures. All IDs must use
+the `fixture-` prefix and contain only lowercase ASCII letters, digits, `_` or
+`-` (at most 64 characters total). Do not put names or account/device identifiers
+in these fields. The strict schema refuses extra keys, duplicate identities,
+conflicting joins, non-UTC times, symlinks and nonregular inputs. Maximum input
+is 4 MiB, with 10,000 total fact/deletion rows and 100 exposure cells.
+
+```bash
+python3 tools/cohort_report.py --input synthetic-fixture.json --output cohort-report.json
+python3 -m unittest discover -s xops/test -p test_cohort_report.py
+```
+
+The output path must be new. It is created exclusively with mode `0600` and
+contains aggregate counts and frozen experiment/cell metadata, without subject,
+session, match, join or recruitment-group IDs. Stdout contains only status and
+the report's SHA-256. Errors omit input data and paths. JSON bytes are canonical
+and deterministic under reordered input rows. These are engineering fixtures;
+no human recruitment, consent, elapsed cohort, launch decision or commercial
+gate is established by a successful calculation.
+
+The fixture schema is `synthetic-cohort-v1`; all listed keys are required,
+including nullable facts. See the executable `fixture()` and `match()` examples
+in [`xops/test/test_cohort_report.py`](../xops/test/test_cohort_report.py).
+
+| Record | Required fields / meaning |
+|---|---|
+| Root | `schema_version`, `synthetic: true`, `manifest`, `subjects`, `sessions`, `matches`, `participations`, `joins`, `intentions`, `deleted_subjects` |
+| Manifest | `formula_version: cohort-v1`, fixture `experiment` ID, `cohort_start`, `cohort_end`, `observation_complete_through`, Monday `week_start` (`YYYY-MM-DD`), positive integer `queue_timeout_seconds` (maximum 86400), `second_match_cutoff: inclusive_7_days`, `cells` |
+| Cell | Fixture `id`, one of the five stable `mode` IDs, `size` 4/6, `language` tag, `access` free/paid, `exposure` prototype/enabled/held, explicit boolean `hosted`, fixture `rules`, `pack`, `build` identities |
+| Subject | Fixture `id`, `group`, acquisition `cell`, `arrived_at`, `eligibility` new_eligible_human/existing_human/ineligible/unknown, `observation` complete/missing, explicit `first_session` ID or null |
+| Session | Fixture `id`, `subject`, `started_at`, `ended_at` or null; the declared first session must be the earliest supplied session; sessions for one subject cannot overlap |
+| Match | Fixture `id`, `cell`, `started_at`, `ended_at`, `outcome` normal/forfeit/low_population/infrastructure/active/unknown; active/unknown require a null end, other outcomes require a known end |
+| Participation | Fixture `subject`, `match`, `session` or null, `voluntary` true/false/null; unique subject/match pair |
+| Join | Fixture `id`, `subject`, `cell`, `joined_at`, `terminal_at`, `outcome` started/left/unresolved, `reason`, `match`; unresolved has null terminal; started references the exact match start and participant; left reasons are voluntary/timeout/disconnect/infrastructure/unknown |
+| Intention | Array of unique `subject`/`stage` pairs, where stage is invitation_sent/opt_in_return; null array means unavailable |
+| Deletion | `deleted_subjects` is a unique array of fixture IDs, retained as tombstones for this recomputation; deletion dominates replayed subject/session/participation/join/intention facts |
+
+All event times use exact `YYYY-MM-DDTHH:MM:SSZ` UTC seconds and must not exceed
+the observation watermark. The arrival cohort is `[start,end)`; activation
+requires a normal match starting and ending inside the same explicitly closed
+first session. Arrivals with missing first sessions or participation/session
+associations remain in the denominator with a missing-session count; potential
+first-session matches with unknown outcomes have a separate missing-outcome count.
+An earlier potential completion with unknown outcome/session association makes
+activation timing uncertain even when a later completion proves activation;
+the activation stays counted, but return windows remain missing until resolved.
+Queue entrants are distinct new cohort subjects with any supplied join in that
+cell. Completion counts each started match with at least one known eligible
+human once, retaining abnormal and incomplete outcomes in its denominator.
+Ineligible/unknown subjects are separately excluded, never assumed human.
+
+Returns are measured within the acquisition exposure cell; a return in another
+mode, language, access or release cell cannot improve this cell's rate. Hosted
+and organic facts cannot be joined. The second match must start at or after
+activation and end within its inclusive seven-day cutoff; forced repeats do
+not count. D1/D7 use the UTC date of a distinct normal completion, with the
+whole target day covered. Immature or missing observations have separate counts
+and do not enter the available return denominator. Zero available observations
+produce a null rate and explicit coverage. Unknown voluntary intent is missing
+second-match evidence. Unknown potentially qualifying match outcomes are also
+missing return evidence; a known qualifying return still counts despite other
+unknown records. These denominators are descriptive, never gate claims.
+
+Weekly participation counts eligible humans completing normal matches on two
+different days in the declared Monday-to-Monday week, per exposure cell; partial
+weeks and missing observation are flagged. Queue rates include every eligible
+human join, even unresolved joins. Timeout equality counts as within timeout;
+leave reasons remain separate. Wait p50/p95 use nearest rank across all known
+terminal waits (starts and leaves); unresolved waits do not masquerade as zero.
+Repeated receipts/reconnect snapshots must use their canonical fact identity;
+duplicate records are refused rather than counted again. Invitation stages are
+descriptive counts with conversion and attribution window marked unavailable.
+No independence intervals, pooled pass claims or invitation thresholds are
+invented. Sample humans/groups include the union of eligible arrivals, match
+participants and queue entrants in that cell; activation groups are separate.
+Reported recruitment-group counts expose sample correlation limits.
+
+Deletion recomputation must retain the tombstone list: stale facts for deleted
+subjects contribute nothing, including to shared-match counts when no surviving
+eligible human participated. Removing the tombstones defeats that guarantee;
+this stateless offline tool supplies no durable deletion policy. Approved
+analytical export, minimum events, access, pseudonym rotation, retention and
+complete-watermark contracts remain separate prerequisites to real collection.
 
 The `mediapack` CLI supports only versioned text commands. Legacy
 `build`, `certify`, `simulate` and `publish` commands refuse before reading or

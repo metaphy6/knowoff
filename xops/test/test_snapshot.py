@@ -65,6 +65,36 @@ class SnapshotSafetyTests(unittest.TestCase):
         self.addCleanup(self.work.cleanup)
         self.root = Path(self.work.name)
 
+    def test_postgres_readiness_does_not_accept_temporary_bootstrap_server(self):
+        from unittest.mock import patch
+        ops = self.ops
+        fixture = object.__new__(ops.Fixture)
+        fixture.receipt = {"containers": {"postgres": "isolated-fixture"}, "database": "postgres"}
+        bootstrapping = True
+        commands = []
+
+        class BootstrapRunner:
+            def run(self, command, **kwargs):
+                commands.append(command)
+                # The image's init server accepts Unix sockets but disables TCP;
+                # it is stopped before the final PostgreSQL process starts.
+                tcp = "-h" in command and command[command.index("-h") + 1] == "127.0.0.1"
+                if bootstrapping and tcp:
+                    raise ops.SnapshotError("bootstrap server does not listen on TCP")
+                return b"1\n"
+
+        fixture.runner = BootstrapRunner()
+
+        def complete_bootstrap(_delay):
+            nonlocal bootstrapping
+            bootstrapping = False
+
+        with patch.object(ops.time, "sleep", complete_bootstrap):
+            fixture.wait_postgres(database="postgres")
+        self.assertFalse(bootstrapping, "temporary init server falsely established readiness")
+        self.assertGreaterEqual(len(commands), 2)
+        self.assertEqual(fixture.pg("SELECT 1"), b"1\n")
+
     def test_exclusive_private_directory_and_symlink_refusal(self):
         out = self.root / "backup"
         self.ops.new_directory(out)

@@ -36,6 +36,9 @@ func newTextRuntime(ctx context.Context, db *sql.DB, cfg *config.Config, prototy
 	if err := store.CheckRuntimeSchema(ctx, db); err != nil {
 		return nil, err
 	}
+	if err := store.CheckRuntimeCutover(ctx, db); err != nil {
+		return nil, err
+	}
 	prototype, err := loadTextPrototype(cfg, prototypePath)
 	if err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ before authentication, socket admission or spending.
 
 ```text
 cmd/knowoffd/        # Runtime, migrations, compiled release manifest, internal ops
+cmd/cutover-controller/ # Offline physical writer fence and target bootstrap
 internal/config/    # Strict layered text config and retired-key rejection
 internal/handler/   # Authenticated HTTP/WS boundaries and private delivery
 internal/transport/ # Readiness, middleware and strict v2 wire contracts
@@ -92,3 +93,59 @@ when a later additive migration changes table shape. Actual additive migrations 
 disposable PostgreSQL proofs. The backup rehearsal records its exact captured
 head and retained-row parity separately; generic all-migrations-down remains
 unsupported for transition rollback.
+
+## Offline cutover controller
+
+`cmd/cutover-controller` is a separate operator executable. It has no listener,
+runtime-config fallback or automatic role provisioning. The selected database
+must satisfy the exact `CutoverControlRoleSpec` capability contract. A controller
+holds a dedicated database session and serialization lock for each command.
+Use `--help` without credentials to inspect the command syntax.
+
+Requests are bounded JSON on stdin (64 KiB maximum, duplicate/unknown fields
+refused; object field names must be ASCII). `--operation` selects `identity`,
+`begin`, `seal`, `handoff` or `bootstrap`; `--timeout` defaults to 30 seconds
+and must be positive and at most
+five minutes. Set `KNOWOFF_CUTOVER_CONTROL_DSN` privately; bootstrap additionally
+requires the independently selected `KNOWOFF_CUTOVER_SOURCE_CONTROL_DSN`.
+Never place DSNs or lease material in arguments, report files or command logs.
+
+Every request has `roles`, the exact control role specification. Supply only
+the matching operation object (`begin`, `seal`, `handoff` or `bootstrap`);
+identity needs none. Bootstrap also needs `source_roles`. The typed field
+contract is in [`cutover_controller.go`](internal/store/cutover_controller.go),
+and the executable fixture in
+[`cutover_integration.py`](../xops/test/cutover_integration.py) demonstrates the
+complete synthetic protocol. Generate a 32-byte lease in the caller's private
+request state; JSON represents it as base64. Reuse the same IDs and lease after
+an uncertain result. Receipts expose identity/generation/phase and evidence
+hashes, never lease bytes or raw SQL errors.
+
+`WritersEnabled` declares the expected observed role state. It is true for the
+source before Begin, false once closing commits and for a target before
+bootstrap, then true for an already activated target. After an uncertain Begin,
+reconnect expecting false and replay its original request; do not infer that
+failure left the source logins enabled.
+
+Begin records closing and disables both declared writer logins before existing
+writer sessions are terminated. A command failure or process loss never
+automatically reenables source writers. Seal requires actual fenced activity
+and durable work checks. Unclassified startup lock holders cause refusal until
+their session identity becomes observable; they are never terminated by guesswork.
+The physical preflight commits before the retained-data snapshot begins, so a
+writer that just finished cannot disappear from both the census and the snapshot.
+Initial target activation uses the same ordering. Handoff binds one separately
+initialized target cluster;
+capture must follow that binding so the restored history contains it. Bootstrap
+checks actual target contents and fresh source authority before target activation.
+An expired lease cannot authorize a new mutation, but the exact authenticated
+committed handoff can still be used for restore/bootstrap recovery. Target
+bootstrap replay preserves its ready child after legitimate target value writes.
+Source closing is terminal under schema 26; a new target or same-source reopening
+requires a separately reviewed additive recovery protocol.
+
+The automated rehearsal uses only owned disposable resources. Production use
+still requires a selected release, verified external process drain, durable
+callback holding/replay and operator authorization under the
+[migration runbook](../docs/launch/VPS_MIGRATION_RUNBOOK.md). Passing synthetic
+replay does not supply a live provider queue or a release decision.

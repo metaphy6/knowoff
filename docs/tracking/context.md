@@ -45,8 +45,17 @@ substantial saved implementation, including five-mode runtime/client, durable
 value and content/trust infrastructure. The owner committed checkpoint
 `bd5e13e` and resumed all remaining phases on 2026-09-12; the earlier pause is
 superseded. Read the [resumption evidence](../reports/2026-09-12-text-transition-resumption.md)
-and current checkpoint. Later integration has not passed the final unified gate
-and is not yet a completed commit handoff.
+and current checkpoint. The owner saved the interrupted integration as `ec8b7ab`
+and requested another resumption on 2026-09-19. Follow the
+[current recovery record](../reports/2026-09-19-text-transition-resumption.md)
+for fresh checks and remaining work. The latest Phase 6.4a continuation adds
+the physical cutover controller, offline command and separate-cluster restore/
+replay proof. Its frozen unified gate passed 2,454 tests/subtests with zero
+failures/skips across 19 stages, with 631 unchanged inputs and independent
+cold race checks. Phase 3 is complete; the Phase 6 controller slice is complete.
+Live callback/drain, selective invalidation and human release proofs remain open.
+Remaining engineering and release gates stay explicit in
+the roadmap; the owner checkpoint commit alone was not validation evidence.
 Initial text specialties and production
 backfill are off. Preserve no-paid-advantage, shared caps, roles/votes, identity,
 community and the visual brand. Follow the current content source checklist;

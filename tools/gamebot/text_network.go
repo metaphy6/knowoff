@@ -573,11 +573,16 @@ func (b *textNetworkBot) nextID() string {
 	return fmt.Sprintf("network-%d-%d", b.seed, b.serial)
 }
 
-func (b *textNetworkBot) control(ctx context.Context, kind string, payload any) error {
+func (b *textNetworkBot) control(ctx context.Context, kind string, payload any) (err error) {
 	if !b.availability.Prototype {
 		return errors.New("prototype admission not authorized")
 	}
 	id := b.nextID()
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("control %s request %s: %w", kind, id, err)
+		}
+	}()
 	if err := b.write(ctx, kind, id, payload, true); err != nil {
 		return err
 	}

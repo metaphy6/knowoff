@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/url"
 	"os"
+	"regexp"
 	"testing"
 	"time"
 
@@ -16,21 +18,38 @@ import (
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("KNOWOFF_TEST_DSN")
-	if dsn == "" {
-		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	token := os.Getenv("KNOWOFF_TEST_DB_TOKEN")
+	u, err := url.Parse(dsn)
+	if err != nil || u == nil || !regexp.MustCompile(`^[0-9a-f]{12}$`).MatchString(token) || u.Scheme != "postgres" || u.Path != "/knowoff_test_"+token || u.Fragment != "" || (u.Hostname() != "postgres" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") {
+		t.Fatal("disposable test database required")
+	}
+	for key := range u.Query() {
+		if key != "sslmode" {
+			t.Fatal("unexpected disposable DSN parameter")
+		}
 	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	if err := db.Ping(); err != nil {
-		t.Skipf("postgres not available: %v", err)
+	t.Cleanup(func() { db.Close() })
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	if err := db.PingContext(ctx); err != nil {
+		t.Fatalf("disposable postgres unavailable: %v", err)
+	}
+	var actual string
+	if err := db.QueryRowContext(ctx, `SELECT current_database()`).Scan(&actual); err != nil || actual != "knowoff_test_"+token {
+		t.Fatal("refusing non-disposable database")
+	}
+	// Audit history cannot be truncated. Rebuild only the verified disposable
+	// schema, keeping the production immutability triggers intact.
+	if _, err := db.ExecContext(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public"); err != nil {
+		t.Fatalf("reset uniquely verified notice fixture: %v", err)
 	}
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	// Keep tests hermetic: notices are global rows and persist across runs.
-	_, _ = db.Exec("TRUNCATE TABLE system_notices, admin_audit_log RESTART IDENTITY CASCADE")
 	return db
 }
 
@@ -39,6 +58,26 @@ func testConfig() *config.Config {
 		Localization: config.LocalizationConfig{
 			DefaultLocale: "en",
 		},
+	}
+}
+
+func TestNoticeFixturesResetRetainedAudit(t *testing.T) {
+	db := setupTestDB(t)
+	m := NewManager(db, testConfig(), nil)
+	if _, err := m.CreateNotice(t.Context(), Notice{Type: NoticeAnnouncement, Title: map[string]string{"en": "Prior fixture"}, Body: map[string]string{"en": "Audited"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	db = setupTestDB(t)
+	defer db.Close()
+	var notices, audits int
+	if err := db.QueryRow(`SELECT (SELECT count(*) FROM system_notices), (SELECT count(*) FROM admin_audit_log)`).Scan(&notices, &audits); err != nil {
+		t.Fatal(err)
+	}
+	if notices != 0 || audits != 0 {
+		t.Fatalf("previous fixture retained notices=%d audits=%d", notices, audits)
 	}
 }
 

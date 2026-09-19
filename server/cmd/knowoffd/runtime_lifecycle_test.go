@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -60,13 +61,25 @@ func TestRuntimeLifecycleClosesEveryApplicationBeforeGraceAndJoinsWorkers(t *tes
 		t.Fatal("game clock stopped before grace completed")
 	default:
 	}
+	finishResponse := func(response *http.Response) {
+		t.Helper()
+		// Consume responses so the transport reuses its connections instead of
+		// leaving speculative, never-used dials in the server's StateNew.
+		if _, err := io.Copy(io.Discard, response.Body); err != nil {
+			response.Body.Close()
+			t.Fatal(err)
+		}
+		if err := response.Body.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, server := range []*httptest.Server{public, admin} {
 		for _, path := range []string{"/api/auth/device", "/api/economy/purchase", "/admin/decide", "/portal/", "/ws/v2", "/healthz/other"} {
 			response, err := server.Client().Get(server.URL + path)
 			if err != nil {
 				t.Fatal(err)
 			}
-			response.Body.Close()
+			finishResponse(response)
 			if response.StatusCode != http.StatusServiceUnavailable {
 				t.Fatalf("admitted closed route %s: %d", path, response.StatusCode)
 			}
@@ -76,11 +89,12 @@ func TestRuntimeLifecycleClosesEveryApplicationBeforeGraceAndJoinsWorkers(t *tes
 			if err != nil {
 				t.Fatal(err)
 			}
-			response.Body.Close()
+			finishResponse(response)
 			if response.StatusCode != want {
 				t.Fatal("health/readiness exemption wrong", path, response.StatusCode)
 			}
 		}
+		server.Client().CloseIdleConnections()
 	}
 	if writes.Load() != 0 {
 		t.Fatal("closed admission invoked application")

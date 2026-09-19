@@ -64,7 +64,32 @@ func VerifyCutoverRoles(ctx context.Context, db *sql.DB, spec CutoverRoleSpec) e
 }
 
 func verifyCutoverRoles(ctx context.Context, db *sql.DB, spec CutoverRoleSpec, control string, writersEnabled bool) error {
-	if db == nil || !cutoverName(spec.Database) {
+	if db == nil {
+		return ErrCutoverPrivileges
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
+	if err != nil {
+		return ErrCutoverPrivileges
+	}
+	defer tx.Rollback()
+	if err = verifyCutoverRolesSnapshot(ctx, tx, spec, control, writersEnabled); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return ErrCutoverPrivileges
+	}
+	return nil
+}
+
+// The controller calls the same verifier inside its dedicated session snapshot.
+type cutoverRoleQuerier interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func verifyCutoverRolesSnapshot(ctx context.Context, q cutoverRoleQuerier, spec CutoverRoleSpec, control string, writersEnabled bool) error {
+	if !cutoverName(spec.Database) {
 		return ErrCutoverPrivileges
 	}
 	names := []string{spec.Owner, spec.Runtime, spec.Capture, spec.Migrator}
@@ -80,15 +105,9 @@ func verifyCutoverRoles(ctx context.Context, db *sql.DB, spec CutoverRoleSpec, c
 		}
 		seen[name] = true
 	}
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true, Isolation: sql.LevelRepeatableRead})
-	if err != nil {
-		return ErrCutoverPrivileges
-	}
-	defer tx.Rollback()
+	var err error
 	var version int
-	if err = tx.QueryRowContext(ctx, `SELECT current_setting('server_version_num')::int`).Scan(&version); err != nil || version < 160000 || version >= 170000 {
+	if err = q.QueryRowContext(ctx, `SELECT current_setting('server_version_num')::int`).Scan(&version); err != nil || version < 160000 || version >= 170000 {
 		return ErrCutoverPrivileges
 	}
 	manifest, err := migrations.Compiled()
@@ -96,29 +115,26 @@ func verifyCutoverRoles(ctx context.Context, db *sql.DB, spec CutoverRoleSpec, c
 		return ErrCutoverPrivileges
 	}
 	var valid bool
-	if err = tx.QueryRowContext(ctx, `SELECT current_database()=$1 AND session_user=current_user AND current_user=ANY($2::text[]) AND count(*)=1 AND min(version)=$3 AND NOT bool_or(dirty) FROM public.schema_migrations`, spec.Database, pq.Array(readers), manifest.SchemaVersion).Scan(&valid); err != nil || !valid {
+	if err = q.QueryRowContext(ctx, `SELECT current_database()=$1 AND session_user=current_user AND current_user=ANY($2::text[]) AND count(*)=1 AND min(version)=$3 AND NOT bool_or(dirty) FROM public.schema_migrations`, spec.Database, pq.Array(readers), manifest.SchemaVersion).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
-	if err = tx.QueryRowContext(ctx, cutoverRoleQuery, pq.Array(names), spec.Owner, spec.Runtime, spec.Capture, spec.Migrator, spec.Database, control, writersEnabled).Scan(&valid); err != nil || !valid {
+	if err = q.QueryRowContext(ctx, cutoverRoleQuery, pq.Array(names), spec.Owner, spec.Runtime, spec.Capture, spec.Migrator, spec.Database, control, writersEnabled).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
 	var actual []string
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(array_agg(c.relname::text ORDER BY c.relname),'{}') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverTables) {
+	if err = q.QueryRowContext(ctx, `SELECT COALESCE(array_agg(c.relname::text ORDER BY c.relname),'{}') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverTables) {
 		return ErrCutoverPrivileges
 	}
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(array_agg(c.relname::text ORDER BY c.relname),'{}') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='S'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverSequences) {
+	if err = q.QueryRowContext(ctx, `SELECT COALESCE(array_agg(c.relname::text ORDER BY c.relname),'{}') FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='S'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverSequences) {
 		return ErrCutoverPrivileges
 	}
-	if err = tx.QueryRowContext(ctx, `SELECT COALESCE(array_agg(p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')' ORDER BY p.proname),'{}') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverFunctions) {
+	if err = q.QueryRowContext(ctx, `SELECT COALESCE(array_agg(p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')' ORDER BY p.proname),'{}') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverFunctions) {
 		return ErrCutoverPrivileges
 	}
-	if err = tx.QueryRowContext(ctx, cutoverObjectQuery, spec.Owner, spec.Runtime, spec.Capture, pq.Array(cutoverReadOnlyTables), pq.Array(cutoverLargeObjectWriters), pq.Array(cutoverInsertOnlyTables), control).Scan(&valid); err != nil || !valid {
+	if err = q.QueryRowContext(ctx, cutoverObjectQuery, spec.Owner, spec.Runtime, spec.Capture, pq.Array(cutoverReadOnlyTables), pq.Array(cutoverLargeObjectWriters), pq.Array(cutoverInsertOnlyTables), control).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
-	if err = tx.QueryRowContext(ctx, cutoverCatalogQuery, pq.Array(names), spec.Runtime, spec.Capture, control).Scan(&valid); err != nil || !valid {
-		return ErrCutoverPrivileges
-	}
-	if err = tx.Commit(); err != nil {
+	if err = q.QueryRowContext(ctx, cutoverCatalogQuery, pq.Array(names), spec.Runtime, spec.Capture, control).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
 	return nil

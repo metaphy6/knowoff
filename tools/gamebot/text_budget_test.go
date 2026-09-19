@@ -210,9 +210,10 @@ func textBudgetPlay(t *testing.T, ctx context.Context, f *networkFixture, rooms 
 		if err := textBudgetParallel(rooms, func(r *textBudgetRoom) error {
 			// Completed spectators keep reading, including websocket ping frames,
 			// until every concurrent room has reached its settlement barrier.
-			for _, peer := range r.peers {
+			for seat, peer := range r.peers {
+				started := time.Now()
 				if err := peer.control(ctx, "resync", struct{}{}); err != nil {
-					return err
+					return fmt.Errorf("step %d refresh seat %d phase %s round %d turn %d history %d elapsed %s: %w", step, seat, peer.snapshot.Phase, peer.snapshot.Round, peer.snapshot.Turn, len(peer.snapshot.History), time.Since(started), err)
 				}
 			}
 			first := r.peers[0].snapshot
@@ -264,7 +265,7 @@ func textBudgetPlay(t *testing.T, ctx context.Context, f *networkFixture, rooms 
 				err := chosen.peer.act(ctx, chosen.action)
 				elapsed := time.Since(start)
 				if err != nil {
-					errors <- fmt.Errorf("%s/%d action %s: %w", chosen.room.mode, len(chosen.room.peers), chosen.action.Kind, err)
+					errors <- fmt.Errorf("step %d %s/%d action %s phase %s round %d turn %d elapsed %s: %w", step, chosen.room.mode, len(chosen.room.peers), chosen.action.Kind, chosen.peer.snapshot.Phase, chosen.peer.snapshot.Round, chosen.peer.snapshot.Turn, elapsed, err)
 					return
 				}
 				chosen.room.latencies = append(chosen.room.latencies, elapsed)

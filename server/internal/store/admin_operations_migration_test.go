@@ -16,8 +16,8 @@ func TestAdminOperationsDownSerializesConcurrentReceiptWriter(t *testing.T) {
 		t.Run(map[bool]string{true: "writer_before_down", false: "down_before_writer"}[writerFirst], func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 			defer cancel()
-				db := transitionDesignDB(t, 27, false)
-				db.SetMaxOpenConns(4) // two real transactions plus a lock observer
+			db := transitionDesignDB(t, 27, false)
+			db.SetMaxOpenConns(4) // two real transactions plus a lock observer
 			account, actor, id := uuid.NewString(), uuid.NewString(), uuid.NewString()
 			if _, err := db.ExecContext(ctx, `INSERT INTO accounts(id,nickname) VALUES($1,'down race fixture')`, account); err != nil {
 				t.Fatal(err)

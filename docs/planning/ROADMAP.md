@@ -1,7 +1,7 @@
 # 🗺 Knowoff — Text Transition Roadmap
 
-**Status: Resumed at owner request — 2026-09-12. Phase 1 complete; Phases 2–5 implementation and integration in progress.**
-See the [resumption evidence](../reports/2026-09-12-text-transition-resumption.md) for current validation and remaining work; the earlier pause is historical.
+**Status: Resumed after credit interruption — 2026-09-19. Phases 1 and 3 complete; remaining implementation and release proof in progress.**
+See the [current recovery record](../reports/2026-09-19-text-transition-resumption.md) and [earlier resumption evidence](../reports/2026-09-12-text-transition-resumption.md) for validation and remaining work; the earlier pause is historical.
 Read [Blueprint](../../BLUEPRINT.md) for normative requirements, then the
 [technical transition design](../design/DESIGN-text-transition.md) for audited
 source gaps, data contracts and retirement inventory, and the
@@ -30,10 +30,10 @@ All five modes remain intended; stagger exposure according to evidence.
 | Phase | Items | Done | Status |
 |---|---|---|---|
 | 1 — Contract, baseline and migration preflight | 12 | 12 | Complete; independent review and full validation passed |
-| 2 — Text catalog, dealing and content certification | 10 | 5 | Catalog, Unicode, dealing and contribution lifecycle verified; action/pinning audit and human gates open |
-| 3 — Shared match state and five mode engines | 14 | 13 | Engine, authenticated network matrix and lock repair verified; final combined gate open |
+| 2 — Text catalog, dealing and content certification | 10 | 6 | Catalog, Unicode, pinning, dealing and contribution lifecycle verified; action audit and human gates open |
+| 3 — Shared match state and five mode engines | 14 | 14 | Complete; independent review, cold race/property/privacy checks and full unified gate passed |
 | 4 — Lobbies, protocol and client integration | 12 | 10 | Technical integration independently verified; physical-device journeys/performance and final gate open |
-| 5 — Durable value, community and trust | 20 | 5 | Guard, weekly lifecycle, OAuth and curation/report integration verified; remaining value/trust gates open |
+| 5 — Durable value, community and trust | 20 | 11 | Durable settlement/recovery, Guard, weekly lifecycle, OAuth, avatar and curation/report integration verified; remaining trust/provider gates open |
 | 6 — Retirement, compatibility and operations | 11 | 0 | Drain and isolated restore proofs in progress; full retirement gates open |
 | 7 — Playtests, business validation and release | 12 | 0 | Planned |
 
@@ -351,7 +351,7 @@ state-machine/property/race tests, full no-leak event scanning.
 - [x] Implement Top That neutral seed/current-target revision and ordered chain, with no semantic superiority judge or veto.
 - [x] Prove all-mode shared vote budgets, early team victory, tied runoff, eliminated permissions, timeout penalties, grace/forfeit/low-population and begun-round-only verdict.
 - [x] Update dev/test gamebot policies and seeded ordered replay scripts for each mode/role, own observation only; test matches never earn live value.
-- [ ] Gate: engine/property/race/no-leak tests pass at 4/6 and multi-round schedules, with no pending trade crossing round/elimination/verdict and no duplicate finish.
+- [x] Gate: engine/property/race/no-leak tests pass at 4/6 and multi-round schedules, with no pending trade crossing round/elimination/verdict and no duplicate finish.
 
 
 #### Phase 3 execution detail — 2026-09-12
@@ -648,6 +648,14 @@ release manifest and operator authorization.
 | 9 — Test migration | Replace obsolete assertions with substantive mode/privacy/unsupported-input/restore coverage; present an exact file-removal list and release-note entry for required approval before deleting test files. Continue other retirement while that narrow decision is pending. |
 | 10 — Final inventory | Compare source/call/dependency/route/config/packaged-artifact inventories with every temporary compatibility entry; close evidenced entries and record owner/reason/expiry for justified historical retention. |
 | 11 — Gate | Independent review and full build/load/security/parity/restore verification precede staging. A future live rollback window needs measured operator evidence; no-deployment N/A does not certify one. |
+
+**2026-09-19 implementation, 4a.** The offline physical cutover controller,
+bounded JSON command and mandatory separate-cluster capture/restore rehearsal
+are implemented; see the [C1–C7 plan and current evidence](../reports/2026-09-19-text-transition-resumption.md#phase-64a-continuation--physical-writer-fence-and-cross-cluster-proof).
+They cover actual writer-role/session fencing, pending durable work, immutable
+handoff, source/target parity and synthetic once-only SQL replay. Live external
+process drain, provider callback holding/replay, selective invalidation and
+human smoke remain open, so the broader parent checkbox remains unchecked.
 
 **Risks.** Never use `compose down -v`, broad Redis flush or generic all-history
 down as recovery. Avatar processing is an active image consumer. After new

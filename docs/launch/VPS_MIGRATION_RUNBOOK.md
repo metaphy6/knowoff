@@ -225,13 +225,19 @@ window. DNS TTL expiry alone is not permission to destroy them.
 
 | State | Permitted recovery |
 |---|---|
-| Target has accepted no writes | Freeze/stop target, verify the source remains complete, restore source routing and compatible application. Reconcile any held callbacks before admission. |
+| Target has accepted no writes and source has not committed durable cutover closing | Freeze/stop target, verify the source remains complete, cancel the pre-closing drain and restore compatible source routing/application. Reconcile held callbacks before admission. |
+| Source has committed durable cutover closing, regardless of target writes | Keep source writer logins fenced. Schema 26 cannot reopen that source identity; proceed with the verified separate-cluster handoff or a separately reviewed additive recovery protocol. Never disable guards or rewrite authority history to reopen it. |
 | Target has accepted writes; expanded schema remains compatible | Freeze admission and drain; roll back the application/config/pack on the same authoritative database using the rehearsed compatible release. Retain target receipts/results. |
 | Target writes exist and the older app/schema is incompatible | Keep maintenance active. Prefer a forward fix; otherwise reconcile/replay target writes into a reviewed recovery database. An older snapshot requires an explicit recovery-point/data-loss decision, never routine DNS reversal. |
 
 Do not replay a settlement without its stable idempotency key. Reverify wallet,
 receipt, entitlement, counter and contribution parity before restoring service.
 Record failure cause, affected interval, exact artifacts and recovery evidence.
+
+The first physical handoff requires distinct PostgreSQL cluster system IDs.
+Roles are cluster-wide: enabling the same writer roles in a sibling database
+would also reopen source logins. A schema-only sibling-database fixture proves
+identity constraints, not safe physical writer activation.
 
 ## 8. Contract and retire only after the rollback window
 
