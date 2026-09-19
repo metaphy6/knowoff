@@ -43,7 +43,7 @@ func (s *TextValueStore) CloseLeaderboardWeek(ctx context.Context, weekID string
 		return nil, err
 	}
 	// Bounded one-match pages release all query connections before settlement.
-	for {
+	for drained := 0; ; drained++ {
 		var id string
 		err = s.db.QueryRowContext(ctx, `SELECT s.match_id FROM text_settlements s JOIN text_matches m ON m.id=s.match_id
    WHERE s.state='pending' AND m.ended_at>=$1 AND m.ended_at<$2 ORDER BY s.match_id LIMIT 1`, start, end).Scan(&id)
@@ -52,6 +52,9 @@ func (s *TextValueStore) CloseLeaderboardWeek(ctx context.Context, weekID string
 		}
 		if err != nil {
 			return nil, err
+		}
+		if drained >= 32 {
+			return nil, ErrWeekPending
 		}
 		if err = s.SettlePending(ctx, id); err != nil {
 			return nil, err
@@ -74,12 +77,16 @@ func (s *TextValueStore) CloseLeaderboardWeek(ctx context.Context, weekID string
 				return ErrWeekPending
 			}
 			if _, err := tx.ExecContext(ctx, `INSERT INTO leaderboard_history(week_id,account_id,rank,points)
-    SELECT week_id,account_id,RANK() OVER(ORDER BY points DESC),points FROM leaderboard_entries WHERE week_id=$1`, weekID); err != nil {
+    SELECT e.week_id,e.account_id,RANK() OVER(ORDER BY e.points DESC),e.points FROM leaderboard_entries e
+    WHERE e.week_id=$1 AND COALESCE((SELECT d.kind FROM leaderboard_admin_decisions d WHERE d.week_id=e.week_id AND d.target_account_id=e.account_id ORDER BY d.revision DESC LIMIT 1),'reinstate')<>'exclude'`, weekID); err != nil {
 				return err
 			}
 			if _, err := tx.ExecContext(ctx, `UPDATE leaderboard_weeks SET closed=true,closed_at=$2 WHERE week_id=$1`, weekID, valueTime(now)); err != nil {
 				return err
 			}
+		}
+		if err := completeLeaderboardAdminTx(ctx, tx, weekID); err != nil {
+			return err
 		}
 		rows, err := tx.QueryContext(ctx, `SELECT rank,account_id,points FROM leaderboard_history WHERE week_id=$1 ORDER BY rank,account_id`, weekID)
 		if err != nil {

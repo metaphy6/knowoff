@@ -11,6 +11,8 @@ Records — accepted decisions with rationale).
 
 - [`DESIGN-text-transition.md`](DESIGN-text-transition.md) — source-backed protocol, data migration, compatibility, retirement and proof contract.
 
+- [`ADR-014`](ADR-014-account-deletion.md) — proposed complete deletion disposition and authority design; the closed profile foundation is implemented, with remaining executor coverage tracked in the roadmap.
+
 ## When to write
 
 - **Design doc**: before a change > a few days of work, before a public API, before a cross-module refactor. Reviewed by humans + agents, signed off before code lands.
@@ -35,3 +37,4 @@ Both live alongside the code they shape — file name embeds the topic
 | [ADR-010](ADR-010-shuffle-sky-accent.md) | Historical Shuffle sky accent; active specialty use retired by ADR-012 |
 | [ADR-011](ADR-011-static-image-and-text-content.md) | Historical static images/text; playable-image allowance superseded by ADR-012 |
 | [ADR-012](ADR-012-text-only-selectable-modes.md) | Text-only five-mode transition; planning adopted, runtime pending |
+| [ADR-013](ADR-013-authoritative-action-certification.md) | Shared authoritative engine replay for technical action certification |

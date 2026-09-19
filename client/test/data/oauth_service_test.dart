@@ -49,10 +49,186 @@ void main() {
   final now = DateTime.utc(2026, 9, 12);
 
   test(
+    'legacy OAuth receipt resumes exact binding after a lost reply and restart',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final bindings = <String>[];
+      var results = 0;
+      final legacy = issued('restored-account', binding: '');
+      final client = MockClient((request) async {
+        if (request.url.path.endsWith('/start')) return flowResponse(now);
+        if (request.url.path.endsWith('/result')) {
+          results++;
+          return legacy;
+        }
+        expect(request.url.path, '/api/auth/installation');
+        bindings.add(request.body);
+        final body = jsonDecode(request.body) as Map;
+        expect(
+          body['refresh_token'],
+          (jsonDecode(legacy.body) as Map)['refresh_token'],
+        );
+        if (bindings.length == 1) {
+          throw http.ClientException('synthetic lost binding reply');
+        }
+        return issued(
+          'restored-account',
+          binding: body['device_hash'] as String,
+        );
+      });
+      final first = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: client,
+      );
+      await first.startOAuth('google', OAuthIntent.restore);
+      await expectLater(
+        first.pollOAuth(),
+        throwsA(isA<http.ClientException>()),
+      );
+      expect(
+        (await SharedPreferences.getInstance()).getString('knowoff_account_id'),
+        isNull,
+      );
+      final restarted = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: client,
+      );
+      expect(await restarted.resumeOAuth(), isNotNull);
+      expect(await restarted.pollOAuth(), OAuthPollState.completed);
+      expect(bindings, hasLength(2));
+      expect(bindings.first, bindings.last);
+      expect(results, 2);
+      expect(restarted.accountId, 'restored-account');
+      expect(
+        (await SharedPreferences.getInstance()).containsKey(
+          'knowoff_oauth_pending',
+        ),
+        isFalse,
+      );
+    },
+  );
+
+  for (final newerFlow in [false, true]) {
+    test(
+      'pending legacy binding cannot survive cancel/new flow: $newerFlow',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final opened = Completer<void>(), response = Completer<http.Response>();
+        String? installation;
+        final service = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/start')) return flowResponse(now);
+            if (request.url.path.endsWith('/result')) {
+              return issued('restored-account', binding: '');
+            }
+            expect(request.url.path, '/api/auth/installation');
+            installation =
+                (jsonDecode(request.body) as Map)['device_hash'] as String;
+            opened.complete();
+            return response.future;
+          }),
+        );
+        await service.startOAuth('google', OAuthIntent.restore);
+        final refused = expectLater(
+          service.pollOAuth(),
+          code('oauth.cancelled'),
+        );
+        await opened.future;
+        if (newerFlow) {
+          await service.startOAuth('google', OAuthIntent.restore);
+        } else {
+          await service.cancelOAuth();
+        }
+        response.complete(issued('restored-account', binding: installation!));
+        await refused;
+        expect(
+          (await SharedPreferences.getInstance()).getString(
+            'knowoff_account_id',
+          ),
+          isNull,
+        );
+        expect(service.pendingOAuth != null, newerFlow);
+      },
+    );
+  }
+
+  test(
+    'legacy binding response cannot overwrite an account switched while waiting',
+    () async {
+      SharedPreferences.setMockInitialValues(saved(expiredAccess: false));
+      final opened = Completer<void>(), response = Completer<http.Response>();
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/start')) return flowResponse(now);
+          if (request.url.path.endsWith('/result')) {
+            return issued('saved-account', binding: '');
+          }
+          expect(request.url.path, '/api/auth/installation');
+          opened.complete();
+          return response.future;
+        }),
+      );
+      await service.startOAuth('google', OAuthIntent.restore);
+      final refused = expectLater(service.pollOAuth(), code('oauth.cancelled'));
+      await opened.future;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('knowoff_account_id', 'newer-account');
+      response.complete(issued('saved-account'));
+      await refused;
+      expect(prefs.getString('knowoff_account_id'), 'newer-account');
+    },
+  );
+
+  test(
+    'legacy binding validates replacement credential expiry after the wait',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var clock = now;
+      final expiry =
+          now.add(const Duration(seconds: 5)).millisecondsSinceEpoch ~/ 1000;
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => clock,
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/start')) return flowResponse(now);
+          if (request.url.path.endsWith('/result')) {
+            return issued('restored-account', binding: '');
+          }
+          expect(request.url.path, '/api/auth/installation');
+          final installation =
+              (jsonDecode(request.body) as Map)['device_hash'] as String;
+          clock = now.add(const Duration(seconds: 5));
+          return http.Response(
+            jsonEncode({
+              'account_id': 'restored-account',
+              'access_token': token(expiry, binding: installation),
+              'refresh_token': token(expiry + 60, binding: installation),
+            }),
+            200,
+          );
+        }),
+      );
+      await service.startOAuth('google', OAuthIntent.restore);
+      await expectLater(service.pollOAuth(), code('oauth.expired'));
+      expect(
+        (await SharedPreferences.getInstance()).getString('knowoff_account_id'),
+        isNull,
+      );
+    },
+  );
+
+  test(
     'fresh restore never creates a device account or sends saved bearer',
     () async {
       SharedPreferences.setMockInitialValues({});
       final requests = <http.Request>[];
+      String? installation;
       final service = AuthService(
         baseUrl: 'https://game.example',
         now: () => now,
@@ -60,9 +236,14 @@ void main() {
           requests.add(request);
           expect(request.headers.containsKey('Authorization'), isFalse);
           if (request.url.path.endsWith('/start')) {
+            installation =
+                (jsonDecode(request.body) as Map)['device_hash'] as String;
+            final prefs = await SharedPreferences.getInstance();
+            expect(installation, prefs.getString('knowoff_installation_id'));
             expect(jsonDecode(request.body), {
               'provider': 'google',
               'intent': 'restore',
+              'device_hash': installation,
             });
             return flowResponse(now);
           }
@@ -71,7 +252,7 @@ void main() {
             'flow_id': flowID,
             'completion_secret': secret,
           });
-          return issued('restored-account');
+          return issued('restored-account', binding: installation!);
         }),
       );
       final attempt = await service.startOAuth('google', OAuthIntent.restore);

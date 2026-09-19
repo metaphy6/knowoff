@@ -108,6 +108,7 @@ type TextLobbyView struct {
 // One network writer consumes Frames. Payloads are marshaled before enqueueing,
 // never shared mutable engine structs. The manager performs no socket writes.
 type TextPeer struct {
+	binding   TextPeerBinding
 	AccountID string
 	ID        string
 	Frames    <-chan TextEnvelope
@@ -355,10 +356,26 @@ func (m *TextManager) current(p *TextPeer) bool {
 	return p != nil && !p.closed.Load() && m.peers[p.AccountID] == p
 }
 func (m *TextManager) Open(ctx context.Context, account string) (*TextPeer, error) {
+	return m.OpenAuthenticated(ctx, func(context.Context) (TextPeerBinding, error) { return TextPeerBinding{AccountID: account}, nil })
+}
+
+type TextPeerBinding = store.TextAdmissionBinding
+
+// Authentication runs under the same mutex as live sanction delivery; a peer
+// cannot appear after a delivery has observed its absence using a stale token.
+func (m *TextManager) OpenAuthenticated(ctx context.Context, authenticate func(context.Context) (TextPeerBinding, error)) (*TextPeer, error) {
 	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
 		return nil, err
 	}
 	defer m.mu.Unlock()
+	if authenticate == nil {
+		return nil, ErrTextMembership
+	}
+	binding, err := authenticate(ctx)
+	if err != nil {
+		return nil, err
+	}
+	account := binding.AccountID
 	if e := m.checkAuthority(ctx); e != nil {
 		return nil, e
 	}
@@ -377,6 +394,7 @@ func (m *TextManager) Open(ctx context.Context, account string) (*TextPeer, erro
 	ch := make(chan TextEnvelope, n)
 	done := make(chan struct{})
 	p := &TextPeer{AccountID: account, ID: uuid.NewString(), Frames: ch, Done: done, frames: ch, done: done}
+	p.binding = binding
 	m.peers[account] = p
 	return p, nil
 }
@@ -537,6 +555,11 @@ func (m *TextManager) reserve(ctx context.Context, account, path string) (string
 		return "", e
 	}
 	id := uuid.NewString()
+	bindings := []store.TextAdmissionBinding{}
+	if peer := m.peers[account]; peer != nil {
+		bindings = append(bindings, peer.binding)
+	}
+	ctx = store.WithTextAdmissionBindings(ctx, bindings)
 	e := m.deps.Values.Reserve(ctx, store.TextReservation{ID: id, AccountID: account, EntryPath: path, Prototype: m.deps.Prototype != nil, At: m.deps.Now()})
 	return id, e
 }

@@ -15,9 +15,61 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Roadmap continuation — 2026-09-19
+
+- Add audited account and known-installation sanctions with exact lifts,
+  current credential checks through match start, and retryable live enforcement.
+  Preserve installation binding across logout, upgrade and OAuth recovery;
+  refuse failed persistence, expired replacements and stale account switches.
+- Add a closed account-deletion foundation with separate privacy ownership,
+  narrowly granted execution and resumable profile erasure under a pinned
+  disposition manifest. Public deletion routes remain disabled while full
+  cleanup and restore suppression are implemented. Add closed one-use same-account
+  deletion proof, capability and provider adapters, durable suppression binding
+  and status tokens; they remain unregistered until the full erasure journey passes.
+
+- Enforce pinned backup creation/expiry with a maximum 90-day restore window,
+  including checks before target creation and final restore success.
+- Add an independent signed suppression journal and separate durable minimum
+  for local deletion rehearsals, with exact replay and rollback refusal;
+  production authority and full restore suppression remain gated.
+- Add an offline decimal economics calculator for monthly contribution, CAC,
+  observed cohort LTV and cash runway, with explicit unavailable ratios and
+  private bounded files. Reports remain unverified arithmetic, not commercial
+  evidence or funding approval.
+- Require private, engine-replayed action evidence when publishing, activating
+  or loading restored production text releases. Keep human screening/editorial
+  decisions separate; deterministic multilingual full-schedule samples do not
+  claim exhaustive production coverage.
+- Add Admin Noin grants and full original-spend refunds with exact-session
+  authorization and atomic decision, audit, wallet, ledger and receipt writes;
+  retries preserve one credit and leave entitlements and gameplay totals intact.
+- Add audited weekly leaderboard exclusion, reinstatement and closure with
+  immutable closed results and bounded restart recovery; raw points and earning
+  caps remain unchanged.
+- Protect contribution terms against database rewrites and all retained user
+  and contribution consent against cascading truncation; preserve append and
+  acceptance workflows through additive migration 28.
+
+- Add explicit, bounded stale room-routing cleanup for verified restored local
+  fixtures, preserving security keys and absolute expiries; retire unused Redis
+  room-routing methods while retaining the active Admin rate limiter.
+- Refuse accepted-input capture, publication, activation and new release reads
+  for deleted or fenced authors; serialize release access before active mappings.
+  Atomic author withdrawal and shared-data erasure remain later deletion work.
+- Add bounded opaque reward claims and immutable signed AdMob receipts with
+  replay protection. Handlers remain closed; no new bonus payout is enabled.
+- Capture immutable Premium bonus eligibility at authoritative match start,
+  including Local Rooms, under the same account locks and transaction as
+  admission. Historical absence remains unknown; bonus payouts and the
+  interrupted-match policy remain unfinished.
+- Retain Flutter's Android Gradle compatibility flags; Android debug and Web
+  artifacts build with the current project SDK. Package size is informational
+  in CI under the owner's decision; platform build checks remain required.
+
 ### Physical cutover controller — 2026-09-19
 
-- Add an offline controller that records closing, disables runtime/migrator
+- Add an offline controller that records closing, disables runtime, migrator and privacy-executor
   logins, terminates matching existing writer sessions, and seals only after
   durable pending-work and physical database checks pass.
 - Bind a sealed source to one independent target cluster and verify restored

@@ -195,4 +195,5 @@ rewarded_ads:
   key_refresh_min_s: 60
   max_concurrent_requests: 4
   claim_ttl_s: 1800
+  max_claims_per_match_window: 4
   ad_units: {}

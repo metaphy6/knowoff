@@ -26,11 +26,12 @@ var (
 // TextValueStore stores contract/value facts only, never hidden live game state.
 // Callers supply authenticated accounts and server-owned clocks/identities.
 type TextValueStore struct {
-	owner        *TextOwner
-	db           *sql.DB
-	tuning       config.TuningConfig
-	beforeCommit func() error
-	startGuard   func(context.Context, *sql.Tx, TextMatchRecord, []string, time.Time) error
+	requireAdmissionBindings bool
+	owner                    *TextOwner
+	db                       *sql.DB
+	tuning                   config.TuningConfig
+	beforeCommit             func() error
+	startGuard               func(context.Context, *sql.Tx, TextMatchRecord, []string, time.Time) error
 }
 
 func NewTextValueStore(db *sql.DB, tuning config.TuningConfig) *TextValueStore {
@@ -184,6 +185,9 @@ func (s *TextValueStore) Reserve(ctx context.Context, a TextReservation) error {
 		if err := valueAccountLock(ctx, tx, a.AccountID); err != nil {
 			return err
 		}
+		if err := s.checkAdmissionBindings(ctx, tx, []string{a.AccountID}, a.Prototype); err != nil {
+			return err
+		}
 		if err := checkTextTrust(ctx, tx, []string{a.AccountID}, a.At); err != nil {
 			return err
 		}
@@ -225,7 +229,10 @@ func (s *TextValueStore) Reserve(ctx context.Context, a TextReservation) error {
 		}
 		processOwnerID, processGeneration := s.processOwner()
 		_, err = tx.ExecContext(ctx, `INSERT INTO text_admissions(id,account_id,entry_path,prototype,access_kind,quota_day,reserved_at,state,process_owner_id,process_generation) VALUES($1,$2,$3,$4,$5,$6,$7,'reserved',$8,$9)`, a.ID, a.AccountID, a.EntryPath, a.Prototype, kind, valueDay(a.At), a.At, processOwnerID, processGeneration)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.checkAdmissionBindings(ctx, tx, []string{a.AccountID}, a.Prototype)
 	})
 }
 func (s *TextValueStore) CancelReservation(ctx context.Context, id, account string) error {
@@ -458,6 +465,9 @@ func (s *TextValueStore) Start(ctx context.Context, id, owner string, epoch int6
 		for i, a := range admissions {
 			ids[i] = a.account
 		}
+		if err = s.checkAdmissionBindings(ctx, tx, ids, m.record.Prototype); err != nil {
+			return err
+		}
 		if err = checkTextTrust(ctx, tx, ids, at); err != nil {
 			return err
 		}
@@ -490,8 +500,14 @@ func (s *TextValueStore) Start(ctx context.Context, id, owner string, epoch int6
 				return err
 			}
 		}
+		if err = captureTextBonusEligibility(ctx, tx, m.record, ids, at); err != nil {
+			return err
+		}
 		_, err = tx.ExecContext(ctx, `UPDATE text_matches SET state='started',started_at=$2 WHERE id=$1`, id, at)
-		return err
+		if err != nil {
+			return err
+		}
+		return s.checkAdmissionBindings(ctx, tx, ids, m.record.Prototype)
 	})
 }
 func (s *TextValueStore) Interrupt(ctx context.Context, id, owner string, epoch int64, at time.Time) error {

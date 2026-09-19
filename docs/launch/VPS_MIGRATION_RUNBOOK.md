@@ -47,6 +47,15 @@ before combining them in an operator-approved release window.
   reviewed retention/consent policy and actual device results remain distinct
   release gates; synthetic receipts cannot certify live purchases.
 
+The latest head-34 cutover fixture uses separate schema and privacy
+NOLOGIN owners, runtime, migrator, privacy executor, capture and offline control.
+Control fences all three LOGIN writers and their existing sessions. Exact
+private-table/function ownership, signatures, bodies and exact source ACLs are verified;
+unbound deletion-suppression publication prevents sealing. The two-cluster
+rehearsal preserves 90 domain tables plus cutover authority. Source SQL fencing
+still requires a separately proven external publisher/provider drain.
+See the [current evidence](../reports/2026-09-19-text-transition-resumption.md).
+
 ## 1. Prepare a concrete release manifest
 
 Record source and target host, operator, window, rollback owner, database
@@ -144,6 +153,14 @@ Capture PostgreSQL while writers are quiescent. Encrypt and restrict access to
 the backup; include schema, data, sequences, constraints and required roles/
 privileges, documenting any exclusions. Verify the dump is readable and record
 its checksum/size/tool versions. A nonempty backup file alone is insufficient.
+
+Fixture backup manifests now pin UTC capture-start creation and expiry, with a
+maximum 90-day lifetime. Restore and restore dry-run refuse missing or malformed
+windows, future creation and the exact expiry instant. Restore rechecks expiry
+before creating its isolated target and before certifying success. Hash-only
+`verify` remains an integrity inspection; it does not authorize restoring an
+expired copy. This enforces lifetime admission, not deletion of expired copies
+or fresh independent deletion suppression; those D5 obligations remain open.
 
 Use the actual schema inventory, then record counts and deterministic row/value
 checksums for every table. The retained legacy schema includes:

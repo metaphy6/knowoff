@@ -197,6 +197,9 @@ func run() (runErr error) {
 	})
 
 	adminMux := http.NewServeMux()
+	operatorHandler := adminManager.OperatorHandler(textService.operatorHooks(db, authManager, economyManager))
+	adminMux.Handle("/admin/operators", operatorHandler)
+	adminMux.Handle("/admin/operators/", operatorHandler)
 	adminMux.Handle("/admin/runtime/", adminManager.RuntimeHandler(textService.adminRuntimeHooks()))
 	adminMux.Handle("/admin/portal/", adminManager.PortalHandler(portalManager))
 	adminMux.Handle("/admin/", adminManager.Handler(noticesManager))
@@ -258,6 +261,9 @@ func run() (runErr error) {
 	})
 	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
 		portalManager.RunCommunity(ctx, func(err error) { logger.Error("community maintenance pending", "error", err) })
+	})
+	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
+		textService.runOperatorMaintenance(ctx, db, func(err error) { logger.Error("operator delivery pending", "error", err) })
 	})
 	lifecycle.Workers.Go(runCtx, func(ctx context.Context) {
 		textService.Lobby.Run(ctx, func(err error) { logger.Error("text match tick failed", "error", err) })

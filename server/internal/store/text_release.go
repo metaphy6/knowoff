@@ -14,6 +14,7 @@ import (
 	v2 "github.com/knowoff/knowoff/server/internal/transport/v2"
 	"github.com/knowoff/knowoff/server/pkg/gamecontract"
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 )
 
 var ErrTextReleaseUnavailable = errors.New("text.release_unavailable")
@@ -57,8 +58,8 @@ func textReleaseAudit(ctx context.Context, tx *sql.Tx, admin, action, id string,
 }
 
 type acceptedSource struct {
-	text, terms, attribution, reviewer string
-	consented, reviewed                time.Time
+	text, terms, attribution, reviewer, account string
+	consented, reviewed                         time.Time
 }
 
 func readAcceptedSource(ctx context.Context, q interface {
@@ -68,17 +69,31 @@ func readAcceptedSource(ctx context.Context, q interface {
 	query := ""
 	switch kind {
 	case "portal_submission":
-		query = `SELECT p.content,p.terms_version,p.terms_accepted_at,p.decided_at,p.decided_by,a.nickname FROM portal_submissions p JOIN accounts a ON a.id=p.account_id WHERE p.id=$1 AND p.media_type='text' AND p.status IN ('approved','published') AND p.decided_at IS NOT NULL AND p.decided_by IS NOT NULL`
+		query = `SELECT p.content,p.terms_version,p.terms_accepted_at,p.decided_at,p.decided_by,a.nickname,p.account_id FROM portal_submissions p JOIN accounts a ON a.id=p.account_id WHERE p.id=$1 AND p.media_type='text' AND p.status IN ('approved','published') AND p.decided_at IS NOT NULL AND p.decided_by IS NOT NULL`
 	case "challenge_entry":
-		query = `SELECT p.content,p.terms_version,p.terms_accepted_at,p.screen_decided_at,p.screen_decided_by,a.nickname FROM challenge_entries p JOIN accounts a ON a.id=p.account_id WHERE p.id=$1 AND p.entry_type='text' AND p.status='approved' AND p.screen_decided_at IS NOT NULL AND p.screen_decided_by IS NOT NULL`
+		query = `SELECT p.content,p.terms_version,p.terms_accepted_at,p.screen_decided_at,p.screen_decided_by,a.nickname,p.account_id FROM challenge_entries p JOIN accounts a ON a.id=p.account_id WHERE p.id=$1 AND p.entry_type='text' AND p.status='approved' AND p.screen_decided_at IS NOT NULL AND p.screen_decided_by IS NOT NULL`
 	default:
 		return v, ErrTextArchiveConflict
 	}
 	if lock {
 		query += " FOR SHARE OF p"
 	}
-	err := q.QueryRowContext(ctx, query, id).Scan(&v.text, &v.terms, &v.consented, &v.reviewed, &v.reviewer, &v.attribution)
-	return v, err
+	err := q.QueryRowContext(ctx, query, id).Scan(&v.text, &v.terms, &v.consented, &v.reviewed, &v.reviewer, &v.attribution, &v.account)
+	if err != nil {
+		return v, err
+	}
+	// The source-row lock may have waited behind confirmation. Use a new
+	// READ COMMITTED statement after that wait, without acquiring a creator
+	// account lock after the source lock. Read-only previews retain their
+	// existing snapshot; the authoritative start always repeats this check.
+	var available bool
+	if err = q.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM accounts a WHERE a.id=$1 AND a.deleted_at IS NULL AND NOT EXISTS(SELECT 1 FROM account_deletion_fences f WHERE f.account_id=a.id))`, v.account).Scan(&available); err != nil {
+		return v, err
+	}
+	if !available {
+		return v, ErrTextReleaseUnavailable
+	}
+	return v, nil
 }
 
 // CaptureAccepted rescreens immutable approved bytes and retains original consent,
@@ -160,7 +175,7 @@ func (s *TextReleaseStore) Publish(ctx context.Context, admin string, candidate 
 		return ErrTextArchiveConflict
 	}
 	m := candidate.Manifest()
-	if err := candidate.ValidateActivation(m.RulesVersion, s.dealing()); err != nil {
+	if err := textcert.ValidateActivationContext(ctx, candidate, m.RulesVersion, s.tuning); err != nil {
 		return err
 	}
 	bundle := candidate.Bundle()
@@ -185,6 +200,9 @@ func (s *TextReleaseStore) Publish(ctx context.Context, admin string, candidate 
 		if err == nil {
 			if oldHash != lineage.ManifestSHA256 || oldSnapshot != lineage.SnapshotSHA256 || oldClass != access.Class || oldKey != access.EntitlementKey {
 				return ErrTextArchiveConflict
+			}
+			if err := validateReleaseInputs(ctx, tx, bundle, true); err != nil {
+				return err
 			}
 			return textAdmin(ctx, tx, admin)
 		}
@@ -247,7 +265,7 @@ func (s *TextReleaseStore) load(ctx context.Context, q interface {
 	if snap.ManifestSHA256() != manifestHash || snap.SHA256() != snapshotHash {
 		return nil, a, ErrTextArchiveConflict
 	}
-	if err = snap.ValidateActivation(snap.Manifest().RulesVersion, s.dealing()); err != nil {
+	if err = textcert.ValidateActivationContext(ctx, snap, snap.Manifest().RulesVersion, s.tuning); err != nil {
 		return nil, a, err
 	}
 	if err = ctx.Err(); err != nil {
@@ -443,9 +461,15 @@ func (s *TextReleaseStore) checkPackAccess(ctx context.Context, tx *sql.Tx, spon
 		return ErrTextReleaseUnavailable
 	}
 	var id string
-	if err := tx.QueryRowContext(ctx, `SELECT a.release_id FROM text_active_releases a JOIN text_releases r ON r.release_id=a.release_id WHERE a.release_id=$1 AND a.language=$2 AND a.rules_version=$3 AND r.withdrawn_at IS NULL FOR SHARE OF a,r`, settings.PackReleaseID, settings.ContentLanguage, settings.RulesVersion).Scan(&id); err != nil {
+	// Match the withdrawal lock order explicitly: release, then active mapping,
+	// then source rows. A joined FOR SHARE has no guaranteed row-lock order.
+	if err := tx.QueryRowContext(ctx, `SELECT release_id FROM text_releases WHERE release_id=$1 AND withdrawn_at IS NULL FOR SHARE`, settings.PackReleaseID).Scan(&id); err != nil {
 		return ErrTextReleaseUnavailable
 	}
+	if err := tx.QueryRowContext(ctx, `SELECT release_id FROM text_active_releases WHERE release_id=$1 AND language=$2 AND rules_version=$3 FOR SHARE`, id, settings.ContentLanguage, settings.RulesVersion).Scan(&id); err != nil {
+		return ErrTextReleaseUnavailable
+	}
+
 	snap, access, err := s.load(ctx, tx, id)
 	if err != nil {
 		return err

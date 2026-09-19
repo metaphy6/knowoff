@@ -7,6 +7,16 @@ import unittest
 
 
 class CutoverFixtureSafetyTests(unittest.TestCase):
+    def test_privacy_source_acl_matches_separately_reviewed_verifier(self):
+        import re
+        import cutover_integration as proof
+        source = (proof.ROOT / "server/internal/store/cutover_privacy.go").read_text()
+        body = source.split("var cutoverPrivacySourceACL = [][3]string{", 1)[1].split("\n}", 1)[0]
+        actual = re.findall(r'\{"([^"]+)", "([^"]*)", "([^"]+)"\}', body)
+        self.assertEqual(tuple(actual), proof.PRIVACY_SOURCE_ACL)
+        self.assertEqual(len(actual), 37)
+        self.assertEqual(len(set(actual)), len(actual))
+
     def test_resource_identity_refuses_foreign_or_exposed_containers(self):
         import cutover_integration as proof
         receipt = proof.resource_receipt("a" * 24, os.getuid())
@@ -88,7 +98,7 @@ class CutoverFixtureSafetyTests(unittest.TestCase):
         fixture = object.__new__(proof.Fixture)
         fixture.runner = Recorder()
         fixture.ids = {"helper": "b" * 64}
-        fixture.roles = {"Roles": {"Database": "fixture", "Owner": "own", "Runtime": "rw", "Capture": "rd", "Migrator": "mg"}, "Control": "ctrl", "WritersEnabled": False}
+        fixture.roles = {"Roles": {"Database": "fixture", "Owner": "own", "Runtime": "rw", "Capture": "rd", "Migrator": "mg", "PrivacyOwner": "po", "PrivacyExecutor": "px"}, "Control": "ctrl", "WritersEnabled": False}
         fixture.prefix = "fixture-prefix"
         fixture.validate = lambda: None
         request = {"proof": {"lease": "synthetic-private-lease"}}

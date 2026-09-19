@@ -7,8 +7,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/knowoff/knowoff/server/internal/admin"
 	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
+	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/game"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/portal"
@@ -60,7 +62,7 @@ func newTextRuntime(ctx context.Context, db *sql.DB, cfg *config.Config, prototy
 			_ = owner.Release(cleanup)
 		}
 	}()
-	values, err := store.NewTextValueStore(db, cfg.Tuning).WithStartGuard(releases.ValidateStart).WithOwner(owner)
+	values, err := store.NewTextValueStore(db, cfg.Tuning).RequireAdmissionBindings().WithStartGuard(releases.ValidateStart).WithOwner(owner)
 	if err != nil {
 		return nil, err
 	}
@@ -200,4 +202,58 @@ func (r *textRuntime) bindModeration(pm *portal.Manager, am *auth.Manager) {
 	pm.SetAccountDisconnect(func(ctx context.Context, account string) error {
 		return r.Lobby.EnforceAccount(ctx, account, am.RevokeEnforcedSessions)
 	})
+}
+
+func (r *textRuntime) sanctionDelivery(s *store.AccountSanctionStore) func(context.Context, string) error {
+	return func(ctx context.Context, id string) error {
+		return r.Lobby.EnforceSanction(ctx, id, func(ctx context.Context, id string, b lobby.TextPeerBinding) (bool, error) {
+			return s.ActiveForBinding(ctx, id, b.AccountID, b.DeviceHash)
+		})
+	}
+}
+
+func (r *textRuntime) operatorHooks(db *sql.DB, am *auth.Manager, em *economy.Manager) admin.OperatorHooks {
+	sanctions := store.NewAccountSanctionStore(db)
+	return admin.OperatorHooks{Decide: func(ctx context.Context, actor string, c store.AdminOperationCommand) (store.AdminOperationReceipt, error) {
+		switch c.Kind {
+		case "room_kick", "room_close":
+			return r.Lobby.DecideRoomOperation(ctx, actor, c)
+		case "noin_grant", "noin_refund":
+			return em.CorrectNoin(ctx, actor, c)
+		case "account_sanction", "sanction_lift":
+			receipt, err := sanctions.Apply(ctx, actor, c, am.RevokeSessionsTx)
+			if err != nil {
+				return store.AdminOperationReceipt{}, err
+			}
+			if c.Kind == "account_sanction" && receipt.Status == "pending" {
+				if err = sanctions.DeliverPending(ctx, c.ID, r.sanctionDelivery(sanctions)); err == nil {
+					if completed, e := store.NewAdminOperationStore(db).Get(ctx, c.ID); e == nil {
+						return completed, nil
+					}
+				}
+			}
+			return receipt, nil
+		default:
+			return store.AdminOperationReceipt{}, store.ErrAdminOperation
+		}
+	}}
+}
+
+func (r *textRuntime) runOperatorMaintenance(ctx context.Context, db *sql.DB, onError func(error)) {
+	sanctions := store.NewAccountSanctionStore(db)
+	weekly := store.NewLeaderboardAdminStore(db)
+	tick := time.NewTicker(5 * time.Second)
+	defer tick.Stop()
+	for {
+		for _, err := range []error{sanctions.ResumePending(ctx, 20, r.sanctionDelivery(sanctions)), weekly.ResumePending(ctx, 20)} {
+			if err != nil && ctx.Err() == nil && onError != nil {
+				onError(err)
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-tick.C:
+		}
+	}
 }

@@ -34,8 +34,12 @@ func lockPortalAccounts(ctx context.Context, tx *sql.Tx, ids ...string) error {
 }
 
 func portalActorAllowedTx(ctx context.Context, tx *sql.Tx, account string, at time.Time) error {
+	if err := checkPortalCredentialTx(ctx, tx, account); err != nil {
+		return err
+	}
 	var allowed bool
 	err := tx.QueryRowContext(ctx, `SELECT deleted_at IS NULL AND banned_at IS NULL AND (suspended_until IS NULL OR suspended_until<=$2)
+ AND NOT direct_account_sanction_active(a.id)
  AND NOT EXISTS(SELECT 1 FROM guard_freezes f WHERE f.account_id=a.id AND f.dismissed_at IS NULL AND f.converted_to_ban_at IS NULL AND f.expires_at>$2)
  FROM accounts a WHERE id=$1`, account, at).Scan(&allowed)
 	if err != nil {

@@ -30,6 +30,7 @@ var (
 // Linking requires the current player credential. Restoration is an explicit
 // separate intent: an invalid or expired credential never falls back to it.
 type OAuthStartRequest struct {
+	DeviceHash  string `json:"device_hash"`
 	Provider    string `json:"provider"`
 	Intent      string `json:"intent"`
 	AccessToken string `json:"-"`
@@ -56,7 +57,7 @@ func (m *Manager) BeginOAuth(ctx context.Context, req OAuthStartRequest) (*OAuth
 	if cfg == nil {
 		return nil, ErrOAuthUnavailable
 	}
-	if (req.Intent != "link" && req.Intent != "restore") || req.Principal == "" || len(req.Principal) > 256 || (req.Intent == "restore" && req.AccessToken != "") {
+	if !validInstallation(req.DeviceHash) || (req.Intent != "link" && req.Intent != "restore") || req.Principal == "" || len(req.Principal) > 256 || (req.Intent == "restore" && req.AccessToken != "") {
 		return nil, ErrOAuthInvalid
 	}
 	state, err := randomCodeVerifier()
@@ -94,12 +95,15 @@ func (m *Manager) BeginOAuth(ctx context.Context, req OAuthStartRequest) (*OAuth
 			return nil, ErrOAuthInvalid
 		}
 		claims, e := m.parseToken(req.AccessToken, TokenAccess)
-		if e != nil {
+		if e != nil || claims.DeviceHash != req.DeviceHash {
 			return nil, ErrOAuthInvalid
 		}
 		initiatingToken = claims.ID
 		account, epoch = id, generation
 		principal = "account:" + id
+	}
+	if err := installationAllowed(ctx, tx, req.DeviceHash, "player"); err != nil {
+		return nil, ErrOAuthInvalid
 	}
 	// A bounded global flow budget also bounds unauthenticated restoration state.
 	// Account locks precede this lock, matching callback/result issuance ordering.
@@ -117,7 +121,7 @@ func (m *Manager) BeginOAuth(ctx context.Context, req OAuthStartRequest) (*OAuth
 		return nil, ErrOAuthRateLimited
 	}
 	flow := &OAuthStart{FlowID: uuid.NewString(), CompletionSecret: secret}
-	if err = tx.QueryRowContext(ctx, `INSERT INTO oauth_flows(id,provider,intent,state_hash,completion_hash,nonce_hash,code_verifier,requester_hash,account_id,session_epoch,initiating_token_id,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,statement_timestamp(),statement_timestamp()+interval '10 minutes') RETURNING expires_at`, flow.FlowID, req.Provider, req.Intent, codeChallenge(state), codeChallenge(secret), codeChallenge(nonce), verifier, codeChallenge(principal), account, epoch, initiatingToken).Scan(&flow.ExpiresAt); err != nil {
+	if err = tx.QueryRowContext(ctx, `INSERT INTO oauth_flows(id,provider,intent,state_hash,completion_hash,nonce_hash,code_verifier,requester_hash,account_id,session_epoch,initiating_token_id,device_hash,created_at,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,statement_timestamp(),statement_timestamp()+interval '10 minutes') RETURNING expires_at`, flow.FlowID, req.Provider, req.Intent, codeChallenge(state), codeChallenge(secret), codeChallenge(nonce), verifier, codeChallenge(principal), account, epoch, initiatingToken, req.DeviceHash).Scan(&flow.ExpiresAt); err != nil {
 		return nil, err
 	}
 	options := []oauth2.AuthCodeOption{oauth2.SetAuthURLParam("prompt", "select_account")}
@@ -125,6 +129,13 @@ func (m *Manager) BeginOAuth(ctx context.Context, req OAuthStartRequest) (*OAuth
 		options = append(options, oauth2.SetAuthURLParam("nonce", nonce), oauth2.SetAuthURLParam("code_challenge", codeChallenge(verifier)), oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 	}
 	flow.URL = cfg.AuthCodeURL(state, options...)
+	if req.Intent == "link" {
+		if _, err = m.ValidateAccessTokenTx(ctx, tx, req.AccessToken); err != nil {
+			return nil, ErrOAuthInvalid
+		}
+	} else if err = installationAllowed(ctx, tx, req.DeviceHash, "player"); err != nil {
+		return nil, ErrOAuthInvalid
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -191,7 +202,11 @@ func (m *Manager) completeOAuthIdentity(ctx context.Context, id, intent string, 
 		return ErrOAuthInvalid
 	}
 	var status string
-	if err = tx.QueryRowContext(ctx, `SELECT status FROM oauth_flows WHERE id=$1 AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id).Scan(&status); err != nil || status != "exchanging" {
+	var installation sql.NullString
+	if err = tx.QueryRowContext(ctx, `SELECT status,device_hash FROM oauth_flows WHERE id=$1 AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id).Scan(&status, &installation); err != nil || status != "exchanging" {
+		return ErrOAuthInvalid
+	}
+	if err = linkInstallationTx(ctx, tx, account.String, installation.String, purpose); err != nil {
 		return ErrOAuthInvalid
 	}
 	if intent == "restore" {
@@ -203,6 +218,9 @@ func (m *Manager) completeOAuthIdentity(ctx context.Context, id, intent string, 
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE oauth_flows SET status='completed',account_id=$2,session_epoch=$3 WHERE id=$1`, id, account.String, epoch); err != nil {
+		return err
+	}
+	if err = freshOAuthFlow(ctx, tx, id); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -248,9 +266,16 @@ func (m *Manager) OAuthResult(ctx context.Context, id, secret string) (*TokenPai
 	}
 	var bound int64
 	var at sql.NullTime
-	var accessID, refreshID, configHash sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT session_epoch,issued_at,access_id,refresh_id,issuance_config_hash FROM oauth_flows WHERE id=$1 AND completion_hash=$2 AND status='completed' AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id, codeChallenge(secret)).Scan(&bound, &at, &accessID, &refreshID, &configHash)
+	var accessID, refreshID, configHash, installation sql.NullString
+	err = tx.QueryRowContext(ctx, `SELECT session_epoch,issued_at,access_id,refresh_id,issuance_config_hash,device_hash FROM oauth_flows WHERE id=$1 AND completion_hash=$2 AND status='completed' AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id, codeChallenge(secret)).Scan(&bound, &at, &accessID, &refreshID, &configHash, &installation)
 	if err != nil || bound != epoch {
+		return nil, ErrOAuthInvalid
+	}
+	if installation.Valid {
+		if err = linkInstallationTx(ctx, tx, account.String, installation.String, purpose); err != nil {
+			return nil, ErrOAuthInvalid
+		}
+	} else if !at.Valid {
 		return nil, ErrOAuthInvalid
 	}
 	if at.Valid && subtle.ConstantTimeCompare([]byte(configHash.String), []byte(m.oauthIssuanceConfigHash())) != 1 {
@@ -265,14 +290,17 @@ func (m *Manager) OAuthResult(ctx context.Context, id, secret string) (*TokenPai
 		}
 	}
 	var revoked bool
-	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM auth_revocations WHERE token_id IN ($1,$2))`, accessID.String, refreshID.String).Scan(&revoked); err != nil {
+	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM auth_revocations WHERE token_id=$1 OR (token_id=$2 AND NOT ($3 AND EXISTS(SELECT 1 FROM auth_installation_rotations b WHERE b.old_refresh_id=$2 AND b.account_id=$4 AND b.session_epoch=$5))))`, accessID.String, refreshID.String, !installation.Valid, account.String, epoch).Scan(&revoked); err != nil {
 		return nil, err
 	}
 	if revoked || !at.Time.Add(m.accessTTL).After(time.Now()) {
 		return nil, ErrOAuthInvalid
 	}
-	pair, err := m.signTokensAt(account.String, "", purpose, epoch, at.Time, accessID.String, refreshID.String)
+	pair, err := m.signTokensAt(account.String, installation.String, purpose, epoch, at.Time, accessID.String, refreshID.String)
 	if err != nil {
+		return nil, err
+	}
+	if err = freshOAuthFlow(ctx, tx, id); err != nil {
 		return nil, err
 	}
 	if err = tx.Commit(); err != nil {
@@ -310,4 +338,14 @@ func (m *Manager) oauthIssuanceConfigHash() string {
 	digest := hmac.New(sha256.New, m.signingKey)
 	digest.Write(data)
 	return base64.RawURLEncoding.EncodeToString(digest.Sum(nil))
+}
+
+// Recheck after installation and identity writes: their locks can outlive the
+// flow even though the initial locked flow read was valid.
+func freshOAuthFlow(ctx context.Context, tx *sql.Tx, id string) error {
+	var allowed bool
+	if err := tx.QueryRowContext(ctx, `SELECT expires_at>clock_timestamp() AND NOT EXISTS(SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FROM oauth_flows WHERE id=$1`, id).Scan(&allowed); err != nil || !allowed {
+		return ErrOAuthInvalid
+	}
+	return nil
 }

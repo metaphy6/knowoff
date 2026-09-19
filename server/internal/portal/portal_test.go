@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/profile"
@@ -23,6 +24,11 @@ import (
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+	return setupTestDBWithTerms(t, true)
+}
+
+func setupTestDBWithTerms(t *testing.T, seedTerms bool) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("KNOWOFF_TEST_DSN")
 	token := os.Getenv("KNOWOFF_TEST_DB_TOKEN")
@@ -47,22 +53,18 @@ func setupTestDB(t *testing.T) *sql.DB {
 		db.Close()
 		t.Fatal("refusing non-disposable database")
 	}
+	// Identity was checked above. Rebuild this disposable fixture rather than
+	// weakening production consent/value guards to truncate retained history.
+	if _, err := db.Exec(`DROP SCHEMA public CASCADE; CREATE SCHEMA public`); err != nil {
+		t.Fatalf("reset disposable portal schema: %v", err)
+	}
 	if err := store.MigrateUp(db, "../../migrations"); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	if _, err := db.ExecContext(context.Background(),
-		`TRUNCATE TABLE challenge_votes, challenge_entries, challenge_winners, challenge_topics,
-		 portal_submission_counts, portal_submissions, portal_terms, portal_role_applications,
-		 portal_roles, guard_freezes RESTART IDENTITY CASCADE`); err != nil {
-		t.Fatalf("truncate portal tables: %v", err)
-	}
-	if _, err := db.Exec(`INSERT INTO challenge_current_winner(singleton) VALUES(true) ON CONFLICT DO NOTHING`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := db.ExecContext(context.Background(),
-		`INSERT INTO portal_terms (version, title, body, active_from) VALUES ('v1', 'Terms', 'Terms body', now())
-		 ON CONFLICT (version) DO NOTHING`); err != nil {
-		t.Fatalf("seed terms: %v", err)
+	if seedTerms {
+		if _, err := db.Exec(`INSERT INTO portal_terms(version,title,body,active_from) VALUES('v1','Terms','Terms body',now())`); err != nil {
+			t.Fatalf("seed terms: %v", err)
+		}
 	}
 	return db
 }
@@ -158,6 +160,18 @@ func (fakeAuth) ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token str
 		return "", err
 	}
 	return token, nil
+}
+
+func (f fakeAuth) ValidateAccessBindingTx(ctx context.Context, tx *sql.Tx, token string) (auth.AccessBinding, error) {
+	account, err := f.ValidateAccessTokenTx(ctx, tx, token)
+	if err != nil {
+		return auth.AccessBinding{}, err
+	}
+	hash := "fixture-" + account
+	if _, err = tx.ExecContext(ctx, `INSERT INTO auth_installations(device_hash) VALUES($1) ON CONFLICT DO NOTHING`, hash); err != nil {
+		return auth.AccessBinding{}, err
+	}
+	return auth.AccessBinding{AccountID: account, DeviceHash: hash}, nil
 }
 
 var _ AuthClient = fakeAuth{}
@@ -738,15 +752,11 @@ func TestDealSimulatorHandlerRetiredBeforeContentWork(t *testing.T) {
 }
 
 func TestEnsureActiveTermsVersion(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupTestDBWithTerms(t, false)
 	defer db.Close()
 	mgr := newTestManager(t, db)
 	ctx := context.Background()
 
-	// setupTestDB seeds v1; clear it to test Ensure.
-	if _, err := db.ExecContext(ctx, `DELETE FROM portal_terms WHERE version = 'v1'`); err != nil {
-		t.Fatalf("delete terms: %v", err)
-	}
 	if err := mgr.EnsureActiveTermsVersion(ctx); err == nil {
 		t.Fatal("missing owner-authored terms were silently manufactured")
 	}

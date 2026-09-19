@@ -56,7 +56,7 @@ func TestCutoverCommandRefusesAmbiguousInputWithoutEcho(t *testing.T) {
 func TestCutoverCommandMissingCredentialsAndNetworkErrorArePrivate(t *testing.T) {
 	for _, dsn := range []string{"", "postgres://private-user:private-password@127.0.0.1:1/private-database?sslmode=disable"} {
 		var out, diagnostics bytes.Buffer
-		body := `{"roles":{"Roles":{"Database":"private_database","Owner":"owner","Runtime":"runtime","Capture":"capture","Migrator":"migrator"},"Control":"control","WritersEnabled":true}}`
+		body := `{"roles":{"Roles":{"Database":"private_database","Owner":"owner","Runtime":"runtime","Capture":"capture","Migrator":"migrator","PrivacyOwner":"privacy_owner","PrivacyExecutor":"privacy_executor"},"Control":"control","WritersEnabled":true}}`
 		if status := run([]string{"--operation=identity", "--timeout=1ms"}, func(string) string { return dsn }, strings.NewReader(body), &out, &diagnostics); status == 0 || out.Len() != 0 {
 			t.Fatal("missing or unavailable connection must refuse")
 		}

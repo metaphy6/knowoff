@@ -8,8 +8,8 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// RedisClient is a thin wrapper around go-redis that exposes only the
-// operations the game server needs for room routing and presence.
+// RedisClient owns the runtime Redis connection, health check and admin limiter.
+// V2 room and queue state belongs to the in-process TextManager.
 type RedisClient struct {
 	client *redis.Client
 }
@@ -35,26 +35,7 @@ func (r *RedisClient) Close() error {
 	return r.client.Close()
 }
 
-// RegisterRoom maps roomID -> nodeID with an expiry so stale mappings fade.
-func (r *RedisClient) RegisterRoom(ctx context.Context, roomID, nodeID string, ttl time.Duration) error {
-	key := fmt.Sprintf("room:%s:node", roomID)
-	return r.client.Set(ctx, key, nodeID, ttl).Err()
-}
-
-// RoomNode returns the node responsible for a room, or "" if none.
-func (r *RedisClient) RoomNode(ctx context.Context, roomID string) (string, error) {
-	key := fmt.Sprintf("room:%s:node", roomID)
-	return r.client.Get(ctx, key).Result()
-}
-
-// UnregisterRoom removes the room→node mapping.
-func (r *RedisClient) UnregisterRoom(ctx context.Context, roomID string) error {
-	key := fmt.Sprintf("room:%s:node", roomID)
-	return r.client.Del(ctx, key).Err()
-}
-
 // AllowIntent implements a sliding-window per-account intent rate limit.
-// It returns true if the intent is allowed under the given window and max.
 func (r *RedisClient) AllowIntent(ctx context.Context, accountID string, window time.Duration, max int) (bool, error) {
 	if accountID == "" || r.client == nil {
 		return true, nil

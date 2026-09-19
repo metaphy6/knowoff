@@ -10,6 +10,7 @@ import (
 
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"github.com/lib/pq"
 	"gopkg.in/yaml.v3"
 )
@@ -154,6 +155,11 @@ func TestAcceptedContributionReleaseJourneyPreservesValueAndConsent(t *testing.T
 		b.Artifacts[name] = data
 		b.Manifest.CertificationArtifacts[name] = media.ContentHash(data)
 	}
+	actions, err := textcert.Certify(snapshot, c, 1, 42)
+	if err != nil {
+		t.Fatal(err)
+	}
+	addArtifact("action-replay.json", actions)
 	certificate := media.CertifyText(snapshot, tuning, 20, 42)
 	if !certificate.Passed {
 		t.Fatal("fixture retained-card certification failed", certificate.Errors)

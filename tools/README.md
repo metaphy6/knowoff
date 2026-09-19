@@ -4,10 +4,56 @@
 tools/
 ├── mediapack/    # Go CLI: reviewed text preparation → certify → publish → simulate
 ├── gamebot/      # Go CLI: protocol-level dev/test bots
-└── cohort_report.py # Python stdlib: synthetic offline cohort calculations
+├── cohort_report.py # Python stdlib: synthetic offline cohort calculations
+└── economics_report.py # Python stdlib: unverified offline business arithmetic
 ```
 
 `mediapack` and `gamebot` are standalone Go modules that build against the same protocol and media libraries used by the server.
+
+`economics_report.py` implements the [Business Plan](../docs/product/BUSINESS_PLAN.md)
+formulas with decimal arithmetic. It verifies arithmetic and input shape only;
+every report says `unverified_arithmetic` and `launch_approval: false`. No quote,
+invoice, net settlement, staffing assumption or cash authority is verified by
+this tool. Use one declared three-letter currency label throughout; there is no
+exchange-rate conversion or currency-code registry lookup.
+
+```bash
+python3 tools/economics_report.py --input economics-input.json --output economics-report.json
+python3 -m unittest discover -s xops/test -p test_economics_report.py
+```
+
+The complete executable input example is `fixture()` in
+[`test_economics_report.py`](../xops/test/test_economics_report.py). All keys are
+required: root `schema_version: economics-v1`, `currency`, `month` (`YYYY-MM`),
+`monthly`, `cohort` and `cash`. Unknown/duplicate keys refuse. Counts are integers
+up to one billion; other numeric inputs are nonnegative decimal **strings** with
+at most 12 integer digits and six fractional places. Premium share is 0–1.
+`new_activated_humans` is a subset of monthly active humans; attributable
+acquisition spend cannot exceed that month's total acquisition expense.
+
+Monthly inputs follow the Business Plan names: player-matches per active human,
+Premium share, recognized net subscription per payer-month, net bulk receipts per
+active human, verified ads per non-Premium active human, net per thousand ads,
+runtime per **player-match**, content/support hours and hourly costs, provider
+costs, hosting/backups/monitoring and acquisition costs. Recognize annual
+subscriptions over the appropriate period before supplying input. Allocate
+incomplete/queue/retry infrastructure into the runtime unit cost; founder labor
+requires a cost assumption. Virtual Noin balances are never receipts.
+
+The optional `cohort` object (otherwise null) declares its observed half-open date
+horizon, activated-human count, net receipts and attributable costs. LTV uses
+that observed horizon only. The optional `cash` object has individually nullable
+`available`, `protected_reserve` and `monthly_burn`; cash burn is supplied
+separately from operating contribution. Zero burn produces unavailable runway,
+not infinity; reserve exhaustion produces zero months and an explicit shortfall.
+Zero denominators or missing inputs produce null ratios with a reason. Arithmetic
+keeps full precision until report rendering at six decimal places, half-even;
+currency denomination and rounding to spendable minor units remain external.
+
+Inputs are bounded to 64 KiB regular files; symlinks/FIFOs refuse. Output must be
+new and is written privately with mode `0600`. CLI output contains only status
+and the report SHA-256; failures do not echo paths or input values. These reports
+do not replace dated cost/settlement evidence or owner funding approval.
 
 `cohort_report.py` implements the bounded offline calculation slice of Phase
 7.6a. It accepts synthetic fixtures only; it has no live-data option, collector,
@@ -108,6 +154,7 @@ go run ./cmd/mediapack text-prepare -tuning ../../configs/gameplay/tuning.yaml -
 go run ./cmd/mediapack text-duplicates -tuning ../../configs/gameplay/tuning.yaml -input candidate.json -out duplicates.json
 go run ./cmd/mediapack text-certify -tuning ../../configs/gameplay/tuning.yaml -samples 20 -seed 71 -out technical.json -replay-out replay.json prepared
 go run ./cmd/mediapack text-simulate -tuning ../../configs/gameplay/tuning.yaml -samples 20 -seed 71 -out simulation.json -replay-out simulation-replay.json prepared
+go run ./cmd/mediapack text-actions -tuning ../../configs/gameplay/tuning.yaml -samples 1 -seed 71 -out action-replay.json prepared
 go run ./cmd/mediapack text-prepare -tuning ../../configs/gameplay/tuning.yaml -input candidate.json -evidence-dir reviewed-evidence -out certified
 go run ./cmd/mediapack text-publish -tuning ../../configs/gameplay/tuning.yaml -rules text-v1 -out published certified
 ```
@@ -127,9 +174,17 @@ it is written with mode `0600`, and seeds are absent from aggregate stdout.
 Keep replay files in privileged storage, outside client assets and public URLs.
 
 The evidence directory must contain `technical.json`, `replay.json`,
-`editorial.json`, `actions.json`, `screening.json` and `release.json`, matching
+`editorial.json`, `actions.json`, `screening.json`, `release.json` and
+`action-replay.json`, matching
 the shared typed evidence schemas. Activation validation checks hashes, tuning,
 every mode/size cell and recomputes the technical report from its replay.
+The separate `text-actions` command generates private (`0600`) deterministic
+full-schedule action witnesses with exact full runtime tuning and bounded
+action/timeout branches. Production publication and restored release loading
+replay these through the authoritative engine. Missing or changed requests,
+clocks, identities, tuning or coverage refuse publication. The sample count is
+per mode/size and includes two scenarios; these witnesses are not exhaustive
+production-state proof. Keep them private alongside the dealing replay.
 Claims in these files still need authentic review and action-proof records;
 test fixtures cannot establish that evidence. All output paths must be new.
 Publishing copies a validated immutable bundle; an identical destination is an

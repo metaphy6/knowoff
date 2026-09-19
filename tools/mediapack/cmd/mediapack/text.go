@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"github.com/knowoff/knowoff/tools/mediapack/internal/generator"
 	"gopkg.in/yaml.v3"
 )
@@ -17,7 +18,7 @@ import (
 // files only; authenticated activation/audit and contribution rewards remain
 // server operations. No command fabricates human/screening/action gate records.
 func runTextCommand(command string, args []string, out, errout io.Writer) int {
-	if command != "text-prepare" && command != "text-build-fixture" && command != "text-certify" && command != "text-simulate" && command != "text-publish" && command != "text-duplicates" {
+	if command != "text-prepare" && command != "text-build-fixture" && command != "text-certify" && command != "text-simulate" && command != "text-publish" && command != "text-duplicates" && command != "text-actions" {
 		fmt.Fprintln(errout, "unknown text command")
 		return 2
 	}
@@ -105,7 +106,7 @@ func runTextCommand(command string, args []string, out, errout io.Writer) int {
 			if bundle.Manifest.CertificationArtifacts == nil {
 				bundle.Manifest.CertificationArtifacts = map[string]string{}
 			}
-			for _, name := range []string{"technical.json", "editorial.json", "actions.json", "screening.json", "release.json", "replay.json"} {
+			for _, name := range []string{"technical.json", "editorial.json", "actions.json", "screening.json", "release.json", "replay.json", "action-replay.json"} {
 				raw, err := readTextInput(filepath.Join(*evidenceDir, name), limits.MaxFileBytes)
 				if err != nil {
 					return fail(err)
@@ -137,7 +138,11 @@ func runTextCommand(command string, args []string, out, errout io.Writer) int {
 			fmt.Fprintln(errout, "text-publish requires -rules")
 			return 2
 		}
-		if err := snapshot.ValidateActivation(*rules, tuning); err != nil {
+		fullTuning, err := loadActionTuning(*tuningPath)
+		if err != nil {
+			return fail(err)
+		}
+		if err := textcert.ValidateActivation(snapshot, *rules, fullTuning); err != nil {
 			return fail(err)
 		}
 		if _, err := os.Lstat(*output); err == nil {
@@ -162,6 +167,28 @@ func runTextCommand(command string, args []string, out, errout io.Writer) int {
 			seedSet = true
 		}
 	})
+	if command == "text-actions" {
+		if *samples < 1 || !seedSet {
+			return fail(fmt.Errorf("actions require positive -samples and explicit nonzero -seed"))
+		}
+		fullTuning, err := loadActionTuning(*tuningPath)
+		if err != nil {
+			return fail(err)
+		}
+		evidence, err := textcert.Certify(snapshot, fullTuning, *samples, *seed)
+		if err != nil {
+			return fail(err)
+		}
+		raw, err := json.Marshal(evidence)
+		if err != nil {
+			return fail(err)
+		}
+		if err := writeTextArtifact(*output, raw); err != nil {
+			return fail(err)
+		}
+		fmt.Fprintln(out, "private action evidence written; sampled full schedules, human release gates remain required")
+		return 0
+	}
 	if *samples < 1 || !seedSet || *replayPath == "" {
 		fmt.Fprintln(errout, "simulation requires positive -samples, explicit -seed and -replay-out")
 		return 2
@@ -268,4 +295,12 @@ func loadTextTuning(path string) (media.TextLimits, media.TextDealTuning, error)
 		return media.TextLimits{}, media.TextDealTuning{}, fmt.Errorf("missing or invalid text tuning values")
 	}
 	return limits, tuning, nil
+}
+
+func loadActionTuning(path string) (textcert.Tuning, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return textcert.Tuning{}, err
+	}
+	return textcert.DecodeTuning(raw)
 }

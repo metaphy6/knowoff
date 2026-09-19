@@ -124,12 +124,17 @@ func TestAuthRejectsDeletedMissingAccountsAndConcurrentRefresh(t *testing.T) {
 	defer db.Close()
 	m := newTestManager(db)
 	ctx := context.Background()
-	for _, mutation := range []string{"UPDATE accounts SET deleted_at=now() WHERE id=$1", "DELETE FROM accounts WHERE id=$1"} {
+	for _, missing := range []bool{false, true} {
 		p, err := m.AuthenticateDevice(ctx, HashDevice(uuid.NewString()))
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err = db.Exec(mutation, p.AccountID); err != nil {
+		if missing {
+			p, err = m.signTokens(uuid.NewString(), HashDevice(uuid.NewString()), "player", 0)
+		} else {
+			_, err = db.Exec("UPDATE accounts SET deleted_at=now() WHERE id=$1", p.AccountID)
+		}
+		if err != nil {
 			t.Fatal(err)
 		}
 		if _, err = m.ValidateAccessToken(ctx, p.AccessToken); err == nil {

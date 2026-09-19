@@ -8,15 +8,16 @@ import (
 // RewardedConfig contains engineering limits and exact operator-owned AdMob
 // callback identities. It never supplies the amount of a match's Noin bonus.
 type RewardedConfig struct {
-	Enabled               bool                    `yaml:"enabled"`
-	MaxQueryBytes         int64                   `yaml:"max_query_bytes"`
-	MaxResponseBytes      int64                   `yaml:"max_response_bytes"`
-	HTTPTimeoutS          int                     `yaml:"http_timeout_s"`
-	KeyCacheS             int                     `yaml:"key_cache_s"`
-	KeyRefreshMinS        int                     `yaml:"key_refresh_min_s"`
-	MaxConcurrentRequests int                     `yaml:"max_concurrent_requests"`
-	ClaimTTLS             int                     `yaml:"claim_ttl_s"`
-	AdUnits               map[string]RewardedUnit `yaml:"ad_units"`
+	Enabled                 bool                    `yaml:"enabled"`
+	MaxQueryBytes           int64                   `yaml:"max_query_bytes"`
+	MaxResponseBytes        int64                   `yaml:"max_response_bytes"`
+	HTTPTimeoutS            int                     `yaml:"http_timeout_s"`
+	KeyCacheS               int                     `yaml:"key_cache_s"`
+	KeyRefreshMinS          int                     `yaml:"key_refresh_min_s"`
+	MaxConcurrentRequests   int                     `yaml:"max_concurrent_requests"`
+	ClaimTTLS               int                     `yaml:"claim_ttl_s"`
+	MaxClaimsPerMatchWindow int                     `yaml:"max_claims_per_match_window"`
+	AdUnits                 map[string]RewardedUnit `yaml:"ad_units"`
 }
 type RewardedUnit struct {
 	RewardItem   string `yaml:"reward_item"`
@@ -26,6 +27,9 @@ type RewardedUnit struct {
 func (c RewardedConfig) Validate() error {
 	if !c.Enabled {
 		return nil
+	}
+	if c.MaxClaimsPerMatchWindow < 1 || c.MaxClaimsPerMatchWindow > 32 {
+		return fmt.Errorf("rewarded_ads claim issuance limit is invalid")
 	}
 	if c.MaxQueryBytes < 1024 || c.MaxQueryBytes > 16384 || c.MaxResponseBytes < 1024 || c.MaxResponseBytes > 1048576 || c.HTTPTimeoutS < 1 || c.HTTPTimeoutS > 30 || c.KeyCacheS < 60 || c.KeyCacheS > 86400 || c.KeyRefreshMinS < 1 || c.KeyRefreshMinS > 300 || c.KeyRefreshMinS > c.KeyCacheS || c.MaxConcurrentRequests < 1 || c.MaxConcurrentRequests > 32 || c.ClaimTTLS < 60 || c.ClaimTTLS > 86400 {
 		return fmt.Errorf("rewarded_ads verification limits are invalid")

@@ -23,6 +23,14 @@ func (m *Manager) ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token s
 	if err != nil || purpose != claims.Purpose || epoch != claims.SessionEpoch {
 		return "", fmt.Errorf("account unavailable")
 	}
+	if purpose != "development" {
+		if err := lockInstallation(ctx, tx, claims.DeviceHash); err != nil {
+			return "", err
+		}
+		if err := installationAllowed(ctx, tx, claims.DeviceHash, purpose); err != nil {
+			return "", err
+		}
+	}
 	var revoked bool
 	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM auth_revocations WHERE token_id=$1)`, claims.ID).Scan(&revoked); err != nil {
 		return "", fmt.Errorf("revocation check: %w", err)
@@ -30,17 +38,24 @@ func (m *Manager) ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token s
 	if revoked {
 		return "", fmt.Errorf("token revoked")
 	}
+	if _, err := m.parseToken(token, TokenAccess); err != nil {
+		return "", err
+	}
 	return claims.AccountID, nil
 }
 
 func (m *Manager) accountSession(ctx context.Context, q accountSessionQuerier, account string, lock bool) (string, int64, error) {
-	query := `SELECT auth_purpose, session_epoch FROM accounts WHERE id=$1 AND banned_at IS NULL AND deleted_at IS NULL AND (suspended_until IS NULL OR suspended_until<=clock_timestamp())`
+	query := `SELECT auth_purpose, session_epoch FROM accounts WHERE id=$1`
 	if lock {
 		query += ` FOR UPDATE`
 	}
 	var purpose string
 	var epoch int64
 	if err := q.QueryRowContext(ctx, query, account).Scan(&purpose, &epoch); err != nil {
+		return "", 0, fmt.Errorf("account unavailable")
+	}
+	var allowed bool
+	if err := q.QueryRowContext(ctx, `SELECT banned_at IS NULL AND deleted_at IS NULL AND (suspended_until IS NULL OR suspended_until<=clock_timestamp()) AND NOT direct_account_sanction_active(id) FROM accounts WHERE id=$1`, account).Scan(&allowed); err != nil || !allowed {
 		return "", 0, fmt.Errorf("account unavailable")
 	}
 	if purpose != "player" && (purpose != "development" || !m.development.Load()) {

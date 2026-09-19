@@ -314,6 +314,34 @@ func (m *TextManager) EnforceAccount(ctx context.Context, account string, active
 	}
 	return m.disconnect(ctx, m.peers[account])
 }
+
+// Each current peer is checked against the exact retained decision and its
+// verified installation. No callbacks may reenter the lobby or hold SQL locks
+// before calling this method. A failure leaves the receipt pending for retry.
+func (m *TextManager) EnforceSanction(ctx context.Context, id string, active func(context.Context, string, TextPeerBinding) (bool, error)) error {
+	if active == nil {
+		return ErrTextUnavailable
+	}
+	if err := waitTextLock(ctx, m.mu.TryLock); err != nil {
+		return err
+	}
+	defer m.mu.Unlock()
+	for _, peer := range m.peers {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		enforced, err := active(ctx, id, peer.binding)
+		if err != nil {
+			return err
+		}
+		if enforced {
+			if err = m.disconnect(ctx, peer); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 func (m *TextManager) disconnect(ctx context.Context, p *TextPeer) error {
 	if p == nil || m.peers[p.AccountID] != p {
 		return nil

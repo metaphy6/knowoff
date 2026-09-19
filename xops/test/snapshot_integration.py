@@ -110,6 +110,12 @@ INSERT INTO reports(reporter_id,report_type,target_media_id,reason) VALUES('{ACC
     f.redis("SET", "security:fixture", "retained-counter")
     f.redis("PEXPIREAT", "security:fixture", "2000000000000")
     f.redis("HSET", "routing:historical", "room", "fixture")
+    f.redis("SET", "room:obsolete-a:node", "old-node-a")
+    f.redis("SET", "room:obsolete-b:node", "old-node-b")
+    f.redis("PEXPIREAT", "room:obsolete-b:node", "2000000000000")
+    f.redis("SET", "room:current:node", "current-node")
+    f.redis("ZADD", "rate:fixture:intents", "1", "security-event")
+    f.redis("PEXPIREAT", "rate:fixture:intents", "2000000000000")
     (f.retained / "pack").mkdir(mode=0o700)
     (f.retained / "pack" / "legacy.bin").write_bytes(b"synthetic retained pack\x00\xff")
     (f.retained / "pack" / "legacy.bin").chmod(0o600)
@@ -136,6 +142,56 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
 INSERT INTO named_entitlement_items(account_id,entitlement_type,value,source_id)
  VALUES('{ACCOUNT}','theme_pack','synthetic-retained','60000000-0000-4000-8000-000000000006');
 """)
+
+
+def rehearse_routing_cleanup(ops, target, pin):
+    expected = [{'key': 'room:obsolete-a:node', 'node': 'old-node-a', 'expires_at_ms': -1},
+                {'key': 'room:obsolete-b:node', 'node': 'old-node-b', 'expires_at_ms': 2000000000000}]
+    original = ops.redis_inventory(target)
+    # Wrong type/value/expiry or a changed restore binding must refuse the whole
+    # batch, including the first key that otherwise matches its inventory.
+    for bad, bad_pin in [([expected[0], dict(expected[1], node='changed')], pin),
+                         ([expected[0], dict(expected[1], expires_at_ms=-1)], pin),
+                         (expected, '0' * 64)]:
+        try:
+            ops.invalidate_legacy_routing(target, bad, bad_pin)
+        except ops.SnapshotError:
+            pass
+        else:
+            raise AssertionError('changed routing inventory accepted')
+        assert ops.redis_inventory(target) == original, 'failed batch partially deleted state'
+    target.redis('DEL', expected[1]['key'])
+    target.redis('HSET', expected[1]['key'], 'node', 'old-node-b')
+    typed = ops.redis_inventory(target)
+    try:
+        ops.invalidate_legacy_routing(target, expected, pin)
+    except ops.SnapshotError:
+        pass
+    else:
+        raise AssertionError('non-string routing key accepted')
+    assert ops.redis_inventory(target) == typed, 'type refusal partially deleted state'
+    target.redis('DEL', expected[1]['key'])
+    target.redis('SET', expected[1]['key'], expected[1]['node'], 'PXAT', str(expected[1]['expires_at_ms']))
+    saved = target.runner
+    target.runner = ops.CommandRunner(overall=0)
+    try:
+        try:
+            ops.invalidate_legacy_routing(target, expected, pin)
+        except ops.SnapshotError:
+            pass
+        else:
+            raise AssertionError('expired cleanup deadline accepted')
+    finally:
+        target.runner = saved
+    assert ops.redis_inventory(target) == original, 'deadline refusal changed state'
+    result = ops.invalidate_legacy_routing(target, expected, pin)
+    assert result['removed'] == 2, 'stale keys not removed'
+    hashes = {hashlib.sha256(entry['key'].encode()).hexdigest() for entry in expected}
+    retained = [entry for entry in original if entry['key_sha256'] not in hashes]
+    assert ops.redis_inventory(target) == retained, 'security/current/unknown values or expiry changed'
+    replay = ops.invalidate_legacy_routing(target, expected, pin)
+    assert replay['removed'] == 0, 'cleanup replay was not idempotent'
+    return {'removed': 2, 'retained_keys': len(retained), 'atomic_refusal': True, 'replay': True}
 
 
 def rehearse(ops, directory):
@@ -196,9 +252,10 @@ def rehearse(ops, directory):
             pass
         else:
             raise AssertionError("occupied destination accepted")
+        cleanup = rehearse_routing_cleanup(ops, target, current_pin)
         return {"legacy_version": 8, "head_version": head, "tables": len(before["tables"]),
                 "sequences": len(before["sequences"]), "restores": 3, "legacy_manifest": pin,
-                "current_manifest": current_pin, "failures": 0, "skips": 0}
+                "current_manifest": current_pin, "routing_cleanup": cleanup, "failures": 0, "skips": 0}
     finally:
         failures = []
         for source in reversed(sources):

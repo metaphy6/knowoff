@@ -218,7 +218,10 @@ def go_checks(modules, backend, database, environment):
         # Preserve the complete 12-minute matrix and matched warm/measurement
         # workload (15 minutes each), plus three minutes of auxiliary work.
         # The inner workload deadlines and all tests remain authoritative.
-        timeout = "45m" if module == "tools/gamebot" else "120s"
+        # The additive migration/authority matrix now exceeds two minutes in
+        # the store package. This is the package watchdog, not a behavior
+        # deadline; individual SQL, socket, performance and load bounds remain.
+        timeout = {"tools/gamebot": "45m", "server": "300s"}.get(module, "120s")
         commands = [
             ("test", ["go", "test", "-json", "./...", "-count=1", "-p=1", "-timeout=" + timeout], "go"),
             ("format", ["gofmt", "-l", "."], "format"),

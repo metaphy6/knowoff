@@ -101,7 +101,7 @@ func registerOAuthRoutes(mux *http.ServeMux, deps AuthDeps) {
 func registerOAuthServiceRoutes(mux *http.ServeMux, service oauthService, trustedProxies ...string) {
 	mux.HandleFunc("/api/auth/oauth/start", func(w http.ResponseWriter, r *http.Request) {
 		var req auth.OAuthStartRequest
-		if !oauthRequest(w, r, &req, "provider", "intent") {
+		if !oauthRequest(w, r, &req, "provider", "intent", "device_hash") {
 			return
 		}
 		authorization := r.Header.Get("Authorization")

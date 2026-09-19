@@ -34,6 +34,7 @@ import (
 	v2 "github.com/knowoff/knowoff/server/internal/transport/v2"
 	"github.com/knowoff/knowoff/server/pkg/gamecontract"
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -562,6 +563,14 @@ func runtimeReviewedFixture(t *testing.T, db *sql.DB, cfg *config.Config) (strin
 		t.Fatal(err)
 	}
 	sealed.Manifest.CertificationArtifacts = map[string]string{}
+	actions, err := textcert.Certify(snapshot, cfg.Tuning, 1, 71)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sealed.Artifacts["action-replay.json"], err = json.Marshal(actions)
+	if err != nil {
+		t.Fatal(err)
+	}
 	sealed.Artifacts["technical.json"], err = json.Marshal(media.CertifyText(snapshot, dealing, 20, 71))
 	if err != nil {
 		t.Fatal(err)

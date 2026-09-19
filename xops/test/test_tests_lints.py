@@ -20,7 +20,7 @@ SPEC.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
-    def test_gamebot_full_workload_has_its_own_bounded_package_timeout(self):
+    def test_expanded_sql_and_gamebot_workloads_have_bounded_package_timeouts(self):
         modules = ["server", "tools/gamebot", "tools/mediapack", "tools/new-tool"]
         for backend in ("native", "docker"):
             with self.subTest(backend=backend), patch.object(runner.shutil, "which", return_value=None):
@@ -29,7 +29,7 @@ class RunnerTests(unittest.TestCase):
                 self.assertEqual(set(tests), set(modules))
                 for module, command in tests.items():
                     go = command[command.index("go"):]
-                    expected = "45m" if module == "tools/gamebot" else "120s"
+                    expected = {"server": "300s", "tools/gamebot": "45m"}.get(module, "120s")
                     self.assertEqual([arg for arg in go if arg.startswith("-timeout=")], ["-timeout=" + expected])
                     self.assertEqual(go[:3], ["go", "test", "-json"])
                     self.assertIn("./...", go)

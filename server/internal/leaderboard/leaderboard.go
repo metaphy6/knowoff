@@ -107,14 +107,20 @@ type Ranking struct {
 
 // Get returns the top N plus the viewer's own rank.
 func (m *Manager) Get(ctx context.Context, weekID string, topN int, viewerAccountID string) ([]Ranking, *Ranking, error) {
-	rows, err := m.db.QueryContext(ctx, `
-		SELECT account_id, points,
-		       RANK() OVER (ORDER BY points DESC) AS rank
-		FROM leaderboard_entries
-		WHERE week_id = $1
-		ORDER BY points DESC, account_id ASC
-		LIMIT $2`,
-		weekID, topN,
+	if topN < 1 || topN > 100 {
+		return nil, nil, store.ErrValueConflict
+	}
+	// Rank after eligibility filtering. A closed week always uses its immutable
+	// snapshot, even if a later caller changes an unrelated projection.
+	const standings = `WITH eligible AS (
+	 SELECT e.account_id,e.points FROM leaderboard_entries e JOIN leaderboard_weeks w ON w.week_id=e.week_id
+	 WHERE e.week_id=$1 AND NOT w.closed AND COALESCE((SELECT d.kind FROM leaderboard_admin_decisions d WHERE d.week_id=e.week_id AND d.target_account_id=e.account_id ORDER BY d.revision DESC LIMIT 1),'reinstate')<>'exclude'), ranked AS (
+	 SELECT account_id,points,RANK() OVER(ORDER BY points DESC) AS rank FROM eligible
+	 UNION ALL SELECT h.account_id,h.points,h.rank FROM leaderboard_history h JOIN leaderboard_weeks w ON w.week_id=h.week_id WHERE h.week_id=$1 AND w.closed) `
+	rows, err := m.db.QueryContext(ctx, standings+`, positioned AS (
+	 SELECT account_id,points,rank,ROW_NUMBER() OVER(ORDER BY points DESC,account_id) AS position FROM ranked)
+	 SELECT account_id,points,rank,position<=$2 FROM positioned WHERE position<=$2 OR account_id::text=$3 ORDER BY position`,
+		weekID, topN, viewerAccountID,
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query top: %w", err)
@@ -122,33 +128,24 @@ func (m *Manager) Get(ctx context.Context, weekID string, topN int, viewerAccoun
 	defer rows.Close()
 
 	var top []Ranking
+	var own *Ranking
 	for rows.Next() {
 		var r Ranking
-		if err := rows.Scan(&r.AccountID, &r.Points, &r.Rank); err != nil {
+		var inTop bool
+		if err := rows.Scan(&r.AccountID, &r.Points, &r.Rank, &inTop); err != nil {
 			return nil, nil, fmt.Errorf("scan: %w", err)
 		}
-		top = append(top, r)
+		if inTop {
+			top = append(top, r)
+		}
+		if r.AccountID == viewerAccountID {
+			own = &r
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, nil, err
 	}
 
-	var own *Ranking
-	row := m.db.QueryRowContext(ctx, `
-		SELECT account_id, points, rank FROM (
-			SELECT account_id, points,
-			       RANK() OVER (ORDER BY points DESC) AS rank
-			FROM leaderboard_entries
-			WHERE week_id = $1
-		) ranked WHERE account_id = $2`,
-		weekID, viewerAccountID,
-	)
-	var r Ranking
-	if err := row.Scan(&r.AccountID, &r.Points, &r.Rank); err == nil {
-		own = &r
-	} else if err != sql.ErrNoRows {
-		return nil, nil, fmt.Errorf("own rank: %w", err)
-	}
 	return top, own, nil
 }
 

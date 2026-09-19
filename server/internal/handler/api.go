@@ -46,13 +46,12 @@ func RegisterAuthRoutes(mux *http.ServeMux, deps AuthDeps) {
 		var req struct {
 			DeviceHash string `json:"device_hash"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+		if !oauthRequest(w, r, &req, "device_hash") {
 			return
 		}
 		pair, err := deps.Auth.AuthenticateDevice(r.Context(), req.DeviceHash)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "auth.unavailable", http.StatusUnauthorized)
 			return
 		}
 		writeJSON(w, pair)
@@ -66,18 +65,32 @@ func RegisterAuthRoutes(mux *http.ServeMux, deps AuthDeps) {
 		var req struct {
 			RefreshToken string `json:"refresh_token"`
 		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+		if !oauthRequest(w, r, &req, "refresh_token") {
 			return
 		}
 		pair, err := deps.Auth.Refresh(r.Context(), req.RefreshToken)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			http.Error(w, "auth.unavailable", http.StatusUnauthorized)
 			return
 		}
 		writeJSON(w, pair)
 	})
 
+	mux.HandleFunc("/api/auth/installation", func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			RefreshToken string `json:"refresh_token"`
+			DeviceHash   string `json:"device_hash"`
+		}
+		if !oauthRequest(w, r, &req, "refresh_token", "device_hash") {
+			return
+		}
+		pair, err := deps.Auth.BindInstallation(r.Context(), req.RefreshToken, req.DeviceHash)
+		if err != nil {
+			http.Error(w, "auth.unavailable", http.StatusUnauthorized)
+			return
+		}
+		writeJSON(w, pair)
+	})
 	registerOAuthRoutes(mux, deps)
 }
 

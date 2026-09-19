@@ -84,6 +84,12 @@ func TestCutoverControllerFencesExistingAndFutureWriters(t *testing.T) {
 	if _, err := migration.ExecContext(t.Context(), `SET ROLE `+pq.QuoteIdentifier(spec.Roles.Owner)); err != nil {
 		t.Fatal(err)
 	}
+	privacy := controllerWriter(t, db, spec.Roles.PrivacyExecutor)
+	privacySession, err := privacy.Conn(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer privacySession.Close()
 	idle := controllerWriter(t, db, spec.Roles.Runtime)
 	var idlePID int
 	if err := idle.QueryRow(`SELECT pg_backend_pid()`).Scan(&idlePID); err != nil {
@@ -101,6 +107,14 @@ func TestCutoverControllerFencesExistingAndFutureWriters(t *testing.T) {
 	}
 	if _, err := migration.ExecContext(t.Context(), `SELECT 1`); err == nil {
 		t.Fatal("SET ROLE migration connection survived")
+	}
+	if _, err := privacySession.ExecContext(t.Context(), `SELECT 1`); err == nil {
+		t.Fatal("privacy executor survived fence")
+	}
+	privacy.Close()
+	freshPrivacy := controllerWriter(t, db, spec.Roles.PrivacyExecutor)
+	if err := freshPrivacy.PingContext(t.Context()); err == nil {
+		t.Fatal("NOLOGIN privacy executor reconnected")
 	}
 	writer.Close()
 	fresh := controllerWriter(t, db, spec.Roles.Runtime)
@@ -338,7 +352,7 @@ func TestCutoverControllerInvalidBeginCannotCloseWriters(t *testing.T) {
 			if n := valueCount(t, db, `SELECT count(*) FROM cutover_instances`); n != 0 {
 				t.Fatal("invalid begin created authority")
 			}
-			if n := valueCount(t, db, `SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[]) AND rolcanlogin`, pq.Array([]string{spec.Roles.Runtime, spec.Roles.Migrator})); n != 2 {
+			if n := valueCount(t, db, `SELECT count(*) FROM pg_roles WHERE rolname=ANY($1::text[]) AND rolcanlogin`, pq.Array(spec.Roles.writers())); n != 3 {
 				t.Fatal("invalid begin closed writers")
 			}
 		})
@@ -573,4 +587,31 @@ func TestCutoverControllerSnapshotAfterPhysicalFence(t *testing.T) {
 		t.Fatal("fresh handoff rejected coherent watermark", err)
 	}
 	t.Log("Fresh handoff preserves the complete committed source snapshot")
+}
+
+func TestCutoverControllerRequiresPrivacySuppressionPublication(t *testing.T) {
+	db, _, c, _, b := controllerFixture(t)
+	account := valueAccount(t, db)
+	request := uuid.NewString()
+	if _, err := db.Exec(`SELECT privacy_prepare_verified_request($1,$2,decode(repeat('a',64),'hex'),decode(repeat('b',64),'hex'))`, request, account); err != nil {
+		t.Fatal(err)
+	}
+	r, err := c.Begin(t.Context(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seal := CutoverSeal{Proof: proofFor(b, r), WatermarkID: uuid.NewString()}
+	if _, err := c.Seal(t.Context(), seal); !errors.Is(err, ErrCutoverPending) {
+		t.Fatal("unpublished deletion suppression sealed", err)
+	}
+	if n := valueCount(t, db, `SELECT count(*) FROM cutover_watermarks`); n != 0 {
+		t.Fatal("pending deletion minted watermark")
+	}
+	// Only a fixture authority binds this synthetic receipt; no external journal is claimed.
+	if _, err := db.Exec(`SELECT privacy_bind_suppression($1,1,decode(repeat('c',64),'hex'))`, request); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Seal(t.Context(), seal); err != nil {
+		t.Fatal("published deletion blocked resumable snapshot", err)
+	}
 }

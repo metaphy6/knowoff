@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	v2 "github.com/knowoff/knowoff/server/internal/transport/v2"
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"testing"
 	"time"
 )
@@ -56,6 +57,16 @@ func TestTextReleaseAcceptedLineageRestartAndTakedown(t *testing.T) {
 		t.Fatal("capture retry changed original attribution", again, err)
 	}
 	snap = releaseTestEvidence(t, r, b)
+	missing := snap.Bundle()
+	delete(missing.Artifacts, "action-replay.json")
+	delete(missing.Manifest.CertificationArtifacts, "action-replay.json")
+	withoutActions, err := media.NewTextSnapshot(missing, r.limits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = r.Publish(ctx, admin, withoutActions, TextPackAccess{Class: "core"}); err == nil {
+		t.Fatal("human action attestation accepted without executable evidence")
+	}
 	if err = r.Publish(ctx, uuid.NewString(), snap, TextPackAccess{Class: "core"}); err == nil {
 		t.Fatal("unauthorized publication")
 	}
@@ -99,6 +110,11 @@ func TestTextReleaseAcceptedLineageRestartAndTakedown(t *testing.T) {
 	}
 	if _, err = db.Exec(`UPDATE portal_submissions SET status='approved' WHERE id=$1`, sourceID); err != nil {
 		t.Fatal(err)
+	}
+	changedPolicy := value.tuning.Clone()
+	changedPolicy.Timers.PlayTurn++
+	if _, err := NewTextReleaseStore(db, changedPolicy, nil).Resolve(ctx, "en", "text-v1"); err == nil {
+		t.Fatal("restored release accepted changed action tuning")
 	}
 	restarted := NewTextReleaseStore(db, value.tuning, nil)
 	if err = restarted.Publish(ctx, admin, snap, TextPackAccess{Class: "core"}); err != nil {
@@ -242,6 +258,11 @@ func releaseTestEvidence(t *testing.T, r *TextReleaseStore, b media.TextBundle) 
 		t.Fatal(err)
 	}
 	sealed.Manifest.CertificationArtifacts = map[string]string{}
+	actions, err := textcert.Certify(s, r.tuning, 1, 71)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sealed.Artifacts["action-replay.json"], _ = json.Marshal(actions)
 	sealed.Artifacts["technical.json"], _ = json.Marshal(media.CertifyText(s, r.dealing(), 20, 71))
 	sealed.Artifacts["replay.json"], _ = json.Marshal(media.NewTextReplay(s, r.dealing(), 20, 71))
 	for _, gate := range []string{"editorial", "actions", "screening", "release"} {
@@ -265,4 +286,34 @@ func releaseTestEvidence(t *testing.T, r *TextReleaseStore, b media.TextBundle) 
 		t.Fatal(err)
 	}
 	return s
+}
+
+func TestTextReleaseRefusesDeletedAndFencedAuthors(t *testing.T) {
+	for _, state := range []string{"deleted", "fenced"} {
+		t.Run(state, func(t *testing.T) {
+			db, value := textValueDB(t)
+			admin, _ := releaseTestAdmin(t, db)
+			author := valueAccount(t, db)
+			r := NewTextReleaseStore(db, value.tuning, func(context.Context, string) error { return nil })
+			source := uuid.NewString()
+			if _, err := db.Exec(`INSERT INTO portal_submissions(id,account_id,media_type,content,status,terms_version,terms_accepted_at,decided_at,decided_by) VALUES($1,$2,'text','Deleted-author fixture','approved','test-terms',now()-interval '1 day',now(),$3)`, source, author, admin); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := r.CaptureAccepted(t.Context(), admin, "portal_submission", source); err != nil {
+				t.Fatal(err)
+			}
+			if state == "deleted" {
+				if _, err := db.Exec(`UPDATE accounts SET deleted_at=clock_timestamp() WHERE id=$1`, author); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := db.Exec(`SELECT privacy_prepare_verified_request($1,$2,decode(repeat('aa',32),'hex'),decode(repeat('bb',32),'hex'))`, uuid.NewString(), author); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := r.CaptureAccepted(t.Context(), admin, "portal_submission", source); !errors.Is(err, ErrTextReleaseUnavailable) {
+				t.Fatal("deleted author capture accepted", err)
+			}
+		})
+	}
 }

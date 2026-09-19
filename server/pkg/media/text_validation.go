@@ -203,7 +203,7 @@ func validateTextBundle(b TextBundle, limits TextLimits) error {
 	if m.Evaluator != nil && (!gamecontract.ValidIdentifier(m.Evaluator.Provider) || !gamecontract.ValidIdentifier(m.Evaluator.Model) || !gamecontract.ValidIdentifier(m.Evaluator.Version) || !textHashValid(m.Evaluator.EvidenceSHA256)) {
 		return fmt.Errorf("unversioned optional evaluator")
 	}
-	allowedArtifacts := map[string]bool{"technical.json": true, "editorial.json": true, "actions.json": true, "screening.json": true, "release.json": true, "replay.json": true}
+	allowedArtifacts := map[string]bool{"technical.json": true, "editorial.json": true, "actions.json": true, "screening.json": true, "release.json": true, "replay.json": true, "action-replay.json": true}
 	if len(m.CertificationArtifacts) != len(b.Artifacts) {
 		return fmt.Errorf("artifact manifest mismatch")
 	}

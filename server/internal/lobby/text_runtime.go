@@ -143,7 +143,14 @@ func (m *TextManager) start(ctx context.Context, r *textRoom) (err error) {
 	if err = m.access(ctx, host, r.settings, r.path); err != nil {
 		return err
 	}
-	if err = m.deps.Values.Start(ctx, matchID, m.owner, 1, at); err != nil {
+	bindings := make([]store.TextAdmissionBinding, 0, len(r.seats))
+	for _, seat := range r.seats {
+		if seat.peer != nil {
+			bindings = append(bindings, seat.peer.binding)
+		}
+	}
+	admissionCtx := store.WithTextAdmissionBindings(ctx, bindings)
+	if err = m.deps.Values.Start(admissionCtx, matchID, m.owner, 1, at); err != nil {
 		return err
 	}
 	r.match = engine

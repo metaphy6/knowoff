@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/knowoff/knowoff/server/internal/store"
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"gopkg.in/yaml.v3"
 )
 
@@ -221,6 +222,14 @@ func textAdminFixture(t *testing.T, m *Manager, db *sql.DB, admin, author string
 	b.Manifest.CertificationArtifacts = map[string]string{}
 	b.Artifacts["technical.json"], _ = json.Marshal(media.CertifyText(s, dealing, 20, 71))
 	b.Artifacts["replay.json"], _ = json.Marshal(media.NewTextReplay(s, dealing, 20, 71))
+	actions, err := textcert.Certify(s, cfg, 1, 71)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Artifacts["action-replay.json"], err = json.Marshal(actions)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, gate := range []string{"editorial", "actions", "screening", "release"} {
 		e := media.TextGateEvidence{SchemaVersion: 2, SnapshotSHA256: s.SHA256(), RulesVersion: b.Manifest.RulesVersion, Language: b.Manifest.Language, Gate: gate, ActorReference: "simulated-test-reviewer", TuningSHA256: media.TextTuningSHA256(dealing)}
 		for _, mode := range b.Manifest.Modes {

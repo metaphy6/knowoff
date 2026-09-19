@@ -134,10 +134,28 @@ automated screening and validated non-playable WebP output; provider refusal
 preserves the prior avatar and entitlement. Administrative takedown remains
 separate from a report's status.
 
-Additional room controls, sanctions, Noin adjustments and complete leaderboard
-controls are tracked as unfinished operator work. Immutable operator decisions
-and delivery receipts alone do not imply those effects are mounted. The
-[Roadmap](../planning/ROADMAP.md) records the reviewed implementation boundaries.
+The account wallet view exposes Admin-only Noin grants and full original-spend
+refunds through `/admin/economy/corrections`. Each request has an immutable ID
+and reason; its decision, audit, wallet credit, ledger entry and result commit
+together. A refund derives its amount from one same-account spend ledger row
+and can apply only once. These controls do not refund platform payments or
+change entitlements, gameplay caps, points or XP. A repeated request returns
+its original receipt; changed input under that ID refuses.
+
+Administrators can sanction an account permanently or until an explicit expiry,
+optionally including its known app installations. Every decision records its
+reason and exact captured scope; lifting one decision leaves independent
+sanctions active. A lift does not restore revoked credentials. Existing player
+sessions are closed through retryable enforcement, and future protected
+requests and match starts check current account and installation authority.
+Installation identity is resettable app data, not physical-device attestation.
+
+Leaderboard controls exclude or reinstate a player for an open week without
+changing earned points, caps or balances. Closing a week freezes its eligibility
+and results; repeated close requests resume the same durable operation.
+Closed history cannot be reranked by a later exclusion. These operations require
+an exact authorized Admin session, a reason, CSRF protection and an audit.
+The [Roadmap](../planning/ROADMAP.md) tracks remaining production evidence.
 
 Gameplay image/GIF/video submissions are retired under
 [ADR-012](../design/ADR-012-text-only-selectable-modes.md). Historical image

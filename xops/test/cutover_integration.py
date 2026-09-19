@@ -32,7 +32,55 @@ ITEM = "20000000-0000-4000-8000-000000000002"
 HELD_ITEM = "30000000-0000-4000-8000-000000000003"
 READ_ONLY = {"billing_legacy_premium", "billing_subscription_imports", "schema_migrations",
              "cutover_instances", "cutover_requests", "cutover_watermarks", "cutover_handoffs"}
-INSERT_ONLY = {"admin_audit_log", "admin_operation_decisions", "admin_operation_results"}
+INSERT_ONLY = {"admin_audit_log", "admin_operation_decisions", "admin_operation_results",
+               "portal_terms", "user_terms_versions", "user_terms_acceptances",
+               "account_sanctions", "account_sanction_installations", "account_sanction_lifts", "account_sanction_deliveries", "auth_installation_bootstrap", "auth_installation_rotations", "leaderboard_admin_decisions", "leaderboard_admin_results", "text_bonus_eligibility", "text_reward_claims", "text_reward_ssv_receipts"}
+PRIVATE_TABLES = {"privacy_requests", "privacy_step_receipts", "account_deletion_fences", "privacy_deletion_capabilities", "privacy_deletion_intents"}
+PRIVACY_FUNCTIONS = {"privacy_prepare_verified_request", "privacy_bind_suppression", "privacy_erase_profile_batch", "account_deletion_status",
+                     "privacy_begin_enrollment", "privacy_enroll_capability", "privacy_begin_deletion_intent",
+                     "privacy_begin_deletion_oauth", "privacy_claim_deletion_oauth", "privacy_complete_deletion_oauth",
+                     "privacy_confirm_deletion", "privacy_security_revoke_deletion", "privacy_deletion_intent_status", "privacy_expire_deletion_intents"}
+# Exact source authority of the NOLOGIN definer; empty column means table grant.
+PRIVACY_SOURCE_ACL = (
+    ("account_sanction_installations", "device_hash", "SELECT"),
+    ("account_sanction_installations", "operation_id", "SELECT"),
+    ("account_sanction_lifts", "sanction_id", "SELECT"),
+    ("account_sanctions", "account_id", "SELECT"),
+    ("account_sanctions", "operation_id", "SELECT"),
+    ("account_sanctions", "until_at", "SELECT"),
+    ("accounts", "auth_purpose", "SELECT"),
+    ("accounts", "banned_at", "SELECT"),
+    ("accounts", "deleted_at", "SELECT"),
+    ("accounts", "deleted_at", "UPDATE"),
+    ("accounts", "id", "SELECT"),
+    ("accounts", "id", "UPDATE"),
+    ("accounts", "nickname", "SELECT"),
+    ("accounts", "session_epoch", "SELECT"),
+    ("accounts", "session_epoch", "UPDATE"),
+    ("accounts", "suspended_until", "SELECT"),
+    ("admin_accounts", "account_id", "SELECT"),
+    ("admin_accounts", "id", "SELECT"),
+    ("admin_sessions", "", "DELETE"),
+    ("admin_sessions", "admin_id", "SELECT"),
+    ("auth_installations", "device_hash", "SELECT"),
+    ("auth_installations", "device_hash", "UPDATE"),
+    ("auth_revocations", "token_id", "SELECT"),
+    ("device_tokens", "account_id", "SELECT"),
+    ("device_tokens", "device_hash", "SELECT"),
+    ("noin_ledger", "account_id", "SELECT"),
+    ("oauth_links", "account_id", "SELECT"),
+    ("oauth_links", "provider", "SELECT"),
+    ("oauth_links", "provider_subject", "SELECT"),
+    ("portal_browser_sessions", "", "DELETE"),
+    ("portal_browser_sessions", "account_id", "SELECT"),
+    ("portal_login_requests", "", "DELETE"),
+    ("portal_login_requests", "account_id", "SELECT"),
+    ("profiles", "", "DELETE"),
+    ("profiles", "", "SELECT"),
+    ("profiles", "account_id", "UPDATE"),
+    ("text_admissions", "account_id", "SELECT"),
+)
+WRITERS = ("fixture_runtime", "fixture_migrator", "fixture_privacy_executor")
 LO_FUNCTIONS = ("lo_create(oid)", "lo_creat(integer)", "lo_from_bytea(oid,bytea)",
                 "lo_put(oid,bigint,bytea)", "lowrite(integer,bytea)", "lo_unlink(oid)",
                 "lo_truncate(integer,integer)", "lo_truncate64(integer,bigint)",
@@ -92,7 +140,8 @@ class Fixture:
         self.network = None
         self.roles = {"Roles": {"Database": "cutover_fixture", "Owner": "fixture_owner",
                                "Runtime": "fixture_runtime", "Capture": "fixture_capture",
-                               "Migrator": "fixture_migrator"}, "Control": "fixture_control",
+                               "Migrator": "fixture_migrator", "PrivacyOwner": "fixture_privacy_owner",
+                               "PrivacyExecutor": "fixture_privacy_executor"}, "Control": "fixture_control",
                       "WritersEnabled": True}
 
     def docker(self, *args, **kwargs):
@@ -172,7 +221,7 @@ class Fixture:
             validate_container(self.receipt, state, service, container, self.network)
 
     def pg_command(self, service, role="postgres", database="cutover_fixture"):
-        require(service in ("source", "target") and role in ("postgres", "fixture_runtime", "fixture_migrator", "fixture_capture", "fixture_control")
+        require(service in ("source", "target") and role in ("postgres", *WRITERS, "fixture_capture", "fixture_control")
                 and database == "cutover_fixture", "unowned database or role refused")
         return ["docker", "exec", "-i", "-e", "PGPASSWORD=" + PASSWORD, self.ids[service],
                 "psql", "-X", "-qAt", "-v", "ON_ERROR_STOP=1", "-h", "127.0.0.1", "-U", role, "-d", database]
@@ -183,28 +232,33 @@ class Fixture:
     def provision(self, service):
         self.validate()
         files = sorted((ROOT / "server/migrations").glob("*.up.sql"))
-        require([int(p.name[:6]) for p in files] == list(range(1, 28)), "reviewed schema head changed")
+        require([int(p.name[:6]) for p in files] == list(range(1, 35)), "reviewed schema head changed")
         self.pg(service, "CREATE TABLE schema_migrations(version bigint PRIMARY KEY,dirty boolean NOT NULL)")
         for path in files:
             require(path.with_name(path.name.replace(".up.sql", ".down.sql")).is_file(), "unpaired migration")
             self.pg(service, path.read_text())
-        self.pg(service, "INSERT INTO schema_migrations VALUES(27,false)")
+        self.pg(service, "INSERT INTO schema_migrations VALUES(34,false)")
         statements = []
-        for role in ("fixture_owner", "fixture_runtime", "fixture_capture", "fixture_migrator", "fixture_control"):
-            login = "NOLOGIN" if role == "fixture_owner" or (service == "target" and role in ("fixture_runtime", "fixture_migrator")) else "LOGIN"
+        for role in ("fixture_owner", "fixture_capture", "fixture_control", "fixture_privacy_owner", *WRITERS):
+            login = "NOLOGIN" if role in ("fixture_owner", "fixture_privacy_owner") or (service == "target" and role in WRITERS) else "LOGIN"
             create = "CREATEROLE" if role == "fixture_control" else "NOCREATEROLE"
             statements.append(f"CREATE ROLE {role} {login} NOINHERIT NOSUPERUSER NOCREATEDB {create} NOREPLICATION NOBYPASSRLS PASSWORD '{PASSWORD}'")
         statements += ["ALTER DATABASE cutover_fixture OWNER TO fixture_owner", "REVOKE ALL ON DATABASE cutover_fixture FROM PUBLIC",
-                       "GRANT CONNECT ON DATABASE cutover_fixture TO fixture_runtime,fixture_capture,fixture_migrator,fixture_control",
+                       "GRANT CONNECT ON DATABASE cutover_fixture TO fixture_runtime,fixture_capture,fixture_migrator,fixture_control,fixture_privacy_executor",
                        "ALTER SCHEMA public OWNER TO fixture_owner", "REVOKE ALL ON SCHEMA public FROM PUBLIC",
-                       "GRANT USAGE ON SCHEMA public TO fixture_runtime,fixture_capture,fixture_control",
-                       "GRANT fixture_owner TO fixture_migrator WITH ADMIN FALSE,INHERIT FALSE,SET TRUE",
-                       "GRANT fixture_runtime,fixture_migrator TO fixture_control WITH ADMIN TRUE,INHERIT FALSE,SET FALSE",
+                       "GRANT USAGE ON SCHEMA public TO fixture_runtime,fixture_capture,fixture_control,fixture_privacy_owner,fixture_privacy_executor",
+                       "GRANT fixture_owner,fixture_privacy_owner TO fixture_migrator WITH ADMIN FALSE,INHERIT FALSE,SET TRUE",
+                       "GRANT fixture_runtime,fixture_migrator,fixture_privacy_executor TO fixture_control WITH ADMIN TRUE,INHERIT FALSE,SET FALSE",
                        "GRANT pg_signal_backend,pg_read_all_stats TO fixture_control WITH ADMIN FALSE,INHERIT TRUE,SET FALSE",
                        "GRANT EXECUTE ON FUNCTION pg_catalog.pg_control_system() TO fixture_control"]
         tables = self.pg(service, "SELECT tablename FROM pg_tables WHERE schemaname='public' ORDER BY tablename").decode().splitlines()
         for table in tables:
             name = "public." + snapshot.identifier(table)
+            if table in PRIVATE_TABLES:
+                statements += [f"ALTER TABLE {name} OWNER TO fixture_privacy_owner", f"GRANT SELECT ON {name} TO fixture_capture,fixture_control"]
+                if table == "account_deletion_fences":
+                    statements += [f"GRANT SELECT ON {name} TO fixture_runtime"]
+                continue
             statements += [f"ALTER TABLE {name} OWNER TO fixture_owner", f"GRANT SELECT ON {name} TO fixture_runtime,fixture_capture,fixture_control"]
             privileges = "INSERT" if table in INSERT_ONLY else "INSERT,UPDATE,DELETE"
             if table not in READ_ONLY:
@@ -213,9 +267,18 @@ class Fixture:
         for sequence in sequences:
             name = "public." + snapshot.identifier(sequence)
             statements += [f"GRANT SELECT,USAGE ON SEQUENCE {name} TO fixture_runtime", f"GRANT SELECT ON SEQUENCE {name} TO fixture_capture,fixture_control"]
-        functions = self.pg(service, "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'").decode().splitlines()
-        for function in functions:
-            statements += ["ALTER FUNCTION public." + snapshot.identifier(function) + "() OWNER TO fixture_owner"]
+        functions = json.loads(self.pg(service, "SELECT json_agg(json_build_array(p.proname,format('%I.%I(%s)',n.nspname,p.proname,pg_get_function_identity_arguments(p.oid)))) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'"))
+        for name, identity in functions:
+            owner = "fixture_privacy_owner" if name in PRIVACY_FUNCTIONS else "fixture_owner"
+            statements += [f"ALTER FUNCTION {identity} OWNER TO {owner}", f"REVOKE ALL ON FUNCTION {identity} FROM PUBLIC"]
+            if name in {"account_deletion_status", "direct_account_sanction_active", "installation_sanction_active"}:
+                statements += [f"GRANT EXECUTE ON FUNCTION {identity} TO fixture_runtime"]
+            elif name in PRIVACY_FUNCTIONS and name != "privacy_prepare_verified_request":
+                statements += [f"GRANT EXECUTE ON FUNCTION {identity} TO fixture_privacy_executor"]
+        for relation, column, privilege in PRIVACY_SOURCE_ACL:
+            if column:
+                privilege += "(" + snapshot.identifier(column) + ")"
+            statements += [f"GRANT {privilege} ON public.{snapshot.identifier(relation)} TO fixture_privacy_owner"]
         statements += [f"REVOKE ALL ON FUNCTION pg_catalog.{fn} FROM PUBLIC" for fn in LO_FUNCTIONS]
         statements += ["GRANT INSERT ON cutover_requests,cutover_watermarks,cutover_handoffs TO fixture_control",
                        "GRANT INSERT,UPDATE ON cutover_instances TO fixture_control"]
@@ -253,7 +316,7 @@ class Fixture:
     def restore(self, path):
         self.validate()
         require(path.parent == self.directory and path.name in ("before-handoff.dump", "after-handoff.dump"), "unowned capture refused")
-        require(self.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator') AND rolcanlogin").strip() == b"0", "target writers must remain closed")
+        require(self.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator','fixture_privacy_executor') AND rolcanlogin").strip() == b"0", "target writers must remain closed")
         # Only these newly created, exact-ID-verified fixture containers may be reset.
         # Preserve selected database OID, role OIDs/NOLOGIN and separately granted
         # pg_catalog capabilities. The dump restores public ownership and ACLs.
@@ -360,14 +423,15 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
         f.pg("source", "BEGIN; INSERT INTO accounts(nickname) VALUES('prepared-must-rollback'); PREPARE TRANSACTION 'synthetic-pending-cutover'", "fixture_runtime")
         stage = "open writer sessions"
         for role, sql in [("fixture_runtime", "BEGIN; INSERT INTO accounts(nickname) VALUES('must-rollback'); SELECT pg_sleep(60); COMMIT;"),
-                          ("fixture_migrator", "SET ROLE fixture_owner; SELECT pg_sleep(60);")]:
+                          ("fixture_migrator", "SET ROLE fixture_owner; SELECT pg_sleep(60);"),
+                          ("fixture_privacy_executor", "SELECT pg_sleep(60);")]:
             process = subprocess.Popen(f.pg_command("source", role), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
             held.append(process)
             process.stdin.write(sql.encode())
             process.stdin.close()
             process.stdin = None
         deadline = time.monotonic() + 5
-        while f.pg("source", "SELECT count(*) FROM pg_stat_activity WHERE datname='cutover_fixture' AND usename IN ('fixture_runtime','fixture_migrator') AND query LIKE '%pg_sleep%'").strip() != b"2":
+        while f.pg("source", "SELECT count(*) FROM pg_stat_activity WHERE datname='cutover_fixture' AND usename IN ('fixture_runtime','fixture_migrator','fixture_privacy_executor') AND query LIKE '%pg_sleep%'").strip() != b"3":
             require(time.monotonic() < deadline, "held writer setup timed out")
             time.sleep(0.02)
         stage = "begin"
@@ -375,7 +439,7 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
         # The existing exact capability verifier refuses prepared work before
         # acquiring authority or changing LOGIN; this is a pre-closing refusal.
         require(f.pg("source", "SELECT count(*) FROM cutover_instances").strip() == b"0", "prepared transaction acquired cutover authority")
-        require(f.pg("source", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator') AND rolcanlogin").strip() == b"2", "pre-closing refusal changed source writer state")
+        require(f.pg("source", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator','fixture_privacy_executor') AND rolcanlogin").strip() == b"3", "pre-closing refusal changed source writer state")
         require(f.pg("source", "SELECT count(*) FROM cutover_watermarks").strip() == b"0", "prepared transaction certified a watermark")
         # This is the disposable fixture's abandoned transaction, not a command
         # that may roll back arbitrary production prepared work.
@@ -392,7 +456,7 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
         require(f.pg("source", "SELECT count(*) FROM accounts WHERE nickname='must-rollback'").strip() == b"0", "uncommitted value survived")
         require(f.pg("source", "SELECT count(*) FROM accounts WHERE nickname='prepared-must-rollback'").strip() == b"0", "abandoned prepared value survived")
         for service in ("source", "target"):
-            for role in ("fixture_runtime", "fixture_migrator"):
+            for role in WRITERS:
                 denied(lambda s=service, r=role: f.pg(s, "SELECT 1", r), "closed writer authenticated")
         proof = {"instance_id": source["instance_id"], "request_id": begin["request_id"], "generation": closing["generation"], "lease": lease}
         seal = {"proof": proof, "watermark_id": str(uuid.uuid4())}
@@ -414,7 +478,7 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
         stage = "refuse prehandoff restore"
         f.restore(before)
         denied(lambda: f.control("target", "bootstrap", handoff), "prehandoff capture activated")
-        require(f.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator') AND rolcanlogin").strip() == b"0", "refused bootstrap enabled writers")
+        require(f.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator','fixture_privacy_executor') AND rolcanlogin").strip() == b"0", "refused bootstrap enabled writers")
         stage = "restore authorized capture"
         f.restore(after)
         require(authority(f, "target") == source_authority, "restored authority bytes differ")
@@ -430,11 +494,11 @@ INSERT INTO text_outbox(match_id,account_id,effect_kind,payload)
         f.pg("source", "ALTER ROLE fixture_runtime LOGIN")
         denied(lambda: f.control("target", "bootstrap", handoff), "source LOGIN drift activated target")
         f.pg("source", "ALTER ROLE fixture_runtime NOLOGIN")
-        require(f.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator') AND rolcanlogin").strip() == b"0", "negative proof enabled target")
+        require(f.pg("target", "SELECT count(*) FROM pg_roles WHERE rolname IN ('fixture_runtime','fixture_migrator','fixture_privacy_executor') AND rolcanlogin").strip() == b"0", "negative proof enabled target")
         stage = "bootstrap"
         ready = f.control("target", "bootstrap", handoff)
         require(ready["phase"] == "ready" and ready["identity"] == target, "target ready identity differs")
-        for role in ("fixture_runtime", "fixture_migrator"):
+        for role in WRITERS:
             denied(lambda r=role: f.pg("source", "SELECT 1", r), "source reopened")
             require(f.pg("target", "SELECT 1", role).strip() == b"1", "target writer unavailable")
         stage = "held synthetic replay"

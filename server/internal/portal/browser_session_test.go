@@ -336,7 +336,7 @@ func TestPortalBrowserSessionRestrictions(t *testing.T) {
 	m := newTestManager(t, db)
 	account := newAccount(t, db)
 	token, csrf := "test-only-session", "test-only-csrf"
-	_, err := db.Exec(`INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at) VALUES($1,$2,$3,now()+interval '1 hour')`, portalHash(token), account, csrf)
+	_, err := db.Exec(`INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at,device_hash) VALUES($1,$2,$3,now()+interval '1 hour','fixture-browser')`, portalHash(token), account, csrf)
 	if err != nil {
 		t.Fatal(err)
 	}

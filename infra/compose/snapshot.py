@@ -560,6 +560,66 @@ def redis_inventory(fixture):
     return result
 
 
+def invalidate_legacy_routing(fixture, entries, pin):
+    """Compare/delete explicit legacy room keys in a verified restored fixture.
+
+    This is a local rehearsal operation, not authority to mutate a deployed
+    Redis. One bounded Lua transaction checks the entire inventory before any
+    deletion; absent keys are safe retries after an uncertain response.
+    """
+    if (not isinstance(pin, str) or not re.fullmatch(r'[0-9a-f]{64}', pin)
+            or not isinstance(entries, list) or not 1 <= len(entries) <= 100):
+        raise SnapshotError('bounded explicit routing inventory and restore pin required')
+    keys, args = [], []
+    for entry in entries:
+        if (not isinstance(entry, dict) or set(entry) != {'key', 'node', 'expires_at_ms'}
+                or not isinstance(entry['key'], str)
+                or not re.fullmatch(r'room:[A-Za-z0-9_-]{1,128}:node', entry['key'])
+                or not isinstance(entry['node'], str)
+                or not re.fullmatch(r'[A-Za-z0-9_-]{1,128}', entry['node'])
+                or type(entry['expires_at_ms']) is not int
+                or not (entry['expires_at_ms'] == -1 or 0 < entry['expires_at_ms'] < 2**53)
+                or entry['key'] in keys):
+            raise SnapshotError('invalid or duplicate legacy routing identity')
+        keys.append(entry['key'])
+        args.extend([entry['node'], str(entry['expires_at_ms'])])
+    receipt = checked_path(fixture.retained.parent / 'restore.json')
+    if (not receipt.is_file() or receipt.stat().st_mode & 0o077
+            or receipt.stat().st_size > 32768):
+        raise SnapshotError('verified private restored-fixture receipt required')
+    restored = decode_json(receipt.read_bytes())
+    if (not isinstance(restored, dict) or restored.get('verified') is not True
+            or restored.get('fixture') is not True or restored.get('admission_open') is not False
+            or restored.get('manifest_sha256') != pin or restored.get('target_token') != fixture.token):
+        raise SnapshotError('restored-fixture identity or pin changed')
+    fixture.validate()
+    before = redis_inventory(fixture)
+    # Every check precedes every DEL: a later mismatch cannot partially apply.
+    script = """
+for i,key in ipairs(KEYS) do
+  local kind = redis.call('TYPE',key).ok
+  if kind ~= 'none' then
+    if kind ~= 'string' or redis.call('GET',key) ~= ARGV[2*i-1]
+      or redis.call('PEXPIRETIME',key) ~= tonumber(ARGV[2*i]) then
+      return -1
+    end
+  end
+end
+local removed = 0
+for _,key in ipairs(KEYS) do removed = removed + redis.call('DEL',key) end
+return removed
+"""
+    removed = decode_json(fixture.redis('EVAL', script, str(len(keys)), *keys, *args))
+    if type(removed) is not int or not 0 <= removed <= len(keys):
+        raise SnapshotError('legacy routing changed; no cleanup completion')
+    stale = {hashlib.sha256(key.encode()).hexdigest() for key in keys}
+    expected = [entry for entry in before if entry['key_sha256'] not in stale]
+    if redis_inventory(fixture) != expected:
+        raise SnapshotError('retained Redis state changed; no cleanup completion')
+    return {'fixture': True, 'verified': True, 'removed': removed,
+            'retained_keys': len(expected), 'manifest_sha256': pin}
+
+
 def object_inventory(fixture):
     # Raw stopped-volume capture below preserves all metadata and versions.
     # This S3 view separately proves required current objects are readable.
@@ -649,8 +709,21 @@ def restore_retained(raw, destination):
             write_private(path, archive.extractfile(item).read())
 
 
+def validate_backup_retention(manifest):
+    """Pinned UTC epoch seconds; integrity alone never permits expired restore."""
+    created, expires = manifest.get("created_at"), manifest.get("expires_at")
+    now = time.time()
+    if (type(created) is not int or type(expires) is not int
+            or created <= 0 or expires <= created or expires - created > 90 * 86400
+            or created > now or now >= expires):
+        raise SnapshotError("backup retention window unavailable or expired")
+
+
 def create_backup(fixture, directory):
     fixture.validate()
+    created_at = int(time.time())
+    retention = {"created_at": created_at, "expires_at": created_at + 90 * 86400}
+    validate_backup_retention(retention)
     out = new_directory(directory)
     write_private(out / "INCOMPLETE", b"isolated fixture capture in progress\n")
     fixture.seal()
@@ -681,8 +754,9 @@ def create_backup(fixture, directory):
     evidence = {"database": before, "redis": redis_before, "redis_file": redis_files[0],
                 "objects": objects, "minio_files": minio_files, "retained": retained_before}
     write_private(out / "inventory.json", encode_json(evidence))
+    validate_backup_retention(retention)
     (out / "INCOMPLETE").unlink()
-    return complete_manifest(out, {"version": FORMAT, "fixture": True, "database": fixture.receipt["database"],
+    return complete_manifest(out, retention | {"version": FORMAT, "fixture": True, "database": fixture.receipt["database"],
                                    "source_token": fixture.token, "images": IMAGES,
                                    "capture": "network-sealed-fixture", "writers_quiescent": "isolated-fixture-only"})
 
@@ -690,7 +764,8 @@ def create_backup(fixture, directory):
 def read_backup(directory, pin):
     directory = checked_path(directory)
     manifest = verify(directory, pin)
-    if (set(manifest) != {"version", "fixture", "database", "source_token", "images", "capture", "writers_quiescent", "files"}
+    validate_backup_retention(manifest)
+    if (set(manifest) != {"version", "fixture", "database", "source_token", "images", "capture", "writers_quiescent", "files", "created_at", "expires_at"}
             or manifest["images"] != IMAGES or manifest["capture"] != "network-sealed-fixture"
             or manifest["writers_quiescent"] != "isolated-fixture-only"
             or not re.fullmatch(r"knowoff_snapshot_[0-9a-f]{12}", manifest["database"])
@@ -711,6 +786,7 @@ def restore_backup(directory, pin, destination):
     checked_path(destination)
     if Path(destination).exists():
         raise SnapshotError("restore destination already occupied")
+    validate_backup_retention(manifest)
     target = Fixture.create(destination, database=manifest["database"], start_stores=False, empty_database=True)
     try:
         target.validate(check_database=False)
@@ -758,7 +834,9 @@ def restore_backup(directory, pin, destination):
         if (inventory(target) != evidence["database"] or redis_inventory(target) != evidence["redis"]
                 or object_inventory(target) != evidence["objects"] or file_inventory(target.retained) != evidence["retained"]):
             raise SnapshotError("restored catalog/data/roles/sequences/objects parity failed")
+        validate_backup_retention(manifest)
         write_private(Path(destination) / "restore.json", encode_json({"verified": True, "fixture": True, "manifest_sha256": pin,
+                                                                      "target_token": target.token,
                                                                       "admission_open": False, "tables": len(evidence["database"]["tables"])}))
         return target
     except BaseException:
@@ -768,15 +846,26 @@ def restore_backup(directory, pin, destination):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("create", "verify", "restore", "cleanup"))
+    parser.add_argument("command", choices=("create", "verify", "restore", "cleanup", "invalidate-routing"))
     parser.add_argument("directory", type=Path)
     parser.add_argument("--source", type=Path, help="tool-created fixture receipt only")
     parser.add_argument("--sha256", help="manifest pin obtained separately at creation")
     parser.add_argument("--output", type=Path, help="new private restored-fixture receipt")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--inventory", type=Path, help="private explicit legacy routing inventory (restored fixtures only)")
     args = parser.parse_args(argv)
     handlers = install_cancellation_handlers()
     try:
+        if args.command == 'invalidate-routing':
+            if args.inventory is None or args.dry_run:
+                raise SnapshotError('explicit routing inventory required; dry-run is unsupported')
+            path = checked_path(args.inventory)
+            if not path.is_file() or path.stat().st_mode & 0o077 or path.stat().st_size > 65536:
+                raise SnapshotError('bounded private routing inventory required')
+            entries = decode_json(path.read_bytes())
+            fixture = Fixture.load(args.directory)
+            print(json.dumps(invalidate_legacy_routing(fixture, entries, args.sha256)))
+            return 0
         if args.command == "cleanup":
             fixture = Fixture.load(args.directory, check_database=False)
             if not args.dry_run:

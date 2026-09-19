@@ -26,6 +26,48 @@ def module():
 
 
 class SnapshotEntryTests(unittest.TestCase):
+    def test_routing_cli_validates_private_inventory_before_loading_fixture(self):
+        from unittest.mock import patch
+        ops = module()
+        with tempfile.TemporaryDirectory(dir='/tmp/agent-runs') as work:
+            inventory = Path(work) / 'inventory.json'
+            inventory.write_text('[]')
+            inventory.chmod(0o644)
+            common = ['invalidate-routing', str(Path(work) / 'fixture.json')]
+            for argv in [common, common + ['--dry-run'],
+                         common + ['--inventory', str(inventory)]]:
+                with self.subTest(argv=argv), patch.object(ops.Fixture, 'load') as load, \
+                        patch('sys.stderr', new_callable=io.StringIO) as stderr:
+                    self.assertEqual(ops.main(argv), 1)
+                    self.assertIn('snapshot:', stderr.getvalue())
+                    load.assert_not_called()
+
+    def test_routing_cli_receipt_and_refusal_exit_status(self):
+        from unittest.mock import patch, Mock
+        ops = module()
+        with tempfile.TemporaryDirectory(dir='/tmp/agent-runs') as work:
+            inventory = Path(work) / 'inventory.json'
+            entries = [{'key': 'room:old:node', 'node': 'old', 'expires_at_ms': -1}]
+            ops.write_private(inventory, ops.encode_json(entries))
+            fixture = Mock()
+            args = ['invalidate-routing', str(Path(work) / 'fixture.json'),
+                    '--sha256', 'a' * 64, '--inventory', str(inventory)]
+            result = {'fixture': True, 'verified': True, 'removed': 1,
+                      'retained_keys': 2, 'manifest_sha256': 'a' * 64}
+            with patch.object(ops.Fixture, 'load', return_value=fixture), \
+                    patch.object(ops, 'invalidate_legacy_routing', return_value=result) as cleanup, \
+                    patch('sys.stdout', new_callable=io.StringIO) as stdout:
+                self.assertEqual(ops.main(args), 0)
+                self.assertEqual(json.loads(stdout.getvalue()), result)
+                cleanup.assert_called_once_with(fixture, entries, 'a' * 64)
+            with patch.object(ops.Fixture, 'load', return_value=fixture), \
+                    patch.object(ops, 'invalidate_legacy_routing', side_effect=ops.SnapshotError('pin mismatch')), \
+                    patch('sys.stdout', new_callable=io.StringIO) as stdout, \
+                    patch('sys.stderr', new_callable=io.StringIO) as stderr:
+                self.assertEqual(ops.main(args), 1)
+                self.assertEqual(stdout.getvalue(), '')
+                self.assertIn('pin mismatch', stderr.getvalue())
+
     def test_legacy_restore_never_touches_ordinary_compose_volumes(self):
         # The old three-file shape must not authorize replacing an installation.
         # Docker is a recording stub: this regression never executes old restore.
@@ -64,6 +106,162 @@ class SnapshotSafetyTests(unittest.TestCase):
         self.work = tempfile.TemporaryDirectory(dir="/tmp/agent-runs")
         self.addCleanup(self.work.cleanup)
         self.root = Path(self.work.name)
+
+    def backup_with_window(self, created=100, expires=200):
+        out = self.ops.new_directory(self.root / "retention-backup")
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w"):
+            pass
+        for name in ("minio.tar", "retained.tar"):
+            self.ops.write_private(out / name, buffer.getvalue())
+        for name in ("postgres.dump", "roles.sql", "redis.rdb"):
+            self.ops.write_private(out / name, b"synthetic")
+        self.ops.write_private(out / "inventory.json", self.ops.encode_json({"minio_files": []}))
+        metadata = {"version": self.ops.FORMAT, "fixture": True,
+                    "database": "knowoff_snapshot_abcdef012345", "source_token": "fixture",
+                    "images": self.ops.IMAGES, "capture": "network-sealed-fixture",
+                    "writers_quiescent": "isolated-fixture-only",
+                    "created_at": created, "expires_at": expires}
+        return out, self.ops.complete_manifest(out, metadata)
+
+    def test_retention_window_exact_boundary_and_strict_types(self):
+        from unittest.mock import patch
+        valid = {"created_at": 100, "expires_at": 100 + 90 * 86400}
+        with patch.object(self.ops.time, "time", return_value=100):
+            self.ops.validate_backup_retention(valid)
+        with patch.object(self.ops.time, "time", return_value=valid["expires_at"] - 0.01):
+            self.ops.validate_backup_retention(valid)
+        with patch.object(self.ops.time, "time", return_value=valid["expires_at"]), self.assertRaises(self.ops.SnapshotError):
+            self.ops.validate_backup_retention(valid)
+        for value in [{}, valid | {"created_at": True}, valid | {"expires_at": True},
+                      valid | {"created_at": "100"}, valid | {"created_at": 100.0},
+                      valid | {"created_at": 0}, valid | {"created_at": 101},
+                      valid | {"expires_at": 100}, valid | {"expires_at": 99},
+                      valid | {"expires_at": valid["expires_at"] + 1}]:
+            with self.subTest(value=value), patch.object(self.ops.time, "time", return_value=100), self.assertRaises(self.ops.SnapshotError):
+                self.ops.validate_backup_retention(value)
+
+    def test_expired_restore_and_cli_dry_run_create_no_target(self):
+        from unittest.mock import patch
+        out, pin = self.backup_with_window()
+        with patch.object(self.ops.time, "time", return_value=150):
+            self.assertEqual(self.ops.read_backup(out, pin)[0]["created_at"], 100)
+        # Integrity remains independently inspectable after expiry.
+        self.assertEqual(self.ops.verify(out, pin)["expires_at"], 200)
+        with patch.object(self.ops.time, "time", return_value=200), patch.object(self.ops.Fixture, "create") as create:
+            with self.assertRaises(self.ops.SnapshotError):
+                self.ops.restore_backup(out, pin, self.root / "target")
+            for extra in ([], ["--dry-run"]):
+                with patch("sys.stderr", new_callable=io.StringIO), patch("sys.stdout", new_callable=io.StringIO) as output:
+                    self.assertEqual(self.ops.main(["restore", str(out), "--sha256", pin, "--output", str(self.root / "target")] + extra), 1)
+                    self.assertEqual(output.getvalue(), "")
+            create.assert_not_called()
+            self.assertFalse((self.root / "target").exists())
+
+    def test_restore_rechecks_expiry_after_read_before_creation(self):
+        from unittest.mock import patch
+        out, pin = self.backup_with_window()
+        with patch.object(self.ops.time, "time", side_effect=[199, 200]), patch.object(self.ops.Fixture, "create") as create:
+            with self.assertRaises(self.ops.SnapshotError):
+                self.ops.restore_backup(out, pin, self.root / "target")
+            create.assert_not_called()
+
+    def test_late_capture_keeps_incomplete_marker(self):
+        from unittest.mock import patch, Mock
+        fixture = Mock()
+        fixture.retained = self.ops.new_directory(self.root / "retained")
+        fixture.receipt = {"database": "fixture", "containers": {"redis": "r", "minio": "m"}}
+        fixture.pg_tool.return_value = b"synthetic"
+        fixture.redis.return_value = b'"OK"'
+        redis = io.BytesIO()
+        with tarfile.open(fileobj=redis, mode="w") as archive:
+            header = tarfile.TarInfo("dump.rdb")
+            header.size = 1
+            archive.addfile(header, io.BytesIO(b"x"))
+        empty = io.BytesIO()
+        with tarfile.open(fileobj=empty, mode="w"):
+            pass
+        fixture.docker.side_effect = [b"", redis.getvalue(), empty.getvalue()]
+        out = self.root / "late"
+        with patch.object(self.ops, "inventory", return_value={}), \
+                patch.object(self.ops, "redis_inventory", return_value=[]), \
+                patch.object(self.ops, "object_inventory", return_value=[]), \
+                patch.object(self.ops.time, "time", side_effect=[100, 100, 100 + 90 * 86400]):
+            with self.assertRaisesRegex(self.ops.SnapshotError, "retention"):
+                self.ops.create_backup(fixture, out)
+        self.assertTrue((out / "INCOMPLETE").exists())
+        self.assertFalse((out / "manifest.json").exists())
+
+    def test_restore_expiring_during_copy_closes_target_without_success(self):
+        from unittest.mock import patch, Mock
+        import hashlib
+        out, pin = self.backup_with_window()
+        target_path = self.ops.new_directory(self.root / "target")
+        retained = self.ops.new_directory(target_path / "retained")
+        # Real filesystem validation/read happens first; only isolated engine calls are faked.
+        with patch.object(self.ops.time, "time", return_value=150):
+            manifest, evidence, minio, archive = self.ops.read_backup(out, pin)
+        evidence |= {"database": {}, "redis": [], "objects": [], "retained": [],
+                     "redis_file": {"sha256": hashlib.sha256(b"synthetic").hexdigest(), "mode": 0o600, "uid": 0, "gid": 0}}
+        target = Mock()
+        target.receipt = {"database": "fixture", "containers": {"postgres": "p", "redis": "r", "minio": "m"}}
+        target.retained = retained
+        target.pg.return_value = b"0"
+        target.docker.return_value = minio
+        # Fixture.create normally creates the target directory; model that exact boundary.
+        retained.rmdir()
+        target_path.rmdir()
+        def create(*args, **kwargs):
+            target_path.mkdir(mode=0o700)
+            retained.mkdir(mode=0o700)
+            return target
+        with patch.object(self.ops, "read_backup", return_value=(manifest, evidence, minio, archive)), \
+                patch.object(self.ops.Fixture, "create", side_effect=create), \
+                patch.object(self.ops, "inventory", return_value={}), \
+                patch.object(self.ops, "redis_inventory", return_value=[]), \
+                patch.object(self.ops, "object_inventory", return_value=[]), \
+                patch.object(self.ops.time, "time", side_effect=[150, 200]):
+            with self.assertRaisesRegex(self.ops.SnapshotError, "retention"):
+                self.ops.restore_backup(out, pin, target_path)
+        target.close.assert_called_once_with()
+        self.assertFalse((target_path / "restore.json").exists())
+
+    def test_routing_cleanup_refuses_unrestored_or_ambiguous_inventory(self):
+        from unittest.mock import Mock
+        fixture = Mock()
+        fixture.retained = self.root / 'retained'
+        fixture.retained.mkdir()
+        fixture.token = '0123456789ab'
+        expected = [{'key': 'room:old-room:node', 'node': 'old-node', 'expires_at_ms': -1}]
+        with self.assertRaises(self.ops.SnapshotError):
+            self.ops.invalidate_legacy_routing(fixture, expected, 'a' * 64)
+        fixture.redis.assert_not_called()
+        self.ops.write_private(self.root / 'restore.json', self.ops.encode_json({
+            'verified': True, 'fixture': True, 'manifest_sha256': 'a' * 64,
+            'target_token': fixture.token, 'admission_open': False, 'tables': 1}))
+        for rows in [[], expected * 2,
+                     [dict(expected[0], key='security:fixture')],
+                     [dict(expected[0], expires_at_ms=True)],
+                     [dict(expected[0], node='')],
+                     [dict(expected[0], unknown='ignored')]]:
+            with self.subTest(rows=rows), self.assertRaises(self.ops.SnapshotError):
+                self.ops.invalidate_legacy_routing(fixture, rows, 'a' * 64)
+        fixture.redis.assert_not_called()
+
+    def test_routing_cleanup_ownership_failure_precedes_redis(self):
+        from unittest.mock import Mock
+        fixture = Mock()
+        fixture.retained = self.root / 'retained'
+        fixture.retained.mkdir()
+        fixture.token = '0123456789ab'
+        self.ops.write_private(self.root / 'restore.json', self.ops.encode_json({
+            'verified': True, 'fixture': True, 'manifest_sha256': 'a' * 64,
+            'target_token': fixture.token, 'admission_open': False, 'tables': 1}))
+        fixture.validate.side_effect = self.ops.SnapshotError('identity changed')
+        with self.assertRaisesRegex(self.ops.SnapshotError, 'identity changed'):
+            self.ops.invalidate_legacy_routing(fixture, [
+                {'key': 'room:old:node', 'node': 'old-node', 'expires_at_ms': -1}], 'a' * 64)
+        fixture.redis.assert_not_called()
 
     def test_postgres_readiness_does_not_accept_temporary_bootstrap_server(self):
         from unittest.mock import patch

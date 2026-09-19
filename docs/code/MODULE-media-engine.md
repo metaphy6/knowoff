@@ -12,6 +12,7 @@ certify a production pack, human playtest or deployment.
 | Boundary | Responsibility |
 |---|---|
 | [`server/pkg/media`](../../server/pkg/media/) | Strict text bundles, reviewed suitability, retained-card dealing, certification, duplicate candidates and immutable snapshots. |
+| [`server/pkg/textcert`](../../server/pkg/textcert/) | Bounded full-schedule action witnesses replayed through the authoritative engine; composes technical and human release gates without a media/game import cycle. |
 | [`tools/mediapack`](../../tools/mediapack/cmd/mediapack/main.go) | Text preparation, fixture generation, sampled certification/simulation, duplicate review input and publication validation. |
 | [`TextReleaseStore`](../../server/internal/store/text_release.go) | Accepted-source capture, durable publication, explicit activation and takedown with immutable lineage and audit. |
 | [`game.TextMatch`](../../server/internal/game/text_match.go) | Copy ownership, all five actions, secret schedule, turn/vote state and outcomes. |
@@ -78,7 +79,7 @@ for each content task.
 ## Commands and release evidence
 
 The current CLI commands are `text-prepare`, `text-build-fixture`,
-`text-certify`, `text-simulate`, `text-publish` and `text-duplicates`.
+`text-certify`, `text-simulate`, `text-actions`, `text-publish` and `text-duplicates`.
 Consult [tool usage](../../tools/README.md) for actual arguments. The old
 `build`, `certify`, `simulate` and `publish` commands reject before input/output
 work. `prepare_candidates.py` also refuses the retired playable-image workflow
@@ -92,6 +93,14 @@ suitability, exact technical/replay/action/screening/editorial artifacts and a
 human release decision for each intended mode/language and both sizes. Private
 replay seeds are not general player output. Publication and activation remain
 separate operations, with configured availability closed until all gates pass.
+
+`action-replay.json` additionally binds full runtime tuning and deterministic
+ordered engine requests/clocks to the exact candidate. Both sizes and all
+declared modes receive full-schedule action and timeout witnesses, including
+draws and trade acceptance/refusal/expiry. Publication, activation and restored
+release loading recompute this evidence through `textcert`; generic human
+`actions.json` alone is insufficient. This sampled scope does not replace the
+separately bounded exhaustive/depletion fixtures or real editorial pilots.
 
 ## Privacy and retained assets
 

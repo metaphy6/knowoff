@@ -49,7 +49,8 @@ func TestOAuthRealHTTPLinkAndSecondDeviceRestoration(t *testing.T) {
 		}
 		return response.StatusCode, response.Header, data
 	}
-	status, _, data := request("POST", "/api/auth/device", "", map[string]string{"device_hash": auth.HashDevice(uuid.NewString())})
+	installation := auth.HashDevice(uuid.NewString())
+	status, _, data := request("POST", "/api/auth/device", "", map[string]string{"device_hash": installation})
 	var original auth.TokenPair
 	if err := json.Unmarshal(data, &original); err != nil || status != 200 {
 		t.Fatal("device session", status, err)
@@ -57,10 +58,13 @@ func TestOAuthRealHTTPLinkAndSecondDeviceRestoration(t *testing.T) {
 	subject := "http-proof-" + uuid.NewString()
 	for _, intent := range []string{"link", "restore"} {
 		credential := ""
+		if intent == "restore" {
+			installation = auth.HashDevice(uuid.NewString())
+		}
 		if intent == "link" {
 			credential = original.AccessToken
 		}
-		status, headers, data := request("POST", "/api/auth/oauth/start", credential, map[string]string{"provider": "google", "intent": intent})
+		status, headers, data := request("POST", "/api/auth/oauth/start", credential, map[string]string{"provider": "google", "intent": intent, "device_hash": installation})
 		var flow auth.OAuthStart
 		if err := json.Unmarshal(data, &flow); err != nil || status != 200 || headers.Get("Cache-Control") != "no-store" {
 			t.Fatal("OAuth start", status, err)

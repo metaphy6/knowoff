@@ -165,3 +165,22 @@ partially sealed source. Fix the cause and create a fresh fixture/rehearsal.
 The reversible route is another isolated restore plus a forward migration fix;
 production cutover, legacy consumer retirement and reopening admission remain
 separate reviewed operations.
+
+After full restore parity, `invalidate-routing` can remove an explicit inventory
+of obsolete `room:<id>:node` strings from that restored fixture only. Supply the
+restore pin and a private JSON array (at most 100 entries), each containing
+`key`, the exact previous `node` value, and `expires_at_ms` (absolute Redis
+expiry, or `-1` for no expiry). For example, an inventory entry is
+`{"key":"room:old-room:node","node":"old-node","expires_at_ms":-1}`.
+
+```bash
+./infra/compose/snapshot.sh invalidate-routing /tmp/agent-runs/another-restore/fixture.json --sha256 <PIN> --inventory /tmp/agent-runs/stale-routing.json
+```
+
+The operation checks the restored fixture identity and every named key before
+atomically deleting any. Changed values/types/expiries refuse the whole batch;
+already absent keys permit retry after an uncertain response. It verifies all
+other keys' values and absolute expiries afterward, including security counters
+and current routes. It never flushes Redis or authorizes production cleanup.
+The restore rehearsal exercises this intentional post-restore transformation
+separately from its unchanged backup/restore parity checks.

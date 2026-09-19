@@ -93,6 +93,23 @@ func (s *AdminOperationStore) Decide(ctx context.Context, actor string, c AdminO
 	if s == nil || s.db == nil || !HasAdminAuthorization(ctx) || !valueUUID(actor) {
 		return receipt, ErrAdminRequired
 	}
+	err := WithValueTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		var err error
+		receipt, err = s.DecideTx(ctx, tx, actor, c, affected)
+		return err
+	})
+	return receipt, err
+}
+
+// DecideTx joins a decision and its audit to the caller's domain transaction.
+// Callers must commit or roll back the whole transaction, including all effects.
+func (s *AdminOperationStore) DecideTx(ctx context.Context, tx *sql.Tx, actor string, c AdminOperationCommand, affected []string) (AdminOperationReceipt, error) {
+	var receipt AdminOperationReceipt
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if s == nil || s.db == nil || tx == nil || !HasAdminAuthorization(ctx) || !valueUUID(actor) {
+		return receipt, ErrAdminRequired
+	}
 	affected = slices.Clone(affected)
 	slices.Sort(affected)
 	affected = slices.Compact(affected)
@@ -109,7 +126,7 @@ func (s *AdminOperationStore) Decide(ctx context.Context, actor string, c AdminO
 		Accounts []string
 	}{actor, c, affected})
 	digest := sha256.Sum256(raw)
-	err := WithValueTransaction(ctx, s.db, func(tx *sql.Tx) error {
+	err := func() error {
 		if c.OwnerID != "" {
 			if _, err := tx.ExecContext(ctx, `SET LOCAL row_security=off; LOCK TABLE text_process_current IN SHARE MODE`); err != nil {
 				return err
@@ -171,7 +188,7 @@ func (s *AdminOperationStore) Decide(ctx context.Context, actor string, c AdminO
 		}
 		receipt, err = readAdminOperation(ctx, tx, c.ID)
 		return err
-	})
+	}()
 	return receipt, err
 }
 

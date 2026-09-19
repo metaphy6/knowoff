@@ -59,7 +59,7 @@ void main() {
     'receipt with stale in-memory identity never creates a replacement after storage loss',
     () async {
       final token =
-          '${base64Url.encode(utf8.encode('{}'))}.${base64Url.encode(utf8.encode('{"exp":4102444800}'))}.synthetic';
+          '${base64Url.encode(utf8.encode('{}'))}.${base64Url.encode(utf8.encode('{"exp":4102444800,"dvh":"purchase-fixture-installation"}'))}.synthetic';
       SharedPreferences.setMockInitialValues({
         'knowoff_account_id': account,
         'knowoff_access_token': token,

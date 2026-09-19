@@ -148,7 +148,10 @@ func TestGuardPortalRouteCSRFAndRevokedRole(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO reports(report_type,reporter_id,target_account_id,reason,status) VALUES('conduct',$1,$2,'resolved-only','resolved'),('media',$1,$2,'media-only','new')`, reporter, target); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at) VALUES($1,$2,'synthetic-csrf',now()+interval '1 hour')`, portalHash("synthetic-session"), guard); err != nil {
+	if _, err := db.Exec(`INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at,device_hash) VALUES($1,$2,'synthetic-csrf',now()+interval '1 hour','guard-fixture')`, portalHash("synthetic-session"), guard); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO auth_installations(device_hash) VALUES('guard-fixture')`); err != nil {
 		t.Fatal(err)
 	}
 	call := func(method, path, csrf string) *httptest.ResponseRecorder {

@@ -30,7 +30,7 @@ All five modes remain intended; stagger exposure according to evidence.
 | Phase | Items | Done | Status |
 |---|---|---|---|
 | 1 — Contract, baseline and migration preflight | 12 | 12 | Complete; independent review and full validation passed |
-| 2 — Text catalog, dealing and content certification | 10 | 6 | Catalog, Unicode, pinning, dealing and contribution lifecycle verified; action audit and human gates open |
+| 2 — Text catalog, dealing and content certification | 10 | 8 | Technical action certification and bounded exhaustive/replay fixtures independently verified; human editorial/release gates open |
 | 3 — Shared match state and five mode engines | 14 | 14 | Complete; independent review, cold race/property/privacy checks and full unified gate passed |
 | 4 — Lobbies, protocol and client integration | 12 | 10 | Technical integration independently verified; physical-device journeys/performance and final gate open |
 | 5 — Durable value, community and trust | 20 | 11 | Durable settlement/recovery, Guard, weekly lifecycle, OAuth, avatar and curation/report integration verified; remaining trust/provider gates open |
@@ -261,8 +261,8 @@ pack refusal, immutable activation and deterministic fixture replay.
 - [x] Pin complete validated text snapshots per match; failed activation leaves prior release active, and mid-match activation never changes wording or evidence.
 - [x] Replace required multimodal assumptions with reviewed versioned text suitability; record optional evaluator/model data without leaking candidate bands to clients.
 - [x] Deal role-blind 5+3 against every scheduled Nown and reject infeasible setup; test retained hand/reserve coverage instead of discarded intermediate selections.
-- [ ] Certify distinct neutral system seeds independent of roles/prompts, unique copy identities and mode-specific reachable action/depletion viability.
-- [ ] Build isolated synthetic fixtures for five modes, small exhaustive ownership/state tests and reproducible production-candidate schedule simulations.
+- [x] Certify distinct neutral system seeds independent of roles/prompts, unique copy identities and mode-specific reachable action/depletion viability.
+- [x] Build isolated synthetic fixtures for five modes, small exhaustive ownership/state tests and reproducible production-candidate schedule simulations.
 - [x] Connect accepted immutable contributions to reviewed bundle/certify/publish/activate lifecycle; preserve consent/credits and forbid duplicate publication rewards.
 - [ ] Run editorial pilots in three themes/two cultures at 4/6 sizes; retain comprehension/ambiguity/first-seat/draw/repetition evidence per mode and language.
 - [ ] Gate: technical certification and human release decision both present for each candidate mode/language; old seed volume counts never constitute production readiness.
@@ -322,6 +322,29 @@ promise or replace all-schedule coverage with first-prompt counts. Optional
 embeddings cannot become a semantic judge. Engine tests may consume synthetic
 snapshots while pilots/review continue; availability stays closed until both
 technical and human release gates pass. Parent alone records completion/staging.
+
+#### Phase 2 continuation — executable action evidence, 2026-09-19
+
+**Goal.** Bind technical action evidence to replay through the authoritative
+five-mode engine, preserving separate human editorial and release decisions.
+**Non-goals.** No gameplay/economy changes, fabricated human evidence, enabled
+production cells or claim of exhaustive production-state enumeration.
+**Ownership.** The certification implementer owns `server/pkg/media/` action
+artifact types, `server/pkg/textcert/`, the mediapack adapter and the narrow
+`server/internal/store/text_release.go` integration plus corresponding tests.
+Existing gamebot replay machinery is the reference; share engine execution
+without copying gameplay rules. The coordinator owns roadmap/tracking/docs.
+
+| Child | Implementation and proof |
+|---|---|
+| A1 | Define bounded typed evidence binding exact content, rules, full tuning, algorithm, cells and replay inputs; reject missing coverage, tampering, unsupported scope and exhausted budgets. |
+| A2 | Implement an acyclic `textcert → game → media` wrapper for deterministic full-schedule sampled action witnesses at both sizes across all modes; cover draws, timeout, replacement, chains and trade accept/refuse/expiry with conservation and privacy assertions. |
+| A3 | Generate and verify private action artifacts through mediapack and publication/activation/restored-release paths; generic human action attestations alone cannot satisfy executable proof. Preserve immutable release lineage and no repeated approval rewards. |
+| A4 | Retain separately labelled small exhaustive/depletion fixtures; run targeted red/green, independent review, cold verification and the unified gate. Close technical parent items only when their full proof is present. |
+
+**Risks.** Avoid a media/game import cycle; bound replay work before allocation;
+never expose privileged seeds/actions in player payloads or ordinary logs.
+Sampled candidate replay and small exhaustive fixtures have distinct scope.
 
 ### Phase 3 — Shared match state and five mode engines
 
@@ -553,6 +576,7 @@ day/profile/wallet lock order and bounded whole-transaction retry protocol.
 | 17a — Billing implementation | Implement authenticated server receipt verification, unique transaction entitlement grant and restore/refund reconciliation; fixture tests cover replay, wrong account/product/platform and provider failure. |
 | 17b — Billing evidence | Run Play/StoreKit test transactions, restore and refund on configured platform accounts/devices; save redacted provider evidence. No mock or absent credentials counts as this proof. |
 | 18a — Doubler/consent | Verify SSV signatures/transaction identity and Premium eligibility server-side; cap/replay/private-settlement tests prove client callbacks grant nothing and denied consent uses the allowed flow. |
+| 18a decision, 2026-09-19 | The owner fixed Premium eligibility at authoritative match start. Persist that decision per match/account; later purchase or expiry cannot change it. Interrupted-match bonus treatment remains pending. |
 | 18b — Provider evidence | Exercise actual configured ad verification and UMP/platform consent paths with test accounts; record revocation/refusal and policy review for intended markets. |
 | 19 — Reconciliation | Check immutable accepted outcomes against every value effect and outbox item, not wallet=sum alone; enforce ledger immutability at DB privilege/trigger boundary with a separately authorized retention path. |
 | 20 — Gate | Review complete integration and run unified real-service concurrency/failure/privacy checks; retain exact original-row/file parity, provider/manual results and unresolved launch dependencies separately. |
@@ -591,6 +615,247 @@ required for their named paths; implement/test unrelated local paths meanwhile.
 Human approval is needed only for a concrete new policy or external action, not
 for the already adopted reward rules. Financial correctness cannot be inferred
 from a passing fixture helper or a successful enqueue.
+
+#### Phase 5 continuation — immutable consent, 2026-09-19
+
+**Goal.** Preserve the exact contribution and user-terms bytes referenced by
+accepted consent at the database boundary. **Non-goals.** No retention bypass,
+deletion-policy invention, new terms wording or changed reward rules.
+**Ownership.** The trust implementer owns a newly allocated migration 28,
+focused store/portal trust tests and required migration-test updates; existing
+applied migrations remain byte-identical. The coordinator owns documentation.
+
+| Child | Implementation and proof |
+|---|---|
+| T1 | Reproduce direct SQL mutation/deletion/truncation of referenced contribution terms and missing retained user-consent truncate guards on guarded disposable PostgreSQL. |
+| T2 | Add immutable row and retained-truncation enforcement with an empty-only controlled down; verify actual role/privilege behavior and preserve historical references/rows. |
+| T3 | Prove fresh/upgrade/repeated-up/down refusal, transactional rollback and ordinary append/accept/replay paths; independent review then real-service cold and unified gates. |
+
+**Risks.** PostgreSQL `TRUNCATE CASCADE` and owner/nonowner paths must not bypass
+retention. Existing test isolation must use its guarded fixture reset, never
+weaken production immutability to clear a test.
+
+#### Phase 5 continuation — audited Noin corrections, 2026-09-19
+
+**Goal.** Let an authenticated Admin issue an explicit Noin grant or refund one
+original Noin spend, with an immutable decision and exactly one wallet credit.
+**Non-goals.** No cash/provider refund, entitlement change, earn-cap bypass via
+gameplay, new policy, or new migration; migration 27 already defines these
+operator decisions and source-refund uniqueness.
+**Ownership.** The trust implementer owns `economy/admin_corrections*.go`,
+the narrow `AdminOperationStore.DecideTx` extraction, internal Admin correction
+forms/route and their tests. Existing Decide remains a compatible wrapper;
+the coordinator owns documentation and final tracking/staging.
+
+| Child | Implementation and proof |
+|---|---|
+| O1 | Add caller-transaction decision reuse and atomic correction API; exact initiating-session checks, sorted actor/target locks, source/operation/wallet ordering, decision/audit/ledger/result commit together. |
+| O2 | Require positive bounded grants; full refunds derive from one same-account negative `spend` ledger row, reject other sources/partial amounts/overflow/reuse. Preserve caps, XP, entitlements and original rows. |
+| O3 | Add bounded strict internal-console form and receipt navigation with role/CSRF/no-store and escaped output; label Noin corrections explicitly, never imply cash refunds. |
+| O4 | Prove retries/conflicts, source-refund/spend concurrency, authority expiry after waits, ledger/audit rollback and all unrelated value parity on real disposable PostgreSQL; independent review then cold and unified gates. |
+
+**Risks.** The immutable operation decision and economic effect must share one
+transaction. A failure cannot leave an authorized-looking pending correction
+or report a credit that did not commit. Admin corrections have distinct ledger
+provenance and do not pretend to be gameplay awards.
+
+#### Phase 5 continuation — account and installation sanctions, 2026-09-19
+
+**Goal.** Admins can issue independent permanent/timed account and known-app-
+installation sanctions and lift an exact decision, with retained audit and
+immediate enforcement. **Non-goals.** No hardware attestation, account merging,
+Guard-history rewrite, deletion policy or provider calls. Installation identity
+is resettable app data, not proof of a physical device.
+**Ownership.** The sanctions implementer owns additive migration 29, new store
+sanction/installation helpers, narrow auth/handler/portal/Admin authorization,
+lobby/runtime enforcement and persistent client installation binding with tests.
+Coordinate shared Admin files with the Noin owner before editing. The parent
+owns documentation and tracking; independent review precedes implementation.
+
+| Child | Implementation and proof |
+|---|---|
+| S1 | Add decision-linked account sanctions, captured installation identities, exact lifts and delivery receipts; preserve Guard provenance and retained history on upgrade/down refusal. |
+| S2 | Serialize accounts before sorted installations; separate canonical anonymous bootstrap from many-account installation links. Concurrent first bootstrap rolls back losing candidates; ambiguous legacy mappings refuse without guessing. |
+| S3 | Commit exact-session decision/audit, captured known installations and one epoch revocation atomically. Same-ID retry never recaptures or revokes again; an exact lift cannot clear unrelated sanctions. |
+| S4 | Persist secure random installation identity before network; preserve existing signed device hash. Authenticated legacy binding rotates credentials for the same account; immutable old OAuth result bytes remain identical. |
+| S5 | Apply current account/installation sanction checks after locks to token issue/refresh/OAuth, protected admission and derived browser authority. Legacy unbound player credentials require explicit binding before protected admission. |
+| S6 | Validate socket binding under lobby serialization; retry pending live enforcement against the current peer and exact effective sanction. Expired/lifted receipts never close newly allowed sessions or repeatedly revoke epochs. |
+| S7 | Prove real PostgreSQL bootstrap/link/sanction races, OAuth replay, session authority, migration parity and actual HTTP/WebSocket enforcement; test client restart/logout/switching/storage failures, then independent review and cold/full gates. |
+
+**Risks.** Lock order must never acquire an existing account while holding an
+installation lock. OAuth account switching remains valid and must not rewrite
+anonymous bootstrap identity. Admin password sessions have no app-installation
+signal and enforce account sanctions only. Captured installation hashes stay
+private. Existing unbound credentials cannot reveal an originating installation;
+compatibility uses explicit same-account binding, never a replacement account.
+
+**S5 review refinement.** Production Reserve/Start require trusted copies of
+each current participant's verified account, installation, epoch and exact
+credential expiry/revocation identity. Copy these under lobby serialization;
+within the value transaction lock the match, sorted participant accounts and
+sorted distinct installation registries, then recheck authority before economic
+writes. Never acquire another account after installations. Missing proof refuses
+production admission; only the existing explicitly verified zero-value development
+path is exempt. Test both orders of a linked peer's installation sanction versus
+Start, token expiry/revocation during waits, clean-installation admission, and
+every Start caller. Accepted terminal settlement/recovery must remain possible.
+Independent plan review accepted this refinement before the admission edit.
+
+#### Phase 5 continuation — leaderboard operations, 2026-09-19
+
+**Goal.** Admins can inspect standings/history, exclude or reinstate an account
+for an open week with reasons, and rerun a durable weekly close.
+**Non-goals.** No score deletion, earn/quota changes, retroactive rewriting of
+closed history or new title/reward policy. Exclusion/reinstatement freezes once
+`closing_at` is set; reinstatement restores eligibility to accumulated points.
+**Ownership.** The trust implementer owns migration 30 (after sanctions 29),
+dedicated store decision/result helpers, filtered leaderboard projections,
+Admin controls and close recovery integration with tests. Coordinate runtime
+wiring with the sanctions owner. The coordinator owns documentation.
+
+| Child | Implementation and proof |
+|---|---|
+| L1 | Add dedicated immutable week-scoped decision/result identities, reason/hash/actor and exact prior exclusion. Refuse populated down and register least-privilege/restore inventories. |
+| L2 | Filter active exclusions before ranking open weeks; closed views use immutable history. Strict bounded Admin forms enforce exact session, role and CSRF; week lock precedes sorted actor/target accounts and final authority recheck. |
+| L3 | Commit accepted close decision/audit and cutoff together, then drain outside account locks. Pending work survives restart; bounded retries and ordinary close converge to the same history and completion receipts without reopening a week. |
+| L4 | Prove exclusion/reinstatement versus award/close races, ties/own-rank filtering, retries/conflicts, expiry after waits, atomic rollback and historical/value parity on real PostgreSQL; independent review, cold checks and unified gate. |
+
+**Risks.** Do not reuse the account-first general operator decision path before
+a week lock. A close rerun returns or completes its original snapshot, never
+recalculates historical scores. Profile podium totals have legacy provenance;
+this slice must not overwrite them with a guessed baseline.
+
+#### Phase 5 continuation — Premium start eligibility, 2026-09-19
+
+**Goal.** Preserve the owner's selected Premium-bonus eligibility at the
+server-authoritative match start, including Local Rooms. **Non-goals.** No
+bonus payment, SSV claim or interrupted-match policy; those remain separate.
+**Ownership.** The coordinator owns migration 31 after 29/30, a narrow Start
+hook, private store helper/tests and privilege/restore inventories.
+
+| Child | Implementation and proof |
+|---|---|
+| P1 | Add immutable match/account eligibility rows with `premium_bonus_eligible`, authoritative start instant and policy version. Leave historical absence explicitly unknown; controlled down refuses retained rows. |
+| P2 | Capture Premium independently of quota access kind under existing owner/match/week/sorted-account locks and in the same start transaction. Prototype/reward-disabled eligibility is false; exact expiry follows existing entitlement semantics. |
+| P3 | Prove Local/Quick Play, free/Premium, expiry/reserve/start transitions, unchanged replay, both purchase/revoke lock orders and complete insert/final-update rollback on real PostgreSQL. No public wire or financial effect changes. |
+
+**Risk.** A missing historical row must never be interpreted as a negative
+eligibility decision by future bonus readers. Later subscription changes do not
+recapture a started match. Independent plan review accepted this boundary.
+
+#### Phase 5 reward verification foundation — 2026-09-19
+
+**Status.** B1–B3 independently reviewed and tested; public registration and
+financial effects remain closed. Premium eligibility uses the immutable start
+receipt. Interrupted matches return `policy_pending` until the owner chooses
+their bonus treatment.
+
+| Child | Implementation and proof |
+|---|---|
+| B1 | Issue opaque match/account claims only after an applied completed settlement, known start eligibility and current account authority; enforce bounded rolling issuance. Missing historical eligibility is not false. |
+| B2 | Verify the actual AdMob signed query before SQL, derive the account from the opaque claim, bind transaction/fingerprint once and accept exact retries. Signed occurrence must fall within the claim lifetime even when delivery is later. |
+| B3 | Keep handlers unregistered, bound body reads including early refusals, and preserve provider acknowledgment semantics. Prove invalid signatures have no SQL effects and immutable claim/receipt rows cannot be rewritten. |
+| B4 | Apply one shared Premium/SSV bonus identity with original-day caps and the selected interrupted-match policy; no double bonus or reconstructed eligibility. |
+| B5 | Add private bonus delivery/reconnect and reconciliation against authoritative accepted receipts; no public role disclosure or invented historical baselines. |
+| B6 | Join actual consent, provider and client paths only after the preceding proof gates; record external platform evidence separately. |
+
+**Evidence.** Independent PostgreSQL/store/signature/config matrix passed 15 top-level
+and 21 nested cases; final HTTP verification passed three tests including six
+real TCP stalled-body cases. Schema 34 retains only claims and verified provider
+receipts; it cannot grant Noin or rewrite existing settlements.
+
+#### Phase 5 deletion decision packet — 2026-09-19 (resolved policy)
+
+**Status: owner delegated mainstream mobile-app policy on 2026-09-19; the selected defaults are now in Blueprint Profile §1a.** Blueprint Profile requires
+statistics erased; the transition design assigns retention policy to the owner.
+The following table preserves the evaluated choices; Blueprint §1a is the adopted
+policy. The current database also protects financial, consent, moderation, source and
+match evidence. A disabled account UUID is still linkable, not anonymized.
+
+| Owner choice | Concrete affected data and implementation consequence |
+|---|---|
+| Retained evidence and period | Specify each retained financial/consent/moderation/settlement class, its purpose, restricted readers, expiry/start event and holds; or authorize a redacted replacement representation. Ledger/purchase/subscription ownership and consent triggers currently forbid deletion. |
+| Content and attribution | Choose approved-content retention with public credit, retained content with suppressed identifying credit, or withdrawal from future releases. Decide drafts/rejections/original blobs separately. Source archives contain whole rows/blobs; accepted provenance and release bundles copy nicknames. |
+| Sanction identifiers | Choose restricted retention of installation/provider linkage for existing sanctions, or removal with the resulting re-registration limitation. Working credentials must not be retained as a login path. |
+| Paid value/recovery | Decide whether deletion permanently ends access or permits a defined later purchase recovery. Existing provider ownership cannot simply move to a replacement account. Deletion does not perform a cash refund or cancel a platform subscription. |
+| Backups/archives | Specify finite retention and restore authorization, with deletion suppression before restored service admission or explicit copy replacement/purge; define completion wording while older copies remain. |
+
+**Prepared engineering boundary.** A fresh same-account reauthentication creates
+one-use intent and durable request; authority denial/revocation is atomic.
+A versioned disposition manifest applies bounded resumable batches across
+relational columns, JSONB, arrays, blobs, source archives and backups. Ordinary
+runtime cannot bypass retained-value guards. Delayed settlement/provider work
+must neither strand other players' value nor recreate deleted profiles/access.
+Proof uses identifiable synthetic markers in every data class, crash/acknowledgment
+failures, replay/account-switch races and actual restore suppression.
+
+**Current source evidence.** Migrations 2/3 contain identity, public counters,
+ledger JSON, raw receipts and Admin secrets; 10 contains retained match/settlement/
+outbox/leaderboard evidence; 11 freezes source archives and attribution; 19/21
+retain provider ownership; 20 contains OAuth receipts; 25/27/28 enforce retained
+truncation. The execution inventory includes sanctions 29, leaderboard 30 and
+Premium eligibility 31. No deletion API or cleanup is claimed by this packet.
+
+#### Phase 5 continuation — account deletion, 2026-09-19
+
+**Goal.** Execute Blueprint Profile §1a with fresh same-account confirmation,
+immediate access/publication fences, bounded personal-data removal and honest
+retention status. The owner's policy delegation resolves the earlier policy
+block; implementation and proof remain required.
+
+| Child | Implementation and proof |
+|---|---|
+| D0 | Review the exact schema/column/JSON/blob disposition manifest, surviving-player effect witnesses and privacy authority design in ADR-014. Unknown inventory refuses cleanup; original hashes remain historical anchors, never hashes of rewritten payloads. |
+| D1 | Add isolated, narrowly scoped privacy authority and transaction-bound transformations. Ordinary runtime SQL, role switching, GUC spoofing, RLS and cascading truncation cannot bypass retained-data protections. |
+| D2 | Add one-use reauthentication intents, atomic confirmation/revocation/public suppression and separate read-only status capabilities for guest, linked and sanctioned accounts. Join HTTP, app and external web paths only after executor coverage is complete. |
+| D3 | Complete pending matches/settlements for surviving players without restoring deleted value or profiles. Fence authored release admission, withdraw affected content and erase copied attribution/source blobs; replacement packs require independent certification. |
+| D4 | Resume bounded cleanup and purpose-scoped evidence expiry; enforce finite sanction digests and explicit scoped retention holds. Prove exact nondeleted-row/value parity, crash recovery and every writer/confirmation race. |
+| D5 | Enforce backup expiry and processor acknowledgments; export suppression to authority independent of restored application data, then require fresh replay before restored admission. Stale/missing suppression authority keeps admission closed. |
+| D6 | Run a complete joined synthetic deletion/expiry/restore journey, independent review and the unified suite before exposing deletion. Physical/provider and production operator evidence remain separately required where applicable. |
+
+**Risks.** Setting `accounts.deleted_at` alone strands settlement because ordinary
+value locks deny deleted accounts. Accepted terminal work needs a narrow separate
+path with deletion-disposition receipts. Shared immutable JSON requires verified
+survivor witnesses before original bytes are removed. No generic trigger bypass,
+blanket evidence exemption, fabricated historical baseline or support-only
+deletion path is permitted.
+
+#### D5a — bounded backup restore lifetime
+
+**Goal.** Refuse restoration of an expired captured copy under Blueprint's
+90-day maximum. **Non-goals.** No production backup authorization, purge receipt,
+processor acknowledgment or independent suppression/freshness claim.
+**Files.** Existing `infra/compose/snapshot.py`, snapshot tests and runbook.
+
+| Child | Implementation and proof |
+|---|---|
+| D5a1 | Pin capture-start UTC creation and expiry in the immutable manifest; require a positive lifetime no longer than 90 days. Long captures cannot publish an already expired manifest. |
+| D5a2 | Validate retention before any restore target or child command, including CLI dry-run. Missing/malformed/future creation and exact expiry refuse; integrity verification alone is not restore admission. |
+| D5a3 | Prove integer/UTC boundaries, invalid metadata, no target creation on refusal and actual isolated snapshot restore parity; independent review and cold verification. |
+
+**Risks.** Backup timestamps cannot certify an independent deletion watermark or
+rollback resistance. Actual expired-copy removal and external authority remain
+D5 work; a valid lifetime never opens application admission.
+
+#### D5b — independent suppression fixture journal
+
+**Goal.** Give D2 a concrete durable, idempotent suppression publisher whose
+records can be authenticated independently of the application backup.
+**Non-goals.** No deployed service, retention purge, processor proof or restored
+application admission. The fixture cannot certify production rollback resistance.
+**Files.** New `server/internal/privacy` package and tests; D2 consumes its
+`Publisher` interface without coupling this package to auth/store.
+
+| Child | Implementation and proof |
+|---|---|
+| D5b1 | Canonical typed request/receipt, installation/key identity and purpose-HMAC account selectors; signed bounded hash-chain records never persist raw account UUIDs or keys. Test exact replay, conflicting identity, malformed/unknown JSON and privacy markers. |
+| D5b2 | Serialize independent opens using a stable lockfile; atomically fsync state and directory, then durably advance an independent minimum. Uncertain replay re-fsyncs before acknowledgment. Test concurrency, cancellation, fault/reopen and rollback/truncation against the separate minimum. |
+| D5b3 | Sign a verifier-supplied random challenge with fresh head/installation/key identity; verify every sequence/digest/signature and the independently trusted minimum. Test stale/future/replayed challenge and changed identity; integrate D2's append/bind retry. |
+| D5b4 | Independent review and cold verification. Document private directory ownership, backup-root separation, exact fixture limits and the still-unconfigured production authority; connect actual restore only after executor coverage. |
+
+**Risks.** Journal and minimum must stay outside restored data; signed old bytes
+alone do not prove freshness. Keys are separately supplied, never captured in
+application artifacts. A locally mocked minimum is test evidence only.
 
 ### Phase 6 — Retirement, compatibility and operations
 
@@ -662,6 +927,27 @@ down as recovery. Avatar processing is an active image consumer. After new
 financial writes, an old database snapshot cannot be routine rollback; preserve
 one authoritative database or reconcile the exact durable delta before reopening.
 
+#### Phase 6 continuation — selective legacy routing cleanup, 2026-09-19
+
+**Goal.** Remove only inventoried obsolete Redis routing from an owned restored
+fixture while retaining identity/security state exactly. **Non-goals.** No new
+Redis-backed v2 queues, production cleanup, broad flush, or implied human smoke.
+**Ownership.** The operations implementer owns unused legacy APIs in
+`server/internal/store/redis.go`, focused tests, and selective restore-fixture
+support in `infra/compose/` and `xops/test/`. Coordinate fixture migration-head
+changes with the consent implementer; the coordinator owns docs/tracking.
+
+| Child | Implementation and proof |
+|---|---|
+| R1 | Verify caller inventory, then retire unused legacy room-routing helpers with retained Redis readiness/error tests. Preserve the live Admin `AllowIntent` limiter and all test files; compiler verification found its caller missing from the graph result. |
+| R2 | Add bounded explicit-inventory cleanup for owned disposable restored Redis only; verify target identity and exact stale key values before deletion, with unknown/current keys preserved and no unrestricted key pattern deletion. |
+| R3 | Restore an actual captured fixture, remove only authorized stale routing, and prove all unrelated/security key types, values and absolute expiries unchanged; retry, cancellation, changed-key and error paths must not claim completion. |
+| R4 | Independent review and cold verification, then final artifact/outage/source-retirement inventory and unified gate. Record remaining external callback/process and human/platform gates separately. |
+
+**Risks.** A source snapshot's full parity proof precedes intentional selective
+invalidation. Avoid races that delete a key whose ownership/value changed after
+inventory; fixture ownership and stale-key compare/delete must remain atomic.
+
 ### Phase 7 — Playtests, business validation and release
 
 **What/why.** Confirm that the text product is understandable, fun, fair and
@@ -725,6 +1011,25 @@ rollout observations. Ask only for the next concrete missing input when its
 dependent work is ready; keep unrelated implementation progressing. No existing
 deployment or paid-customer inventory is asserted beyond the owner's dated N/A.
 
+#### Phase 7 continuation — economics arithmetic, 2026-09-19
+
+**Goal.** Make Business Plan monthly, acquisition, observed-cohort and runway
+formulas reproducible, with explicit units and missing denominators. This is an
+offline arithmetic tool; it cannot certify quotes, human measurements, funding
+or a launch decision. **Files/ownership.** Coordinator: `tools/economics_report.py`,
+`xops/test/test_economics_report.py`, tool documentation and evidence report.
+
+| Child | Implementation and proof |
+|---|---|
+| E1 | Strict bounded JSON with decimal-string accounting units, one currency, formula version and explicit observation horizon. Reject unknown fields, nonfinite/negative inputs, impossible shares and invalid counts. |
+| E2 | Compute subscription/bulk/ad receipts, player-match runtime and itemized labor/provider/hosting costs, acquisition contribution, CAC, observed cohort LTV and runway. Return unavailable ratios for missing/zero denominators; distinguish cash burn from operating contribution. |
+| E3 | Reproduce all three Business Plan examples exactly, then test player-match units, zero activity/ads/burn, missing cash/reserve, loss-making cohorts, horizon preservation, reorder determinism and strict CLI/private output behavior. Independent review and full Python suite are required; commercial parent remains open. |
+
+**Risk.** Formula validation does not validate business assumptions. Inputs and
+reports remain explicitly unverified arithmetic; yearly receipts must already
+be recognized on a monthly basis. Never infer revenue from virtual currency or
+infer cash burn from profit.
+
 ## Appendix A — Tracking and truthful completion
 
 One run ID per scoped pass; `action=commit,status=completed,commit_sha=pending`
@@ -742,3 +1047,16 @@ verified. An implementation gate blocked by environment or owner evidence stays
 open with a checkpoint. The overall transition additionally requires retirement
 proof, preserved user value and the business/content/operations launch decision;
 a green compile cannot substitute for any of these.
+
+
+#### Finalization boundary — 2026-09-19
+
+At the owner's request, finalize and stage the current verified implementation
+for a human push. No D3–D6 completion is claimed: there is no migration35 or36,
+no public deletion route, no survivor-value transformation and no deployed
+suppression/processor service. D2 supplies only closed same-account proof and
+status adapters. The source-reader deletion check is implemented; atomic authored
+release withdrawal and shared-byte erasure remain pending. Reward B1–B3 is closed
+verification only; payouts, consent/provider/client joins and the interrupted
+bonus decision remain pending. Human, device, provider, cohort and live cutover
+evidence stays unchecked. This handoff does not mark all roadmap phases complete.

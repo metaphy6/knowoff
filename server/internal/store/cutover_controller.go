@@ -276,7 +276,7 @@ func (c *CutoverController) Begin(ctx context.Context, b CutoverBegin) (CutoverR
 			}
 		}
 		var writers string
-		if err = tx.QueryRowContext(ctx, `SELECT jsonb_agg(jsonb_build_object('name',rolname,'oid',oid::bigint) ORDER BY rolname)::text FROM pg_roles WHERE rolname=ANY($1::text[])`, pq.Array([]string{c.spec.Roles.Runtime, c.spec.Roles.Migrator})).Scan(&writers); err != nil {
+		if err = tx.QueryRowContext(ctx, `SELECT jsonb_agg(jsonb_build_object('name',rolname,'oid',oid::bigint) ORDER BY rolname)::text FROM pg_roles WHERE rolname=ANY($1::text[])`, pq.Array(c.spec.Roles.writers())).Scan(&writers); err != nil {
 			return ErrCutoverUnavailable
 		}
 		_, err = tx.ExecContext(ctx, `INSERT INTO cutover_requests(id,instance_id,generation,predecessor_id,writer_roles,schema_sha256,image_sha256,config_sha256,content_sha256,lease_sha256,issued_at,expires_at) SELECT $1,$2,$3,NULLIF($4,'')::uuid,$5::jsonb,$6,$7,$8,$9,$10,at,at+$11*interval '1 second' FROM (SELECT clock_timestamp() at) clock`, b.RequestID, b.Identity.InstanceID, generation+1, b.PredecessorID, writers, b.Pins.SchemaSHA256, b.Pins.ImageSHA256, b.Pins.ConfigSHA256, b.Pins.ContentSHA256, digest[:], b.LeaseSeconds)
@@ -286,7 +286,7 @@ func (c *CutoverController) Begin(ctx context.Context, b CutoverBegin) (CutoverR
 		if _, err = tx.ExecContext(ctx, `UPDATE cutover_instances SET phase='closing',generation=$2,current_request=$3 WHERE id=$1`, b.Identity.InstanceID, generation+1, b.RequestID); err != nil {
 			return ErrCutoverConflict
 		}
-		for _, role := range []string{c.spec.Roles.Runtime, c.spec.Roles.Migrator} {
+		for _, role := range c.spec.Roles.writers() {
 			if _, err = tx.ExecContext(ctx, `ALTER ROLE `+pq.QuoteIdentifier(role)+` NOLOGIN`); err != nil {
 				return ErrCutoverUnavailable
 			}
@@ -329,7 +329,7 @@ func (c *CutoverController) authenticate(ctx context.Context, tx *sql.Tx, p Cuto
 		return r, pins, ErrCutoverConflict
 	}
 	var writersMatch bool
-	if err = tx.QueryRowContext(ctx, `SELECT writer_roles=(SELECT jsonb_agg(jsonb_build_object('name',rolname,'oid',oid::bigint) ORDER BY rolname) FROM pg_roles WHERE rolname=ANY($2::text[])) FROM cutover_requests WHERE id=$1`, p.RequestID, pq.Array([]string{c.spec.Roles.Runtime, c.spec.Roles.Migrator})).Scan(&writersMatch); err != nil || !writersMatch {
+	if err = tx.QueryRowContext(ctx, `SELECT writer_roles=(SELECT jsonb_agg(jsonb_build_object('name',rolname,'oid',oid::bigint) ORDER BY rolname) FROM pg_roles WHERE rolname=ANY($2::text[])) FROM cutover_requests WHERE id=$1`, p.RequestID, pq.Array(c.spec.Roles.writers())).Scan(&writersMatch); err != nil || !writersMatch {
 		return r, pins, ErrCutoverPrivileges
 	}
 	return r, pins, nil
@@ -354,13 +354,13 @@ func (c *CutoverController) fenceSessions(ctx context.Context, tx *sql.Tx, termi
 		return ErrCutoverBusy
 	}
 	var unknown bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datid=(SELECT oid FROM pg_database WHERE datname=current_database()) AND backend_type='client backend' AND pid<>pg_backend_pid() AND usesysid NOT IN(SELECT oid FROM pg_roles WHERE rolname=ANY($1::text[]))) OR EXISTS(SELECT 1 FROM pg_prepared_xacts WHERE database=current_database())`, pq.Array([]string{c.spec.Roles.Runtime, c.spec.Roles.Migrator, c.spec.Roles.Capture})).Scan(&unknown); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datid=(SELECT oid FROM pg_database WHERE datname=current_database()) AND backend_type='client backend' AND pid<>pg_backend_pid() AND usesysid NOT IN(SELECT oid FROM pg_roles WHERE rolname=ANY($1::text[]))) OR EXISTS(SELECT 1 FROM pg_prepared_xacts WHERE database=current_database())`, pq.Array(append(c.spec.Roles.writers(), c.spec.Roles.Capture))).Scan(&unknown); err != nil {
 		return ErrCutoverUnavailable
 	}
 	if unknown {
 		return ErrCutoverBusy
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT pid,backend_start,usesysid,datid FROM pg_stat_activity WHERE datid=(SELECT oid FROM pg_database WHERE datname=current_database()) AND backend_type='client backend' AND usesysid IN(SELECT oid FROM pg_roles WHERE rolname=ANY($1::text[]))`, pq.Array([]string{c.spec.Roles.Runtime, c.spec.Roles.Migrator}))
+	rows, err := tx.QueryContext(ctx, `SELECT pid,backend_start,usesysid,datid FROM pg_stat_activity WHERE datid=(SELECT oid FROM pg_database WHERE datname=current_database()) AND backend_type='client backend' AND usesysid IN(SELECT oid FROM pg_roles WHERE rolname=ANY($1::text[]))`, pq.Array(c.spec.Roles.writers()))
 	if err != nil {
 		return ErrCutoverUnavailable
 	}
@@ -460,6 +460,7 @@ func cutoverPending(ctx context.Context, tx *sql.Tx) (map[string]int64, error) {
 		"provider_tasks":      `SELECT count(*) FROM billing_provider_tasks WHERE state='pending'`,
 		"subscription_tasks":  `SELECT count(*) FROM billing_subscription_tasks WHERE state='pending'`,
 		"operator_decisions":  `SELECT count(*) FROM admin_operation_decisions d WHERE NOT EXISTS(SELECT 1 FROM admin_operation_results r WHERE r.operation_id=d.id)`,
+		"privacy_publication": `SELECT count(*) FROM privacy_requests WHERE suppression_sequence IS NULL`,
 		"oauth_exchanges":     `SELECT count(*) FROM oauth_flows WHERE status='exchanging'`,
 	}
 	for name, query := range queries {
@@ -765,7 +766,7 @@ func (c *CutoverController) Bootstrap(ctx context.Context, source *CutoverContro
 			if _, err = ttx.ExecContext(ctx, `INSERT INTO cutover_instances(id,cluster_system_identifier,database_oid,database_name,parent_instance_id,parent_watermark_id) VALUES($1,$2,$3,$4,$5,$6)`, b.Target.InstanceID, b.Target.ClusterSystemIdentifier, b.Target.DatabaseOID, b.Target.DatabaseName, b.Proof.InstanceID, b.WatermarkID); err != nil {
 				return ErrCutoverConflict
 			}
-			for _, role := range []string{c.spec.Roles.Runtime, c.spec.Roles.Migrator} {
+			for _, role := range c.spec.Roles.writers() {
 				if _, err = ttx.ExecContext(ctx, `ALTER ROLE `+pq.QuoteIdentifier(role)+` LOGIN`); err != nil {
 					return ErrCutoverUnavailable
 				}

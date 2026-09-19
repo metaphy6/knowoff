@@ -75,7 +75,8 @@ func validPortalCSRF(stored, supplied string) bool {
 func (m *Manager) portalAccountAllowed(ctx context.Context, account string) bool {
 	var allowed bool
 	err := m.db.QueryRowContext(ctx, `SELECT banned_at IS NULL AND deleted_at IS NULL AND (suspended_until IS NULL OR suspended_until<=now())
-  AND NOT EXISTS (SELECT 1 FROM guard_freezes f WHERE f.account_id=a.id
+  AND NOT direct_account_sanction_active(a.id)
+	  AND NOT EXISTS (SELECT 1 FROM guard_freezes f WHERE f.account_id=a.id
   AND f.expires_at>now() AND f.dismissed_at IS NULL AND f.converted_to_ban_at IS NULL)
   FROM accounts a WHERE a.id=$1`, account).Scan(&allowed)
 	return err == nil && allowed
@@ -97,8 +98,10 @@ func (m *Manager) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		portalHeaders(w)
 		var account, csrf string
+		var proof portalCredential
 		if r.Header.Get("Authorization") != "" {
 			account = m.accountFromRequest(r)
+			proof = portalCredential{account: account, bearer: strings.Fields(r.Header.Get("Authorization")), auth: m.auth}
 			if account == "" {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
@@ -106,7 +109,7 @@ func (m *Manager) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		} else {
 			cookie, err := r.Cookie(portalSessionCookie)
 			if err == nil {
-				err = m.db.QueryRowContext(r.Context(), `SELECT account_id,csrf_token FROM portal_browser_sessions WHERE token_hash=$1 AND expires_at>now()`, portalHash(cookie.Value)).Scan(&account, &csrf)
+				err = m.db.QueryRowContext(r.Context(), `SELECT account_id,csrf_token FROM portal_browser_sessions WHERE token_hash=$1 AND expires_at>clock_timestamp() AND device_hash IS NOT NULL AND NOT installation_sanction_active(device_hash)`, portalHash(cookie.Value)).Scan(&account, &csrf)
 				if err != nil {
 					account = ""
 				}
@@ -120,6 +123,7 @@ func (m *Manager) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 				}
 				return
 			}
+			proof = portalCredential{account: account, sessionHash: portalHash(cookie.Value), csrf: csrf}
 			if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !validPortalCSRF(csrf, portalCSRF(r)) {
 				http.Error(w, "invalid csrf token", http.StatusForbidden)
 				return
@@ -131,6 +135,7 @@ func (m *Manager) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		ctx := context.WithValue(r.Context(), ctxAccountIDKey{}, account)
 		ctx = context.WithValue(ctx, ctxPortalCSRFKey{}, csrf)
+		ctx = context.WithValue(ctx, portalCredentialKey{}, proof)
 		next(w, r.WithContext(ctx))
 	}
 }
@@ -254,8 +259,8 @@ func (m *Manager) ConnectHandler() http.Handler {
 		defer tx.Rollback()
 		// Initial authentication is a routing precheck. Bind this derived session
 		// only after validating the same credential under the account lock.
-		verified, err := m.auth.ValidateAccessTokenTx(r.Context(), tx, strings.Fields(r.Header.Get("Authorization"))[1])
-		if err != nil || verified != account {
+		binding, err := m.auth.ValidateAccessBindingTx(r.Context(), tx, strings.Fields(r.Header.Get("Authorization"))[1])
+		if err != nil || binding.AccountID != account {
 			http.Error(w, "unauthorized", 401)
 			return
 		}
@@ -263,7 +268,7 @@ func (m *Manager) ConnectHandler() http.Handler {
 			http.Error(w, "account unavailable", 403)
 			return
 		}
-		result, err := tx.ExecContext(r.Context(), `UPDATE portal_login_requests SET account_id=$1 WHERE pairing_code=$2 AND account_id IS NULL AND expires_at>clock_timestamp()`, account, code)
+		result, err := tx.ExecContext(r.Context(), `UPDATE portal_login_requests SET account_id=$1,device_hash=$3 WHERE pairing_code=$2 AND account_id IS NULL AND expires_at>clock_timestamp()`, account, code, binding.DeviceHash)
 		if err != nil {
 			http.Error(w, "connection unavailable", 500)
 			return
@@ -272,6 +277,10 @@ func (m *Manager) ConnectHandler() http.Handler {
 		if err != nil || count != 1 {
 			slog.Warn("portal pairing rejected", "reason", "invalid or expired code")
 			http.Error(w, "code invalid, expired, or already approved", 400)
+			return
+		}
+		if verified, checkErr := m.auth.ValidateAccessTokenTx(r.Context(), tx, strings.Fields(r.Header.Get("Authorization"))[1]); checkErr != nil || verified != account {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
 		if err = tx.Commit(); err != nil {
@@ -291,8 +300,8 @@ func (m *Manager) loginContinue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var csrf string
-	var account sql.NullString
-	err = m.db.QueryRowContext(r.Context(), `SELECT csrf_token,account_id FROM portal_login_requests WHERE browser_hash=$1 AND expires_at>now()`, portalHash(cookie.Value)).Scan(&csrf, &account)
+	var account, installation sql.NullString
+	err = m.db.QueryRowContext(r.Context(), `SELECT csrf_token,account_id,device_hash FROM portal_login_requests WHERE browser_hash=$1 AND expires_at>now()`, portalHash(cookie.Value)).Scan(&csrf, &account, &installation)
 	if err != nil || !validPortalCSRF(csrf, portalCSRF(r)) {
 		http.Error(w, "login expired or invalid; return to login", 403)
 		return
@@ -328,7 +337,11 @@ func (m *Manager) loginContinue(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "account unavailable", 403)
 		return
 	}
-	result, err := tx.ExecContext(r.Context(), `DELETE FROM portal_login_requests WHERE browser_hash=$1 AND account_id=$2 AND csrf_token=$3 AND expires_at>clock_timestamp()`, portalHash(cookie.Value), account.String, csrf)
+	if !installation.Valid || lockPortalInstallation(r.Context(), tx, installation.String) != nil {
+		http.Error(w, "installation unavailable", 403)
+		return
+	}
+	result, err := tx.ExecContext(r.Context(), `DELETE FROM portal_login_requests WHERE browser_hash=$1 AND account_id=$2 AND csrf_token=$3 AND device_hash=$4 AND expires_at>clock_timestamp()`, portalHash(cookie.Value), account.String, csrf, installation.String)
 	if err != nil {
 		http.Error(w, "login unavailable", 500)
 		return
@@ -348,7 +361,7 @@ func (m *Manager) loginContinue(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "login unavailable", 500)
 		return
 	}
-	if _, err = tx.ExecContext(r.Context(), `INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at) VALUES($1,$2,$3,$4)`, portalHash(token), account.String, sessionCSRF, time.Now().Add(portalSessionTTL)); err != nil {
+	if _, err = tx.ExecContext(r.Context(), `INSERT INTO portal_browser_sessions(token_hash,account_id,csrf_token,expires_at,device_hash) VALUES($1,$2,$3,$4,$5)`, portalHash(token), account.String, sessionCSRF, time.Now().Add(portalSessionTTL), installation.String); err != nil {
 		http.Error(w, "login unavailable", 500)
 		return
 	}

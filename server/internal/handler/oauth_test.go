@@ -56,8 +56,8 @@ func TestOAuthHTTPPrivateCallbackAndBoundedExplicitIntents(t *testing.T) {
 			t.Fatal("ambiguous or unbounded JSON reached OAuth", w.Code)
 		}
 	}
-	w := call("POST", "/api/auth/oauth/start", `{"provider":"google","intent":"link"}`)
-	if w.Code != 200 || f.request.AccessToken != "player-credential" || f.request.Principal != "192.0.2.4" || w.Header().Get("Cache-Control") != "no-store" {
+	w := call("POST", "/api/auth/oauth/start", `{"provider":"google","intent":"link","device_hash":"fixture-installation"}`)
+	if w.Code != 200 || f.request.AccessToken != "player-credential" || f.request.Principal != "192.0.2.4" || f.request.DeviceHash != "fixture-installation" || w.Header().Get("Cache-Control") != "no-store" {
 		t.Fatal("start identity boundary", w.Code)
 	}
 	w = call("POST", "/api/auth/oauth/result", `{"flow_id":"fixture-flow","completion_secret":"app-only-secret"}`)

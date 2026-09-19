@@ -21,7 +21,7 @@ import (
 )
 
 func rewardedFixture() config.RewardedConfig {
-	return config.RewardedConfig{Enabled: true, MaxQueryBytes: 16384, MaxResponseBytes: 262144, HTTPTimeoutS: 1, KeyCacheS: 60, KeyRefreshMinS: 1, MaxConcurrentRequests: 4, ClaimTTLS: 1800, AdUnits: map[string]config.RewardedUnit{"123": {RewardItem: "match_bonus", RewardAmount: 1}}}
+	return config.RewardedConfig{Enabled: true, MaxQueryBytes: 16384, MaxResponseBytes: 262144, HTTPTimeoutS: 1, KeyCacheS: 60, KeyRefreshMinS: 1, MaxConcurrentRequests: 4, ClaimTTLS: 1800, MaxClaimsPerMatchWindow: 4, AdUnits: map[string]config.RewardedUnit{"123": {RewardItem: "match_bonus", RewardAmount: 1}}}
 }
 
 type rewardedTransport func(*http.Request) (*http.Response, error)

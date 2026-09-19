@@ -74,7 +74,15 @@ func (f *oauthFixture) roundTrip(r *http.Request) (*http.Response, error) {
 }
 func (f *oauthFixture) start(intent, access string) (*OAuthStart, string, string) {
 	f.t.Helper()
-	flow, err := f.m.BeginOAuth(context.Background(), OAuthStartRequest{Provider: "google", Intent: intent, AccessToken: access, Principal: uuid.NewString()})
+	hash := HashDevice(uuid.NewString())
+	if access != "" {
+		claims, err := f.m.parseToken(access, TokenAccess)
+		if err != nil {
+			f.t.Fatal(err)
+		}
+		hash = claims.DeviceHash
+	}
+	flow, err := f.m.BeginOAuth(context.Background(), OAuthStartRequest{DeviceHash: hash, Provider: "google", Intent: intent, AccessToken: access, Principal: uuid.NewString()})
 	if err != nil {
 		f.t.Fatal(err)
 	}
@@ -148,8 +156,8 @@ func TestOAuthDurableLinkRestoreAndPrivateResult(t *testing.T) {
 		t.Fatal("second device did not restore account", err)
 	}
 	var balance, devices int
-	if err = f.m.db.QueryRow(`SELECT (SELECT balance FROM noin_wallets WHERE account_id=$1),(SELECT count(*) FROM device_tokens WHERE account_id=$1)`, player.AccountID).Scan(&balance, &devices); err != nil || balance != 93 || devices != 1 {
-		t.Fatal("restoration changed wallet/device identity", balance, devices, err)
+	if err = f.m.db.QueryRow(`SELECT (SELECT balance FROM noin_wallets WHERE account_id=$1),(SELECT count(*) FROM device_tokens WHERE account_id=$1)`, player.AccountID).Scan(&balance, &devices); err != nil || balance != 93 || devices != 2 {
+		t.Fatal("restoration changed wallet or failed to retain both installation links", balance, devices, err)
 	}
 	if _, err = f.m.Refresh(ctx, linked.RefreshToken); err != nil {
 		t.Fatal(err)
@@ -314,12 +322,12 @@ func TestOAuthUnlinkedConflictExpiryAndBoundedInitiation(t *testing.T) {
 	}
 	principal := uuid.NewString()
 	for range 10 {
-		if _, err = f.m.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "restore", Principal: principal}); err != nil {
+		if _, err = f.m.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "restore", DeviceHash: HashDevice(principal), Principal: principal}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	restarted := NewManager(f.m.db, f.m.signingKey, "test", "test", time.Hour, 24*time.Hour, f.m.oauth)
-	if _, err = restarted.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "restore", Principal: principal}); !errors.Is(err, ErrOAuthRateLimited) {
+	if _, err = restarted.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "restore", DeviceHash: HashDevice(principal), Principal: principal}); !errors.Is(err, ErrOAuthRateLimited) {
 		t.Fatal("restart bypassed budget", err)
 	}
 }
@@ -425,16 +433,24 @@ func TestOAuthLinkBudgetSeparatesAuthenticatedAccountsBehindProxy(t *testing.T) 
 		if first == nil {
 			first = p
 		}
-		if _, err = f.m.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "link", AccessToken: p.AccessToken, Principal: proxy}); err != nil {
+		claims, err := f.m.parseToken(p.AccessToken, TokenAccess)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = f.m.BeginOAuth(ctx, OAuthStartRequest{DeviceHash: claims.DeviceHash, Provider: "google", Intent: "link", AccessToken: p.AccessToken, Principal: proxy}); err != nil {
 			t.Fatal("different linked account inherited proxy budget", err)
 		}
 	}
+	firstClaims, err := f.m.parseToken(first.AccessToken, TokenAccess)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for range 9 {
-		if _, err := f.m.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "link", AccessToken: first.AccessToken, Principal: uuid.NewString()}); err != nil {
+		if _, err := f.m.BeginOAuth(ctx, OAuthStartRequest{DeviceHash: firstClaims.DeviceHash, Provider: "google", Intent: "link", AccessToken: first.AccessToken, Principal: uuid.NewString()}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := f.m.BeginOAuth(ctx, OAuthStartRequest{Provider: "google", Intent: "link", AccessToken: first.AccessToken, Principal: uuid.NewString()}); !errors.Is(err, ErrOAuthRateLimited) {
+	if _, err := f.m.BeginOAuth(ctx, OAuthStartRequest{DeviceHash: firstClaims.DeviceHash, Provider: "google", Intent: "link", AccessToken: first.AccessToken, Principal: uuid.NewString()}); !errors.Is(err, ErrOAuthRateLimited) {
 		t.Fatal("account bypassed link budget by changing address", err)
 	}
 }

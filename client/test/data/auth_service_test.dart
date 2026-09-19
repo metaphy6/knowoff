@@ -6,21 +6,25 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:knowoff_client/data/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
-String token(int expires) =>
+String token(int expires, {String binding = 'fixture-installation'}) =>
     '${base64Url.encode(utf8.encode('{}'))}.'
-    '${base64Url.encode(utf8.encode(jsonEncode({'exp': expires})))}.synthetic';
+    '${base64Url.encode(utf8.encode(jsonEncode({'exp': expires, 'dvh': binding})))}.synthetic';
 const futureExpiry = 4102444800;
 Map<String, Object> saved({bool expiredAccess = true}) => {
   'knowoff_account_id': 'saved-account',
   'knowoff_access_token': token(expiredAccess ? 1 : futureExpiry),
   'knowoff_refresh_token': token(futureExpiry),
 };
-http.Response issued(String account) => http.Response(
+http.Response issued(
+  String account, {
+  String binding = 'fixture-installation',
+}) => http.Response(
   jsonEncode({
     'account_id': account,
-    'access_token': token(futureExpiry),
-    'refresh_token': token(futureExpiry + 1),
+    'access_token': token(futureExpiry, binding: binding),
+    'refresh_token': token(futureExpiry + 1, binding: binding),
   }),
   200,
 );
@@ -36,8 +40,183 @@ class RemovingIdentityBeforeEnsure extends AuthService {
   }
 }
 
+class RejectingInstallationStore extends InMemorySharedPreferencesStore {
+  RejectingInstallationStore() : super.empty();
+  int attempts = 0;
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.knowoff_installation_id') {
+      attempts++;
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'failed installation writes never reach HTTP, including retries',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = RejectingInstallationStore();
+      SharedPreferencesStorePlatform.instance = store;
+      addTearDown(() => SharedPreferences.setMockInitialValues({}));
+      var requests = 0;
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        client: MockClient((r) async {
+          requests++;
+          return http.Response('', 503);
+        }),
+      );
+      for (var i = 0; i < 2; i++) {
+        await expectLater(
+          service.ensureSession(),
+          throwsA(
+            isA<AuthSessionException>().having(
+              (e) => e.code,
+              'failure',
+              'auth.storage_unavailable',
+            ),
+          ),
+        );
+        expect(requests, 0);
+      }
+      expect(store.attempts, 2);
+    },
+  );
+
+  test('concurrent first instances share the persisted installation', () async {
+    SharedPreferences.setMockInitialValues({});
+    final hashes = <String>[];
+    final release = Completer<void>();
+    final client = MockClient((request) async {
+      final hash = (jsonDecode(request.body) as Map)['device_hash'] as String;
+      hashes.add(hash);
+      expect(
+        (await SharedPreferences.getInstance()).getString(
+          'knowoff_installation_id',
+        ),
+        hash,
+      );
+      if (hashes.length == 2) release.complete();
+      await release.future;
+      return issued('canonical-account', binding: hash);
+    });
+    final first = AuthService(baseUrl: 'https://game.example', client: client);
+    final second = AuthService(baseUrl: 'https://game.example', client: client);
+    await Future.wait([first.ensureSession(), second.ensureSession()]);
+    expect(hashes, hasLength(2));
+    expect(hashes.toSet(), hasLength(1));
+    expect(first.accountId, second.accountId);
+  });
+
+  test(
+    'upgrade preserves signed installation and refuses mismatching local identity',
+    () async {
+      SharedPreferences.setMockInitialValues(saved(expiredAccess: false));
+      var requests = 0;
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        client: MockClient((r) async {
+          requests++;
+          return http.Response('', 503);
+        }),
+      );
+      await service.ensureSession();
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getString('knowoff_installation_id'),
+        'fixture-installation',
+      );
+      await prefs.setString(
+        'knowoff_installation_id',
+        'different-installation',
+      );
+      await expectLater(
+        service.ensureSession(),
+        throwsA(
+          isA<AuthSessionException>().having(
+            (e) => e.code,
+            'failure',
+            'auth.installation_mismatch',
+          ),
+        ),
+      );
+      expect(requests, 0);
+    },
+  );
+
+  for (final background in [false, true]) {
+    test(
+      'legacy saved refresh binds the same account: background=$background',
+      () async {
+        final initial = saved(expiredAccess: false);
+        initial['knowoff_refresh_token'] = token(futureExpiry, binding: '');
+        initial['knowoff_access_token'] = token(futureExpiry, binding: '');
+        SharedPreferences.setMockInitialValues(initial);
+        final paths = <String>[];
+        final service = AuthService(
+          baseUrl: 'https://game.example',
+          client: MockClient((request) async {
+            paths.add(request.url.path);
+            expect(request.url.path, '/api/auth/installation');
+            final body = jsonDecode(request.body) as Map;
+            expect(body['refresh_token'], initial['knowoff_refresh_token']);
+            expect(
+              body['device_hash'],
+              (await SharedPreferences.getInstance()).getString(
+                'knowoff_installation_id',
+              ),
+            );
+            return issued(
+              'saved-account',
+              binding: body['device_hash'] as String,
+            );
+          }),
+        );
+        if (background) {
+          expect(await service.restoreExistingSession(), isTrue);
+        } else {
+          await service.ensureSession();
+        }
+        expect(service.accountId, 'saved-account');
+        expect(paths, ['/api/auth/installation']);
+        await service.ensureSession();
+        expect(paths, hasLength(1));
+      },
+    );
+  }
+  test(
+    'installation is persisted before network and reused after restart',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final hashes = <String>[];
+      final client = MockClient((r) async {
+        final hash = (jsonDecode(r.body) as Map)['device_hash'] as String;
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('knowoff_installation_id'), hash);
+        hashes.add(hash);
+        return http.Response('', 503);
+      });
+      for (var i = 0; i < 2; i++) {
+        final auth = AuthService(
+          baseUrl: 'https://game.example',
+          client: client,
+        );
+        await expectLater(
+          auth.ensureSession(),
+          throwsA(isA<AuthSessionException>()),
+        );
+      }
+      expect(hashes.toSet(), hasLength(1));
+      expect(
+        base64Url.decode(base64Url.normalize(hashes.first)),
+        hasLength(32),
+      );
+    },
+  );
   test(
     'background restoration cannot delegate to an identity-creating path',
     () async {
@@ -192,7 +371,10 @@ void main() {
       client: MockClient((r) async {
         expect(r.url.path, '/api/auth/device');
         calls++;
-        return issued('first-account');
+        return issued(
+          'first-account',
+          binding: (jsonDecode(r.body) as Map)['device_hash'] as String,
+        );
       }),
     );
     await auth.ensureSession();

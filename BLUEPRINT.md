@@ -323,6 +323,48 @@ Players are never surprised by downtime:
 * Derived nightly from the server's audit-event stream — no client-reported numbers anywhere. Reputations are part of the metagame: a profile that survives most of its Donower matches *should* scare the table.
 * Privacy: profiles are pseudonymous (nickname + avatar, no PII); delete-my-data erases stats with the account.
 
+### 1a. Account deletion and retention
+
+Owner-delegated policy, 2026-09-19: use a straightforward in-app and web deletion
+journey, including guest accounts and accounts sanctioned from gameplay.
+Fresh same-account verification confirms intent; deletion is not a support-only
+or temporary-deactivation flow. Immediately revoke access and suppress public
+profile/statistics/attribution and future publication/admission of affected UGC.
+Delete active personal data and authored contributions as soon as processing
+permits, within 30 days. Licensed contributions do not gain a blanket deletion
+exception; withdraw affected releases, then certify replacements without them.
+
+Retain only minimized transaction/reconciliation and substantiated security
+evidence for 180 days from verified deletion, with restricted purpose/access,
+then purge it. This exception excludes working credentials, contact details,
+ordinary chat, original submitted content/blobs and public statistics. A hold
+requires a specific basis, exact scope, responsible owner, expiry and review;
+no automatic renewal or whole-account preservation. These durations are product
+defaults, not assertions of a universal statutory period.
+
+For necessary sanction checks retain only purpose-specific keyed installation
+digests until the earlier of a timed sanction expiry or deletion plus 180 days.
+The deleted account never returns; finite linkage intentionally limits later
+re-registration detection. Do not call pseudonymous retained evidence anonymous.
+Deletion ends access to that account's progression and earned balance; it does
+not perform a cash refund or cancel a platform subscription. Explain this before
+confirmation and provide platform subscription-management controls while still
+allowing immediate deletion. Delayed billing/settlement must not recreate the
+account, profile, statistics or spendable value.
+
+Expire backups within 90 days of creation. A separate deletion-suppression
+record must be applied before restored service admission; backup presence and
+remaining expiry are disclosed in deletion status. Completion distinguishes
+active-data removal from scoped retained evidence and unexpired backup copies.
+The versioned executor covers relational fields, JSON/arrays, blobs, historical
+source/release artifacts and configured processors, with bounded resumable
+steps and an explicit retention authority distinct from ordinary runtime writes.
+
+Policy sources checked 2026-09-19: [Apple account deletion guidance](https://developer.apple.com/support/offering-account-deletion-in-your-app)
+and [Google Play account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en).
+These require meaningful deletion and disclosures; the deadlines above are
+Knowoff's selected defaults, not platform-prescribed periods or launch approval.
+
 ### 2. Avatars (Free Presets, Paid Uploads)
 
 * A curated preset gallery, free forever, on-brand by construction.
@@ -529,7 +571,7 @@ from testing only first-Nown band counts.
 ### 3. Text pipeline and content production
 
 Current `tools/mediapack` provides `text-prepare`, `text-build-fixture`,
-`text-certify`, `text-simulate`, `text-publish` and `text-duplicates`. The old
+`text-certify`, `text-simulate`, `text-actions`, `text-publish` and `text-duplicates`. The old
 command names explicitly refuse. The durable release store separately binds
 accepted sources, publication, activation and takedown. Technical success does
 not supply the required human editorial/action/pilot evidence; see
@@ -768,6 +810,10 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 
 * Bulk packs via platform billing (Play Billing / StoreKit): sizes in `economy.noin_bundles`, store price tiers mapped at launch. Noin bundles and Premium are the two cash lanes. Every Noin-priced item is earnable; Premium's ad removal is a subscription benefit.
 * Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Premium subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Premium subscription (💰 §2)** — Noin Play Passes never remove ads.
+  Premium bonus eligibility is fixed at authoritative match start (owner decision,
+  2026-09-19); expiry or purchase during that match does not change its recorded
+  eligibility. Interrupted-match bonus treatment remains an open owner decision
+  before durable doubler implementation.
 
 ### 4. Theme Packs
 
@@ -791,7 +837,7 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 * Compliance: capture versioned user-terms acceptance before authored chat/UGC as well as contribution-specific consent; anonymous device accounts by default, with **one-tap registration via Google Sign-In or Facebook Login** (OAuth 2.0 / OpenID Connect) to carry progress, Noin, and entitlements across devices — the linked identity stores only the provider subject id and email, never shown publicly; privacy notice at first launch; age gate + per-pack age ratings; Google UMP consent before any personalized ad; in-app delete-my-data backed by a server endpoint; purchases exclusively through platform billing; contributor license grants (commercial use + modification) stored with terms version and timestamp per submission.
 * Analytics: no third-party client SDK — the authoritative server witnesses every event; nightly jobs derive KPIs (retention, queue fill times, matches/day, Donower win rate by table size, Noin earn/spend flows, premium conversion, pack attach rate) from the audit stream.
 * Moderation & admin: locale-aware nickname filtering, player-facing report/block capability, published support contact, Guard freezes with admin-final bans and audited admin actions (kick, ban, close room, avatar/content takedown) — tested before public launch. Blocking hides user-authored chat/UGC and prevents future co-matching/invites; it never hides required public card/vote evidence, reveals a private block relation, removes a player mid-match or changes scoring. Leaving/reporting remains available. Serialize block changes with future queue reservations and test symmetric exclusion without public disclosure; live safety intervention remains an admin action. See the business plan's sourced platform checkpoints; no store acceptance is implied.
-* Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. App-size budget enforced in CI: authorized text arrives through role-scoped state; binaries stay lean.
+* Platforms & release: **Android native + Web PWA first**, **iOS native fast-follow** once retention is proven. CI builds all three targets from day one. Package size is reported in CI without a failing size limit (owner decision, 2026-09-19); Android, Web and iOS build checks remain required. Authorized text arrives through role-scoped state.
 
 The technical transition design expands operational contracts and evidence; the
 Roadmap alone orders implementation. The business plan records assumptions and

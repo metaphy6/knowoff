@@ -8,10 +8,8 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -104,36 +102,13 @@ func NewManager(db *sql.DB, signingKey []byte, issuer, audience string, accessTT
 // CreateAnonymousAccount creates a fresh account for a device fingerprint and
 // returns access and refresh tokens. The account has a random nickname.
 func (m *Manager) CreateAnonymousAccount(ctx context.Context, deviceHash string) (*TokenPair, error) {
-	if deviceHash == "" || strings.HasPrefix(deviceHash, developmentDevicePrefix) || len(deviceHash) > 256 {
-		return nil, fmt.Errorf("device_hash required")
-	}
-	accountID, err := m.createAccount(ctx, randomNickname())
-	if err != nil {
-		return nil, fmt.Errorf("create account: %w", err)
-	}
-	if err := m.upsertDeviceToken(ctx, accountID, deviceHash); err != nil {
-		return nil, fmt.Errorf("link device: %w", err)
-	}
-	return m.issueTokens(ctx, accountID, deviceHash)
+	return m.authenticateInstallation(ctx, deviceHash)
 }
 
 // AuthenticateDevice returns tokens for an existing device-linked account, or
 // creates one if the device has not been seen before.
 func (m *Manager) AuthenticateDevice(ctx context.Context, deviceHash string) (*TokenPair, error) {
-	if deviceHash == "" || strings.HasPrefix(deviceHash, developmentDevicePrefix) || len(deviceHash) > 256 {
-		return nil, fmt.Errorf("device_hash required")
-	}
-	accountID, err := m.findAccountByDevice(ctx, deviceHash)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("lookup device: %w", err)
-	}
-	if accountID == "" {
-		return m.CreateAnonymousAccount(ctx, deviceHash)
-	}
-	if err := m.touchDeviceToken(ctx, accountID, deviceHash); err != nil {
-		return nil, fmt.Errorf("touch device: %w", err)
-	}
-	return m.issueTokens(ctx, accountID, deviceHash)
+	return m.authenticateInstallation(ctx, deviceHash)
 }
 
 // TokenPair contains the JWT access and refresh tokens plus metadata.
@@ -153,6 +128,11 @@ func (m *Manager) issueTokens(ctx context.Context, accountID, deviceHash string)
 	purpose, epoch, err := m.accountSession(ctx, tx, accountID, true)
 	if err != nil {
 		return nil, err
+	}
+	if deviceHash != "" {
+		if err := linkInstallationTx(ctx, tx, accountID, deviceHash, purpose); err != nil {
+			return nil, err
+		}
 	}
 	pair, err := m.signTokens(accountID, deviceHash, purpose, epoch)
 	if err != nil {
@@ -226,6 +206,9 @@ func (m *Manager) ValidateAccessToken(ctx context.Context, token string) (string
 	if err != nil || purpose != claims.Purpose || epoch != claims.SessionEpoch {
 		return "", fmt.Errorf("account unavailable")
 	}
+	if err := installationAllowed(ctx, m.db, claims.DeviceHash, purpose); err != nil {
+		return "", err
+	}
 	return claims.AccountID, nil
 }
 
@@ -245,12 +228,18 @@ func (m *Manager) Refresh(ctx context.Context, refreshToken string) (*TokenPair,
 	if err != nil || purpose != claims.Purpose || epoch != claims.SessionEpoch {
 		return nil, fmt.Errorf("account unavailable")
 	}
+	if err := linkInstallationTx(ctx, tx, claims.AccountID, claims.DeviceHash, purpose); err != nil {
+		return nil, err
+	}
 	result, err := tx.ExecContext(ctx, `INSERT INTO auth_revocations(token_id,expires_at) VALUES($1,$2) ON CONFLICT DO NOTHING`, claims.ID, claims.ExpiresAt.Time)
 	if err != nil {
 		return nil, fmt.Errorf("revoke refresh: %w", err)
 	}
 	if n, err := result.RowsAffected(); err != nil || n != 1 {
 		return nil, fmt.Errorf("token revoked")
+	}
+	if _, err := m.parseToken(refreshToken, TokenRefresh); err != nil {
+		return nil, err
 	}
 	pair, err := m.signTokens(claims.AccountID, claims.DeviceHash, purpose, epoch)
 	if err != nil {

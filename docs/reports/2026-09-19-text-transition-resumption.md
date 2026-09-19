@@ -574,3 +574,398 @@ replay, selective stale-generation invalidation, and the remaining retirement
 inventory. Human enabled-mode smoke, platform/provider observations and release
 decisions still require their own evidence. This slice supplies an offline
 controller and guarded synthetic rehearsal, not a production cutover or release.
+
+## All-phase continuation — 2026-09-19, from e840852
+
+The owner requested all remaining phases. Bootstrap confirmed clean `main` at
+`e840852`; the older staged checkpoint was already committed. The current
+roadmap continuation tables record implementation ownership and proof before
+edits. Run ID: `roadmap-completion-20260919`. No deployment, outreach, spending,
+human study or provider transaction is inferred from this request.
+
+### Action certification
+
+The new public `server/pkg/textcert` boundary replays deterministic full-schedule
+action/timeout witnesses through the authoritative engine. It binds exact
+content, full tuning, rules, algorithm, samples, ordered requests/clocks and
+history; `action-replay.json` is privileged technical evidence. Human
+`actions.json`, screening, editorial and release evidence remain separate.
+Store publication/activation/restored loading and mediapack use the same gate.
+Request context cancels new replay work per witness/step; the pre-existing
+retained-card gate remains synchronous. ADR-013 records the import boundary.
+
+Independent source review passed after direct Turkish/Arabic coverage and
+cancellation proofs. Cold final certifier evidence: **21 tests/subtests**,
+9.802 s, zero failures/skips, `action-review-final--20260919T104309Z-760480.log`.
+Independent media/game suites passed in 2.458/6.308 s, including existing small
+exhaustive/depletion fixtures (`action-review-core--20260919T104037Z-753167.log`);
+the entire mediapack CLI passed in 6.329 s
+(`action-review-cli--20260919T104038Z-753373.log`). Two real PostgreSQL durable
+release integration tests passed in 13.440 s
+(`action-review-store--20260919T104119Z-755665.log`). Final combined verification
+is still required; samples never claim exhaustive production-state or human proof.
+
+### Immutable consent
+
+Migration 28 protects contribution terms against UPDATE/DELETE and all three
+retained contribution/user-consent tables against TRUNCATE, including cascading
+and RLS-hidden attempts. Runtime privilege inventory now permits only INSERT
+for these tables. Existing migrations remain unchanged; controlled down refuses
+retained consent. Portal fixtures rebuild only their independently verified
+disposable database instead of weakening production guards.
+
+Independent source review and **21 cold tests/subtests** passed in 3.109 s:
+`consent-independent--20260919T103836Z-747579.log`. Proof includes original
+full-table parity, 27→28/repeated-up/empty-down/retained-down refusal, exact
+wording/timestamps, nonowner/RLS/CASCADE and ordinary acceptance replay.
+An earlier parallel portal compile encountered the new package mid-edit;
+stable full portal rerun passed in 28.384 s
+(`action-portal-full--20260919T103900Z-749072.log`). That transient failure is
+retained, not counted as passing evidence.
+
+### Selective routing retirement
+
+The restored-fixture operation accepts at most 100 exact legacy room key/node/
+absolute-expiry entries. It verifies restore pin and target ownership, atomically
+checks all entries before deleting any, and compares every retained Redis value
+and expiry afterward. Changed type/value/expiry refuses the entire batch;
+absent keys support uncertain-response retry. Production Redis and unrestricted
+key-pattern cleanup are not accepted targets.
+
+The first integration passed with head 27, three actual restores and exactly two
+stale routes removed; four security/current/unknown keys remained unchanged
+(`routing-restored-integration--20260919T103357Z-610111.log`, 101.761 s).
+Independent final snapshot tests repeated the complete rehearsal at **head 28**:
+**25 tests**, 111.152 s, zero failures
+(`routing-review-unit--20260919T103639Z-679931.log`). Two added CLI dispatch/error
+tests independently passed (`routing-cli-independent--20260919T103848Z-748750.log`).
+All owned fixture resources were cleaned up.
+
+Compiler verification found that CodeGraph's empty caller result for
+`AllowIntent` missed the Admin limiter. The method was restored unchanged;
+only the three unused legacy room-routing methods were removed. All server
+packages compiled afterward (`routing-go-compile-fixed--20260919T103506Z-654164.log`).
+Compilation selected zero tests and is not a runtime test claim.
+
+### Platform checks and open size gate
+
+Web build passed (`roadmap-web-build--20260919T102706Z-596718.log`), with
+`main.dart.js` 3,539,442 bytes. Android debug compilation passed
+(`roadmap-android-build--20260919T102753Z-598213.log`), but its universal APK is
+**157,506,946 bytes**, failing the existing **52,428,800-byte** CI size gate.
+The archive contains three debug engine binaries, kernel/isolate snapshots and
+a Vulkan validation layer. Release-artifact measurement is underway; this
+failure cannot be labelled a complete Android acceptance pass. Flutter inserted
+the two Android Gradle compatibility flags used by this build.
+
+Only the Linux desktop device is connected. Physical native/PWA accessibility,
+low-end frame timing and macOS/Xcode evidence remain unavailable.
+
+### Owner decisions and further work
+
+The owner selected **Premium eligibility at authoritative match start** during
+this continuation. Blueprint and roadmap now record that decision.
+Interrupted-match bonus treatment remains pending. Reviewed retention/deletion,
+provider/device checks, human editorial pilots, elapsed cohorts and commercial/
+operator release evidence remain distinct prerequisites.
+
+Local work continues on audited Noin corrections under existing migration 27,
+followed by the remaining Admin, reconciliation and operational boundaries.
+No all-phase completion or final staging is claimed by these partial gates.
+
+### Package-size decision and release build evidence
+
+The owner explicitly removed package size as a failing gate on 2026-09-19.
+CI still builds Android and Web, and retains its macOS iOS build job; the
+existing APK measurement now reports size without a threshold. Blueprint
+Product Baseline is aligned with this decision.
+
+Local split release APKs also built successfully in
+`/tmp/agent-runs/roadmap-android-release-size--20260919T104417Z-763353.log`:
+arm64 20,176,110 bytes; armeabi-v7a 17,830,488 bytes; x86_64 21,741,761 bytes.
+These local artifacts use the existing signing configuration and do not prove
+store signing, physical-device behavior or store acceptance. The earlier
+150.2 MiB debug size is no longer an unresolved gate under the owner's choice.
+
+### Audited Noin corrections
+
+Implemented Phase 5 O1–O4 under existing migration 27. The internal wallet view
+now offers reasoned grants and full refunds derived from one immutable
+same-account Noin spend. Exact initiating-session authority is rechecked after
+locks, and decision/audit/wallet/ledger/result are one transaction. No cash
+refund, entitlement, points, XP or gameplay-cap behavior changes.
+
+Independent source review and cold PostgreSQL/Redis `TestNoinCorrection|TestOperator`
+passed in 10.450 s, exit 0:
+`/tmp/agent-runs/noin-review-cold--20260919T105347Z-775957.log`.
+Tests include replay/conflict, source uniqueness, spend races, authority expiry
+after account/operation/wallet waits, balance overflow and ledger/audit/result
+rollback. Full economy passed in 26.969 s and vet passed for Admin/economy/store.
+The broader Admin run exposed an old content-publish fixture lacking the new
+action certification artifact; its failure is being repaired in that fixture
+and is not represented as an all-Admin pass.
+
+Further independent plans cover account/installation sanctions (migration 29)
+and leaderboard operations (migration 30), with implementations underway.
+
+### Leaderboard controls and Premium capture
+
+Migration 30 adds immutable weekly operator decisions/results. Exclusion is
+applied before open-week ranking; closed reads use frozen history. Accepted close
+work drains in bounded batches and resumes independently of the initiating
+session. Final whole-package tests passed: leaderboard 1.335 s and Admin 68.000 s
+in `/tmp/agent-runs/leaderboard-final-broad--20260919T111228Z-819294.log`.
+This also resolves the earlier Admin content-fixture failure. Independent cold
+review covered close/exclusion races and a 33-match bounded recovery case.
+Main runtime recovery wiring is being joined with sanctions work.
+
+Migration 31 and the authoritative Start transaction now capture one immutable
+Premium eligibility decision per admitted participant, including Local Rooms.
+The capture uses existing sorted account locks and rejects partial writes.
+Historical absence is unknown, and this change does not pay a bonus.
+Seven top-level tests (17 reported events) passed in 5.043 s, independently
+repeated in 5.301 s:
+`/tmp/agent-runs/premium-start-complete--20260919T110623Z-799879.log` and
+`/tmp/agent-runs/premium-review-cold--20260919T110733Z-803341.log`.
+An additional six-seat/PlayPass negative test passed in 0.38 s.
+
+The privilege manifest and disposable cutover provisioning now include schema
+29–31, insert-only evidence and exactly two invoker SQL sanction predicates.
+Unknown routines and SECURITY DEFINER drift still refuse. Independent cold
+`^TestCutover` passed in 33.061 s, exit 0:
+`/tmp/agent-runs/cutover-all-independent--20260919T111342Z-822462.log`.
+Earlier predicate-signature and return-type fixture failures are resolved;
+the complete two-cluster integration will be repeated after the schema freezes.
+
+### Delegated deletion policy
+
+The owner delegated selection of mainstream mobile-app deletion policy.
+Blueprint Profile §1a records the chosen product defaults and checked Apple/
+Google guidance: immediate access/public suppression, active-data removal within
+30 days, minimized purpose-bound evidence for 180 days, and backups expiring
+within 90 days of creation. These durations are product defaults, not asserted
+universal legal retention periods. The policy question is resolved.
+
+Implementation is planned as D0–D6 in the roadmap. The source audit found that
+ordinary deleted-account denial would strand surviving players' settlement, and
+that shared immutable contract/outcome hashes cannot be reused after privacy
+transformation. These require explicit terminal-work dispositions and verified
+survivor witnesses before removing source payloads. No deletion endpoint or
+successful cleanup is claimed by the policy or architectural plan.
+
+### Head 31 two-cluster rehearsal
+
+The actual separate-cluster cutover fixture passed all seven tests in 20.479 s:
+`/tmp/agent-runs/cutover-head31-integration--20260919T111947Z-830463.log`.
+The two restores used distinct PostgreSQL system identities, preserved 83 domain
+tables plus the cutover authority inventory, retained an unacknowledged outbox
+row and proved committed handoff recovery after lease expiry. Prepared
+transactions, source-login drift, changed target data and wrong target identity
+refused. Source writers stayed fenced after target activation.
+
+The synthetic held transaction was applied once despite two deliveries; it is
+isolated SQL replay, not a verified provider holding queue. The capture SHA-256
+was `b5acaca3f43e3f5daa6603cb65fd227ad2a9b0fca3d44a4b74fa2052e27b59f0`.
+Fixture resources were cleaned up. Later schema changes require a new rehearsal.
+
+### Offline economics formulas
+
+Phase 7 E1–E3 adds `tools/economics_report.py` with bounded strict JSON,
+decimal-string accounting units and explicit missing/zero-denominator results.
+All three illustrative Business Plan examples reproduce exactly. Cash burn is
+independent of accounting contribution; cohort LTV preserves its observation
+horizon. Every output labels itself unverified arithmetic with no launch
+approval, and reports contain no inferred quotes or financial authority.
+
+Expected preimplementation RED was the missing calculator module. Thirteen
+focused tests now pass in 0.133 s:
+`/tmp/agent-runs/economics-boundaries--20260919T112520Z-848562.log`.
+These include maximum magnitude/rounding, zero ads/activity/burn, reserve
+shortfall, private errors, new-only 0600 output and duplicate/symlink/FIFO/size
+refusal. Independent review and full Python verification remain pending.
+
+Independent source review subsequently found no economics issues, and the same
+13 tests passed cold in 0.135 s, exit 0:
+`/tmp/agent-runs/economics-review-cold--20260919T112653Z-851530.log`.
+The mandatory runner's full Python slice is in progress.
+
+That full Python slice subsequently passed all **115 tests across three stages**,
+zero failures/skips, via `python3 xops/test/tests-lints.py --suite python`:
+`/tmp/agent-runs/roadmap-python-head31--20260919T112726Z-852231.log` and
+`/tmp/agent-runs/roadmap-python-head31.json`. Its 99-test xops stage took 131.500 s
+and included fresh head-31 actual snapshots (three restores, 88 tables including
+the fixture sentinel, six sequences) and the separate-cluster cutover. Selective
+routing cleanup again removed exactly two obsolete keys and retained four others.
+These results close the local E1–E3 calculator proof; the commercial parent
+requires actual dated evidence and remains open.
+
+### Sanctions and client recovery acceptance
+
+Independent sanctions review and cold PostgreSQL verification passed 52 top-level
+checks plus 131 subtests across seven packages:
+`/tmp/agent-runs/sanctions-final-independent--20260919T114602Z-971853.log`.
+Current credential expiry is checked after admission and OAuth lock waits, and
+actual Admin HTTP decisions drive live WebSocket enforcement. Exact lifts and
+expired decisions preserve unrelated authority and retained history.
+
+Client proofs cover persistent installation identity, same-account upgrade,
+OAuth recovery and storage failure. Regression tests exposed failed preference
+writes leaving a misleading cache, stale asynchronous OAuth binding overwriting
+a switched account, and expired replacement access. Full-suite verification
+then found a completed initializer Future retained across Flutter test zones;
+clearing only the identical completed queue tail preserves serialized writes.
+All 515 client tests passed, with clean analysis:
+`/tmp/agent-runs/sanctions-client-all-green--20260919T114753Z-978300.log` and
+`/tmp/agent-runs/sanctions-client-final-analyze--20260919T114754Z-978562.log`.
+The independent combined 60-test regression group and analysis also passed:
+`/tmp/agent-runs/sanctions-client-queue-independent--20260919T115054Z-983934.log`.
+
+### Closed deletion foundation
+
+Migration 32 creates a separately owned privacy request/fence/receipt boundary
+and four narrowly granted typed routines. Its sole erasure step removes a
+profile only when its complete shape matches the reviewed manifest and no
+accepted match or ledger effects need survivor handling. Unknown columns,
+constraints, inheritance, RLS, user triggers and rewrite rules refuse;
+transaction locks prevent concurrent schema drift. Faults roll back all step
+receipts. This is a closed foundation, not a complete deletion endpoint.
+
+Independent source review and all eight top-level cold tests passed in 4.850 s:
+`/tmp/agent-runs/deletion-foundation-independent--20260919T115253Z-987370.log`.
+Full D2–D6 reauthentication, source/content/evidence cleanup, survivor value and
+independent restore suppression remain in progress.
+
+The actual head-32 two-cluster rehearsal passed all seven tests in 20.906 s,
+including two restores and 86 domain tables:
+`/tmp/agent-runs/cutover-head32-integration--20260919T115508Z-991516.log`.
+It additionally fenced the privacy executor's existing and future connections.
+Its held event remains an isolated SQL uniqueness proof, not provider delivery.
+
+### Backup restore lifetime
+
+D5a now pins creation at capture start and expiry no later than 90 days later.
+Restore requires strict integer UTC timestamps and rechecks the deadline before
+target creation and before successful completion. Late capture retains its
+INCOMPLETE marker; late restore closes its owned target without a success receipt.
+Hash verification remains available for inspecting an expired artifact.
+
+Independent source review and 30 cold safety/CLI tests passed in 0.665 s:
+`/tmp/agent-runs/backup-retention-independent--20260919T120220Z-1032175.log`.
+The complete snapshot suite then passed all32tests in109.332s, including actual
+legacy8→head32 migration and three restores across91tables (fixture sentinel
+included),6sequences and selective routing parity:
+`/tmp/agent-runs/backup-retention-complete--20260919T120142Z-1011517.log`.
+This does not implement expired-copy purge or external suppression; D5 remains open.
+
+Cutover32 independent final source review and all controller/role tests also
+passed: store38.136s, CLI0.016s, exit0,
+`/tmp/agent-runs/cutover32-final-independent--20260919T115813Z-1005152.log`.
+
+### Independent suppression fixture journal
+
+`server/internal/privacy` supplies D2's Publisher contract and a concrete closed
+fixture journal. Records contain purpose-HMAC selectors instead of account UUIDs,
+canonical signed request identities and a verified hash chain. Ed25519 keys and
+selector keys are supplied separately and never written to the journal. A
+separate signed private minimum file advances durably before Publish succeeds.
+Both directories must be disjoint from declared application backup roots and
+each other; reopening the minimum object refuses older journal contents.
+
+Cross-handle file locking, bounded reads, strict canonical decoding, uncertain
+rename/fsync replay, minimum failures, cancellation and key/installation drift
+have regression proofs. A fresh verifier challenge is signed with the complete
+head; stale/future/challenge-replayed heads refuse. A reviewer-found lossy
+sub-microsecond timestamp identity was reproduced and now refuses explicitly.
+
+Independent source review, all11top-level race tests (plus6subtests), and vet
+passed, race runtime1.270s:
+`/tmp/agent-runs/privacy-journal-independent--20260919T121740Z-1103467.log` and
+`/tmp/agent-runs/privacy-journal-vet-independent--20260919T121756Z-1103900.log`.
+This is a filesystem mechanics/replay proof. No production authority, processor,
+retention purge or restored application admission is claimed; D2 binding and
+complete executor/restore integration remain required.
+
+Latest client artifacts also rebuilt after the installation/OAuth fixes:
+Android debug5.6s (`roadmap-android-final--20260919T120250Z-1054839.log`) and
+Web18.6s (`roadmap-web-final--20260919T120608Z-1083125.log`), both exit0.
+Physical-device performance and iOS still require their stated environments.
+
+
+### Reward claim verification and cutover schema 34
+
+Closed reward foundation B1–B3 passed independent store/config/signature coverage
+(15 top-level, 21 nested cases) and the final HTTP deadline gate (3 tests,
+4.779 seconds). Immutable opaque claims and provider receipts remain separate
+from payouts. No reward route is publicly mounted. Premium eligibility is fixed
+at start; interrupted-match policy and payout/delivery/consent joins remain open.
+
+Schema 34 cutover integration passed 8 tests in 21.618 seconds, including two
+actual independent-cluster restores and exact parity of 90 domain tables.
+A real privacy-executor login completed enrollment, challenge, confirmation,
+suppression binding and profile fixture removal while direct preparation was
+denied. Exact source ACLs are compared in both directions, including omitted
+grants; reward tables have runtime SELECT/INSERT only. The later D2 cleanup
+lock-order review requires refreshed function pins and another cold gate before
+final acceptance.
+
+
+### Final handoff scope requested by owner
+
+The owner requested finalization for a human remote push. Source is frozen at
+schema34, with no migration35/36 and no D3 survivor-value implementation. Closed
+D2 authority uses ten narrowly granted functions, including independently
+committed bounded expiry cleanup to avoid account/intent lock inversion.
+Source readers reject deleted/fenced authors and acquire release rows before
+active mappings; atomic withdrawal and shared-data erasure remain pending.
+
+Final independent review accepted the current boundary with no outstanding
+blocker: 48 top-level tests and 133 subtests passed (store60.518s, auth2.054s,
+handler0.552s), plus the nil-UUID regression0.003s; diff whitespace checks passed.
+Evidence: `final-boundary-independent--20260919T123652Z-1163931.log` and
+`deletion-id-independent--20260919T123815Z-1219763.log` under `/tmp/agent-runs`.
+The full mandatory repository runner and final immutable image proof are the
+remaining finalization gates; their completed results are recorded below.
+
+
+Final immutable production-image proof passed all six stages: embedded manifest,
+actual migration CLI, runtime without object storage, Redis outage/recovery,
+PostgreSQL ownership-loss/restart and incompatible-startup refusal. The fixture
+source inventory exactly matches the final source (zero drift), schema34,
+manifest `37e282269b8dd4fd79f0b81a6546f29ec475b1e1cbcf45f6ad1f0751bad4e6e3`,
+image `sha256:3c420092d214e1c3a53c2ccc5b9072019084040c3104f8506aa4cb7adce055fc`.
+Evidence: `/tmp/agent-runs/knowoff-artifact-312a6ae22edd-7s39bnbx/results.json`.
+
+
+The mandatory full run completed with all Python121, gamebot81,
+mediapack-Go24, web-cache2 and client515 tests passing, plus client analysis and
+formatting and Go vet/build checks. Its server test stage exposed two head31
+rollback fixtures that ignored a later FK, a schema24 fixture that invoked a
+newer runtime, and the enlarged store package exceeding its120-second watchdog.
+A Go formatting issue was also found and corrected. These were repaired with
+dependency-ordered real migrations, explicit historical-schema seeding with
+stronger receipt parity, and a bounded300-second package watchdog; inner SQL,
+network, performance and load assertions remain unchanged. Independent repair
+verification passed all3 migration tests +2 subtests and21 runner tests.
+The full store package is rerun below; the initial failed report is retained
+rather than relabeled green.
+
+The100-room matched warm/measurement and100-match soak passed197.530s:
+action RTT p95=125.965ms,p99=151.533ms; worst frame8185bytes; warm/final heap
+2473248/2556984bytes; warm/final goroutines8/8. No runtime source changed during
+the fixture/watchdog repairs. Source hashes in the production-image evidence
+still match every runtime and migration file; subsequent edits affect tests
+and the test runner only.
+
+
+Final repaired gates are green. The complete store package passed496 tests/subtests
+in186.683 seconds, followed by vet and build, with zero failures/skips. Server
+format verification is clean. Combining the full runner's unaffected packages
+with this complete cold store replacement yields 2207 passing Go tests/subtests
+across31 packages containing tests, with zero remaining failures or test skips.
+Python121, Flutter515 and web-cache2 passed; the changed runner's21 tests also
+passed independently. Android debug and Web artifact builds passed earlier on
+the same client source. iOS/device/provider/human release evidence remains pending.
+
+Reports: `/tmp/agent-runs/roadmap-final-unified.json` (initial failure retained)
+and `/tmp/agent-runs/roadmap-final-store.json` (complete repaired package),
+plus `roadmap-runner-regressions--20260919T124907Z-1283985.log`.

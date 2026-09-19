@@ -43,7 +43,7 @@ func lockTrustAccounts(ctx context.Context, tx *sql.Tx, ids []string) error {
 // Called after the same sorted account locks used by Block and match Start.
 func checkTextTrust(ctx context.Context, tx *sql.Tx, ids []string, at time.Time) error {
 	var refused bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM accounts WHERE id=ANY($1::uuid[]) AND (deleted_at IS NOT NULL OR banned_at IS NOT NULL OR suspended_until>$2)) OR EXISTS(SELECT 1 FROM guard_freezes WHERE account_id=ANY($1::uuid[]) AND dismissed_at IS NULL AND converted_to_ban_at IS NULL AND expires_at>$2) OR EXISTS(SELECT 1 FROM player_blocks WHERE actor_id=ANY($1::uuid[]) AND target_id=ANY($1::uuid[]))`, pq.Array(ids), at).Scan(&refused)
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM accounts WHERE id=ANY($1::uuid[]) AND (deleted_at IS NOT NULL OR banned_at IS NOT NULL OR suspended_until>$2 OR direct_account_sanction_active(id))) OR EXISTS(SELECT 1 FROM guard_freezes WHERE account_id=ANY($1::uuid[]) AND dismissed_at IS NULL AND converted_to_ban_at IS NULL AND expires_at>$2) OR EXISTS(SELECT 1 FROM player_blocks WHERE actor_id=ANY($1::uuid[]) AND target_id=ANY($1::uuid[]))`, pq.Array(ids), at).Scan(&refused)
 	if err != nil {
 		return err
 	}

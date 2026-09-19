@@ -292,15 +292,26 @@ func TestTextAbandonActualMigrationParityAndDown(t *testing.T) {
 			}
 			assertTransitionLegacyUnchanged(t, after, transitionLegacySnapshot(t, ctx, db))
 			if retained {
-				// Obtain full policy from the existing loader fixture without changing this
-				// database; its legacy rows remain the parity baseline above.
-				s := NewTextValueStore(db, cooldownTestPolicy(t))
+				// This is a schema24 downgrade proof, so seed the retained
+				// schema24 representation directly. Current gameplay requires
+				// later sanction/bonus authority and cannot run on this prefix.
+				// Runtime Abandon behavior is covered by the current-head tests.
+				account, match := valueAccount(t, db), uuid.NewString()
 				at := time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC)
-				m, ids := valueMatch(t, s, db, at, false)
-				if err := s.Abandon(ctx, TextAbandon{MatchID: m.Contract.MatchID, Owner: m.Owner, Epoch: 1, AccountID: ids[0], Seat: 0, At: at.Add(20 * time.Second)}); err != nil {
+				if _, err := db.ExecContext(ctx, `INSERT INTO text_matches(id,room_id,contract,contract_hash,owner_id,fence,state,prototype,created_at,started_at) VALUES($1,'migration24-fixture','{"historical_fixture":true}',$2,$3,1,'started',false,$4,$4)`, match, repeatHash(), uuid.NewString(), at); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.ExecContext(ctx, `INSERT INTO text_abandons(match_id,account_id,seat,occurred_at,body_hash,prior_count,applied_count,duration_seconds,cooldown_until) VALUES($1,$2,0,$3,$4,0,1,30,$3::timestamptz+interval '30 seconds')`, match, account, at, repeatHash()); err != nil {
 					t.Fatal(err)
 				}
 			}
+			var receiptBefore string
+			if retained {
+				if err := db.QueryRowContext(ctx, `SELECT to_jsonb(a)::text FROM text_abandons a`).Scan(&receiptBefore); err != nil {
+					t.Fatal(err)
+				}
+			}
+
 			err := runMigration(db, path, "exact text abandonment down", func(m *migrate.Migrate) error { return m.Steps(-1) })
 			if retained {
 				if err == nil {
@@ -309,6 +320,11 @@ func TestTextAbandonActualMigrationParityAndDown(t *testing.T) {
 				if n := valueCount(t, db, `SELECT count(*) FROM text_abandons`); n != 1 {
 					t.Fatal("receipt lost", n)
 				}
+				var receiptAfter string
+				if err := db.QueryRowContext(ctx, `SELECT to_jsonb(a)::text FROM text_abandons a`).Scan(&receiptAfter); err != nil || receiptBefore != receiptAfter {
+					t.Fatal("retained receipt changed", err)
+				}
+
 			} else {
 				if err != nil {
 					t.Fatal(err)

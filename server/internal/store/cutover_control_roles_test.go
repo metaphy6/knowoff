@@ -35,6 +35,7 @@ func cutoverControlFixture(t *testing.T) (*sql.DB, *sql.DB, *sql.DB, CutoverCont
 		`GRANT USAGE ON SCHEMA public TO ` + c,
 		`GRANT ` + pq.QuoteIdentifier(roles.Runtime) + ` TO ` + c + ` WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`,
 		`GRANT ` + pq.QuoteIdentifier(roles.Migrator) + ` TO ` + c + ` WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`,
+		`GRANT ` + pq.QuoteIdentifier(roles.PrivacyExecutor) + ` TO ` + c + ` WITH ADMIN TRUE, INHERIT FALSE, SET FALSE`,
 		`GRANT pg_signal_backend,pg_read_all_stats TO ` + c + ` WITH ADMIN FALSE, INHERIT TRUE, SET FALSE`,
 		`GRANT EXECUTE ON FUNCTION pg_catalog.pg_control_system() TO ` + c,
 		`GRANT SELECT ON ALL TABLES IN SCHEMA public TO ` + c,
@@ -76,7 +77,7 @@ func TestCutoverControlRolesVerifyExactCapabilities(t *testing.T) {
 	instance := cutoverSource(t, control)
 	cutoverRequest(t, control, instance, 1, nil)
 	cutoverWatermark(t, control, instance, cutoverCurrentRequest(t, control, instance), 1)
-	for _, role := range []string{s.Roles.Runtime, s.Roles.Migrator} {
+	for _, role := range s.Roles.writers() {
 		if _, err := control.Exec(`ALTER ROLE ` + pq.QuoteIdentifier(role) + ` NOLOGIN`); err != nil {
 			t.Fatal("declared login control", err)
 		}
@@ -88,7 +89,7 @@ func TestCutoverControlRolesVerifyExactCapabilities(t *testing.T) {
 	if err := VerifyCutoverControlRoles(t.Context(), capture, s); err != nil {
 		t.Fatal("fenced role state refused", err)
 	}
-	for _, role := range []string{s.Roles.Runtime, s.Roles.Migrator} {
+	for _, role := range s.Roles.writers() {
 		if _, err := control.Exec(`ALTER ROLE ` + pq.QuoteIdentifier(role) + ` LOGIN`); err != nil {
 			t.Fatal(err)
 		}
@@ -128,24 +129,30 @@ func cutoverCurrentRequest(t *testing.T, db *sql.DB, instance string) string {
 
 func TestCutoverControlRolesRejectExtraOrMissingAuthority(t *testing.T) {
 	db, capture, _, s := cutoverControlFixture(t)
-	replace := strings.NewReplacer("%c", pq.QuoteIdentifier(s.Control), "%r", pq.QuoteIdentifier(s.Roles.Runtime), "%m", pq.QuoteIdentifier(s.Roles.Migrator), "%o", pq.QuoteIdentifier(s.Roles.Owner))
+	replace := strings.NewReplacer("%e", pq.QuoteIdentifier(s.Roles.PrivacyExecutor), "%p", pq.QuoteIdentifier(s.Roles.PrivacyOwner), "%c", pq.QuoteIdentifier(s.Control), "%r", pq.QuoteIdentifier(s.Roles.Runtime), "%m", pq.QuoteIdentifier(s.Roles.Migrator), "%o", pq.QuoteIdentifier(s.Roles.Owner))
 	for name, queries := range map[string][2]string{
-		"runtime set":             {`GRANT %r TO %c WITH SET TRUE`, `GRANT %r TO %c WITH SET FALSE`},
-		"runtime inherit":         {`GRANT %r TO %c WITH INHERIT TRUE`, `GRANT %r TO %c WITH INHERIT FALSE`},
-		"missing admin":           {`GRANT %r TO %c WITH ADMIN FALSE`, `GRANT %r TO %c WITH ADMIN TRUE`},
-		"owner membership":        {`GRANT %o TO %c WITH SET FALSE,INHERIT FALSE`, `REVOKE %o FROM %c`},
-		"broad read":              {`GRANT pg_read_all_data TO %c`, `REVOKE pg_read_all_data FROM %c`},
-		"missing signal":          {`REVOKE pg_signal_backend FROM %c`, `GRANT pg_signal_backend TO %c WITH ADMIN FALSE,INHERIT TRUE,SET FALSE`},
-		"missing stats":           {`REVOKE pg_read_all_stats FROM %c`, `GRANT pg_read_all_stats TO %c WITH ADMIN FALSE,INHERIT TRUE,SET FALSE`},
-		"stats admin":             {`GRANT pg_read_all_stats TO %c WITH ADMIN TRUE`, `GRANT pg_read_all_stats TO %c WITH ADMIN FALSE`},
-		"missing system identity": {`REVOKE EXECUTE ON FUNCTION pg_control_system() FROM %c`, `GRANT EXECUTE ON FUNCTION pg_control_system() TO %c`},
-		"file reader":             {`GRANT EXECUTE ON FUNCTION pg_read_file(text) TO %c`, `REVOKE EXECUTE ON FUNCTION pg_read_file(text) FROM %c`},
-		"ordinary write":          {`GRANT UPDATE ON accounts TO %c`, `REVOKE UPDATE ON accounts FROM %c`},
-		"missing receipt insert":  {`REVOKE INSERT ON cutover_requests FROM %c`, `GRANT INSERT ON cutover_requests TO %c`},
-		"sequence advance":        {`GRANT USAGE ON noin_ledger_id_seq TO %c`, `REVOKE USAGE ON noin_ledger_id_seq FROM %c`},
-		"schema ddl":              {`GRANT CREATE ON SCHEMA public TO %c`, `REVOKE CREATE ON SCHEMA public FROM %c`},
-		"trigger bypass":          {`GRANT SET ON PARAMETER session_replication_role TO %c`, `REVOKE SET ON PARAMETER session_replication_role FROM %c`},
-		"role creation missing":   {`ALTER ROLE %c NOCREATEROLE`, `ALTER ROLE %c CREATEROLE`},
+		"privacy executor set":           {`GRANT %e TO %c WITH SET TRUE`, `GRANT %e TO %c WITH SET FALSE`},
+		"privacy executor inherit":       {`GRANT %e TO %c WITH INHERIT TRUE`, `GRANT %e TO %c WITH INHERIT FALSE`},
+		"privacy executor admin missing": {`GRANT %e TO %c WITH ADMIN FALSE`, `GRANT %e TO %c WITH ADMIN TRUE`},
+		"privacy owner membership":       {`GRANT %p TO %c WITH SET FALSE,INHERIT FALSE`, `REVOKE %p FROM %c`},
+		"privacy direct write":           {`GRANT UPDATE ON privacy_requests TO %c`, `REVOKE UPDATE ON privacy_requests FROM %c`},
+		"privacy mutator":                {`GRANT EXECUTE ON FUNCTION privacy_erase_profile_batch(uuid,integer) TO %c`, `REVOKE EXECUTE ON FUNCTION privacy_erase_profile_batch(uuid,integer) FROM %c`},
+		"runtime set":                    {`GRANT %r TO %c WITH SET TRUE`, `GRANT %r TO %c WITH SET FALSE`},
+		"runtime inherit":                {`GRANT %r TO %c WITH INHERIT TRUE`, `GRANT %r TO %c WITH INHERIT FALSE`},
+		"missing admin":                  {`GRANT %r TO %c WITH ADMIN FALSE`, `GRANT %r TO %c WITH ADMIN TRUE`},
+		"owner membership":               {`GRANT %o TO %c WITH SET FALSE,INHERIT FALSE`, `REVOKE %o FROM %c`},
+		"broad read":                     {`GRANT pg_read_all_data TO %c`, `REVOKE pg_read_all_data FROM %c`},
+		"missing signal":                 {`REVOKE pg_signal_backend FROM %c`, `GRANT pg_signal_backend TO %c WITH ADMIN FALSE,INHERIT TRUE,SET FALSE`},
+		"missing stats":                  {`REVOKE pg_read_all_stats FROM %c`, `GRANT pg_read_all_stats TO %c WITH ADMIN FALSE,INHERIT TRUE,SET FALSE`},
+		"stats admin":                    {`GRANT pg_read_all_stats TO %c WITH ADMIN TRUE`, `GRANT pg_read_all_stats TO %c WITH ADMIN FALSE`},
+		"missing system identity":        {`REVOKE EXECUTE ON FUNCTION pg_control_system() FROM %c`, `GRANT EXECUTE ON FUNCTION pg_control_system() TO %c`},
+		"file reader":                    {`GRANT EXECUTE ON FUNCTION pg_read_file(text) TO %c`, `REVOKE EXECUTE ON FUNCTION pg_read_file(text) FROM %c`},
+		"ordinary write":                 {`GRANT UPDATE ON accounts TO %c`, `REVOKE UPDATE ON accounts FROM %c`},
+		"missing receipt insert":         {`REVOKE INSERT ON cutover_requests FROM %c`, `GRANT INSERT ON cutover_requests TO %c`},
+		"sequence advance":               {`GRANT USAGE ON noin_ledger_id_seq TO %c`, `REVOKE USAGE ON noin_ledger_id_seq FROM %c`},
+		"schema ddl":                     {`GRANT CREATE ON SCHEMA public TO %c`, `REVOKE CREATE ON SCHEMA public FROM %c`},
+		"trigger bypass":                 {`GRANT SET ON PARAMETER session_replication_role TO %c`, `REVOKE SET ON PARAMETER session_replication_role FROM %c`},
+		"role creation missing":          {`ALTER ROLE %c NOCREATEROLE`, `ALTER ROLE %c CREATEROLE`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := db.Exec(replace.Replace(queries[0])); err != nil {

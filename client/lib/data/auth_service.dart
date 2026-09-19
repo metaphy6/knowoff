@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,6 +33,8 @@ class AuthService {
   static const _accessKey = 'knowoff_access_token';
   static const _refreshKey = 'knowoff_refresh_token';
   static const _accountKey = 'knowoff_account_id';
+  static const _installationKey = 'knowoff_installation_id';
+  static Future<void>? _installationTail;
 
   String? _accessToken;
   String? _refreshToken;
@@ -58,7 +59,12 @@ class AuthService {
     if (account == null || _refreshToken == null) {
       throw const AuthSessionException('auth.restore_required');
     }
-    if (_accessToken == null || _isTokenExpired(_accessToken!)) await refresh();
+    await _installation();
+    if (_accessToken == null ||
+        _isTokenExpired(_accessToken!) ||
+        _tokenInstallation(_refreshToken) == null) {
+      await refresh();
+    }
     if (generation != _sessionGeneration || _accountId != account) {
       throw const AuthSessionException('auth.restore_required');
     }
@@ -81,10 +87,12 @@ class AuthService {
     if (_refreshing case final pending?) return pending;
     final prefs = await SharedPreferences.getInstance();
     _load(prefs);
+    await _installation();
     if (_accessToken != null &&
         _refreshToken != null &&
         _accountId != null &&
-        !_isTokenExpired(_accessToken!)) {
+        !_isTokenExpired(_accessToken!) &&
+        _tokenInstallation(_refreshToken) != null) {
       return;
     }
     if (prefs.containsKey(_accountKey) ||
@@ -93,7 +101,7 @@ class AuthService {
       return refresh();
     }
 
-    final deviceHash = _deviceHash();
+    final deviceHash = await _installation();
     final res = await _client
         .post(
           Uri.parse('$_baseUrl/api/auth/device'),
@@ -144,11 +152,18 @@ class AuthService {
     if (expectedAccount == null || token == null || _isTokenExpired(token)) {
       throw const AuthSessionException('auth.restore_required');
     }
+    final installation = await _installation();
+    final binding = _tokenInstallation(token) == null;
     final res = await _client
         .post(
-          Uri.parse('$_baseUrl/api/auth/refresh'),
+          Uri.parse(
+            '$_baseUrl/api/auth/${binding ? "installation" : "refresh"}',
+          ),
           headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'refresh_token': token}),
+          body: jsonEncode({
+            'refresh_token': token,
+            if (binding) 'device_hash': installation,
+          }),
         )
         .timeout(const Duration(seconds: 15));
     if (res.statusCode != 200) {
@@ -159,6 +174,7 @@ class AuthService {
       expectedAccount: expectedAccount,
       expectedGeneration: generation,
     );
+    if (binding && _isTokenExpired(_accessToken!)) await _refresh();
   }
 
   /// A server-rejected access token may be refreshed for the same account.
@@ -189,7 +205,7 @@ class AuthService {
     Map<String, dynamic> data, {
     String? expectedAccount,
     int? expectedGeneration,
-    bool Function()? authorized,
+    bool Function(SharedPreferences)? authorized,
     bool advanceGeneration = false,
   }) async {
     final access = _nonempty(data['access_token']);
@@ -202,7 +218,7 @@ class AuthService {
       throw const AuthSessionException('auth.invalid_response');
     }
     await _store((prefs) async {
-      if ((authorized != null && !authorized()) ||
+      if ((authorized != null && !authorized(prefs)) ||
           (expectedGeneration != null &&
               expectedGeneration != _sessionGeneration)) {
         throw const AuthSessionException('oauth.cancelled');
@@ -263,6 +279,7 @@ class AuthService {
       final response = await _oauthPost('/start', {
         'provider': provider,
         'intent': intent.name,
+        'device_hash': await _installation(),
       }, access: intent == OAuthIntent.link ? _accessToken : null);
       if (generation != _oauthGeneration) {
         throw const AuthSessionException('oauth.cancelled');
@@ -421,7 +438,8 @@ class AuthService {
   }
 
   Future<void> _applyOAuth(int generation, OAuthAttempt attempt) async {
-    final candidate = _oauthCandidate;
+    final sessionGeneration = _sessionGeneration;
+    var candidate = _oauthCandidate;
     if (candidate == null ||
         !attempt.expiresAt.isAfter(_now()) ||
         _isTokenExpired(candidate['access_token'] as String) ||
@@ -437,10 +455,41 @@ class AuthService {
         candidate['account_id'] != _accountId) {
       throw const AuthSessionException('oauth.account_mismatch');
     }
+    if (_tokenInstallation(candidate['refresh_token'] as String) == null) {
+      final installation = await _installation();
+      final response = await _client
+          .post(
+            Uri.parse('$_baseUrl/api/auth/installation'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'refresh_token': candidate['refresh_token'],
+              'device_hash': installation,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) {
+        throw const AuthSessionException('auth.restore_required');
+      }
+      final bound = _oauthMap(response.body);
+      if (bound['account_id'] != candidate['account_id'] ||
+          _tokenInstallation(bound['refresh_token'] as String?) !=
+              installation) {
+        throw const AuthSessionException('oauth.invalid_response');
+      }
+      candidate = bound;
+    }
     await _persist(
       candidate,
-      expectedGeneration: _sessionGeneration,
-      authorized: () => generation == _oauthGeneration,
+      expectedGeneration: sessionGeneration,
+      authorized: (prefs) {
+        if (!attempt.expiresAt.isAfter(_now()) ||
+            _isTokenExpired(candidate!['access_token'] as String) ||
+            _isTokenExpired(candidate['refresh_token'] as String)) {
+          throw const AuthSessionException('oauth.expired');
+        }
+        return generation == _oauthGeneration &&
+            prefs.getString(_accountKey) == attempt._originalAccount;
+      },
       advanceGeneration: true,
     );
     await cancelOAuth(generation: generation);
@@ -500,11 +549,67 @@ class AuthService {
     return const AuthSessionException('oauth.provider_unavailable');
   }
 
-  String _deviceHash() {
-    final bytes = utf8.encode(
-      'knowoff-device-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1 << 30)}',
+  String? _tokenInstallation(String? token) {
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final claims =
+          jsonDecode(
+                utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+              )
+              as Map<String, dynamic>;
+      return _nonempty(claims['dvh']);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String> _installation() {
+    final result = Completer<String>();
+    final operation = (_installationTail ?? Future<void>.value()).then((
+      _,
+    ) async {
+      final prefs = await SharedPreferences.getInstance();
+      // Failed preference writes still change the plugin's in-memory cache.
+      // Only persisted identity may authorize a subsequent network request.
+      await prefs.reload();
+      final existing = _nonempty(prefs.getString(_installationKey));
+      final signed =
+          _tokenInstallation(prefs.getString(_refreshKey)) ??
+          _tokenInstallation(prefs.getString(_accessKey));
+      if (existing != null) {
+        if (signed != null && signed != existing) {
+          throw const AuthSessionException('auth.installation_mismatch');
+        }
+        return existing;
+      }
+      final random = Random.secure();
+      final value =
+          signed ??
+          base64Url
+              .encode(List<int>.generate(32, (_) => random.nextInt(256)))
+              .replaceAll('=', '');
+      if (!await prefs.setString(_installationKey, value)) {
+        throw const AuthSessionException('auth.storage_unavailable');
+      }
+      return value;
+    });
+    // Keep only pending work. Retaining a completed future also retains its
+    // scheduling zone, which may have ended before the next auth lifecycle.
+    late final Future<void> completion;
+    completion = operation.then<void>(
+      (value) {
+        if (identical(_installationTail, completion)) _installationTail = null;
+        result.complete(value);
+      },
+      onError: (Object error, StackTrace stack) {
+        if (identical(_installationTail, completion)) _installationTail = null;
+        result.completeError(error, stack);
+      },
     );
-    return base64Encode(sha256.convert(bytes).bytes);
+    _installationTail = completion;
+    return result.future;
   }
 }
 

@@ -184,20 +184,20 @@ func LoadTextPack(path string, limits TextLimits) (*TextSnapshot, error) {
 	if err != nil {
 		return nil, err
 	}
-	// There are three data files, a manifest and at most six evidence artifacts.
-	entries, err := dir.ReadDir(11)
+	// There are three data files, a manifest and at most seven evidence artifacts.
+	entries, err := dir.ReadDir(12)
 	_ = dir.Close()
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
-	if len(entries) > 10 {
+	if len(entries) > 11 {
 		return nil, fmt.Errorf("too many text bundle members")
 	}
 	allowed := map[string]bool{"manifest.json": true}
 	for _, name := range textDataMembers {
 		allowed[name] = true
 	}
-	for _, name := range []string{"technical.json", "editorial.json", "actions.json", "screening.json", "release.json", "replay.json"} {
+	for _, name := range []string{"technical.json", "editorial.json", "actions.json", "screening.json", "release.json", "replay.json", "action-replay.json"} {
 		allowed[name] = true
 	}
 	raws := map[string][]byte{}

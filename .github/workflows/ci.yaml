@@ -49,16 +49,12 @@ jobs:
         run: cd client && flutter build apk --debug
       - name: build Web
         run: cd client && flutter build web
-      - name: app size budget
+      - name: report app size
         run: |
           cd client
           APK_SIZE=$(stat -c%s build/app/outputs/flutter-apk/app-debug.apk)
           echo "APK size: $APK_SIZE bytes"
-          # Phase 1 budget: debug APK under 50 MB; release budget will be tighter.
-          if [ "$APK_SIZE" -gt 52428800 ]; then
-            echo "APK exceeds 50 MB budget"
-            exit 1
-          fi
+          # Owner decision 2026-09-19: package size is informational, not a gate.
 
   ios:
     runs-on: macos-latest

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/lobby"
 	"github.com/knowoff/knowoff/server/internal/ratelimit"
@@ -228,9 +229,37 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 		}
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
-		peer, e := d.Lobby.Open(ctx, account)
+		bindingRefused := false
+		peer, e := d.Lobby.OpenAuthenticated(ctx, func(locked context.Context) (lobby.TextPeerBinding, error) {
+			locked, done := context.WithTimeout(locked, 5*time.Second)
+			defer done()
+			if bound, ok := d.Auth.(interface {
+				ValidateAccessBinding(context.Context, string) (auth.AccessBinding, error)
+			}); ok {
+				binding, err := bound.ValidateAccessBinding(locked, hello.Payload.Token)
+				if err != nil {
+					bindingRefused = true
+					return lobby.TextPeerBinding{}, err
+				}
+				if binding.AccountID != account {
+					bindingRefused = true
+					return lobby.TextPeerBinding{}, lobby.ErrTextMembership
+				}
+				return lobby.TextPeerBinding{AccountID: binding.AccountID, DeviceHash: binding.DeviceHash, SessionEpoch: binding.SessionEpoch, TokenID: binding.TokenID, Purpose: binding.Purpose, ExpiresAt: binding.ExpiresAt}, nil
+			}
+			verified, err := d.Auth.ValidateAccessToken(locked, hello.Payload.Token)
+			if err != nil || verified != account {
+				bindingRefused = true
+				return lobby.TextPeerBinding{}, lobby.ErrTextMembership
+			}
+			return lobby.TextPeerBinding{AccountID: verified}, nil
+		})
 		if e != nil {
-			reject(textErrorCode(e))
+			if bindingRefused {
+				reject("auth.required")
+			} else {
+				reject(textErrorCode(e))
+			}
 			return
 		}
 		// A final sanction can revoke the token after its first check but before

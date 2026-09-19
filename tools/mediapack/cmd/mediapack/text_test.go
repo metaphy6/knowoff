@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/knowoff/knowoff/server/pkg/media"
+	"github.com/knowoff/knowoff/server/pkg/textcert"
 	"github.com/knowoff/knowoff/tools/mediapack/internal/generator"
 )
 
@@ -289,6 +290,15 @@ func TestTextPublishIsImmutableAndIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	fullTuning, err := loadActionTuning("../../../../configs/gameplay/tuning.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	actionEvidence, err := textcert.Certify(snapshot, fullTuning, 1, 71)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Artifacts["action-replay.json"], _ = json.Marshal(actionEvidence)
 	report := media.CertifyText(snapshot, tuning, 20, 71)
 	b.Artifacts["technical.json"], _ = json.Marshal(report)
 	b.Artifacts["replay.json"], _ = json.Marshal(media.NewTextReplay(snapshot, tuning, 20, 71))
@@ -348,4 +358,31 @@ func snapshotWithArtifacts(t *testing.T, b media.TextBundle, l media.TextLimits)
 		t.Fatal(err)
 	}
 	return s
+}
+
+func TestTextActionCommandProducesPrivateExecutableEvidence(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "action-replay.json")
+	var out, errors bytes.Buffer
+	args := []string{"-tuning", "../../../../configs/gameplay/tuning.yaml", "-samples", "1", "-seed", "71", "-out", path, "../../../../server/pkg/media/testdata/text-en"}
+	if code := runTextCommand("text-actions", args, &out, &errors); code != 0 {
+		t.Fatal(code, errors.String())
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evidence media.TextActionEvidence
+	if err = json.Unmarshal(raw, &evidence); err != nil || len(evidence.Cells) != 10 {
+		t.Fatal("invalid executable evidence", err)
+	}
+	if bytes.Contains(out.Bytes(), []byte(`"seed"`)) || bytes.Contains(out.Bytes(), []byte(`"steps"`)) {
+		t.Fatal("private action inputs entered logs")
+	}
+	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0600 {
+		t.Fatal("private artifact permissions", err)
+	}
+	if code := runTextCommand("text-actions", args, &out, &errors); code == 0 {
+		t.Fatal("immutable evidence overwritten")
+	}
 }

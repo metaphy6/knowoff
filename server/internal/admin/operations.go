@@ -12,6 +12,8 @@ import (
 
 func (m *Manager) registerOperations(mux *http.ServeMux) {
 	m.registerTextContent(mux)
+	m.registerNoinCorrections(mux)
+	m.registerLeaderboard(mux)
 	mux.Handle("GET /admin/report-cases/{id}", m.requireRole("admin", false)(http.HandlerFunc(m.caseReports)))
 	resolve := m.requireRole("admin", true)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := reports.NewManager(m.db).ResolveCase(r.Context(), adminIDFromContext(r.Context()), r.PathValue("id"), r.FormValue("decision"), r.FormValue("reason"), m.textContent.TakedownTx); err != nil {
@@ -137,6 +139,7 @@ func (m *Manager) feedbackList(w http.ResponseWriter, r *http.Request) {
 }
 
 type ledgerRow struct {
+	ID           int64
 	Type, Reason string
 	Amount       int
 	Created      string
@@ -144,7 +147,7 @@ type ledgerRow struct {
 type entitlementRow struct{ Type, Value, Until string }
 
 func (m *Manager) economyLookup(w http.ResponseWriter, r *http.Request) {
-	data := map[string]any{"AccountID": r.URL.Query().Get("account_id")}
+	data := map[string]any{"AccountID": r.URL.Query().Get("account_id"), "GrantID": uuid.NewString(), "RefundID": uuid.NewString()}
 	id := r.URL.Query().Get("account_id")
 	if id != "" {
 		if _, err := uuid.Parse(id); err != nil {
@@ -163,7 +166,7 @@ func (m *Manager) economyLookup(w http.ResponseWriter, r *http.Request) {
 			data["Found"] = true
 			data["Nickname"] = nickname
 			data["Balance"] = balance
-			rows, err := m.db.QueryContext(r.Context(), `SELECT event_type,amount,reason,created_at::text FROM noin_ledger WHERE account_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100`, id)
+			rows, err := m.db.QueryContext(r.Context(), `SELECT id,event_type,amount,reason,created_at::text FROM noin_ledger WHERE account_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100`, id)
 			if err != nil {
 				http.Error(w, "Ledger unavailable.", 500)
 				return
@@ -171,7 +174,7 @@ func (m *Manager) economyLookup(w http.ResponseWriter, r *http.Request) {
 			var ledger []ledgerRow
 			for rows.Next() {
 				var v ledgerRow
-				if err = rows.Scan(&v.Type, &v.Amount, &v.Reason, &v.Created); err != nil {
+				if err = rows.Scan(&v.ID, &v.Type, &v.Amount, &v.Reason, &v.Created); err != nil {
 					rows.Close()
 					http.Error(w, "Ledger unavailable.", 500)
 					return
@@ -209,5 +212,5 @@ func (m *Manager) economyLookup(w http.ResponseWriter, r *http.Request) {
 			data["Entitlements"] = grants
 		}
 	}
-	adminPage(w, r, "Accounts & economy", "Inspect the server's wallet, ledger and entitlement records.", `<form method="get" action="/admin/economy"><label for="account">Account ID</label><input id="account" name="account_id" value="{{.Data.AccountID}}" required><button>Look up account</button></form>{{if .Data.Missing}}<p class="notice">No account matches that ID.</p>{{end}}{{if .Data.Found}}<h2>{{.Data.Nickname}}</h2><p>Wallet balance: <strong>{{.Data.Balance}} Noin</strong></p><h2>Entitlements</h2><div class="table-scroll"><table><tr><th>Type</th><th>Value</th><th>Active until</th></tr>{{range .Data.Entitlements}}<tr><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Until}}</td></tr>{{else}}<tr><td colspan="3">No entitlements.</td></tr>{{end}}</table></div><h2>Latest 100 ledger entries</h2><div class="table-scroll"><table><tr><th>Event</th><th>Noin</th><th>Reason</th><th>Created</th></tr>{{range .Data.Ledger}}<tr><td>{{.Type}}</td><td>{{.Amount}}</td><td>{{.Reason}}</td><td>{{.Created}}</td></tr>{{else}}<tr><td colspan="4">No wallet activity.</td></tr>{{end}}</table></div>{{end}}<p class="muted">This lookup is read-only. Grants and refunds need their own audited product workflows.</p>`, data)
+	adminPage(w, r, "Accounts & economy", "Inspect the server's wallet, ledger and entitlement records.", `<form method="get" action="/admin/economy"><label for="account">Account ID</label><input id="account" name="account_id" value="{{.Data.AccountID}}" required><button>Look up account</button></form>{{if .Data.Missing}}<p class="notice">No account matches that ID.</p>{{end}}{{if .Data.Found}}<h2>{{.Data.Nickname}}</h2><p>Wallet balance: <strong>{{.Data.Balance}} Noin</strong></p><h2>Entitlements</h2><div class="table-scroll"><table><tr><th>Type</th><th>Value</th><th>Active until</th></tr>{{range .Data.Entitlements}}<tr><td>{{.Type}}</td><td>{{.Value}}</td><td>{{.Until}}</td></tr>{{else}}<tr><td colspan="3">No entitlements.</td></tr>{{end}}</table></div><h2>Latest 100 ledger entries</h2><div class="table-scroll"><table><tr><th>Ledger ID</th><th>Event</th><th>Noin</th><th>Reason</th><th>Created</th></tr>{{range .Data.Ledger}}<tr><td>{{.ID}}</td><td>{{.Type}}</td><td>{{.Amount}}</td><td>{{.Reason}}</td><td>{{.Created}}</td></tr>{{else}}<tr><td colspan="5">No wallet activity.</td></tr>{{end}}</table></div>{{end}}`+noinCorrectionForms, data)
 }

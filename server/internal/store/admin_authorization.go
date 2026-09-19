@@ -79,7 +79,7 @@ func LockAdminTx(ctx context.Context, tx *sql.Tx, actor string, allowedRoles []s
 	// Keep wall-clock status validation after every authority lock wait, including
 	// the exact-session callback. Guard freezes deliberately do not revoke admin.
 	var allowed bool
-	if err := tx.QueryRowContext(ctx, `SELECT deleted_at IS NULL AND banned_at IS NULL AND (suspended_until IS NULL OR suspended_until<=clock_timestamp()) FROM accounts WHERE id=$1`, account).Scan(&allowed); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT NOT direct_account_sanction_active(id) AND deleted_at IS NULL AND banned_at IS NULL AND (suspended_until IS NULL OR suspended_until<=clock_timestamp()) FROM accounts WHERE id=$1`, account).Scan(&allowed); err != nil {
 		return err
 	}
 	if !allowed {

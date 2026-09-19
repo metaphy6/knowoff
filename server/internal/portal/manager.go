@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/auth"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"github.com/knowoff/knowoff/server/internal/economy"
 	"github.com/knowoff/knowoff/server/internal/profile"
@@ -201,6 +202,7 @@ type AuditLogger interface {
 // AuthClient validates bearer tokens, including derived-session issuance under
 // the canonical account lock. Implemented by auth.Manager.
 type AuthClient interface {
+	ValidateAccessBindingTx(context.Context, *sql.Tx, string) (auth.AccessBinding, error)
 	ValidateAccessToken(ctx context.Context, token string) (string, error)
 	ValidateAccessTokenTx(ctx context.Context, tx *sql.Tx, token string) (string, error)
 }

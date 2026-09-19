@@ -37,7 +37,7 @@ func (m *Manager) AuthorizeSessionTx(ctx context.Context, tx *sql.Tx, sessionID,
 	// Evaluate the clock after all lock waits. Transaction-start now() could
 	// accept a session that expired while waiting for an account or session row.
 	var allowed bool
-	if err := tx.QueryRowContext(ctx, `SELECT a.deleted_at IS NULL AND a.banned_at IS NULL AND (a.suspended_until IS NULL OR a.suspended_until<=clock_timestamp()) AND s.expires_at>clock_timestamp() FROM accounts a JOIN admin_sessions s ON s.id=$2 AND s.admin_id=$3 WHERE a.id=$1`, accountID, sessionID, adminID).Scan(&allowed); err != nil || !allowed {
+	if err := tx.QueryRowContext(ctx, `SELECT a.deleted_at IS NULL AND a.banned_at IS NULL AND (a.suspended_until IS NULL OR a.suspended_until<=clock_timestamp()) AND NOT direct_account_sanction_active(a.id) AND s.expires_at>clock_timestamp() FROM accounts a JOIN admin_sessions s ON s.id=$2 AND s.admin_id=$3 WHERE a.id=$1`, accountID, sessionID, adminID).Scan(&allowed); err != nil || !allowed {
 		return "", denied
 	}
 	return adminID, nil
