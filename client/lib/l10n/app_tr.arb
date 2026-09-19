@@ -741,5 +741,51 @@
   },
   "@serviceBillingUnavailable": {
     "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
+  },
+  "bonusPremium": "Premium bonusu",
+  "@bonusPremium": {
+    "description": "Title for a confirmed Premium match bonus."
+  },
+  "bonusRewardedAd": "Reklam ödülü",
+  "@bonusRewardedAd": {
+    "description": "Title for a server-verified rewarded-ad bonus."
+  },
+  "bonusCredited": "{amount} Noin eklendi",
+  "@bonusCredited": {
+    "description": "Actual server-confirmed Noin credited, including zero.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bonusCapped": "Günlük kazanma sınırı bu bonusu azalttı.",
+  "@bonusCapped": {
+    "description": "Explains a bonus limited by original-day earning caps."
+  },
+  "bonusSyncRetry": "Bonus makbuzların eşitlenemedi. Durumlarını kontrol etmek için yeniden dene.",
+  "@bonusSyncRetry": {
+    "description": "Receipt read or dismissal synchronization failed; retry does not grant currency."
+  },
+  "bonusRequested": "Günlük sınırdan önceki bonus: {amount} Noin",
+  "@bonusRequested": {
+    "description": "Requested bonus before applying original-day caps, not an extra credit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rewardWatchAd": "Maç bonusu için reklam izle",
+  "@rewardWatchAd": {
+    "description": "Explicit action for a server-authorized rewarded ad."
+  },
+  "rewardAdDetails": "Bonusun sunucu tarafından onaylanır. Günlük sınırlar geçerlidir.",
+  "@rewardAdDetails": {
+    "description": "Server confirmation and daily-cap explanation for rewarded ads."
+  },
+  "rewardPrivacyChoices": "Reklam gizlilik tercihleri",
+  "@rewardPrivacyChoices": {
+    "description": "Entry to the native required ad privacy choices form."
   }
 }

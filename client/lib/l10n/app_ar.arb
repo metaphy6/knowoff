@@ -741,5 +741,51 @@
   },
   "@serviceBillingUnavailable": {
     "description": "Explains which purchases require unavailable platform billing and which Noin purchases still work."
+  },
+  "bonusPremium": "مكافأة Premium",
+  "@bonusPremium": {
+    "description": "Title for a confirmed Premium match bonus."
+  },
+  "bonusRewardedAd": "مكافأة الإعلان",
+  "@bonusRewardedAd": {
+    "description": "Title for a server-verified rewarded-ad bonus."
+  },
+  "bonusCredited": "تمت إضافة {amount} Noin",
+  "@bonusCredited": {
+    "description": "Actual server-confirmed Noin credited, including zero.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bonusCapped": "قلّل حد الكسب اليومي هذه المكافأة.",
+  "@bonusCapped": {
+    "description": "Explains a bonus limited by original-day earning caps."
+  },
+  "bonusSyncRetry": "تعذّرت مزامنة إيصالات مكافآتك. أعد المحاولة للتحقق من حالتها.",
+  "@bonusSyncRetry": {
+    "description": "Receipt read or dismissal synchronization failed; retry does not grant currency."
+  },
+  "bonusRequested": "المكافأة قبل الحد اليومي: {amount} Noin",
+  "@bonusRequested": {
+    "description": "Requested bonus before applying original-day caps, not an extra credit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rewardWatchAd": "شاهد إعلانًا للحصول على مكافأة المباراة",
+  "@rewardWatchAd": {
+    "description": "Explicit action for a server-authorized rewarded ad."
+  },
+  "rewardAdDetails": "يؤكد الخادم مكافأتك. تنطبق الحدود اليومية.",
+  "@rewardAdDetails": {
+    "description": "Server confirmation and daily-cap explanation for rewarded ads."
+  },
+  "rewardPrivacyChoices": "خيارات خصوصية الإعلانات",
+  "@rewardPrivacyChoices": {
+    "description": "Entry to the native required ad privacy choices form."
   }
 }

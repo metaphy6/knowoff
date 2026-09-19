@@ -243,7 +243,17 @@ func (s *TextValueStore) CancelReservation(ctx context.Context, id, account stri
 }
 
 func (s *TextValueStore) cancelReservationTx(ctx context.Context, tx *sql.Tx, id, account string) error {
-	if err := valueAccountLock(ctx, tx, account); err != nil {
+	// Prove accepted standalone work before acquiring tombstone authority; then
+	// revalidate the admission under account -> admission locks.
+	var accepted bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM text_admissions WHERE id=$1 AND account_id=$2 AND match_id IS NULL)`, id, account).Scan(&accepted); err != nil {
+		return err
+	}
+	if !accepted {
+		return ErrValueConflict
+	}
+	request, err := lockAcceptedTextTombstone(ctx, tx, account)
+	if err != nil {
 		return err
 	}
 	var state string
@@ -260,7 +270,12 @@ func (s *TextValueStore) cancelReservationTx(ctx context.Context, tx *sql.Tx, id
 	if state != "reserved" || match.Valid {
 		return ErrValueConflict
 	}
-	_, err := tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE id=$1`, id)
+	if request != "" {
+		if err := recordTextAdmissionErasure(ctx, tx, acceptedTextAccount{admission: id, account: account, request: request}, "cancel_reservation", time.Now().UTC()); err != nil {
+			return err
+		}
+	}
+	_, err = tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE id=$1`, id)
 	return err
 }
 func (s *TextValueStore) Prepare(ctx context.Context, m TextMatchRecord, at time.Time) error {
@@ -401,6 +416,7 @@ type admissionRow struct {
 	day                            time.Time
 	prototype                      bool
 	seat                           int
+	erasure                        acceptedTextAccount
 }
 
 func matchAdmissions(ctx context.Context, tx *sql.Tx, id string) ([]admissionRow, error) {
@@ -539,8 +555,9 @@ func (s *TextValueStore) interruptTx(ctx context.Context, tx *sql.Tx, id, owner 
 	if err != nil {
 		return err
 	}
-	for _, a := range admissions {
-		if err = valueAccountLock(ctx, tx, a.account); err != nil {
+	for i := range admissions {
+		a := &admissions[i]
+		if a.erasure, err = lockAcceptedTextAccount(ctx, tx, m, a.account); err != nil {
 			return err
 		}
 	}
@@ -548,13 +565,18 @@ func (s *TextValueStore) interruptTx(ctx context.Context, tx *sql.Tx, id, owner 
 		if a.state != "started" {
 			return ErrValueConflict
 		}
-		if a.kind == "free" {
+		if a.kind == "free" && a.erasure.request == "" {
 			res, err := tx.ExecContext(ctx, `UPDATE daily_quickplay_counts SET count=count-1 WHERE account_id=$1 AND server_day=$2 AND count>0`, a.account, a.day)
 			if err != nil {
 				return err
 			}
 			if n, _ := res.RowsAffected(); n != 1 {
 				return fmt.Errorf("admission compensation missing consumed count")
+			}
+		}
+		if a.kind == "free" && a.erasure.request != "" {
+			if err = recordTextAdmissionErasure(ctx, tx, a.erasure, "quota_compensation", at); err != nil {
+				return err
 			}
 		}
 		if _, err = tx.ExecContext(ctx, `UPDATE text_admissions SET state='compensated' WHERE id=$1`, a.id); err != nil {
@@ -565,6 +587,9 @@ func (s *TextValueStore) interruptTx(ctx context.Context, tx *sql.Tx, id, owner 
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE text_matches SET state='interrupted',fence=fence+1,ended_at=$2 WHERE id=$1`, id, at)
+	if err == nil && s.beforeCommit != nil {
+		return s.beforeCommit()
+	}
 	return err
 }
 
@@ -592,14 +617,20 @@ func (s *TextValueStore) cancelPreparedTx(ctx context.Context, tx *sql.Tx, id, o
 	if err != nil {
 		return err
 	}
-	for _, a := range admissions {
-		if err = valueAccountLock(ctx, tx, a.account); err != nil {
+	for i := range admissions {
+		a := &admissions[i]
+		if a.erasure, err = lockAcceptedTextAccount(ctx, tx, m, a.account); err != nil {
 			return err
 		}
 	}
 	for _, a := range admissions {
 		if a.state != "reserved" {
 			return ErrValueConflict
+		}
+		if a.erasure.request != "" {
+			if err = recordTextAdmissionErasure(ctx, tx, a.erasure, "cancel_prepared", at); err != nil {
+				return err
+			}
 		}
 	}
 	if _, err = tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE match_id=$1`, id); err != nil {

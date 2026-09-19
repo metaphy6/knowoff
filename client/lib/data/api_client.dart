@@ -5,7 +5,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import 'auth_service.dart';
+import 'bonus_delivery.dart';
+import '../core/text/v2_contract.dart' show V2Codec, V2Failure;
 import 'purchases.dart';
+import 'rewarded_ads.dart';
 
 class ApiException implements Exception {
   const ApiException(this.statusCode, {this.code});
@@ -122,6 +125,116 @@ class ApiClient {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> _bonusRequest(
+    String path,
+    Map<String, dynamic>? body,
+    String account,
+    int generation, {
+    String method = 'POST',
+    bool retry = true,
+  }) async {
+    void requireCurrent() {
+      if (_auth.accountId != account || _auth.sessionGeneration != generation) {
+        throw const ApiException(401, code: 'auth.required');
+      }
+    }
+
+    requireCurrent();
+    if (!await _auth.restoreExistingSession()) {
+      throw const ApiException(401, code: 'auth.required');
+    }
+    requireCurrent();
+    final abort = Completer<void>();
+    final request = http.AbortableRequest(
+      method,
+      Uri.parse('$_baseUrl$path'),
+      abortTrigger: abort.future,
+    )..headers['Authorization'] = 'Bearer ${_auth.accessToken}';
+    if (body != null) {
+      request.headers['Content-Type'] = 'application/json';
+      request.body = jsonEncode(body);
+    }
+    var accepting = true;
+    final sending = _client.send(request).then((response) async {
+      // Custom clients may ignore Abortable. Dispose late headers explicitly.
+      if (!accepting) {
+        await response.stream
+            .listen((_) {}, onError: (Object _, StackTrace __) {})
+            .cancel()
+            .timeout(const Duration(seconds: 1));
+        throw TimeoutException('reward.bonus_delivery_invalid');
+      }
+      return response;
+    });
+    late http.StreamedResponse streamed;
+    late Uint8List raw;
+    try {
+      streamed = await sending.timeout(const Duration(seconds: 15));
+      raw = await _readBoundedResponse(
+        streamed.stream,
+        65536,
+        'reward.bonus_delivery_invalid',
+      );
+    } finally {
+      accepting = false;
+      abort.complete();
+    }
+    requireCurrent();
+    if (streamed.statusCode == 401 && retry) {
+      await _auth.refresh();
+      requireCurrent();
+      return _bonusRequest(
+        path,
+        body,
+        account,
+        generation,
+        method: method,
+        retry: false,
+      );
+    }
+    final response = http.Response.bytes(
+      raw,
+      streamed.statusCode,
+      headers: streamed.headers,
+    );
+    if (response.statusCode != 200) throw _error(response);
+    try {
+      return V2Codec.object(utf8.decode(raw), maxBytes: 65536);
+    } on V2Failure {
+      throw const FormatException('Invalid bonus response');
+    }
+  }
+
+  Future<Map<String, dynamic>> getExistingSessionWallet(
+    String account,
+    int generation,
+  ) async {
+    final data = await _bonusRequest(
+      '/api/economy/wallet',
+      null,
+      account,
+      generation,
+      method: 'GET',
+    );
+    const fields = {
+      'balance',
+      'noin',
+      'daily_earned',
+      'daily_earn_cap',
+      'points_to_noin',
+      'free_daily_matches',
+      'non_converted_points',
+    };
+    if (data.length != fields.length ||
+        !fields.every(data.containsKey) ||
+        data.values.any((v) => v is! int || v < 0 || v > 9007199254740991) ||
+        data['balance'] != data['noin'] ||
+        data['points_to_noin'] == 0) {
+      throw const FormatException('Invalid wallet response');
+    }
+    return Map.unmodifiable(data);
+  }
+
   Future<void> _post(String path, Map<String, dynamic> body) async {
     await _postJson(path, body);
   }
@@ -195,7 +308,7 @@ class ApiClient {
     final response = await _client
         .send(request)
         .timeout(const Duration(seconds: 15));
-    final bytes = await _readAvatarResponse(
+    final bytes = await _readBoundedResponse(
       response.stream,
       2 * 1024 * 1024,
       'avatar.invalid',
@@ -267,7 +380,7 @@ class ApiClient {
       final streamed = await _client
           .send(request)
           .timeout(const Duration(seconds: 40));
-      final bytes = await _readAvatarResponse(
+      final bytes = await _readBoundedResponse(
         streamed.stream,
         2048,
         'billing.response',
@@ -391,7 +504,7 @@ class ApiClient {
   // A response owns one total deadline, including an active trickle. Every
   // completion releases its subscription and timer; callers never retain bytes
   // beyond the size cap or apply a result under a replacement account.
-  Future<Uint8List> _readAvatarResponse(
+  Future<Uint8List> _readBoundedResponse(
     Stream<List<int>> stream,
     int maxBytes,
     String code,
@@ -416,7 +529,7 @@ class ApiClient {
     );
     final deadline = Timer(const Duration(seconds: 15), () {
       if (!result.isCompleted) {
-        result.completeError(TimeoutException('avatar.response'));
+        result.completeError(TimeoutException(code));
       }
     });
     try {
@@ -455,7 +568,7 @@ class ApiClient {
     final streamed = await _client
         .send(request)
         .timeout(const Duration(seconds: 45));
-    final responseBytes = await _readAvatarResponse(
+    final responseBytes = await _readBoundedResponse(
       streamed.stream,
       65536,
       'avatar.unavailable',
@@ -480,5 +593,96 @@ class ApiClient {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw _error(res);
     }
+  }
+}
+
+/// Explicitly constructed only after the joined reward activation gate.
+class ApiBonusDeliveryTransport implements BonusDeliveryTransport {
+  ApiBonusDeliveryTransport(this._api, {required this._refreshBalance});
+  final ApiClient _api;
+  final Future<void> Function(String account, int generation) _refreshBalance;
+  @override
+  String? get accountId => _api.authService.accountId;
+  @override
+  int get sessionGeneration => _api.authService.sessionGeneration;
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final account = accountId;
+    if (account == null) throw const ApiException(401, code: 'auth.required');
+    return _api._bonusRequest(path, body, account, sessionGeneration);
+  }
+
+  @override
+  Future<Map<String, dynamic>> claim(int limit, List<String> pendingIds) =>
+      _post('/v2/rewards/bonuses/claim', {
+        'limit': limit,
+        'pending_delivery_ids': pendingIds,
+      });
+  @override
+  Future<void> acknowledge(String id, String lease) async {
+    final result = await _post('/v2/rewards/bonuses/ack', {
+      'delivery_id': id,
+      'lease': lease,
+    });
+    if (result.length != 2 ||
+        result['version'] is! int ||
+        result['version'] != 1 ||
+        result['acknowledged'] != true) {
+      throw const FormatException('Invalid bonus acknowledgment');
+    }
+  }
+
+  @override
+  Future<void> refreshBalance() async {
+    final account = accountId;
+    if (account != null) await _refreshBalance(account, sessionGeneration);
+  }
+}
+
+/// Uses the same bounded existing-session transport as private bonus delivery.
+class ApiRewardClaimTransport implements RewardClaimTransport {
+  ApiRewardClaimTransport(
+    this._api, {
+    required Future<void> Function(String account, int generation) refreshBonus,
+  }) : _refresh = refreshBonus;
+  final ApiClient _api;
+  final Future<void> Function(String account, int generation) _refresh;
+  @override
+  String? get accountId => _api.authService.accountId;
+  @override
+  int get sessionGeneration => _api.authService.sessionGeneration;
+  Future<Map<String, dynamic>> _post(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final account = accountId;
+    if (account == null) throw const ApiException(401, code: 'auth.required');
+    return _api._bonusRequest(path, body, account, sessionGeneration);
+  }
+
+  @override
+  Future<Map<String, dynamic>> issue(String match, String providerUnit) =>
+      _post('/v2/rewards/claim', {'match_id': match, 'ad_unit': providerUnit});
+  @override
+  Future<void> check(String match, RewardClaim claim) async {
+    final data = await _post('/v2/rewards/claim/check', {
+      'match_id': match,
+      'ad_unit': claim.adUnit,
+      'claim': claim.opaque,
+    });
+    if (data.length != 2 ||
+        data['version'] is! int ||
+        data['version'] != 1 ||
+        data['eligible'] != true) {
+      throw const FormatException('Invalid reward check');
+    }
+  }
+
+  @override
+  Future<void> refreshBonus() async {
+    final account = accountId;
+    if (account != null) await _refresh(account, sessionGeneration);
   }
 }

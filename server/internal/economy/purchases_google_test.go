@@ -177,3 +177,58 @@ func TestBillingProviderTransportRefusesRedirectAndHonorsCancellation(t *testing
 		t.Fatal("canceled provider returned proof")
 	}
 }
+
+func TestBillingAcknowledgementOutcomesDistinguishEvidence(t *testing.T) {
+	cfg, _ := billingFixture(t)
+	cases := []struct {
+		name, product, body, want string
+		getCode, postCode, posts  int
+	}{
+		{"consumed", "coins", `{"purchaseState":0,"consumptionState":1}`, "observed_complete", 200, 204, 0},
+		{"consume", "coins", `{"purchaseState":0,"consumptionState":0}`, "post_succeeded", 200, 204, 1},
+		{"subscription_seen", "premium", `{"acknowledgementState":"ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED"}`, "observed_complete", 200, 204, 0},
+		{"subscription_post", "premium", `{"acknowledgementState":"ACKNOWLEDGEMENT_STATE_PENDING"}`, "post_succeeded", 200, 204, 1},
+		{"post_lost", "coins", `{"purchaseState":0,"consumptionState":0}`, "unavailable", 200, 500, 1},
+	}
+	for _, code := range []int{400, 401, 403, 404, 410, 429, 500} {
+		cases = append(cases, struct {
+			name, product, body, want string
+			getCode, postCode, posts  int
+		}{strconv.Itoa(code), "coins", `{}`, "unavailable", code, 204, 0})
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			posts := 0
+			g, err := NewGoogleReceiptVerifier(cfg, billingRoundTripper(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Host == "oauth2.googleapis.com" {
+					return billingResponse(200, `{"access_token":"fixture","token_type":"Bearer","expires_in":3600}`), nil
+				}
+				if r.Method == http.MethodPost {
+					posts++
+					return billingResponse(c.postCode, ""), nil
+				}
+				return billingResponse(c.getCode, c.body), nil
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, ok := any(g).(BillingAcknowledgementVerifier)
+			if !ok {
+				t.Fatal("concrete Google adapter does not distinguish ACK evidence")
+			}
+			outcome, err := v.AcknowledgeOutcome(t.Context(), ReceiptRequest{Platform: PlatformGooglePlay, ProductID: c.product, RawReceipt: map[string]any{"purchase_token": "fixture-token"}}, VerifiedPurchase{Platform: PlatformGooglePlay, TransactionID: "fixture-token"})
+			if outcome != c.want || (err != nil) != (c.want == "unavailable") || posts != c.posts {
+				t.Fatal("provider outcome misreported", outcome, err, posts)
+			}
+		})
+	}
+	var apple any = &AppleReceiptVerifier{}
+	v, ok := apple.(BillingAcknowledgementVerifier)
+	if !ok {
+		t.Fatal("Apple no-op has no distinct outcome")
+	}
+	outcome, err := v.AcknowledgeOutcome(t.Context(), ReceiptRequest{}, VerifiedPurchase{})
+	if err != nil || outcome != "no_server_operation" {
+		t.Fatal("Apple no-op called server-confirmed", outcome, err)
+	}
+}

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:knowoff_client/data/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import 'auth_service_test.dart' show saved, issued, token;
 
@@ -44,9 +45,299 @@ class PausedCleanupAuth extends AuthService {
   }
 }
 
+class PausedSessionWriteStore extends InMemorySharedPreferencesStore {
+  PausedSessionWriteStore() : super.empty();
+  bool armed = false;
+  final entered = Completer<void>(), release = Completer<void>();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (armed && key == 'flutter.knowoff_access_token') {
+      armed = false;
+      entered.complete();
+      await release.future;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
+class PausedDurableCommitStore extends InMemorySharedPreferencesStore {
+  PausedDurableCommitStore(this.outcome, this.throwCompensation)
+    : super.empty();
+  final String outcome;
+  final bool throwCompensation;
+  bool armed = false, dispatched = false;
+  int compensations = 0;
+  final entered = Completer<void>(), release = Completer<void>();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.knowoff_session_commit') {
+      if (dispatched && value == 'incomplete') {
+        compensations++;
+        if (throwCompensation) throw StateError('compensation unavailable');
+        return false;
+      }
+      if (armed && value != 'incomplete') {
+        armed = false;
+        await super.setValue(valueType, key, value);
+        dispatched = true;
+        entered.complete();
+        await release.future;
+        if (outcome == 'throw') throw StateError('commit result lost');
+        return outcome != 'false';
+      }
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final now = DateTime.utc(2026, 9, 12);
+
+  test(
+    'authority reads join pending session writes without invalidating them',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PausedSessionWriteStore();
+      SharedPreferencesStorePlatform.instance = store;
+      addTearDown(() => SharedPreferences.setMockInitialValues({}));
+      for (final entry in saved(expiredAccess: false).entries) {
+        await store.setValue('String', 'flutter.${entry.key}', entry.value);
+      }
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: MockClient((r) async => issued('saved-account')),
+      );
+      expect(await service.restoreExistingSession(), isTrue);
+      final generation = service.sessionGeneration;
+      store.armed = true;
+      final writing = service.refresh();
+      final writeCheck = expectLater(writing, completes);
+      await store.entered.future.timeout(const Duration(seconds: 2));
+      final reading = service.restoreExistingSession();
+      final readCheck = expectLater(reading, completion(isTrue));
+      await Future<void>.delayed(Duration.zero);
+      store.release.complete();
+      await writeCheck;
+      await readCheck;
+      expect(service.accountId, 'saved-account');
+      expect(service.sessionGeneration, generation);
+    },
+  );
+
+  for (final mode in ['success-false', 'success-throw', 'false', 'throw']) {
+    test(
+      'cancel after durable commit dispatch joins accepted outcome: $mode',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final store = PausedDurableCommitStore(
+          mode.startsWith('success') ? 'success' : mode,
+          mode.endsWith('throw'),
+        );
+        SharedPreferencesStorePlatform.instance = store;
+        addTearDown(() => SharedPreferences.setMockInitialValues({}));
+        for (final entry in saved(expiredAccess: false).entries) {
+          await store.setValue('String', 'flutter.${entry.key}', entry.value);
+        }
+        final client = MockClient(
+          (r) async => r.url.path.endsWith('/start')
+              ? flowResponse(now)
+              : issued('restored-account'),
+        );
+        final service = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: client,
+        );
+        await service.restoreExistingSession();
+        await service.startOAuth('google', OAuthIntent.restore);
+        expect(await service.pollOAuth(), OAuthPollState.confirmSwitch);
+        store.armed = true;
+        final applying = service.confirmOAuthSwitch();
+        final applyCheck = expectLater(
+          applying,
+          mode.startsWith('success')
+              ? completes
+              : code('auth.storage_unavailable'),
+        );
+        await store.entered.future.timeout(const Duration(seconds: 2));
+        var cancelled = false;
+        final cancelling = service.cancelOAuth().then((_) => cancelled = true);
+        await Future<void>.delayed(Duration.zero);
+        expect(
+          cancelled,
+          isFalse,
+          reason: 'cancellation must join the accepted durable write',
+        );
+        store.release.complete();
+        await applyCheck;
+        await cancelling;
+        expect(store.compensations, 0);
+        expect(
+          service.accountId,
+          mode.startsWith('success') ? 'restored-account' : isNull,
+        );
+        final reopened = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: client,
+        );
+        expect(await reopened.restoreExistingSession(), isTrue);
+        expect(reopened.accountId, 'restored-account');
+      },
+    );
+  }
+
+  test(
+    'same-account invalidation fences OAuth installation response generation',
+    () async {
+      SharedPreferences.setMockInitialValues(saved(expiredAccess: false));
+      final entered = Completer<void>(), binding = Completer<http.Response>();
+      final client = MockClient((r) async {
+        if (r.url.path.endsWith('/start')) return flowResponse(now);
+        if (r.url.path.endsWith('/result')) {
+          return issued('saved-account', binding: '');
+        }
+        expect(r.url.path, '/api/auth/installation');
+        entered.complete();
+        return binding.future;
+      });
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: client,
+      );
+      await service.restoreExistingSession();
+      await service.startOAuth('google', OAuthIntent.restore);
+      final applying = service.pollOAuth();
+      final applyCheck = expectLater(applying, code('oauth.cancelled'));
+      await entered.future.timeout(const Duration(seconds: 2));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('knowoff_session_commit', 'incomplete');
+      await expectLater(
+        service.restoreExistingSession(),
+        code('auth.storage_unavailable'),
+      );
+      binding.complete(issued('saved-account'));
+      await applyCheck;
+      expect(service.accountId, isNull);
+      expect(prefs.getString('knowoff_session_commit'), 'incomplete');
+    },
+  );
+
+  test(
+    'cancel during session persistence cannot publish or reopen the candidate',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PausedSessionWriteStore();
+      SharedPreferencesStorePlatform.instance = store;
+      addTearDown(() => SharedPreferences.setMockInitialValues({}));
+      for (final entry in saved(expiredAccess: false).entries) {
+        await store.setValue('String', 'flutter.${entry.key}', entry.value);
+      }
+      final client = MockClient((r) async {
+        if (r.url.path.endsWith('/start')) return flowResponse(now);
+        expect(r.url.path, '/api/auth/oauth/result');
+        return issued('restored-account');
+      });
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: client,
+      );
+      await service.restoreExistingSession();
+      await service.startOAuth('google', OAuthIntent.restore);
+      expect(await service.pollOAuth(), OAuthPollState.confirmSwitch);
+      store.armed = true;
+      final applying = service.confirmOAuthSwitch();
+      final refusal = expectLater(applying, code('oauth.cancelled'));
+      await store.entered.future;
+      final cancelling = service.cancelOAuth();
+      store.release.complete();
+      await refusal;
+      await cancelling;
+      expect(service.accountId, isNull);
+      final reopened = AuthService(
+        baseUrl: 'https://game.example',
+        now: () => now,
+        client: client,
+      );
+      await expectLater(
+        reopened.restoreExistingSession(),
+        code('auth.storage_unavailable'),
+      );
+      expect(reopened.accessToken, isNull);
+    },
+  );
+
+  for (final different in [false, true]) {
+    test(
+      'partial session reopens only through explicit OAuth recovery: $different',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'knowoff_account_id': 'partial-account',
+          'knowoff_access_token': token(
+            4102444800,
+            binding: 'stale-token-installation',
+          ),
+          'knowoff_refresh_token': token(
+            4102444800,
+            binding: 'stale-token-installation',
+          ),
+          'knowoff_installation_id': 'fixture-installation',
+          'knowoff_session_commit': 'incomplete',
+        });
+        final target = different ? 'restored-account' : 'partial-account';
+        final client = MockClient((r) async {
+          expect(r.headers.containsKey('Authorization'), isFalse);
+          if (r.url.path.endsWith('/start')) {
+            expect(
+              (jsonDecode(r.body) as Map)['device_hash'],
+              'fixture-installation',
+            );
+            return flowResponse(now);
+          }
+          expect(r.url.path, '/api/auth/oauth/result');
+          return issued(target);
+        });
+        final first = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: client,
+        );
+        await expectLater(
+          first.restoreExistingSession(),
+          code('auth.storage_unavailable'),
+        );
+        expect(first.accountId, isNull);
+        await first.startOAuth('google', OAuthIntent.restore);
+        final reopened = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: client,
+        );
+        expect(await reopened.resumeOAuth(), isNotNull);
+        expect(reopened.accountId, isNull);
+        final state = await reopened.pollOAuth();
+        if (different) {
+          expect(state, OAuthPollState.confirmSwitch);
+          expect(reopened.accountId, isNull);
+          await reopened.confirmOAuthSwitch();
+        } else {
+          expect(state, OAuthPollState.completed);
+        }
+        expect(reopened.accountId, target);
+        final finalReopen = AuthService(
+          baseUrl: 'https://game.example',
+          now: () => now,
+          client: client,
+        );
+        expect(await finalReopen.restoreExistingSession(), isTrue);
+        expect(finalReopen.accountId, target);
+      },
+    );
+  }
 
   test(
     'legacy OAuth receipt resumes exact binding after a lost reply and restart',

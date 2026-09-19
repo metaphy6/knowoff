@@ -812,8 +812,9 @@ One currency sits at the center of the business: **Noin**. Players earn it by pl
 * Rewarded ads (SSV — the ad network's servers call our verification endpoint; the client callback grants nothing): an optional post-match ad **doubles that match's Noin**; Premium subscribers get the doubling automatically, ad-free. **Ad surfaces disappear only under the Premium subscription (💰 §2)** — Noin Play Passes never remove ads.
   Premium bonus eligibility is fixed at authoritative match start (owner decision,
   2026-09-19); expiry or purchase during that match does not change its recorded
-  eligibility. Interrupted-match bonus treatment remains an open owner decision
-  before durable doubler implementation.
+  eligibility. Server-interrupted matches receive no Premium or rewarded-ad bonus,
+  including on base Noin already earned before interruption (owner decision,
+  2026-09-19); previously earned base Noin remains governed by interruption rules.
 
 ### 4. Theme Packs
 

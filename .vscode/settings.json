@@ -28,6 +28,8 @@
   },
   // No system Chrome on this box, only snap Chromium — propagates to all
   // Dart/Flutter processes the extension spawns, including device polling.
+  // Project SDK meets client/pubspec.yaml; see client/README.md.
+  "dart.flutterSdkPath": ".tools/flutter",
   "dart.env": {
     "CHROME_EXECUTABLE": "/snap/bin/chromium"
   },

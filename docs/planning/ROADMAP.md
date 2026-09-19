@@ -1,6 +1,6 @@
 # 🗺 Knowoff — Text Transition Roadmap
 
-**Status: Resumed after credit interruption — 2026-09-19. Phases 1 and 3 complete; remaining implementation and release proof in progress.**
+**Status: Verified continuation handoff after pushed commit 1274814 — 2026-09-19. Phases 1 and 3 complete; remaining implementation and release proof are not complete.**
 See the [current recovery record](../reports/2026-09-19-text-transition-resumption.md) and [earlier resumption evidence](../reports/2026-09-12-text-transition-resumption.md) for validation and remaining work; the earlier pause is historical.
 Read [Blueprint](../../BLUEPRINT.md) for normative requirements, then the
 [technical transition design](../design/DESIGN-text-transition.md) for audited
@@ -36,6 +36,20 @@ All five modes remain intended; stagger exposure according to evidence.
 | 5 — Durable value, community and trust | 20 | 11 | Durable settlement/recovery, Guard, weekly lifecycle, OAuth, avatar and curation/report integration verified; remaining trust/provider gates open |
 | 6 — Retirement, compatibility and operations | 11 | 0 | Drain and isolated restore proofs in progress; full retirement gates open |
 | 7 — Playtests, business validation and release | 12 | 0 | Planned |
+
+**Original roadmap: 55 of 91 tasks complete; 2 of 7 phases complete.**
+Continuation tables below document components of these existing tasks; they do
+not increase the denominator or establish product readiness. The current
+handoff ends at schema migration 41 and the joined reward/client implementation.
+Unfinished migration 42 and unused billing-erasure preparation were excluded;
+the next run starts a new implementation slice rather than repairing partial code.
+
+Deletion work exposed required dependencies in immutable financial records,
+shared match history, provider work and restored data. Those dependencies belong
+to the existing deletion task, but the implementation detail grew too prominent
+and delayed closure of other original tasks. Remaining work includes both
+engineering (complete erasure, trust features and retirement) and external proof
+(editorial review, physical devices, provider acceptance and cohort results).
 
 Counts reflect actual task boxes, not inherited phase completion. Run
 `python3 xops/makefile/roadmap_ops.py status` from the repository root after
@@ -576,7 +590,7 @@ day/profile/wallet lock order and bounded whole-transaction retry protocol.
 | 17a — Billing implementation | Implement authenticated server receipt verification, unique transaction entitlement grant and restore/refund reconciliation; fixture tests cover replay, wrong account/product/platform and provider failure. |
 | 17b — Billing evidence | Run Play/StoreKit test transactions, restore and refund on configured platform accounts/devices; save redacted provider evidence. No mock or absent credentials counts as this proof. |
 | 18a — Doubler/consent | Verify SSV signatures/transaction identity and Premium eligibility server-side; cap/replay/private-settlement tests prove client callbacks grant nothing and denied consent uses the allowed flow. |
-| 18a decision, 2026-09-19 | The owner fixed Premium eligibility at authoritative match start. Persist that decision per match/account; later purchase or expiry cannot change it. Interrupted-match bonus treatment remains pending. |
+| 18a decision, 2026-09-19 | The owner fixed Premium eligibility at authoritative match start. Persist that decision per match/account; later purchase or expiry cannot change it. Server-interrupted matches receive no Premium/ad bonus; prior base Noin remains unchanged. |
 | 18b — Provider evidence | Exercise actual configured ad verification and UMP/platform consent paths with test accounts; record revocation/refusal and policy review for intended markets. |
 | 19 — Reconciliation | Check immutable accepted outcomes against every value effect and outbox item, not wallet=sum alone; enforce ledger immutability at DB privilege/trigger boundary with a separately authorized retention path. |
 | 20 — Gate | Review complete integration and run unified real-service concurrency/failure/privacy checks; retain exact original-row/file parity, provider/manual results and unresolved launch dependencies separately. |
@@ -745,10 +759,12 @@ recapture a started match. Independent plan review accepted this boundary.
 
 #### Phase 5 reward verification foundation — 2026-09-19
 
-**Status.** B1–B3 independently reviewed and tested; public registration and
-financial effects remain closed. Premium eligibility uses the immutable start
-receipt. Interrupted matches return `policy_pending` until the owner chooses
-their bonus treatment.
+**Status.** B1–B4 independently reviewed and tested; public registration and
+automatic reward execution remain closed. The store payment boundary is verified;
+Premium eligibility uses the immutable start receipt. The owner selected no Premium/ad bonus for interrupted matches on
+2026-09-19. B4a now rejects interrupted claims and SSV proof as terminally
+ineligible, with independent earned-value parity tests. B4b completed-match payouts are
+independently accepted; private delivery and joined activation remain open.
 
 | Child | Implementation and proof |
 |---|---|
@@ -756,6 +772,7 @@ their bonus treatment.
 | B2 | Verify the actual AdMob signed query before SQL, derive the account from the opaque claim, bind transaction/fingerprint once and accept exact retries. Signed occurrence must fall within the claim lifetime even when delivery is later. |
 | B3 | Keep handlers unregistered, bound body reads including early refusals, and preserve provider acknowledgment semantics. Prove invalid signatures have no SQL effects and immutable claim/receipt rows cannot be rewritten. |
 | B4 | Apply one shared Premium/SSV bonus identity with original-day caps and the selected interrupted-match policy; no double bonus or reconstructed eligibility. |
+| B4a | Apply the selected interrupted-match exclusion to claim and SSV eligibility; preserve genuine pre-interruption award, ledger, wallet and daily-cap bytes on repeated refusal. This closes only the policy branch, not completed-match bonus payouts. |
 | B5 | Add private bonus delivery/reconnect and reconciliation against authoritative accepted receipts; no public role disclosure or invented historical baselines. |
 | B6 | Join actual consent, provider and client paths only after the preceding proof gates; record external platform evidence separately. |
 
@@ -856,6 +873,26 @@ application admission. The fixture cannot certify production rollback resistance
 **Risks.** Journal and minimum must stay outside restored data; signed old bytes
 alone do not prove freshness. Keys are separately supplied, never captured in
 application artifacts. A locally mocked minimum is test evidence only.
+
+#### Current continuation boundary — 2026-09-19
+
+Completed components of the existing Phase 5 tasks:
+
+- Atomic authored-release withdrawal and survivor settlement after deletion.
+- Bounded credential/installation cleanup and provider-work draining through
+  migration 41, with restricted-role and isolated schema/data restore checks;
+  deletion suppression on restored admission remains open.
+- Completed-match Premium/verified-ad bonus payments, durable private delivery,
+  authenticated client recovery, explicit ad offers and native consent controls.
+- Legacy receipt creation/replay fenced against deleted accounts.
+
+Full deletion, provider acceptance and the other original unchecked tasks remain
+open. Unaccepted migration 42 and unused billing-erasure preparation are excluded
+from this handoff. Detailed implementation history and per-boundary proof are in
+the [continuation report](../reports/2026-09-19-text-transition-resumption.md#continuation-after-1274814-implementation-evidence);
+remaining deletion contracts are in [ADR-014](../design/ADR-014-account-deletion.md).
+These components do not create additional roadmap phases or change the 91-task
+denominator.
 
 ### Phase 6 — Retirement, compatibility and operations
 
@@ -1047,16 +1084,3 @@ verified. An implementation gate blocked by environment or owner evidence stays
 open with a checkpoint. The overall transition additionally requires retirement
 proof, preserved user value and the business/content/operations launch decision;
 a green compile cannot substitute for any of these.
-
-
-#### Finalization boundary — 2026-09-19
-
-At the owner's request, finalize and stage the current verified implementation
-for a human push. No D3–D6 completion is claimed: there is no migration35 or36,
-no public deletion route, no survivor-value transformation and no deployed
-suppression/processor service. D2 supplies only closed same-account proof and
-status adapters. The source-reader deletion check is implemented; atomic authored
-release withdrawal and shared-byte erasure remain pending. Reward B1–B3 is closed
-verification only; payouts, consent/provider/client joins and the interrupted
-bonus decision remain pending. Human, device, provider, cohort and live cutover
-evidence stays unchecked. This handoff does not mark all roadmap phases complete.

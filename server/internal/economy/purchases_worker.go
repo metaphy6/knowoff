@@ -51,30 +51,30 @@ func (p *Purchases) ProcessProviderTasks(ctx context.Context) (int, error) {
 	}
 	queryCtx, queryCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
 	defer queryCancel()
-	rows, e := p.db.QueryContext(queryCtx, `SELECT work_kind,work_key,platform,account_id,request FROM (
- SELECT 'purchase' AS work_kind,b.purchase_id::text AS work_key,b.platform,b.account_id,s.raw_receipt AS request,b.checked_at
+	rows, e := p.db.QueryContext(queryCtx, `SELECT work_kind,work_key,platform,account_id,request,purchase_id FROM (
+ SELECT 'purchase' AS work_kind,b.purchase_id::text AS work_key,b.platform,b.account_id,s.raw_receipt AS request,b.checked_at,b.purchase_id
  FROM billing_transactions b JOIN store_purchases s ON s.id=b.purchase_id WHERE b.product_kind='noin' AND b.state NOT IN ('revoked','canceled')
  UNION ALL
  SELECT 'subscription',s.source_key,s.platform,s.account_id,
- CASE WHEN s.platform='google_play' AND o.product_id IS NOT NULL THEN jsonb_set(sp.raw_receipt,'{product_id}',to_jsonb(o.product_id)) ELSE sp.raw_receipt END,c.checked_at
+ CASE WHEN s.platform='google_play' AND o.product_id IS NOT NULL THEN jsonb_set(sp.raw_receipt,'{product_id}',to_jsonb(o.product_id)) ELSE sp.raw_receipt END,c.checked_at,s.initial_purchase_id
  FROM billing_subscription_sources s JOIN store_purchases sp ON sp.id=s.initial_purchase_id
  JOIN billing_subscription_current c ON (c.platform,c.source_key)=(s.platform,s.source_key)
  JOIN billing_subscription_observations o ON (o.platform,o.source_key,o.id)=(c.platform,c.source_key,c.observation_id)
  WHERE o.state<>'canceled' AND NOT EXISTS(SELECT 1 FROM billing_subscription_replacements r WHERE r.platform=s.platform AND r.predecessor_key=s.source_key)
- ) work WHERE (($2 AND platform='google_play') OR ($3 AND platform='app_store')) ORDER BY checked_at,work_kind,platform,work_key LIMIT $1`, limit, p.BillingAvailable(PlatformGooglePlay), p.BillingAvailable(PlatformAppStore))
+ ) work WHERE EXISTS(SELECT 1 FROM accounts a WHERE a.id=work.account_id AND a.deleted_at IS NULL) AND NOT EXISTS(SELECT 1 FROM account_deletion_fences f WHERE f.account_id=work.account_id) AND (($2 AND platform='google_play') OR ($3 AND platform='app_store')) ORDER BY checked_at,work_kind,platform,work_key LIMIT $1`, limit, p.BillingAvailable(PlatformGooglePlay), p.BillingAvailable(PlatformAppStore))
 	if e != nil {
 		return 0, ErrBillingUnavailable
 	}
 	type task struct {
-		kind, id, account string
-		platform          PurchasePlatform
-		request           ReceiptRequest
+		kind, id, account, purchase string
+		platform                    PurchasePlatform
+		request                     ReceiptRequest
 	}
 	tasks := []task{}
 	for rows.Next() {
 		var t task
 		var raw []byte
-		if e = rows.Scan(&t.kind, &t.id, &t.platform, &t.account, &raw); e != nil {
+		if e = rows.Scan(&t.kind, &t.id, &t.platform, &t.account, &raw, &t.purchase); e != nil {
 			rows.Close()
 			return 0, ErrBillingUnavailable
 		}
@@ -100,19 +100,22 @@ func (p *Purchases) ProcessProviderTasks(ctx context.Context) (int, error) {
 		if t.kind == "subscription" {
 			knownSource = t.id
 		}
-		_, e = p.verifyReceipt(ctx, t.account, t.request, knownSource)
+		attempt, claimErr := p.claimProviderWork(ctx, t.purchase, "observe")
+		if claimErr != nil {
+			failed = true
+			processed++
+			continue
+		}
+		if billingJSON(attempt.source.request, &t.request) != nil {
+			failed = true
+			_ = p.finishProviderWork(ctx, attempt, "unavailable")
+			processed++
+			continue
+		}
+		_, e = p.verifyReceipt(ctx, t.account, t.request, knownSource, &attempt)
 		if e != nil {
 			failed = true
-		}
-		writeCtx, writeCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-		if t.kind == "subscription" {
-			_, e = p.db.ExecContext(writeCtx, `UPDATE billing_subscription_current SET checked_at=clock_timestamp() WHERE platform=$1 AND source_key=$2`, t.platform, t.id)
-		} else {
-			_, e = p.db.ExecContext(writeCtx, `UPDATE billing_transactions SET checked_at=clock_timestamp() WHERE purchase_id=$1`, t.id)
-		}
-		writeCancel()
-		if e != nil {
-			failed = true
+			_ = p.finishProviderWork(ctx, attempt, "unavailable")
 		}
 		processed++
 	}

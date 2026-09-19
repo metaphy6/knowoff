@@ -277,53 +277,64 @@ func (g *GoogleReceiptVerifier) subscription(ctx context.Context, r ReceiptReque
 	return v, nil
 }
 func (g *GoogleReceiptVerifier) Acknowledge(ctx context.Context, r ReceiptRequest, v VerifiedPurchase) error {
+	_, err := g.AcknowledgeOutcome(ctx, r, v)
+	return err
+}
+
+func (g *GoogleReceiptVerifier) AcknowledgeOutcome(ctx context.Context, r ReceiptRequest, v VerifiedPurchase) (string, error) {
 	token, e := googleReceiptToken(r)
 	if e != nil || v.TransactionID != token || v.Platform != PlatformGooglePlay {
-		return ErrBillingProof
+		return "unavailable", ErrBillingProof
 	}
 	// Re-read on every retry. A prior success whose response was lost is a done
 	// task, so never treat a provider error as evidence of successful consumption.
 	product, ok := g.cfg.Google.Products[r.ProductID]
 	if !ok {
-		return ErrBillingProof
+		return "unavailable", ErrBillingProof
 	}
 	if product.Kind == "noin" {
 		b, e := g.request(ctx, http.MethodGet, "/purchases/products/"+url.PathEscape(r.ProductID)+"/tokens/"+url.PathEscape(token), "")
 		if e != nil {
-			return e
+			return "unavailable", e
 		}
 		var s struct {
 			State    *int `json:"purchaseState"`
 			Consumed *int `json:"consumptionState"`
 		}
 		if billingJSON(b, &s) != nil || s.State == nil || *s.State != 0 || s.Consumed == nil {
-			return ErrBillingProof
+			return "unavailable", ErrBillingProof
 		}
 		if *s.Consumed == 1 {
-			return nil
+			return "observed_complete", nil
 		}
 		if *s.Consumed != 0 {
-			return ErrBillingProof
+			return "unavailable", ErrBillingProof
 		}
 		_, e = g.request(ctx, http.MethodPost, "/purchases/products/"+url.PathEscape(r.ProductID)+"/tokens/"+url.PathEscape(token)+":consume", "")
-		return e
+		if e != nil {
+			return "unavailable", e
+		}
+		return "post_succeeded", nil
 	}
 	b, e := g.request(ctx, http.MethodGet, "/purchases/subscriptionsv2/tokens/"+url.PathEscape(token), "")
 	if e != nil {
-		return e
+		return "unavailable", e
 	}
 	var s struct {
 		State string `json:"acknowledgementState"`
 	}
 	if billingJSON(b, &s) != nil {
-		return ErrBillingProof
+		return "unavailable", ErrBillingProof
 	}
 	if s.State == "ACKNOWLEDGEMENT_STATE_ACKNOWLEDGED" {
-		return nil
+		return "observed_complete", nil
 	}
 	if s.State != "ACKNOWLEDGEMENT_STATE_PENDING" {
-		return ErrBillingProof
+		return "unavailable", ErrBillingProof
 	}
 	_, e = g.request(ctx, http.MethodPost, "/purchases/subscriptions/"+url.PathEscape(r.ProductID)+"/tokens/"+url.PathEscape(token)+":acknowledge", "{}")
-	return e
+	if e != nil {
+		return "unavailable", e
+	}
+	return "post_succeeded", nil
 }

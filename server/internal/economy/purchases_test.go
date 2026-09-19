@@ -291,3 +291,75 @@ func seedLegacyPurchase(t *testing.T, db *sql.DB, transaction string, amount int
 	}
 	return tx.Commit()
 }
+
+func TestPurchasesRecordReceiptRefusesDeletedAccount(t *testing.T) {
+	db := setupPurchasesTestDB(t)
+	account := newAccount(t, db)
+	p := NewPurchases(db, NewWallet(db))
+	originalKey := uuid.NewString()
+	purchase, _, err := p.RecordReceipt(t.Context(), account, PlatformAppStore, "noin_500", originalKey, map[string]any{"raw": "original"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var before string
+	if err = db.QueryRow(`SELECT to_jsonb(p)::text FROM store_purchases p WHERE id=$1`, purchase).Scan(&before); err != nil {
+		t.Fatal(err)
+	}
+	billingDeletionRequest(t, db, account)
+	for _, key := range []string{originalKey, uuid.NewString()} {
+		id, existing, err := p.RecordReceipt(t.Context(), account, PlatformAppStore, "noin_500", key, map[string]any{"raw": "late"})
+		if err == nil || id != "" || existing {
+			t.Fatalf("deleted receipt accepted: id=%q existing=%v err=%v", id, existing, err)
+		}
+	}
+	var after string
+	var count int
+	if err = db.QueryRow(`SELECT to_jsonb(p)::text FROM store_purchases p WHERE id=$1`, purchase).Scan(&after); err != nil || after != before {
+		t.Fatal("retained receipt changed", err)
+	}
+	if err = db.QueryRow(`SELECT count(*) FROM store_purchases WHERE account_id=$1`, account).Scan(&count); err != nil || count != 1 {
+		t.Fatal("late raw receipt retained", count, err)
+	}
+}
+
+func TestPurchasesRecordReceiptRechecksDeletionAfterAccountWait(t *testing.T) {
+	db := setupPurchasesTestDB(t)
+	account := newAccount(t, db)
+	p := NewPurchases(db, NewWallet(db))
+	tx, err := db.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	if _, err = tx.Exec(`SELECT id FROM accounts WHERE id=$1 FOR UPDATE`, account); err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		id, existing, err := p.RecordReceipt(t.Context(), account, PlatformAppStore, "noin_500", uuid.NewString(), map[string]any{"raw": "late"})
+		if err == nil || id != "" || existing {
+			done <- errors.New("deleted receipt accepted after account wait")
+			return
+		}
+		done <- nil
+	}()
+	billingWaitLock(t, db, "FROM accounts")
+	if _, err = billingDeletionRequestResult(tx, account); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case err = <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("receipt did not converge")
+	}
+	var count int
+	if err = db.QueryRow(`SELECT count(*) FROM store_purchases WHERE account_id=$1`, account).Scan(&count); err != nil || count != 0 {
+		t.Fatal("late raw receipt retained", count, err)
+	}
+}

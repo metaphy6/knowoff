@@ -38,18 +38,38 @@ func (s *TextValueStore) Award(ctx context.Context, a TextAward) (int, error) {
 		if readErr != sql.ErrNoRows {
 			return readErr
 		}
+		if replay, err := erasedTextEventReplay(ctx, tx, a.MatchID, a.AccountID, "award_"+a.Kind, a.Ordinal, bodyHash); err != nil || replay {
+			return err
+		}
 		if err = checkValueFence(m, a.Owner, a.Epoch, "started"); err != nil {
 			return err
 		}
 		if !m.started.Valid || a.At.Before(m.started.Time) {
 			return ErrValueConflict
 		}
-		if err = valueAccountLock(ctx, tx, a.AccountID); err != nil {
+		accepted, err := lockAcceptedTextAccount(ctx, tx, m, a.AccountID)
+		if err != nil {
 			return err
 		}
 		pinned := *s
 		pinned.tuning = m.record.Policy
-		credited, err = pinned.awardTx(ctx, tx, a, m.record.Prototype || !m.record.Contract.Eligibility.Rewards)
+		zero := m.record.Prototype || !m.record.Contract.Eligibility.Rewards
+		if err := pinned.validateAwardAmount(a, zero); err != nil {
+			return err
+		}
+		if accepted.request != "" {
+			if _, err = recordTextErasure(ctx, tx, accepted, "award_"+a.Kind, a.Ordinal, bodyHash, a.At, ""); err != nil {
+				return err
+			}
+			if s.beforeCommit != nil {
+				return s.beforeCommit()
+			}
+			return nil
+		}
+		credited, err = pinned.awardTx(ctx, tx, a, zero)
+		if err == nil && s.beforeCommit != nil {
+			return s.beforeCommit()
+		}
 		return err
 	})
 	return credited, err
@@ -71,11 +91,8 @@ func (s *TextValueStore) awardTx(ctx context.Context, tx *sql.Tx, a TextAward, z
 	if err != sql.ErrNoRows {
 		return 0, err
 	}
-	allowed := map[string]int{"correct_vote": s.tuning.Noin.CorrectVote, "donower_vote_survived": s.tuning.Noin.DonowerVoteSurvived, "match_completed": s.tuning.Noin.MatchCompleted, "nower_win": s.tuning.Noin.NowerWin, "donower_team_win": s.tuning.Noin.DonowerTeamWin, "daily_first_win": s.tuning.Noin.DailyFirstWin}
-	// The engine deliberately emits zero for a prototype/no-reward event.
-	// Its receipt is still immutable; live events must match the pinned policy.
-	if amount, ok := allowed[a.Kind]; !ok || amount != a.Amount && !(zero && a.Amount == 0) {
-		return 0, ErrValueConflict
+	if err := s.validateAwardAmount(a, zero); err != nil {
+		return 0, err
 	}
 	day := valueDay(a.At)
 	credited = a.Amount
@@ -127,6 +144,15 @@ func (s *TextValueStore) awardTx(ctx context.Context, tx *sql.Tx, a TextAward, z
 	}
 	_, err = tx.ExecContext(ctx, `INSERT INTO text_award_receipts(match_id,account_id,kind,ordinal,body_hash,occurred_at,server_day,requested,credited,ledger_id) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, a.MatchID, a.AccountID, a.Kind, a.Ordinal, hash, a.At, day, a.Amount, credited, ledger)
 	return credited, err
+}
+
+func (s *TextValueStore) validateAwardAmount(a TextAward, zero bool) error {
+	allowed := map[string]int{"correct_vote": s.tuning.Noin.CorrectVote, "donower_vote_survived": s.tuning.Noin.DonowerVoteSurvived, "match_completed": s.tuning.Noin.MatchCompleted, "nower_win": s.tuning.Noin.NowerWin, "donower_team_win": s.tuning.Noin.DonowerTeamWin, "daily_first_win": s.tuning.Noin.DailyFirstWin}
+	// Prototype/no-reward events may explicitly carry zero; live amounts are pinned.
+	if amount, ok := allowed[a.Kind]; !ok || amount != a.Amount && !(zero && a.Amount == 0) {
+		return ErrValueConflict
+	}
+	return nil
 }
 
 func (s *TextValueStore) Finish(ctx context.Context, o TextOutcome) error {
@@ -262,10 +288,12 @@ func (s *TextValueStore) settle(ctx context.Context, matchID, account string) er
 			return ErrValueFence
 		}
 		var state string
-		if err = tx.QueryRowContext(ctx, `SELECT state FROM text_settlements WHERE match_id=$1 AND account_id=$2 FOR UPDATE`, matchID, account).Scan(&state); err != nil {
+		// The match lock serializes settlement; defer dependent row locks until
+		// after the week/account locks, including an erasure disposition.
+		if err = tx.QueryRowContext(ctx, `SELECT state FROM text_settlements WHERE match_id=$1 AND account_id=$2`, matchID, account).Scan(&state); err != nil {
 			return err
 		}
-		if state == "applied" {
+		if state == "applied" || state == "erased" {
 			return nil
 		}
 		var o TextOutcome
@@ -303,8 +331,18 @@ func (s *TextValueStore) settle(ctx context.Context, matchID, account string) er
 				return fmt.Errorf("leaderboard week closed with unsettled outcome")
 			}
 		}
-		if err = valueAccountLock(ctx, tx, account); err != nil {
+		accepted, err := lockAcceptedTextAccount(ctx, tx, m, account)
+		if err != nil {
 			return err
+		}
+		if accepted.request != "" {
+			if err = markTextSettlementErased(ctx, tx, m, account, accepted, "settlement", o.At); err != nil {
+				return err
+			}
+			if s.beforeCommit != nil {
+				return s.beforeCommit()
+			}
+			return nil
 		}
 
 		// All day buckets precede profile/wallet locks, including capped zero rewards.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/privacy"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -39,16 +40,17 @@ type Claims struct {
 
 // Manager is the auth service.
 type Manager struct {
-	development atomic.Bool
-	db          *sql.DB
-	signingKey  []byte
-	issuer      string
-	audience    string
-	accessTTL   time.Duration
-	refreshTTL  time.Duration
-	oauth       OAuthProviders
-	oauthHTTP   *http.Client
-	oauthCfgs   map[string]*oauth2.Config
+	development   atomic.Bool
+	installations atomic.Pointer[privacy.InstallationAuthority]
+	db            *sql.DB
+	signingKey    []byte
+	issuer        string
+	audience      string
+	accessTTL     time.Duration
+	refreshTTL    time.Duration
+	oauth         OAuthProviders
+	oauthHTTP     *http.Client
+	oauthCfgs     map[string]*oauth2.Config
 }
 
 // OAuthProviderConfig holds OAuth client credentials for one provider.
@@ -120,6 +122,9 @@ type TokenPair struct {
 }
 
 func (m *Manager) issueTokens(ctx context.Context, accountID, deviceHash string) (*TokenPair, error) {
+	if err := m.RegisterInstallationPrivacy(ctx, deviceHash); err != nil {
+		return nil, err
+	}
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -195,6 +200,11 @@ func (m *Manager) ValidateAccessToken(ctx context.Context, token string) (string
 	if err != nil {
 		return "", err
 	}
+	if claims.Purpose == "player" {
+		if err = m.RegisterInstallationPrivacy(ctx, claims.DeviceHash); err != nil {
+			return "", err
+		}
+	}
 	revoked, err := m.isRevoked(ctx, claims.ID)
 	if err != nil {
 		return "", fmt.Errorf("revocation check: %w", err)
@@ -209,6 +219,9 @@ func (m *Manager) ValidateAccessToken(ctx context.Context, token string) (string
 	if err := installationAllowed(ctx, m.db, claims.DeviceHash, purpose); err != nil {
 		return "", err
 	}
+	if _, err = m.parseToken(token, TokenAccess); err != nil {
+		return "", err
+	}
 	return claims.AccountID, nil
 }
 
@@ -218,6 +231,11 @@ func (m *Manager) Refresh(ctx context.Context, refreshToken string) (*TokenPair,
 	claims, err := m.parseToken(refreshToken, TokenRefresh)
 	if err != nil {
 		return nil, err
+	}
+	if claims.Purpose == "player" {
+		if err = m.RegisterInstallationPrivacy(ctx, claims.DeviceHash); err != nil {
+			return nil, err
+		}
 	}
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {

@@ -1552,5 +1552,51 @@
         "type": "String"
       }
     }
+  },
+  "bonusPremium": "[Þřémïüm böñüs ƒöř ýöü]",
+  "@bonusPremium": {
+    "description": "Title for a confirmed Premium match bonus."
+  },
+  "bonusRewardedAd": "[Åð řéŵåřð ƒöř ýöü]",
+  "@bonusRewardedAd": {
+    "description": "Title for a server-verified rewarded-ad bonus."
+  },
+  "bonusCredited": "[{amount} Noin åððéð ţö ýöüř båļåñçé]",
+  "@bonusCredited": {
+    "description": "Actual server-confirmed Noin credited, including zero.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "bonusCapped": "[Ţĥé ðåïļý éåřñïñĝ ļïmïţ řéðüçéð ţĥïs böñüs.]",
+  "@bonusCapped": {
+    "description": "Explains a bonus limited by original-day earning caps."
+  },
+  "bonusSyncRetry": "[Ýöüř böñüs řéçéïþţš çöüļð ñöţ bé šýñçéð. Řéţřý ţö çĥéçķ ţĥéïř šţåţüš.]",
+  "@bonusSyncRetry": {
+    "description": "Receipt read or dismissal synchronization failed; retry does not grant currency."
+  },
+  "bonusRequested": "[Böñüs béƒöřé ţĥé ðåïļý ļïmïţ: {amount} Noin]",
+  "@bonusRequested": {
+    "description": "Requested bonus before applying original-day caps, not an extra credit.",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "rewardWatchAd": "[Ŵáţçĥ áñ áđ ƒöŕ á máţçĥ böñüš ·········]",
+  "@rewardWatchAd": {
+    "description": "Explicit action for a server-authorized rewarded ad."
+  },
+  "rewardAdDetails": "[Ýöüŕ böñüš ïš çöñƒïŕmèđ bý ţĥè šèŕvèŕ. Đáïlý lïmïţš áþþlý. ·············]",
+  "@rewardAdDetails": {
+    "description": "Server confirmation and daily-cap explanation for rewarded ads."
+  },
+  "rewardPrivacyChoices": "[Áđ þŕïváçý çĥöïçèš ······]",
+  "@rewardPrivacyChoices": {
+    "description": "Entry to the native required ad privacy choices form."
   }
 }

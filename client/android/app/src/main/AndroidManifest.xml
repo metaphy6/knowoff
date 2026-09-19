@@ -1,8 +1,11 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application
         android:label="knowoff_client"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${knowoffAdMobAppId}" />
+        <!-- All SDK initialization belongs to the explicit consent-gated flow. -->
+        <provider android:name="com.google.android.gms.ads.MobileAdsInitProvider" tools:node="remove" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

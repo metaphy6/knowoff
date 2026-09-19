@@ -1,3 +1,9 @@
+import '../../data/rewarded_session.dart';
+import '../widgets/rewarded_lifecycle.dart';
+import '../widgets/rewarded_offer.dart';
+import '../../data/bonus_session.dart';
+import '../widgets/bonus_lifecycle.dart';
+import '../widgets/bonus_receipts.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -586,7 +592,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 }
 
 class StoreScreen extends StatefulWidget {
-  const StoreScreen({this.api, this.purchases, super.key});
+  const StoreScreen({
+    this.api,
+    this.purchases,
+    this.bonuses,
+    this.rewarded,
+    super.key,
+  });
+  final BonusSessionController? bonuses;
+  final RewardedSessionController? rewarded;
   final ApiClient? api;
   final PurchaseController? purchases;
   @override
@@ -597,9 +611,63 @@ class _StoreScreenState extends State<StoreScreen> {
   late final _store = StoreActions(serviceApi(widget.api));
   late final _purchases = widget.purchases ?? AppConfig.instance.purchases;
   int _verifiedRevision = 0;
+  BonusSessionController? _bonuses;
+  int _walletRevision = 0;
+  bool _identityLost = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindBonuses();
+  }
+
+  @override
+  void didUpdateWidget(StoreScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _bindBonuses();
+  }
+
+  void _bindBonuses() {
+    final next =
+        widget.bonuses ??
+        (widget.api == null ? BonusScope.maybeOf(context) : null);
+    if (!identical(next, _bonuses)) {
+      _bonuses?.removeListener(_bonusChanged);
+      _bonuses = next;
+      _walletRevision = next?.walletRevision ?? 0;
+      _bonuses?.addListener(_bonusChanged);
+    }
+  }
+
+  bool get _sameBonusIdentity =>
+      _bonuses != null &&
+      _bonuses!.identity.accountId != null &&
+      _bonuses!.identity.accountId == _store.api.authService.accountId &&
+      _bonuses!.identity.generation == _store.api.authService.sessionGeneration;
+
+  void _identityChanged() {
+    _identityLost = _store.api.authService.accountId == null;
+    _store.invalidate();
+    _purchases.disableOffers();
+    _walletRevision = _bonuses?.walletRevision ?? 0;
+    if (mounted) _reload();
+  }
+
+  void _bonusChanged() {
+    if (!mounted || _bonuses == null) return;
+    setState(() {});
+    if (!_sameBonusIdentity) return;
+    final revision = _bonuses!.walletRevision;
+    if (revision != _walletRevision) {
+      _walletRevision = revision;
+      if (revision > 0) _reload();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _store.api.authService.identityChanges.addListener(_identityChanged);
     _verifiedRevision = _purchases.verifiedRevision;
     _purchases.addListener(_purchaseChanged);
     _purchases.start();
@@ -607,6 +675,8 @@ class _StoreScreenState extends State<StoreScreen> {
 
   @override
   void dispose() {
+    _store.api.authService.identityChanges.removeListener(_identityChanged);
+    _bonuses?.removeListener(_bonusChanged);
     _purchases.removeListener(_purchaseChanged);
     super.dispose();
   }
@@ -621,6 +691,9 @@ class _StoreScreenState extends State<StoreScreen> {
   }
 
   Future<void> _load() async {
+    if (_identityLost) {
+      throw const AuthSessionException('auth.restore_required');
+    }
     await _store.load();
     final catalog = _store.purchaseCatalog;
     if (catalog == null) {
@@ -659,11 +732,15 @@ class _StoreScreenState extends State<StoreScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final rewarded =
+        widget.rewarded ??
+        (widget.api == null ? RewardedScope.maybeOf(context) : null);
     return KoPage(
       title: l10n.storeTitle,
       eyebrow: l10n.serviceStoreEyebrow,
       accent: KoColors.tangerine,
       actions: [
+        if (rewarded != null) RewardedPrivacyButton(session: rewarded),
         IconButton(
           key: const Key('store-refresh'),
           tooltip: l10n.serviceRefresh,
@@ -698,6 +775,7 @@ class _StoreScreenState extends State<StoreScreen> {
                 key: const Key('store-wallet'),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (_sameBonusIdentity) BonusReceipts(session: _bonuses!),
                   KoPanel(
                     color: KoColors.tangerine,
                     shadow: KoShadows.lg,

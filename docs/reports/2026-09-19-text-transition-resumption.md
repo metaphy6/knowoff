@@ -1,5 +1,10 @@
 # Text transition resumption — 2026-09-19
 
+This report is chronological: earlier recovery scopes, pending statements and
+test results describe their recorded boundary. See the [finalization scope](#finalization-scope)
+and [roadmap status](../planning/ROADMAP.md#status-snapshot) for the current
+migration 41 handoff; [final verification is complete](#final-gate-results-and-handoff).
+
 ## Recovery
 
 The owner requested continuation after credits interrupted development. Work
@@ -969,3 +974,599 @@ the same client source. iOS/device/provider/human release evidence remains pendi
 Reports: `/tmp/agent-runs/roadmap-final-unified.json` (initial failure retained)
 and `/tmp/agent-runs/roadmap-final-store.json` (complete repaired package),
 plus `roadmap-runner-regressions--20260919T124907Z-1283985.log`.
+
+## Continuation after 1274814: implementation evidence
+
+The following continuation notes preserve implementation and review history.
+Statements that a later boundary is pending describe that entry's date; the
+latest acceptance entry and [roadmap status](../planning/ROADMAP.md#status-snapshot)
+govern the current handoff.
+
+### Prior handoff at 1274814 — 2026-09-19
+
+This paragraph records the earlier pushed boundary, superseded by the
+continuation evidence below. At that handoff there was no migration35 or36,
+no public deletion route, no survivor-value transformation and no deployed
+suppression/processor service. D2 supplies only closed same-account proof and
+status adapters. The source-reader deletion check is implemented; atomic authored
+release withdrawal and shared-byte erasure remain pending. Reward B1–B3 is closed
+verification only; payouts and consent/provider/client joins remained pending. Human, device, provider, cohort and live cutover
+evidence stays unchecked. This handoff does not mark all roadmap phases complete.
+
+
+### D3a — atomic authored-release withdrawal (resumed after1274814)
+
+**Goal.** Confirmation withdraws exactly the deleting author's affected releases
+and prevents fresh publication/admission without changing another author's
+release or rewriting an in-flight match's pinned bytes.
+**Boundary.** Migration35 replaces only confirmation's body; no new callable
+privacy authority, source-byte erasure, survivor settlement or public route.
+**Files.** Migration35 pair, deletion/release tests, exact cutover source ACL/body
+pins and provisioning parity. Existing readers already check author fences and
+lock release rows before active mappings.
+
+| Child | Implementation and proof |
+|---|---|
+| [x] D3a1 | Under the existing account lock, acquire publication serialization, affected release rows in order, then owned source rows. Resolve affected IDs through exact accepted-input provenance. Set withdrawal once and remove only those active mappings in the same confirmation transaction. |
+| [x] D3a2 | Preserve the existing confirmation proof, replay, deadlines and final expiry checks; roll back withdrawal on any confirmation failure. Prove portal/card and challenge/Nown paths, unrelated exact-row parity, prior withdrawal, exact retry and retained-source hashes. |
+| [x] D3a3 | Prove both source-lock/confirmation orders and release-access/confirmation orders on PostgreSQL, future source capture/publication/activation/start refusal and unchanged preexisting match pins. |
+| [x] D3a4 | Add exact source-column grants plus the table DELETE privilege needed for publication serialization; prove the immutable trigger still refuses deletion and update the confirmation body digest. Prove real executor success, extra/missing grant refusal, empty down/up and retained-request rollback refusal; independent review and cold verification. |
+
+**Risks.** Lock order is account→release serialization→release rows→source rows;
+author checks after source waits remain non-locking to avoid inversion. Existing
+read-only repeatable-read previews may retain their old snapshot; authoritative
+start repeats current checks. Call deadlines bound confirmation; no completed
+active erasure or production processor acknowledgment is claimed here.
+
+**D3a evidence (2026-09-19).** Independent content and cutover verification
+passed 11 tests and 100 subtests in 16.598s; actual certified-release Start and
+confirmation races passed in both lock orders (12.837s). Head36 full cutover
+store verification passed 40.505s. The exact 53 source privileges include only
+the required release DELETE table grant for locking; the immutable trigger
+refuses actual deletion. Confirmation body pin is
+`9c466a5a0285a6bc3dad970e063294fa95869f5435d4fe961140f43e38a8b3d8`.
+Pre35 consumed requests preserve exact replay without retroactive withdrawal;
+current source fences still refuse admission. Deploying such retained requests
+needs a separately verified backfill. Shared source erasure and D6 remain open.
+
+### B4b — completed-match bonus payment (accepted 2026-09-19)
+
+**Boundary.** After D3 accepted-work authority is verified, add a closed typed
+payment method. Public provider routes and automatic runtime registration remain
+behind B5/B6. Reserve the next available migration after the credential slice;
+never edit committed eligibility or verification migrations.
+
+| Child | Implementation and proof |
+|---|---|
+| B4b1 [x] | Add one immutable match/account bonus receipt and normalized original-day items, bound to the exact applied settlement, start eligibility and original award receipts. Premium and signed-ad proof resolve to the same identity. Missing historical eligibility remains unknown. |
+| B4b2 [x] | Lock match then account then original day buckets in order. Derive the base solely from genuine credited award receipts; apply the pinned daily cap to each original UTC server day. Never credit on callback day or reconstruct awards from counters. Zero/capped receipts are terminal and replay exactly. |
+| B4b3 [x] | Derive Premium authority from the start receipt; otherwise require a verified SSV receipt belonging to an opaque claim for the same match/account. No caller-supplied amount, entitlement or proof bypass. Interrupted/prototype/reward-disabled/unapplied/deleted/fenced sources refuse payment. |
+| B4b4 [x] | Write receipt, day items, wallet, ledger and day totals atomically. Prove concurrent Premium/SSV/replay, changed source conflict, midnight and cap boundaries, rollback at each write, deletion in both lock orders and exact survivor parity. Extend reconciliation with explicit bonus identities; no rewriting base settlement effects. |
+
+**Review questions to resolve before implementation.** Pin exact relational
+constraints and ledger event shape; specify how recovery enumerates eligible
+pending bonuses without stranding behind erased accounts; coordinate B5's
+separate immutable private delivery so a later bonus never changes an already
+acknowledged base settlement. These questions were resolved by the concrete shape and reviewed conditions below.
+
+**B4b proposed concrete shape.** `text_bonus_payments` has one immutable
+`(match_id,account_id)` key with source (`premium` or `ssv`), optional exact SSV
+transaction FK, eligibility/settlement/award-set hashes, pinned policy hash,
+requested/credited totals and occurrence/application times. Child
+`text_bonus_payment_items` rows identify original award `(kind,ordinal)`, exact
+body hash, original server day, base credited amount, bonus credited amount and
+nullable unique ledger ID. Composite FKs bind items to both payment and genuine
+award; a reviewed deferred constraint checks the complete item set and totals at
+commit. Runtime receives SELECT/INSERT only. Empty rollback refuses retained
+payment/value evidence rather than discarding it.
+
+A closed `ApplyBonus(match_id,account_id)` derives authority in SQL-backed code:
+known Premium-at-start, otherwise an already verified same-account/match SSV
+receipt. It does not accept source, amount or provider reward count from callers.
+Under match/account locks it checks an exact existing receipt first for replay,
+then validates the pinned completed/scored-low-population settlement and locks
+original day buckets in sorted order. Each original award gets at most its
+actually credited base amount again, capped by remaining original-day allowance.
+A distinct `match_bonus` ledger event records the original award identity and
+payment identity; no first-win claim, XP, rank or base outbox row is rewritten.
+Wallet and original-day totals move only by the sum of positive new bonus items.
+The exact source-set hash includes zero-credit receipts, preventing later source
+omission from silently changing an accepted payment.
+
+Recovery enumeration is bounded and deterministic over terminal applied matches
+with known start eligibility plus either Premium authority or verified SSV proof,
+excluding existing bonus identities and currently deleted/fenced accounts.
+Rechecking under locks handles a deletion after enumeration as a terminal
+ineligible item for that pass; it does not recreate value or block following
+survivors. B5 must persist/replay a separate private bonus delivery from the
+immutable payment receipt. No recovery worker or route is registered until the
+joined gates pass. The reviewer must approve these exact constraints and tests
+before implementation.
+
+**B4b plan review conditions.** Versioned canonical hashes cover the entire
+ordered award key/body hash/day/requested/credited/ledger-ID set, including zeros,
+the start receipt, exact settlement source/effects and pinned policy. Deferred
+SQL checks bind every item to its exact parent/source, same-account SSV proof,
+matching totals and positive ledger account/event/day/amount/payment/award keys;
+zero items require NULL ledger. Explicit integer bounds prevent overflow.
+Deterministic original-day ordering accumulates cap consumption across items.
+Select one verified SSV proof deterministically and retain it on every replay.
+A prior paid receipt may return historical metadata after deletion without new
+effects; private delivery separately refuses deleted/fenced accounts. Recovery
+uses bounded keyset/selected-set progress, skips terminal ineligibility, and
+surfaces genuine database or corruption errors. Tests include zero-only awards,
+multiple original days/SSVs, partial source corruption, changed current
+entitlement/config, direct-SQL constraint violations and exact historical replay.
+These conditions were independently reviewed before implementation.
+
+**D3 accepted-work V1–V3 evidence (2026-09-19).** Migration36 and its
+narrow accepted-work paths passed independent review and 34 tests plus 20
+subtests (store21.775s, lobby0.010s), including both deletion/value lock orders,
+exact surviving effects, prior receipt replay, recovery, no fabricated paid
+receipt, SQL subject/source binding and empty rollback/refusal. Full store
+regression passed 550 tests/subtests in206.690s with vet/build; the final fresh
+database-clock enqueue correction passed the independent focused gate afterward.
+Separate-cluster restore/handoff passed eight tests in21.570s. This completes
+V1–V3 only: shared representation erasure and pre-fence queued-frame handling
+remain D3/D6 work.
+
+### B5 — private bonus delivery proposal
+
+**Boundary.** After B4b's payment receipt is accepted, add a separate immutable
+bonus outbox and authenticated HTTP polling/acknowledgment adapter. This keeps
+later bonus value separate from the immutable base settlement and avoids changing
+its wire identity. Server routes remain unregistered until B6's joined gate.
+
+The outbox binds exactly one payment identity to a stable delivery ID and typed
+payload: match ID, Premium/ad source, requested/credited bonus totals and original
+day cap results. It contains no participant list, roles, provider transaction,
+claim token or private source receipt. Payment and outbox insertion must be
+atomic; a one-time migration backfills only verified existing payment receipts.
+Payload identity is immutable; only bounded lease/attempt/ack fields may change.
+
+Claim and acknowledgment methods derive the account from freshly validated
+bearer authority inside the transaction. Account lock precedes outbox locks;
+current deletion/fence checks occur after waits. Claim reads a bounded ordered
+page, uses a fresh database-clock lease, and returns opaque lease identity.
+ACK requires exact account/delivery/lease, with replay preserving an existing
+acknowledgment; stale or cross-account acknowledgments cannot hide another item.
+Suppression is not acknowledgment. No amount or entitlement is accepted from
+the client. Pending recovery must not strand surviving accounts behind erased
+ones. Public presentation never changes payment or base settlement effects.
+
+The client keeps a separate bounded bonus receipt collection and validates exact
+payload shape and stable payload hash across lease replay. It fetches on the
+post-match/foreground/reconnect path using the existing authenticated session;
+an ad completion callback may prompt a read but cannot award value. Account
+switch/logout fences in-flight responses and clears private presentation. Lost
+ACK replay re-acknowledges a dismissed stable receipt without adding value twice;
+UI shows credited bonus and any cap reduction separately from earned base Noin.
+No ad surface is introduced here.
+
+**Required proof.** Transaction-fault rollback, restart/lease expiry, duplicate and
+changed-payload replay, cross-account auth/ACK, both deletion lock orders,
+bounded stale-body handling, no public role/source leakage, client account-switch
+and reconnect races, and exact reconciliation of payment/outbox/ledger IDs.
+Review transport timing and old-client compatibility before implementation;
+HTTP delivery does not claim D6 draining of already in-flight responses.
+
+**B5 plan review conditions.** Pin payload version/canonical hash and exclude
+lease/attempt metadata from immutable identity. Stable delivery IDs are unique
+per payment; opaque lease secrets are random and retained only as hashes. The
+full order is account → sorted bearer installation locks → outbox; validate the
+same JWT purpose/JTI/epoch/expiry after waits and final writes without introducing
+a new installation lock after the outbox. Backfill verifies original payment
+receipts and excludes deleted/fenced accounts, reporting explicit suppression
+rather than acknowledgment or unexplained missing delivery. An already ACKed
+exact account/delivery/lease may replay only after current authority checks;
+a stale outstanding lease cannot ACK a replacement lease. Client receipt arrival
+never increments wallet locally: refresh authoritative balance. Persist bounded
+account-scoped dismissal/pending-ACK state, evict only after confirmed ACK or a
+reviewed expiry contract, and fence account-switch/logout responses. All HTTP
+refusals use existing strict body/deadline limits. No routes, automatic polling or
+UI activation precede the joined gate; already in-flight HTTP bytes remain D6.
+
+**B5 client ordering detail.** Serialize claim/ACK work per account and fence each
+response by account/session generation. Keep pending dismissal state until ACK
+is confirmed. A confirmed ACK may be evicted only after earlier claim responses
+are drained or rejected by that generation/order fence; otherwise a delayed
+pre-ACK response could redisplay a dismissed bonus. Lease replacement updates
+only pending ACK authority, never stable payload identity or credited value.
+
+
+### D4A — credential erasure accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Migration37 erases account-bound OAuth, portal, Admin and deletion credentials in bounded batches after independent suppression binding; retains only an immutable exact-confirmation replay witness and non-authorizing Admin actor identity for later shared-history transformation. |
+| [x] | Preserve survivors and exact retry after cleanup waits; refuse changed confirmation tuples, expired authority, source-schema drift and broad grants. |
+| [x] | Independent review and 13 tests plus 18 subtests passed (store5.937s, auth0.496s, admin0.418s); actual restricted executor cleanup and retry also passed with head38 role/body/property checks. D4B–E and D6 remain open. |
+
+**B5 wire and client plan.** Closed `POST /v2/rewards/bonuses/claim` accepts
+`{limit:1..20,pending_delivery_ids:[UUID,...]}` with at most20 unique pending IDs
+and returns version1, a bounded deliveries array and `acknowledged_ids`. Each
+entry has UUID delivery ID, random base64url lease, UTC lease expiry, lower-hex
+SHA256 and a typed version1 payload: match UUID, `premium|rewarded_ad`, requested
+and credited totals, and sorted unique original-day requested/credited totals.
+Canonical identity hashes compact UTF-8 JSON
+`[1,match_id,source,requested,credited,[[day,requested,credited],...]]`.
+No private account, provider, claim or role fields enter this payload. The day
+bound must follow verified accepted-source bounds; it cannot silently truncate
+or strand a valid payment. All integers are nonnegative signed32 with credited
+no greater than requested and exact day sums. Closed
+`POST /v2/rewards/bonuses/ack` accepts only delivery UUID and lease and returns
+`{version:1,acknowledged:true}`. Invalid shape is400, authentication401, and
+unknown/cross-account/stale lease409; neither endpoint is registered before B6.
+
+Client implementation owns new `client/lib/data/bonus_delivery.dart` and its
+matching tests, plus narrow authenticated API and AuthService generation reads.
+A separate controller serializes claims/dismissals/ACKs, persists only bounded
+account-scoped pending dismissal identity and payload hash, and suppresses a
+lost-ACK replay before redisplay. It must not persist lease secrets or amounts
+as wallet authority. Account/session changes fence pending responses and clear
+visible receipts; pending state for another account never enters presentation.
+Strict decode rejects extra keys, invalid dates/UUIDs/ranges, duplicate IDs,
+changed hashes, malformed leases, oversized arrays and inconsistent sums.
+No controller construction, UI or automatic polling is activated before B6.
+Tests cover strict shape/hash, duplicate and changed-payload replay, lease
+replacement, failed persistence, failed/lost ACK, restart, bounded capacity,
+serialized concurrent claim/dismiss, stale same-account generation and account
+switch. Each accepted delivery requests authoritative balance refresh; it never
+increments wallet from receipt values. Independent review and focused Flutter
+verification precede integration.
+
+
+**B4b acceptance evidence.** Migration38 and closed payment/recovery methods
+passed independent review and 24 tests plus 48 subtests in27.757s. Proof includes
+exact accepted award-set binding, all write rollback/deferred checks, original
+UTC-day/pinned caps, deletion in both orders, expired verified-ad proof delayed
+payment, empty/zero receipts, historical replay and session-format-independent
+hashes. B4 is complete as a closed store boundary; B5/B6 remain pending.
+
+**B5 lost-ACK recovery adjustment (reviewed before implementation).**
+`acknowledged_ids` is only the intersection of caller-supplied pending IDs with
+that authenticated account's durably ACKed outbox, read under the same fresh
+account/deletion guard. Unknown, foreign and unacknowledged IDs are all omitted.
+This read-only observation does not change the exact lease requirement for ACK.
+Client clears persisted dismissal only for a returned ID after account/generation
+checks; omitted IDs and errors retain it. Test committed ACK with lost response
+and restart, plus another device ACKing a newer lease. This prevents permanent
+pending-state exhaustion without persisting lease secrets or exposing foreign
+status. The verified event model permits at most nine genuine award receipts
+(six vote events plus three terminal awards), so at most nine original days;
+empty source yields an empty day array with zero totals.
+
+**D4C source review for the next deletion slice.** Existing verified billing
+requires provider `AccountID` to equal the authenticated account, then locks
+provider source ownership before the account. Preserve that order in any
+credential/source eraser; account-first then billing-source locks would invert
+`applyProof`. Confirmation already fences new value, but provider task polling
+still reads original request/proof JSON and independently updates checked-at.
+Before removing these rows, add explicit terminal erased task dispositions and
+both-order tests for verification/acknowledgment against deletion. A canceled or
+erased task is not a fabricated provider acknowledgment, cash refund or platform
+subscription cancellation. Preserve survivor source ownership and genuine
+already-applied financial effects; never reconstruct them from the wallet.
+
+The implementation plan must cover `purchases_verified.go`,
+`purchases_subscription_store.go`, `purchases_worker.go`, every billing family in
+ADR014's exact inventory, legacy sources without reviewed ownership, and scoped
+private reconciliation evidence. Verify a source's complete current references
+under locks before removing its original bytes. Provider identities may not be
+reassigned to a new account merely because a source row disappeared; delayed
+proof/recovery and original-source replacement chains require exact refusal
+proof before source cleanup can be marked complete. Finite retention and source
+witnesses are not a license to retain raw receipts or provider requests past the
+active-data deadline. Schema and cutover authority require a separately reviewed
+versioned migration, bounded resumable tests and independent verification.
+
+
+**B5 closed client acceptance (2026-09-19).**
+| Complete | Verified child proof |
+|---|---|
+| [x] | Strict bounded payload/envelope parsing, duplicate-key refusal and exact Go/Dart canonical hash vector; separate receipt presentation with no local wallet increments and no app construction or polling activation. |
+| [x] | Serialized account/generation-fenced claim/dismiss/ACK, persisted bounded pending identity, lost-ACK/restart/status recovery, confirmed preference reads after false or thrown writes, and capacity-safe acknowledged-state progress. |
+| [x] | Per-request HTTP abort, late-stream cancellation, response size/deadline bounds and existing-session-only authentication; independent review and50 focused tests passed, full Flutter analysis reports zero issues. |
+The server outbox/migration40 and joined B6 activation remain open.
+
+### B6 next boundary — consent and joined reward execution
+
+**Planning inputs (2026-09-19; implementation not yet accepted).** B5 store and
+transport acceptance precedes registration. Split the join into server execution,
+client presentation, and the platform ad adapter so provider credentials and
+physical-device evidence do not become synthetic completion claims.
+
+- Server: connect bounded Premium/verified-SSV recovery to the existing owner
+  lifecycle; register private delivery only after actual bearer/revocation,
+  settlement, payment and outbox integration tests. Preserve permanent
+  interrupted-match refusal and unknown historical start eligibility.
+- Client: connect the accepted bonus controller to authenticated foreground,
+  reconnect and post-match lifecycle with one account/session owner. Display
+  credited bonus and cap reduction separately; read the authoritative wallet.
+  Current Premium hides ad surfaces even when start eligibility differs; an ad
+  must never be shown merely to discover that a Premium bonus already exists.
+- Consent: the platform adapter must use UMP's current SDK state, refresh it at
+  launch, display required forms and expose required privacy options. Check
+  `canRequestAds()` before loading; do not infer personalized-ad consent from
+  that boolean or a saved application preference. Refusal/unavailability leaves
+  ordinary play and earned base rewards usable. See Google's
+  [UMP integration](https://developers.google.com/admob/flutter/privacy).
+- Ad lifecycle: use a server-issued opaque claim as SSV custom data, never an
+  account identifier; validate account/session and consent again before show,
+  dispose stale loaded ads, and make the client reward callback only prompt a
+  server read. Prevent duplicate loads/shows and handle dismiss/error/restart.
+  An already-shown ad cannot be programmatically removed, so account changes
+  must invalidate its callbacks without claiming to retract the SDK overlay.
+  See [rewarded ads](https://developers.google.com/admob/flutter/rewarded) and
+  [SSV](https://developers.google.com/admob/flutter/ssv).
+- Platform/configuration: the official plugin supports Android/iOS, not Web;
+  Web keeps bonus delivery/Premium and offers no unsupported ad operation.
+  Verify the actual dependency/API before pinning it. Configure real application
+  and ad-unit identities through existing build configuration; development uses
+  official test identities only. Missing production configuration keeps ads
+  unavailable. See the [official setup](https://developers.google.com/admob/flutter/quick-start).
+
+Required gates include denied/changed consent, same and changed account during
+form/load/show/SSV delivery, current-Premium versus start-eligibility transitions,
+no local wallet credit, lost callbacks, duplicate SSV and restart recovery, plus
+Android/Web builds. Real UMP geography, iOS/device behavior and configured AdMob
+callbacks remain the separate Phase5 provider-evidence gate.
+
+**B6 plan review conditions.** Obtain server-authoritative claim eligibility
+before ad load/show, including start-Premium eligibility even if Premium has
+since expired. Bind the exact claim expiry and ad unit to the loaded ad;
+discard stale claims instead of replacing their data after display. Every form,
+load and show callback carries the captured account/session generation, and
+show rechecks current consent, Premium and claim lifetime. Automatic Premium
+recovery is independent of AdMob/UMP configuration. Closed adapter/controller
+proof never substitutes for physical/provider evidence or enables production
+ads by itself. Independent plan review accepted these conditions.
+
+**Head40 cutover integration (provisional source freeze).** The installation
+privacy boundary is represented by eight private tables, 22 pinned definer
+functions and 112 exact source grants; the bonus outbox permits runtime
+SELECT/INSERT/UPDATE but not DELETE. The actual restricted executor completes
+credential cleanup, bounded installation cleanup and profile cleanup while
+preserving the finite bootstrap witness. Role/body mutation checks passed three
+top-level and 116 nested cases (5.294s). A separate-cluster rehearsal passed eight
+checks (21.671s), covering 97 domain tables and two restores. Its psql fixture now
+runs each migration in a transaction, preserving migration locks and temporary
+validation tables. Final39/40 source acceptance remains a separate gate.
+
+**B5 closed server acceptance (2026-09-19).**
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Migration40 binds each active payment to one immutable typed bonus delivery in the same transaction. Verified backfill preserves suppressed accounts; deferred validation rejects a payload inserted before its final payment items. |
+| [x] | Private claim/ACK operations implement fresh bearer authorization, account/installation/outbox locking, opaque finite leases and lost-ACK status recovery without treating suppression as acknowledgement. |
+| [x] | Closed HTTP adapters bound reads and deadlines, reject duplicate/unknown fields and revalidate after body/lock waits. Routes remain unregistered. |
+| [x] | Independent store/HTTP proof passed 44 top-level and 55 nested cases (38.834s/3.565s), including rollback, migration corruption, concurrency, deletion in both lock orders, stale leases and real unfinished request bodies. |
+
+B5 is complete at the closed server/client boundary. B6 owns automatic reward
+execution, route registration, lifecycle/presentation and the platform adapter;
+physical/provider evidence remains separately open.
+
+**B6 client executable plan (independently reviewed).** First fix auth persistence:
+write a durable incomplete marker before the account/token triple, confirm every
+write and commit an exact-triple digest before publishing identity. Reloaded
+incomplete/mismatched sessions refuse ordinary auth and anonymous replacement;
+retain the account marker for explicit OAuth recovery only. Same-account token
+refresh does not notify identity change; account/session generation changes fence
+private presentation synchronously. Prove false/throwing writes at each boundary,
+reopen, concurrent refresh/switch, cancellation and recovered identity.
+
+Then connect an app-owned bonus lifecycle above the navigator: existing-session
+restore only, coalesced foreground/reconnect/terminal-match reads, terminal match
+ID deduplication, scope-checked authoritative wallet refresh and localized private
+Ko receipt presentation/dismissal retry. SDK and reward callbacks remain scoped
+to captured identity. Keep construction closed until the server/client join is
+accepted. This persistence fix has six failing regression cases before edits.
+
+
+### D4B — installation erasure accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Migration39 removes raw account-bound installation/legacy bootstrap links using exact transaction-bound permits and bounded cleanup. Retain finite, purpose-separated HMAC evidence for existing sanctions and erased bootstrap; unknown/shared links are never attributed by guesswork. |
+| [x] | Enforce complete registered key coverage, canonical bootstrap identity, finite expiry/lift/rotation and account → request → key registry lock order. Pin source/private schema, primary keys and foreign-key behavior; reject concurrent catalog drift before mutating evidence or permits. |
+| [x] | Independent source review and cold verification passed 59 tests plus73 subtests (store18.963s, auth19.728s, privacy0.003s); vet passed. Final39/40 restricted-role/body/property and executor journey passed7 tests plus138 subtests in7.959s. All nine final function hashes match the cutover manifest. |
+
+This completes the installation-linked D4B boundary, not full erasure. D4E still
+owns bounded cleanup of unbound failed-registration/orphan identifiers and
+ambiguous legacy bootstrap resolution; D4C billing and D4D shared-source
+transformation remain open. Public deletion routes stay closed.
+
+
+### B6 server execution boundary accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Add bounded bonus recovery worker independent of ad configuration; use cancellation-aware database work, bounded backoff and exact owner-loss shutdown. Join reward work before releasing server ownership. |
+| [x] | Recheck current/start Premium, prior payment and accepted proof before issuing an ad claim; bind exact ad unit and expiry. Preserve accepted-claim delayed proof replay and server-only payment authority. |
+| [x] | Independent source review and61 tests plus178 subtests passed (store47.499s, handler7.560s, cmd3.302s), including signed SSV → restart → one payment/outbox → private delivery, Premium without provider config, ownership loss while SQL waits and final cutover permissions. |
+
+This is the closed server execution boundary. Main route registration/worker
+startup, client lifecycle join and native consent/ad adapter remain B6 work.
+
+
+### B6 client recovery and presentation boundary accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Serialize persistent authority reads/writes, reject partial account/token triples, and publish identity only after confirmed commit. Explicit OAuth recovery may read the retained account marker without treating it as authority. Cancellation before final-marker dispatch wins; cancellation after that linearization point joins the accepted commit and cannot promise rollback. Capture session generation before installation-binding waits. |
+| [x] | Add closed app-owned lifecycle and receipt presentation: coalesced reads, one additional read when a terminal event arrives during a claim, bounded terminal-ID deduplication, immediate identity clearing, disposal fencing and lost-ACK dismissal retry. No receipt callback increments local currency. |
+| [x] | Show server-confirmed credited and pre-cap bonus amounts using Ko surfaces and six localized messages across English, Turkish, Arabic and pseudo-locale. Independent113 auth/client tests and19 lifecycle/UI/localization tests passed; 360px width/2x text monetary labels and account-change privacy passed. Full Flutter analysis passed after the test-style correction. |
+
+These components remain closed: service construction, authenticated match
+signals, store wallet refresh and native consent/ad joining are the next B6 gate.
+
+
+**B6 joined-client implementation plan (reviewed).** Keep lazy service construction
+closed until joined verification; an app-owned inherited scope supplies the
+controller to ordinary Store/match screens, while injected API/session screens
+require explicit reward injection. Read `/api/economy/wallet` with the bounded,
+existing-session transport and publish a wallet revision only after strict
+response validation and matching account/session generation. Store reloads only
+on that revision, clears in-flight snapshots on identity change and never creates
+an anonymous replacement from automatic identity-loss handling.
+
+A match screen retains the first authenticated socket identity; it never labels
+an old snapshot with a replacement account. Refresh after accepted hello and
+once per completed/scored-low-population verdict, excluding prototype and
+interrupted matches. Replace/unsubscribe injected controllers on widget updates;
+render private receipts only when their account/generation matches the screen.
+Test partial wallet failure while a delivery lease is outstanding, same-account
+session replacement, old/new listeners, foreign receipt injection, absent identity,
+repeated terminal snapshots and all three terminal eligibility cases.
+
+
+### B6 joined client accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Join the app-owned controller to authenticated match and Store screens, preserving the first socket identity and refusing foreign receipt scopes. Completed verdicts trigger one read; interrupted/prototype matches do not. |
+| [x] | Read the authoritative wallet through the bounded existing-session transport; retry wallet failure even while a receipt lease remains outstanding. Clear Store state on identity changes without creating replacement accounts. |
+| [x] | Independently verify88 client checks, including injected-controller replacement, same-account session generations, repeated terminal snapshots, lost ACK and all localized receipt amounts. |
+
+Main now registers reward delivery and starts owner-bound bonus recovery before
+listeners; protocol2 client startup mounts the reward lifecycle. The startup
+assembly regression failed before wiring and passed afterward;40 client startup,
+match, Store and lifecycle checks pass. Independent startup source review and18 client/one Go assembly checks pass.
+These checks do not claim a full-binary production startup rehearsal.
+Native consent/ad execution remains separately gated and disabled by default;
+physical device and provider acceptance are not implied by these client tests.
+
+
+### D4C C1 — billing work draining accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Add migration41 bounded verification slots and exact provider-attempt identity, generations, request/proof hashes and absolute deadlines. |
+| [x] | Fence ordinary verification and ACK against deletion; preserve prior positive ACK evidence, reject stale subscription state and treat adapter errors as unavailable even when paired with a positive outcome. |
+| [x] | Add four private typed drain operations and a closed provider adapter. Provider HTTP runs outside SQL transactions; late responses cannot create deleted-account value. Deadline abandonment remains explicitly unresolved. |
+| [x] | Verify the real restricted executor's nonempty begin/claim/finish journey, original receipt/transaction parity, and ordinary billing with24 column grants. Runtime cannot write the private deletion binding or delete work rows. |
+| [x] | Independently review and cold-test64 top-level/51 nested checks. The full implementer economy gate passed91 top-level/109 nested checks before the final two focused ACK regressions; those regressions passed independently afterward. |
+| [x] | Extend cutover to26 pinned private functions,157 exact private source grants, and24 runtime column grants. Nine separate-cluster checks pass in22.970s, covering99 domain tables and two actual restores. |
+
+C1 drains known provider work only. Raw receipts/tokens, unknown legacy sources,
+finite financial evidence, processor cleanup and final account detachment remain
+C2/C3 and D4E/D5/D6 work; production deletion routes remain disabled.
+
+
+### B6 native consent and joined ad UI accepted (2026-09-19)
+
+| Complete | Verified child proof |
+|---|---|
+| [x] | Add the disabled-by-default Android/iOS adapter, current UMP consent and required privacy options, scoped claim/load/show lifecycle and opaque SSV data. Web performs no unsupported SDK operation; callbacks only prompt server reads. |
+| [x] | Join explicit post-match offers and Home/Store privacy controls, preserving socket/account generations, foreground ownership and injected service scopes. Interrupted/prototype matches never request offers; showing requires a tap. |
+| [x] | Independently review the complete join and pass110 client checks plus full analysis. Four locales pass narrow-screen/large-text offer tests. The complete Flutter suite subsequently passed624 tests. |
+| [x] | Build the final joined Android debug APK and Web client; verify the merged Android manifest excludes automatic Mobile Ads initialization. APK size remains informational under the owner's decision. |
+
+Native ads remain disabled without explicit build configuration. These local
+checks do not satisfy iOS execution, physical-device consent/network behavior or
+live configured provider SSV acceptance; those external evidence gates remain open.
+
+
+**C2 prerequisite accepted (2026-09-19).** Legacy `RecordReceipt` now takes current
+account authority and retains it through insertion and exact identity lookup.
+A regression reproduced deleted-account acceptance before the fix. Independent
+nine top-level/two nested purchase/refund checks pass, including full deletion
+while receipt recording waits on the account and unchanged retained raw bytes.
+Raw billing removal and finite evidence remain pending under ADR014 §10.6.
+
+
+### Finalization scope
+
+At the owner's request, this continuation closes at migration 41 and the
+completed reward/server/client boundary. Unaccepted migration 42 and its readers,
+codecs and fixtures, plus unused billing evidence preparation, were excluded.
+The next deletion slice is planned in ADR-014 but has no partially implemented
+source in this handoff. Production deletion and live native ads remain gated.
+
+Original roadmap completion remains **55/91 tasks and 2/7 phases**, unchanged
+from pushed commit `1274814`; this continuation closed no additional original
+checkboxes. Completed
+components within Phase 5 do not count as completion of its full acceptance
+gates. The continuation details above are historical evidence, not additional
+roadmap phases. Earlier statements that a component is pending are superseded
+by its later explicit acceptance entry. Final unified verification is recorded below.
+
+### Restore rehearsal transaction correction
+
+The final unified run exposed that the rehearsal sent migration statements to
+psql without a transaction. Migration 39's table lock consequently failed,
+although application migration execution and the independent cutover harness
+were atomic. The rehearsal now encloses each file and its schema version marker
+in one transaction, normalizing the existing outer wrappers and refusing
+unsupported inner transaction controls. Retained migration-byte checks remain.
+
+The new regression failed before the fix. Two focused tests pass, and the real
+8-to-41 restore passes with 104 tables, six sequences and three restores; injected
+migration-body and version-marker failures both roll back the new DDL and version.
+Evidence: `snapshot-transaction-restore-green--20260919T163558Z-1890613.log`
+(111.973 seconds). The original full-run failure is retained, not reported as
+a clean run; the complete Python suite is rerun after the correction.
+
+### Final retained boundary verification
+
+- Frozen head 41 independently passed 58 tests and 83 subtests (65.883s),
+  including original bonus/reward matrices, reconciliation, accepted-work
+  deletion races and the actual restricted privacy executor.
+- The final server suite passed 2,402 tests/subtests with zero failures/skips;
+  store completed in 290.429s. Server formatting, vet and build also passed.
+- The repaired complete Python runner passed 124 tests with zero failures/skips,
+  including isolated cutover and snapshot restore. Independent restore
+  verification passed separately in 108.791s.
+- Joined native/client validation before finalization passed all 624 Flutter
+  tests, full analyze, Android debug and Web builds; the Android manifest proof
+  confirmed the consent-controlled initialization boundary. No physical-device,
+  iOS build or live provider result is claimed. The final unified client rerun
+  and workload results are recorded below.
+
+Evidence: `finalize41-all--20260919T162924Z-1808459.log`,
+`finalize41-python.json`, `privacy41-final-fixed--20260919T163041Z-1844657.log`,
+`snapshot-restore-independent--20260919T163807Z-2012126.log`. The initial Python
+failures in the full invocation are superseded only by the successful repaired
+Python rerun; the original full invocation is not relabeled successful.
+
+### Final gate results and handoff
+
+All retained gates are green after the diagnosed Python correction: **2,507 Go
+tests/subtests** (server 2,402, gamebot 81, mediapack 24), **124 Python tests**,
+**624 Flutter tests** and **two web-cache tests**, with zero remaining failures
+or skips. Formatting, Go vet/build and Flutter analyze pass. The 100-room
+workload passed in 193.81s: action p95 128.678ms, p99 157.899ms, worst frame
+8,185 bytes and final goroutines 8, matching warm baseline 8.
+
+The unified invocation initially failed its Python stage for the cleanup-time
+compiler race and the restore transaction bug; all its remaining stages passed.
+The complete corrected Python rerun passed separately. Both original and rerun
+logs remain available; no failed invocation is presented as a clean run.
+
+Run ID: `roadmap-continuation-20260919`. The accepted implementation stops at
+migration 41. Full deletion and original roadmap release gates remain open.
+No commit, push, deployment or production enablement was performed by the agent.
+
+Staged-diff hygiene found one trailing space in the new migration 37 function.
+Its removal changes no SQL behavior; the exact function-body SHA-256 pin was
+updated to match, with the actual two-cluster cutover check rerun on those bytes.
+Final byte-level cutover verification: nine checks passed in 22.308s
+(`finalize41-whitespace-cutover--20260919T164718Z-2128013.log`).
+
+### Client editor syntax diagnostics
+
+The owner reported widespread `client/lib` syntax errors during finalization.
+They were reproduced using the workstation's default SDK (Dart 3.10.4): 515
+analyzer issues, including unsupported private named constructor parameters.
+The project already declares Dart ≥3.12.0 / Flutter ≥3.44.0.
+
+A copy of the verified Flutter 3.47.1 / Dart 3.13.1 SDK now resides in the ignored
+workspace directory `.tools/flutter`. VS Code selects that local SDK explicitly;
+client setup documentation covers shell PATH and analyzer restart. No system SDK
+or global settings were changed, and the SDK is not committed. Dependency and
+localization regeneration followed by analysis reports zero issues.
+Evidence: `client-reported-analysis--20260919T164857Z-2139821.log` (old SDK),
+`client-workspace-prepare--20260919T165002Z-2141047.log` (zero issues).
+The full client runner on the workspace-local SDK then passed 624 tests,
+two web-cache tests, analysis and formatting with no failures/skips
+(`client-workspace-final--20260919T165012Z-2141409.log`).

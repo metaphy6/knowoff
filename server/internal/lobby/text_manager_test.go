@@ -961,6 +961,29 @@ type fakeTextDeliveries struct {
 	rows     []store.TextDelivery
 	accounts []string
 	claims   int
+	guarded  int
+	guardErr error
+}
+
+func (f *fakeTextDeliveries) WithTextDeliveryEnqueue(_ context.Context, _ string, _ store.TextDelivery, enqueue func() error) error {
+	f.guarded++
+	if f.guardErr != nil {
+		return f.guardErr
+	}
+	return enqueue()
+}
+
+func TestTextManagerPrivateDeliveryRequiresFinalEnqueueGuard(t *testing.T) {
+	m, _, _, _ := textManagerFixture(t)
+	p := textPeer(t, m)
+	textDrainFrames(p)
+	source := &fakeTextDeliveries{rows: []store.TextDelivery{{ID: 42, AccountID: p.AccountID, MatchID: "closed-match"}}, guardErr: store.ErrValueFence}
+	if err := m.PumpDeliveries(t.Context(), source); !errors.Is(err, store.ErrValueFence) {
+		t.Fatal("missing final delivery guard", err)
+	}
+	if source.guarded != 1 || len(p.frames) != 0 {
+		t.Fatal("fenced private delivery enqueued", source.guarded, len(p.frames))
+	}
 }
 
 func (f *fakeTextDeliveries) RecoverPending(context.Context, int) (int, error) { return 0, nil }

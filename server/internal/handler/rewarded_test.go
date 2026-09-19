@@ -35,10 +35,46 @@ type rewardHTTPStore struct {
 	db    *sql.DB
 }
 
+func TestRewardedHTTPExactCheckStrictBody(t *testing.T) {
+	_, econ, am, cleanup := setupEconomyHandlerTest(t)
+	defer cleanup()
+	_, token := seedAccountForEconomy(t, t.Context(), econ.DB(), am)
+	cfg := config.RewardedConfig{Enabled: true, MaxQueryBytes: 16384, MaxResponseBytes: 262144, HTTPTimeoutS: 2, KeyCacheS: 60, KeyRefreshMinS: 1, MaxConcurrentRequests: 4, ClaimTTLS: 60, MaxClaimsPerMatchWindow: 2, AdUnits: map[string]config.RewardedUnit{"123": {RewardItem: "match_bonus", RewardAmount: 1}}}
+	verifier, _ := economy.NewAdMobVerifier(cfg, nil)
+	receipts := &rewardHTTPStore{db: econ.DB()}
+	h, err := NewRewardedHandlers(cfg, am, receipts, verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, body := range []string{`{"match_id":"a","ad_unit":"123"}`, `{"match_id":"a","ad_unit":"123","claim":"secret","extra":1}`, `{"match_id":"a","ad_unit":"123","claim":"a","claim":"b"}`} {
+		r := httptest.NewRequest("POST", "/check", strings.NewReader(body))
+		r.Header.Set("Authorization", "Bearer "+token)
+		w := &rewardDeadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+		h.Check.ServeHTTP(w, r)
+		if w.Code != 400 || receipts.calls != 0 {
+			t.Fatal("invalid check reached store", w.Code, receipts.calls)
+		}
+	}
+	r := httptest.NewRequest("POST", "/check", strings.NewReader(`{"match_id":"a","ad_unit":"123","claim":"secret"}`))
+	r.Header.Set("Authorization", "Bearer "+token)
+	w := &rewardDeadlineRecorder{ResponseRecorder: httptest.NewRecorder()}
+	h.Check.ServeHTTP(w, r)
+	if w.Code != 200 || receipts.calls != 1 || !strings.Contains(w.Body.String(), `"eligible":true`) {
+		t.Fatal(w.Code, w.Body.String(), receipts.calls)
+	}
+}
+
 func (s *rewardHTTPStore) RecordVerifiedSSV(_ context.Context, p store.VerifiedRewardInteraction) error {
 	s.calls++
 	s.proof = p
 	return nil
+}
+func (s *rewardHTTPStore) CheckClaim(ctx context.Context, match, account, unit, claim string, guard func(context.Context, *sql.Tx) error) error {
+	if claim == "" {
+		return store.ErrRewardClaimInvalid
+	}
+	_, err := s.IssueClaim(ctx, match, account, unit, guard)
+	return err
 }
 func (s *rewardHTTPStore) IssueClaim(ctx context.Context, _ string, _ string, _ string, guard func(context.Context, *sql.Tx) error) (store.TextRewardClaim, error) {
 	if s.db != nil {

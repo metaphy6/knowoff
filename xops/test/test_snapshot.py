@@ -4,6 +4,7 @@ import os
 import importlib.util
 import io
 import json
+import re
 import signal
 import tarfile
 import sys
@@ -555,6 +556,43 @@ class SnapshotSafetyTests(unittest.TestCase):
                     os.kill(int(pid_file.read_text()), signal.SIGKILL)
                 except ProcessLookupError:
                     pass
+
+
+class SnapshotMigrationBoundaryTests(unittest.TestCase):
+    def test_unsupported_inner_transaction_control_refuses_before_execution(self):
+        import snapshot_integration
+        for body in (b"BEGIN;\nSELECT 1;", b"SELECT 1;\nCOMMIT;", b"BEGIN;\nCOMMIT;\nSELECT 1;\nCOMMIT;"):
+            with self.subTest(body=body), self.assertRaisesRegex(AssertionError, "transaction boundaries"):
+                snapshot_integration.migration_statement(body, 9)
+
+    def test_file_and_version_marker_share_one_transaction(self):
+        import snapshot_integration
+        # 20/26 already contain explicit wrappers;39 starts with LOCK TABLE.
+        for current, target in ((19, 20), (25, 26), (38, 39)):
+            with self.subTest(target=target), tempfile.TemporaryDirectory(dir="/tmp/agent-runs") as directory:
+                class Fixture:
+                    retained = Path(directory)
+
+                    def __init__(self):
+                        self.scripts = []
+
+                    def pg(self, sql):
+                        return b"t" if "to_regclass" in sql else str(current).encode()
+
+                    def seed_sql(self, sql):
+                        self.scripts.append(sql)
+
+                fixture = Fixture()
+                self.assertEqual(snapshot_integration.migrate(fixture, target), target)
+                self.assertEqual(len(fixture.scripts), 1)
+                script = fixture.scripts[0]
+                self.assertTrue(script.startswith("BEGIN;\n"))
+                self.assertTrue(script.endswith("\nCOMMIT;"))
+                self.assertEqual(re.findall(r"(?m)^(?:BEGIN|COMMIT);$", script), ["BEGIN;", "COMMIT;"])
+                marker = f"DELETE FROM schema_migrations; INSERT INTO schema_migrations VALUES({target},false)"
+                self.assertIn(marker, script)
+                if target == 39:
+                    self.assertLess(script.index("LOCK TABLE"), script.index(marker))
 
 
 class SnapshotIntegrationTests(unittest.TestCase):

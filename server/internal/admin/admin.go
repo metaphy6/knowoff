@@ -106,7 +106,7 @@ func (m *Manager) Authenticate(ctx context.Context, email, password string) (*Ad
 	err := m.db.QueryRowContext(ctx,
 		`SELECT a.id, a.account_id, a.email, a.role, a.password_hash, a.totp_secret, p.session_epoch
 		 FROM admin_accounts a JOIN accounts p ON p.id=a.account_id
-		 WHERE a.email=$1 AND NOT direct_account_sanction_active(p.id) AND p.deleted_at IS NULL AND p.banned_at IS NULL
+		 WHERE a.email=$1 AND a.credentials_erased_at IS NULL AND NOT direct_account_sanction_active(p.id) AND p.deleted_at IS NULL AND p.banned_at IS NULL
 		 AND (p.suspended_until IS NULL OR p.suspended_until<=clock_timestamp())`,
 		email,
 	).Scan(&a.ID, &a.AccountID, &a.Email, &a.Role, &hash, &a.TOTPSecret, &a.SessionEpoch)
@@ -145,7 +145,7 @@ func VerifyTOTP(secret, code string) bool {
 // unrelated secret via GenerateTOTPSecret.
 func (m *Manager) TOTPSecretForEmail(ctx context.Context, email string) (secret, otpauthURL string, err error) {
 	if err := m.db.QueryRowContext(ctx,
-		`SELECT totp_secret FROM admin_accounts WHERE email = $1`, email,
+		`SELECT totp_secret FROM admin_accounts WHERE email = $1 AND credentials_erased_at IS NULL`, email,
 	).Scan(&secret); err != nil {
 		return "", "", fmt.Errorf("lookup totp secret: %w", err)
 	}
@@ -182,7 +182,7 @@ func (m *Manager) createSession(ctx context.Context, adminID string, expectedEpo
 		return "", "", "", fmt.Errorf("account session unavailable")
 	}
 	var allowed bool
-	if err = tx.QueryRowContext(ctx, `SELECT p.deleted_at IS NULL AND p.banned_at IS NULL AND (p.suspended_until IS NULL OR p.suspended_until<=clock_timestamp()) AND NOT direct_account_sanction_active(p.id) FROM accounts p JOIN admin_accounts a ON a.account_id=p.id WHERE a.id=$1`, adminID).Scan(&allowed); err != nil || !allowed {
+	if err = tx.QueryRowContext(ctx, `SELECT p.deleted_at IS NULL AND p.banned_at IS NULL AND (p.suspended_until IS NULL OR p.suspended_until<=clock_timestamp()) AND NOT direct_account_sanction_active(p.id) FROM accounts p JOIN admin_accounts a ON a.account_id=p.id WHERE a.id=$1 AND a.credentials_erased_at IS NULL`, adminID).Scan(&allowed); err != nil || !allowed {
 		return "", "", "", fmt.Errorf("account session unavailable")
 	}
 	sessionID = uuid.NewString()
@@ -216,7 +216,7 @@ func (m *Manager) sessionDetails(ctx context.Context, sessionID string) (adminID
 		`SELECT a.id, a.role, s.csrf_token FROM admin_sessions s
 	   JOIN admin_accounts a ON a.id = s.admin_id
 	   JOIN accounts p ON p.id=a.account_id
-	   WHERE s.id = $1 AND s.expires_at > now() AND NOT direct_account_sanction_active(p.id) AND p.deleted_at IS NULL AND p.banned_at IS NULL AND (p.suspended_until IS NULL OR p.suspended_until<=now())`, sessionID).Scan(&adminID, &role, &csrf)
+	   WHERE s.id = $1 AND a.credentials_erased_at IS NULL AND s.expires_at > now() AND NOT direct_account_sanction_active(p.id) AND p.deleted_at IS NULL AND p.banned_at IS NULL AND (p.suspended_until IS NULL OR p.suspended_until<=now())`, sessionID).Scan(&adminID, &role, &csrf)
 	if err != nil {
 		return "", "", "", fmt.Errorf("invalid session: %w", err)
 	}

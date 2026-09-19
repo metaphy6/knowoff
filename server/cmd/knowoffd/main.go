@@ -169,7 +169,12 @@ func run() (runErr error) {
 	textService.bindModeration(portalManager, authManager)
 	// Contribution intake stays closed until an admin publishes real terms.
 
+	rewardHTTP, err := newTextRewardHTTP(cfg.Rewarded, db, authManager, textService.Values, nil)
+	if err != nil {
+		return fmt.Errorf("initialize text rewards: %w", err)
+	}
 	publicMux := http.NewServeMux()
+	rewardHTTP.register(publicMux)
 	lifecycle := newRuntimeLifecycle()
 	textHandlerDeps := handler.TextHandlerDeps{Config: cfg, Lobby: textService.Lobby, Auth: authManager, ConnLimiter: connLimiter, Deliveries: textService.Values, DeliveryWorker: textService.Lobby.Owner(), Connections: connections, ConnectionRejections: connLimiterRejections}
 	handler.RegisterTextRealtimeRoutes(publicMux, textHandlerDeps)
@@ -243,6 +248,9 @@ func run() (runErr error) {
 	}()
 	// The worker gate owns child cancellation so grace never cancels Tick early.
 	runCtx := context.Background()
+	if !textService.startBonusRecovery(runCtx, lifecycle.Workers, func(err error) { logger.Error("text bonus recovery pending", "error", err) }) {
+		return fmt.Errorf("start text bonus recovery: ownership unavailable")
+	}
 
 	errCh := make(chan error, 3)
 	for _, server := range []*http.Server{publicServer, adminServer, metricsServer} {

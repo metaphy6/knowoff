@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -299,9 +300,42 @@ func TestDeletionProviderProofIsSameAccountFreshAndSingleUse(t *testing.T) {
 		})
 	}
 }
+func deletionIsolatedDB(t *testing.T) *sql.DB {
+	t.Helper()
+	// One application database has one independent journal sequence. Other auth
+	// tests retain synthetic receipts, so this real journal needs its own database
+	// rather than colliding with their sequence1 or weakening receipt uniqueness.
+	fixture := setupTestDB(t)
+	dsn := os.Getenv("KNOWOFF_TEST_DSN")
+	if dsn == "" {
+		dsn = "postgres://knowoff:knowoff@localhost:5432/knowoff_test?sslmode=disable"
+	}
+	parsed, err := url.Parse(dsn)
+	if err != nil || parsed.Scheme != "postgres" && parsed.Scheme != "postgresql" {
+		t.Fatalf("journal fixture requires PostgreSQL URL: %v", err)
+	}
+	name := "knowoff_test_journal_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = fixture.Exec(`CREATE DATABASE "` + name + `"`); err != nil {
+		t.Fatal(err)
+	}
+	var db *sql.DB
+	t.Cleanup(func() {
+		if db != nil {
+			_ = db.Close()
+		}
+		if _, err := fixture.Exec(`DROP DATABASE "` + name + `"`); err != nil {
+			t.Error(err)
+		}
+		_ = fixture.Close()
+	})
+	parsed.Path = "/" + name
+	t.Setenv("KNOWOFF_TEST_DSN", parsed.String())
+	db = setupTestDB(t)
+	return db
+}
+
 func TestDeletionConcreteSuppressionSurvivesProcessReopen(t *testing.T) {
-	db := setupTestDB(t)
-	defer db.Close()
+	db := deletionIsolatedDB(t)
 	m := newTestManager(db)
 	pair, err := m.AuthenticateDevice(t.Context(), HashDevice(uuid.NewString()))
 	if err != nil {

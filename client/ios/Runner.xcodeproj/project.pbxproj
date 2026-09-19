@@ -236,7 +236,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin";
+			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" embed_and_thin || exit $?\n\"$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart\" \"$SRCROOT/../tool/native_admob_config.dart\" ios \"${FLUTTER_BUILD_MODE:-$CONFIGURATION}\" \"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"";
 		};
 		9740EEB61CF901F6004384FC /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -251,7 +251,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
+			shellScript = "\"$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart\" \"$SRCROOT/../tool/native_admob_config.dart\" ios \"${FLUTTER_BUILD_MODE:-$CONFIGURATION}\" > /dev/null || exit $?\n/bin/sh \"$FLUTTER_ROOT/packages/flutter_tools/bin/xcode_backend.sh\" build";
 		};
 /* End PBXShellScriptBuildPhase section */
 

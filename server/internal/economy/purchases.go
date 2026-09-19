@@ -45,24 +45,33 @@ func (p *Purchases) RecordReceipt(ctx context.Context, accountID string, platfor
 		return "", false, fmt.Errorf("invalid receipt encoding: %w", err)
 	}
 	id := uuid.NewString()
-	_, err = p.db.ExecContext(ctx,
-		`INSERT INTO store_purchases (id, account_id, platform, product_id, transaction_id, raw_receipt)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 ON CONFLICT (transaction_id) DO NOTHING`,
-		id, accountID, string(platform), productID, transactionID, receiptJSON,
-	)
+	var existing string
+	err = store.WithValueTransaction(ctx, p.db, func(tx *sql.Tx) error {
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return fmt.Errorf("record receipt account: %w", err)
+		}
+		if _, err := tx.ExecContext(ctx,
+			`INSERT INTO store_purchases (id, account_id, platform, product_id, transaction_id, raw_receipt)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (transaction_id) DO NOTHING`,
+			id, accountID, string(platform), productID, transactionID, receiptJSON,
+		); err != nil {
+			return fmt.Errorf("record receipt: %w", err)
+		}
+		var account, product, source string
+		if err := tx.QueryRowContext(ctx,
+			"SELECT id,account_id,product_id,platform FROM store_purchases WHERE transaction_id = $1",
+			transactionID,
+		).Scan(&existing, &account, &product, &source); err != nil {
+			return fmt.Errorf("lookup receipt: %w", err)
+		}
+		if account != accountID || product != productID || source != string(platform) {
+			return fmt.Errorf("receipt identity conflict")
+		}
+		return nil
+	})
 	if err != nil {
-		return "", false, fmt.Errorf("record receipt: %w", err)
-	}
-	var existing, account, product, source string
-	if err := p.db.QueryRowContext(ctx,
-		"SELECT id,account_id,product_id,platform FROM store_purchases WHERE transaction_id = $1",
-		transactionID,
-	).Scan(&existing, &account, &product, &source); err != nil {
-		return "", false, fmt.Errorf("lookup receipt: %w", err)
-	}
-	if account != accountID || product != productID || source != string(platform) {
-		return "", false, fmt.Errorf("receipt identity conflict")
+		return "", false, err
 	}
 	return existing, existing != id, nil
 }
@@ -79,6 +88,13 @@ func (p *Purchases) Refund(ctx context.Context, purchaseID string) error {
 	day := serverDay(time.Now().UTC())
 	return store.WithValueTransaction(ctx, p.db, func(tx *sql.Tx) error {
 		var accountID string
+		if err := tx.QueryRowContext(ctx, `SELECT account_id FROM store_purchases WHERE id=$1`, purchaseID).Scan(&accountID); err != nil {
+			return err
+		}
+		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+			return err
+		}
+		owner := accountID
 		var amount int
 		var verified sql.NullTime
 		var refunded sql.NullTime
@@ -88,8 +104,14 @@ func (p *Purchases) Refund(ctx context.Context, purchaseID string) error {
 		).Scan(&accountID, &amount, &verified, &refunded); err != nil {
 			return fmt.Errorf("lock purchase: %w", err)
 		}
-		if err := store.LockValueAccount(ctx, tx, accountID); err != nil {
+		if accountID != owner {
+			return ErrBillingConflict
+		}
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM billing_transactions WHERE purchase_id=$1 UNION ALL SELECT 1 FROM billing_subscription_sources WHERE initial_purchase_id=$1)`, purchaseID).Scan(&providerSource); err != nil {
 			return err
+		}
+		if providerSource {
+			return ErrBillingConflict
 		}
 		if !verified.Valid {
 			return fmt.Errorf("purchase not verified")

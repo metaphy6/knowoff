@@ -10,6 +10,8 @@ import 'core/text/cache_upgrade.dart';
 import 'presentation/screens/home_screen.dart';
 import 'presentation/theme/knowoff_theme.dart';
 import 'presentation/widgets/purchase_lifecycle.dart';
+import 'presentation/widgets/bonus_lifecycle.dart';
+import 'presentation/widgets/rewarded_lifecycle.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +23,15 @@ void main() async {
   runApp(
     PurchaseLifecycle(
       purchases: services.purchases,
-      child: KnowoffApp(config: config),
+      child: config.protocolVersion == 2
+          ? BonusLifecycle(
+              session: services.bonuses,
+              child: RewardedLifecycle(
+                session: services.rewarded,
+                child: KnowoffApp(config: config),
+              ),
+            )
+          : KnowoffApp(config: config),
     ),
   );
 }

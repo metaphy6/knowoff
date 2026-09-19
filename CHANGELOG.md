@@ -17,6 +17,36 @@ All notable changes to Knowoff are documented in this file.
 
 ### Roadmap continuation — 2026-09-19
 
+- Select a compatible project-local Flutter SDK in editor settings and document
+  setup, preventing older Dart analyzers from reporting spurious syntax errors.
+
+- Apply each restore-rehearsal migration and its schema version marker in one
+  transaction, matching application execution. Verify rollback on migration
+  and version-marker failures, including migrations that require table locks.
+
+- Coordinate billing verification and acknowledgment with account deletion using
+  bounded attempts and exact private work binding. Preserve known provider outcomes,
+  stop stale/deleted work and record unresolved deadline abandonment honestly.
+  Refuse legacy receipt insertion/replay after deletion, including lock waits.
+  Raw billing erasure and production deletion activation remain gated.
+
+- Make account/token persistence reject partial writes and serialize concurrent
+  authority reads. Preserve explicit recovery without authenticating incomplete
+  storage; fence stale OAuth installation replies and define cancellation at
+  the durable session commit boundary.
+- Connect owner-bound reward recovery and private receipt delivery to server
+  startup and the authenticated client lifecycle. Show localized requested/credited
+  amounts, cap explanations and durable dismissal retry; refresh the server wallet
+  without creating replacement accounts. Interrupted matches receive no bonus.
+  Add explicit, localized ad offers and required privacy controls with current
+  consent and account-scoped claim/load/show checks. Native ads default to disabled;
+  production configuration and physical provider acceptance remain gated.
+
+- Remove raw installation links during bounded account deletion while retaining
+  finite purpose-separated evidence for existing sanctions and erased-account
+  bootstrap prevention. Refuse missing key coverage and unexpected schema
+  changes; preserve survivors, sanction lifts and expiry.
+
 - Add audited account and known-installation sanctions with exact lifts,
   current credential checks through match start, and retryable live enforcement.
   Preserve installation binding across logout, upgrade and OAuth recovery;
@@ -28,6 +58,14 @@ All notable changes to Knowoff are documented in this file.
   deletion proof, capability and provider adapters, durable suppression binding
   and status tokens; they remain unregistered until the full erasure journey passes.
 
+- Add bounded deletion of account-bound OAuth, portal, Admin and deletion
+  credentials, preserving exact confirmation retry after proof removal. Erased
+  Admin actors retain audit identity but cannot authenticate; shared installation
+  and retained-history cleanup remain separate pending steps.
+- Complete accepted match work for surviving players when another player is
+  deleted, recording explicit erased dispositions without recreating deleted
+  value or profiles. Suppress new private delivery enqueue for fenced accounts;
+  full transport draining and shared-data erasure remain gated.
 - Enforce pinned backup creation/expiry with a maximum 90-day restore window,
   including checks before target creation and final restore success.
 - Add an independent signed suppression journal and separate durable minimum
@@ -56,13 +94,25 @@ All notable changes to Knowoff are documented in this file.
   room-routing methods while retaining the active Admin rate limiter.
 - Refuse accepted-input capture, publication, activation and new release reads
   for deleted or fenced authors; serialize release access before active mappings.
-  Atomic author withdrawal and shared-data erasure remain later deletion work.
+  Confirming deletion now atomically withdraws affected releases and removes
+  their active mappings, preserving retained source bytes and in-flight pins.
+  Shared-data erasure remains later deletion work.
+- Add closed, exactly-once Premium or verified-ad bonus payments bound to
+  original match-start eligibility, genuine awards and original UTC-day caps.
+  Preserve base settlement identity and historical replay; automatic execution
+  remains gated. Add an atomic private bonus outbox with authenticated finite
+  leases, exact acknowledgements and recovery after lost responses; HTTP adapters
+  remain unregistered until the joined flow passes.
+- Add closed private bonus receipt client handling with strict hashes, bounded
+  response cancellation and account-safe dismissal/restart recovery. It refreshes
+  authoritative balances and remains unconstructed until the joined flow passes.
 - Add bounded opaque reward claims and immutable signed AdMob receipts with
   replay protection. Handlers remain closed; no new bonus payout is enabled.
 - Capture immutable Premium bonus eligibility at authoritative match start,
   including Local Rooms, under the same account locks and transaction as
-  admission. Historical absence remains unknown; bonus payouts and the
-  interrupted-match policy remain unfinished.
+  admission. Historical absence remains unknown; bonus payouts remain gated.
+  Server-interrupted matches permanently refuse Premium/ad bonus claims and
+  verification, while preserving base Noin earned before interruption.
 - Retain Flutter's Android Gradle compatibility flags; Android debug and Web
   artifacts build with the current project SDK. Package size is informational
   in CI under the owner's decision; platform build checks remain required.

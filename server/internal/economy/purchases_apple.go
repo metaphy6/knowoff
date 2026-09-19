@@ -318,3 +318,10 @@ func (a *AppleReceiptVerifier) checkOCSP(ctx context.Context, cert, issuer *x509
 	}
 	return nil
 }
+
+func (a *AppleReceiptVerifier) AcknowledgeOutcome(ctx context.Context, _ ReceiptRequest, _ VerifiedPurchase) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "unavailable", err
+	}
+	return "no_server_operation", nil
+}

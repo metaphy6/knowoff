@@ -33,17 +33,24 @@ class StoreActions {
     return List<String>.unmodifiable(value);
   }
 
-  Future<void> load() async {
-    final generation = ++_generation;
+  void invalidate() {
+    _generation++;
     wallet = null;
     catalog = null;
     accountID = null;
+  }
+
+  Future<void> load() async {
+    invalidate();
+    final generation = _generation;
     await api.authService.ensureSession();
     final account = api.authService.accountId;
+    final sessionGeneration = api.authService.sessionGeneration;
     void current() {
       if (account == null ||
           account.isEmpty ||
           api.authService.accountId != account ||
+          api.authService.sessionGeneration != sessionGeneration ||
           generation != _generation) {
         throw const AuthSessionException('billing.account_changed');
       }

@@ -20,11 +20,11 @@ var (
 	ErrRewardClaimConflict    = errors.New("reward.receipt_conflict")
 	ErrRewardClaimBusy        = errors.New("reward.claim_budget")
 	ErrRewardClaimUnavailable = errors.New("reward.unavailable")
-	ErrRewardPolicyPending    = errors.New("reward.policy_pending")
 )
 
-// TextRewardStore is a closed verification foundation. It never writes wallets,
-// the ledger, settlements or delivery effects. No production route mounts it yet.
+// TextRewardStore retains authorized claims and verified provider interactions.
+// It never writes wallets, the ledger, settlements or delivery effects; the
+// independent bonus owner applies accepted proof through the payment boundary.
 type TextRewardStore struct {
 	db           *sql.DB
 	cfg          config.RewardedConfig
@@ -43,6 +43,7 @@ func NewTextRewardStore(db *sql.DB, cfg config.RewardedConfig) (*TextRewardStore
 type TextRewardClaim struct {
 	Claim     string    `json:"claim"`
 	ExpiresAt time.Time `json:"expires_at"`
+	AdUnit    string    `json:"ad_unit"`
 }
 
 // VerifiedRewardInteraction is an internal adapter input, not a client payload.
@@ -62,13 +63,52 @@ func rewardClaimHash(raw string) (string, error) {
 	return hex.EncodeToString(h[:]), nil
 }
 
+// CheckClaim authorizes displaying the exact retained claim without consuming
+// issuance budget or modifying proof. It cannot make SDK display atomic with a
+// later Premium purchase; callers must also fence their local session/consent.
+func (s *TextRewardStore) CheckClaim(ctx context.Context, match, account, unit, raw string, authorize func(context.Context, *sql.Tx) error) error {
+	hash, err := rewardClaimHash(raw)
+	if err != nil || !valueUUID(match) || !valueUUID(account) || authorize == nil {
+		return ErrRewardClaimInvalid
+	}
+	if _, ok := s.cfg.AdUnits[unit]; !ok {
+		return ErrRewardClaimInvalid
+	}
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(s.cfg.HTTPTimeoutS)*time.Second)
+	defer cancel()
+	return WithValueTransaction(ctx, s.db, func(tx *sql.Tx) error {
+		if err := s.eligible(ctx, tx, match, account); err != nil {
+			return err
+		}
+		if err := authorize(ctx, tx); err != nil {
+			return err
+		}
+		if err := newRewardOffer(ctx, tx, match, account); err != nil {
+			return err
+		}
+		if err := authorize(ctx, tx); err != nil {
+			return err
+		}
+		if err := newRewardOffer(ctx, tx, match, account); err != nil {
+			return err
+		}
+		var valid bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM text_reward_claims WHERE claim_hash=$1 AND match_id=$2 AND account_id=$3 AND ad_unit=$4 AND issued_at<=clock_timestamp() AND expires_at>clock_timestamp())`, hash, match, account, unit).Scan(&valid); err != nil {
+			return err
+		}
+		if !valid {
+			return ErrRewardClaimInvalid
+		}
+		// All match/account/installation waits have completed. PostgreSQL owns the
+		// interval, and original bearer authority is checked again at the boundary.
+		return nil
+	})
+}
+
 func (s *TextRewardStore) eligible(ctx context.Context, tx *sql.Tx, match, account string) error {
 	m, err := lockTextMatch(ctx, tx, match)
 	if err != nil {
 		return err
-	}
-	if m.state == "interrupted" {
-		return ErrRewardPolicyPending
 	}
 	if m.state != "completed" && m.state != "scored_low_population" {
 		return ErrRewardClaimInvalid
@@ -89,6 +129,24 @@ func (s *TextRewardStore) eligible(ctx context.Context, tx *sql.Tx, match, accou
 		return err
 	}
 	if !eligible {
+		return ErrRewardClaimInvalid
+	}
+	return nil
+}
+
+// New offers must not ask a player to watch for an already-proven bonus or
+// while Premium is current. This predicate never revokes an issued claim's
+// signed occurrence interval; verified callback replay uses eligible instead.
+func newRewardOffer(ctx context.Context, tx *sql.Tx, match, account string) error {
+	var blocked bool
+	err := tx.QueryRowContext(ctx, `SELECT
+ EXISTS(SELECT 1 FROM entitlements WHERE account_id=$2 AND entitlement_type IN ('premium_monthly','premium_yearly') AND (active_until IS NULL OR active_until>clock_timestamp()))
+ OR EXISTS(SELECT 1 FROM text_bonus_payments WHERE match_id=$1 AND account_id=$2)
+ OR EXISTS(SELECT 1 FROM text_reward_claims c JOIN text_reward_ssv_receipts r USING(claim_hash) WHERE c.match_id=$1 AND c.account_id=$2)`, match, account).Scan(&blocked)
+	if err != nil {
+		return err
+	}
+	if blocked {
 		return ErrRewardClaimInvalid
 	}
 	return nil
@@ -120,6 +178,9 @@ func (s *TextRewardStore) IssueClaim(ctx context.Context, match, account, unit s
 		if e := authorize(ctx, tx); e != nil {
 			return e
 		}
+		if e := newRewardOffer(ctx, tx, match, account); e != nil {
+			return e
+		}
 		at := s.now().UTC().Truncate(time.Millisecond)
 		expires := at.Add(time.Duration(s.cfg.ClaimTTLS) * time.Second)
 		var count int
@@ -137,13 +198,16 @@ func (s *TextRewardStore) IssueClaim(ctx context.Context, match, account, unit s
 				return e
 			}
 		}
+		if e := newRewardOffer(ctx, tx, match, account); e != nil {
+			return e
+		}
 		if e := authorize(ctx, tx); e != nil {
 			return e
 		}
 		if !s.now().Before(expires) {
 			return ErrRewardClaimInvalid
 		}
-		result = TextRewardClaim{Claim: token, ExpiresAt: expires}
+		result = TextRewardClaim{Claim: token, ExpiresAt: expires, AdUnit: unit}
 		return nil
 	})
 	if err != nil {

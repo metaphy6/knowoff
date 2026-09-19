@@ -15,13 +15,14 @@ import (
 )
 
 type RewardedReceipts interface {
+	CheckClaim(context.Context, string, string, string, string, func(context.Context, *sql.Tx) error) error
 	IssueClaim(context.Context, string, string, string, func(context.Context, *sql.Tx) error) (store.TextRewardClaim, error)
 	RecordVerifiedSSV(context.Context, store.VerifiedRewardInteraction) error
 }
 
 // RewardedHandlers are deliberately unmounted until policy, consent, retention
 // and private payout delivery gates are complete. These handlers grant no value.
-type RewardedHandlers struct{ Claim, SSV http.Handler }
+type RewardedHandlers struct{ Claim, Check, SSV http.Handler }
 
 func NewRewardedHandlers(cfg config.RewardedConfig, authMgr *auth.Manager, receipts RewardedReceipts, verifier *economy.AdMobVerifier) (RewardedHandlers, error) {
 	if !cfg.Enabled || cfg.Validate() != nil || receipts == nil || verifier == nil {
@@ -59,47 +60,62 @@ func NewRewardedHandlers(cfg config.RewardedConfig, authMgr *auth.Manager, recei
 			next(w, r.WithContext(ctx))
 		})
 	}
-	claim := bounded(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		if authMgr == nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		raw := r.Header.Get("Authorization")
-		token := strings.TrimPrefix(raw, "Bearer ")
-		if token == raw || token == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		account, err := authMgr.ValidateAccessToken(r.Context(), token)
-		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		var req struct {
-			MatchID string `json:"match_id"`
-			AdUnit  string `json:"ad_unit"`
-		}
-		if !oauthRequest(w, r, &req, "match_id", "ad_unit") {
-			return
-		}
-		authorize := func(ctx context.Context, tx *sql.Tx) error {
-			got, e := authMgr.ValidateAccessTokenTx(ctx, tx, token)
-			if e != nil || got != account {
-				return store.ErrRewardClaimInvalid
+	claimHandler := func(check bool) http.Handler {
+		return bounded(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
 			}
-			return nil
-		}
-		result, err := receipts.IssueClaim(r.Context(), req.MatchID, account, req.AdUnit, authorize)
-		if err != nil {
-			rewardedError(w, err)
-			return
-		}
-		writeJSON(w, result)
-	})
+			if authMgr == nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			raw := r.Header.Get("Authorization")
+			token := strings.TrimPrefix(raw, "Bearer ")
+			if token == raw || token == "" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			account, err := authMgr.ValidateAccessToken(r.Context(), token)
+			if err != nil {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			var req struct {
+				MatchID string `json:"match_id"`
+				AdUnit  string `json:"ad_unit"`
+				Claim   string `json:"claim,omitempty"`
+			}
+			fields := []string{"match_id", "ad_unit"}
+			if check {
+				fields = append(fields, "claim")
+			}
+			if !oauthRequest(w, r, &req, fields...) {
+				return
+			}
+			authorize := func(ctx context.Context, tx *sql.Tx) error {
+				got, e := authMgr.ValidateAccessTokenTx(ctx, tx, token)
+				if e != nil || got != account {
+					return store.ErrRewardClaimInvalid
+				}
+				return nil
+			}
+			if check {
+				if err := receipts.CheckClaim(r.Context(), req.MatchID, account, req.AdUnit, req.Claim, authorize); err != nil {
+					rewardedError(w, err)
+					return
+				}
+				writeJSON(w, map[string]any{"version": 1, "eligible": true})
+				return
+			}
+			result, err := receipts.IssueClaim(r.Context(), req.MatchID, account, req.AdUnit, authorize)
+			if err != nil {
+				rewardedError(w, err)
+				return
+			}
+			writeJSON(w, result)
+		})
+	}
 	ssv := bounded(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -118,7 +134,7 @@ func NewRewardedHandlers(cfg config.RewardedConfig, authMgr *auth.Manager, recei
 		// AdMob requires exactly 200 OK to acknowledge its callback.
 		w.WriteHeader(http.StatusOK)
 	})
-	return RewardedHandlers{Claim: claim, SSV: ssv}, nil
+	return RewardedHandlers{Claim: claimHandler(false), Check: claimHandler(true), SSV: ssv}, nil
 }
 
 func rewardedError(w http.ResponseWriter, err error) {
@@ -131,9 +147,6 @@ func rewardedError(w http.ResponseWriter, err error) {
 	case errors.Is(err, store.ErrRewardClaimConflict):
 		status = http.StatusConflict
 		code = "reward.receipt_conflict"
-	case errors.Is(err, store.ErrRewardPolicyPending):
-		status = http.StatusConflict
-		code = "reward.policy_pending"
 	case errors.Is(err, economy.ErrRewardBusy), errors.Is(err, store.ErrRewardClaimBusy):
 		status = http.StatusTooManyRequests
 		code = "reward.busy"

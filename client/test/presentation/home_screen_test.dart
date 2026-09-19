@@ -1,3 +1,5 @@
+import '../data/rewarded_session_test.dart' show Harness;
+import 'package:knowoff_client/presentation/widgets/rewarded_lifecycle.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -80,6 +82,45 @@ Future<_Auth> _pump(
 }
 
 void main() {
+  testWidgets(
+    'home privacy choices require explicit injection with a custom API',
+    (t) async {
+      final h = Harness();
+      h.platform.privacyOptionsRequired = true;
+      h.session.start();
+      final api = _Api();
+      final auth = await _pump(
+        t,
+        RewardedScope(
+          session: h.session,
+          child: HomeScreen(api: api),
+        ),
+      );
+      expect(find.byKey(const Key('reward-privacy-options')), findsNothing);
+      await _pump(
+        t,
+        HomeScreen(api: api, rewarded: h.session),
+        auth: auth,
+      );
+      expect(find.byKey(const Key('reward-privacy-options')), findsOneWidget);
+      await t.tap(find.byKey(const Key('reward-privacy-options')));
+      await t.pumpAndSettle();
+      expect(h.platform.allowed, false);
+      expect(h.claims.issues, 0);
+      expect(h.platform.loads, 0);
+      expect(auth.calls, 0);
+      await t.tap(find.byKey(const Key('service-nav-store')));
+      await t.pumpAndSettle();
+      expect(
+        t.widget<StoreScreen>(find.byType(StoreScreen)).rewarded,
+        same(h.session),
+      );
+      expect(find.byKey(const Key('reward-privacy-options')), findsOneWidget);
+      await t.pumpWidget(const SizedBox());
+      h.dispose();
+    },
+  );
+
   for (final protocol in [1, 3]) {
     testWidgets('retired protocol $protocol cannot enter a legacy quick play', (
       tester,

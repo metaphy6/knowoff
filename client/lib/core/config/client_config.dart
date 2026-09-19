@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'rewarded_ads_config.dart';
 
 /// Client-side configuration: server URL, feature flags, and localization
 /// settings. Loaded from an asset bundle JSON file so the same build can be
 /// pointed at different environments without recompilation.
 class ClientConfig {
+  RewardedAdsConfig get rewardedAds => const RewardedAdsConfig();
   const ClientConfig({
     required this.serverUrl,
     required this.websocketUrl,

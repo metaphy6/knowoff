@@ -31,9 +31,6 @@ func (s *TextValueStore) Abandon(ctx context.Context, a TextAbandon) error {
 		if err != nil {
 			return err
 		}
-		if m.record.Owner != a.Owner || m.epoch != a.Epoch {
-			return ErrValueFence
-		}
 		var seat int
 		if err = tx.QueryRowContext(ctx, `SELECT seat FROM text_admissions WHERE match_id=$1 AND account_id=$2`, a.MatchID, a.AccountID).Scan(&seat); err != nil {
 			if err == sql.ErrNoRows {
@@ -43,9 +40,6 @@ func (s *TextValueStore) Abandon(ctx context.Context, a TextAbandon) error {
 		}
 		if seat != a.Seat {
 			return ErrValueConflict
-		}
-		if err = valueAccountLock(ctx, tx, a.AccountID); err != nil {
-			return err
 		}
 		_, hash, err := valueHash(a)
 		if err != nil {
@@ -62,6 +56,9 @@ func (s *TextValueStore) Abandon(ctx context.Context, a TextAbandon) error {
 		if err != sql.ErrNoRows {
 			return err
 		}
+		if replay, err := erasedTextEventReplay(ctx, tx, a.MatchID, a.AccountID, "abandon", 0, hash); err != nil || replay {
+			return err
+		}
 		if err = checkValueFence(m, a.Owner, a.Epoch, "started"); err != nil {
 			return err
 		}
@@ -69,6 +66,19 @@ func (s *TextValueStore) Abandon(ctx context.Context, a TextAbandon) error {
 			return ErrValueConflict
 		}
 		if m.record.Prototype || m.record.Contract.Eligibility.EntryPath != "quick_play" {
+			return nil
+		}
+		accepted, err := lockAcceptedTextAccount(ctx, tx, m, a.AccountID)
+		if err != nil {
+			return err
+		}
+		if accepted.request != "" {
+			if _, err = recordTextErasure(ctx, tx, accepted, "abandon", 0, hash, a.At, ""); err != nil {
+				return err
+			}
+			if s.beforeCommit != nil {
+				return s.beforeCommit()
+			}
 			return nil
 		}
 		var previous int

@@ -60,6 +60,9 @@ func (m *Manager) BeginOAuth(ctx context.Context, req OAuthStartRequest) (*OAuth
 	if !validInstallation(req.DeviceHash) || (req.Intent != "link" && req.Intent != "restore") || req.Principal == "" || len(req.Principal) > 256 || (req.Intent == "restore" && req.AccessToken != "") {
 		return nil, ErrOAuthInvalid
 	}
+	if err := m.RegisterInstallationPrivacy(ctx, req.DeviceHash); err != nil {
+		return nil, ErrOAuthInvalid
+	}
 	state, err := randomCodeVerifier()
 	if err != nil {
 		return nil, err
@@ -182,6 +185,13 @@ func (m *Manager) completeOAuthIdentity(ctx context.Context, id, intent string, 
 	if !validOAuthIdentity(provider, subject, email) {
 		return ErrOAuthInvalid
 	}
+	var expectedInstallation sql.NullString
+	if err := m.db.QueryRowContext(ctx, `SELECT device_hash FROM oauth_flows WHERE id=$1 AND status='exchanging'`, id).Scan(&expectedInstallation); err != nil || !expectedInstallation.Valid {
+		return ErrOAuthInvalid
+	}
+	if err := m.RegisterInstallationPrivacy(ctx, expectedInstallation.String); err != nil {
+		return ErrOAuthInvalid
+	}
 	if intent == "restore" {
 		owner, err := m.FindOAuthAccount(ctx, provider, subject)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -204,6 +214,9 @@ func (m *Manager) completeOAuthIdentity(ctx context.Context, id, intent string, 
 	var status string
 	var installation sql.NullString
 	if err = tx.QueryRowContext(ctx, `SELECT status,device_hash FROM oauth_flows WHERE id=$1 AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id).Scan(&status, &installation); err != nil || status != "exchanging" {
+		return ErrOAuthInvalid
+	}
+	if installation != expectedInstallation {
 		return ErrOAuthInvalid
 	}
 	if err = linkInstallationTx(ctx, tx, account.String, installation.String, purpose); err != nil {
@@ -233,8 +246,9 @@ func (m *Manager) OAuthResult(ctx context.Context, id, secret string) (*TokenPai
 		return nil, ErrOAuthInvalid
 	}
 	var account sql.NullString
+	var expectedInstallation sql.NullString
 	var status, code string
-	err := m.db.QueryRowContext(ctx, `SELECT account_id,status,error_code FROM oauth_flows WHERE id=$1 AND completion_hash=$2 AND expires_at>clock_timestamp()`, id, codeChallenge(secret)).Scan(&account, &status, &code)
+	err := m.db.QueryRowContext(ctx, `SELECT account_id,status,error_code,device_hash FROM oauth_flows WHERE id=$1 AND completion_hash=$2 AND expires_at>clock_timestamp()`, id, codeChallenge(secret)).Scan(&account, &status, &code, &expectedInstallation)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrOAuthInvalid
 	}
@@ -255,6 +269,11 @@ func (m *Manager) OAuthResult(ctx context.Context, id, secret string) (*TokenPai
 		}
 		return nil, ErrOAuthInvalid
 	}
+	if expectedInstallation.Valid {
+		if err = m.RegisterInstallationPrivacy(ctx, expectedInstallation.String); err != nil {
+			return nil, ErrOAuthInvalid
+		}
+	}
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -269,6 +288,9 @@ func (m *Manager) OAuthResult(ctx context.Context, id, secret string) (*TokenPai
 	var accessID, refreshID, configHash, installation sql.NullString
 	err = tx.QueryRowContext(ctx, `SELECT session_epoch,issued_at,access_id,refresh_id,issuance_config_hash,device_hash FROM oauth_flows WHERE id=$1 AND completion_hash=$2 AND status='completed' AND expires_at>clock_timestamp() AND NOT EXISTS (SELECT 1 FROM auth_revocations r WHERE r.token_id=oauth_flows.initiating_token_id) FOR UPDATE`, id, codeChallenge(secret)).Scan(&bound, &at, &accessID, &refreshID, &configHash, &installation)
 	if err != nil || bound != epoch {
+		return nil, ErrOAuthInvalid
+	}
+	if installation != expectedInstallation {
 		return nil, ErrOAuthInvalid
 	}
 	if installation.Valid {

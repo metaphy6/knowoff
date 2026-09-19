@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -41,11 +42,45 @@ func VerifyCutoverControlRoles(ctx context.Context, db *sql.DB, spec CutoverCont
 
 // This exact inventory is deliberately reviewed alongside schema changes. An
 // additional table cannot silently inherit runtime DML or be omitted from capture.
-var cutoverTables = strings.Fields("account_deletion_fences account_sanction_deliveries account_sanction_installations account_sanction_lifts account_sanctions accounts admin_accounts admin_audit_log admin_operation_decisions admin_operation_results admin_sessions audit_events auth_installation_bootstrap auth_installation_rotations auth_installations auth_revocations billing_account_sources billing_legacy_premium billing_provider_tasks billing_subscription_current billing_subscription_imports billing_subscription_observations billing_subscription_replacements billing_subscription_sources billing_subscription_tasks billing_transactions challenge_current_winner challenge_entries challenge_topics challenge_votes challenge_winners custom_avatars cutover_handoffs cutover_instances cutover_requests cutover_watermarks daily_noin_earned daily_quickplay_counts device_tokens entitlements feedback guard_freezes leaderboard_admin_decisions leaderboard_admin_results leaderboard_daily_counts leaderboard_entries leaderboard_history leaderboard_weeks named_entitlement_items noin_ledger noin_wallets oauth_flows oauth_links player_blocks portal_browser_sessions portal_login_limits portal_login_requests portal_role_applications portal_roles portal_submission_counts portal_submissions portal_terms privacy_deletion_capabilities privacy_deletion_intents privacy_requests privacy_step_receipts profiles queue_cooldowns report_cases report_rate_limits reports schema_migrations store_purchases system_notices text_abandons text_accepted_inputs text_active_releases text_admissions text_archive_progress text_award_receipts text_bonus_eligibility text_content_revisions text_first_win_claims text_legacy_archive text_matches text_outbox text_process_current text_process_owners text_releases text_reward_claims text_reward_ssv_receipts text_settlements user_terms_acceptances user_terms_versions")
+var cutoverTables = strings.Fields("account_deletion_fences account_sanction_deliveries account_sanction_installations account_sanction_lifts account_sanctions accounts admin_accounts admin_audit_log admin_operation_decisions admin_operation_results admin_sessions audit_events auth_installation_bootstrap auth_installation_rotations auth_installations auth_revocations billing_account_sources billing_legacy_premium billing_provider_tasks billing_provider_work billing_subscription_current billing_subscription_imports billing_subscription_observations billing_subscription_replacements billing_subscription_sources billing_subscription_tasks billing_transactions billing_verification_slots challenge_current_winner challenge_entries challenge_topics challenge_votes challenge_winners custom_avatars cutover_handoffs cutover_instances cutover_requests cutover_watermarks daily_noin_earned daily_quickplay_counts device_tokens entitlements feedback guard_freezes leaderboard_admin_decisions leaderboard_admin_results leaderboard_daily_counts leaderboard_entries leaderboard_history leaderboard_weeks named_entitlement_items noin_ledger noin_wallets oauth_flows oauth_links player_blocks portal_browser_sessions portal_login_limits portal_login_requests portal_role_applications portal_roles portal_submission_counts portal_submissions portal_terms privacy_deletion_capabilities privacy_deletion_intents privacy_installation_erasure_authorizations privacy_installation_evidence privacy_installation_keys privacy_requests privacy_step_receipts profiles queue_cooldowns report_cases report_rate_limits reports schema_migrations store_purchases system_notices text_abandons text_accepted_inputs text_active_releases text_admissions text_archive_progress text_award_receipts text_bonus_eligibility text_bonus_outbox text_bonus_payment_items text_bonus_payments text_content_revisions text_first_win_claims text_legacy_archive text_matches text_outbox text_process_current text_process_owners text_releases text_reward_claims text_reward_ssv_receipts text_settlements text_value_erasure_dispositions user_terms_acceptances user_terms_versions")
 var cutoverReadOnlyTables = []string{"billing_legacy_premium", "billing_subscription_imports", "schema_migrations", "cutover_instances", "cutover_requests", "cutover_watermarks", "cutover_handoffs"}
-var cutoverInsertOnlyTables = []string{"account_sanction_deliveries", "account_sanction_installations", "account_sanction_lifts", "account_sanctions", "admin_audit_log", "admin_operation_decisions", "admin_operation_results", "auth_installation_bootstrap", "auth_installation_rotations", "leaderboard_admin_decisions", "leaderboard_admin_results", "portal_terms", "text_bonus_eligibility", "text_reward_claims", "text_reward_ssv_receipts", "user_terms_acceptances", "user_terms_versions"}
+var cutoverInsertOnlyTables = []string{"account_sanction_deliveries", "account_sanction_installations", "account_sanction_lifts", "account_sanctions", "admin_audit_log", "admin_operation_decisions", "admin_operation_results", "auth_installation_bootstrap", "auth_installation_rotations", "leaderboard_admin_decisions", "leaderboard_admin_results", "portal_terms", "text_bonus_eligibility", "text_bonus_payment_items", "text_bonus_payments", "text_reward_claims", "text_reward_ssv_receipts", "text_value_erasure_dispositions", "user_terms_acceptances", "user_terms_versions"}
 var cutoverSequences = strings.Fields("admin_audit_log_id_seq audit_events_id_seq billing_subscription_observations_id_seq noin_ledger_id_seq text_outbox_id_seq")
-var cutoverFunctions = []string{"account_deletion_status(p_status bytea)", "billing_retained_identity()", "billing_subscription_immutable()", "billing_subscription_projection_guard()", "billing_subscription_receipt_guard()", "billing_subscription_replacement_guard()", "billing_subscription_task_guard()", "cutover_guard_handoff()", "cutover_guard_instance()", "cutover_guard_request()", "cutover_guard_watermark()", "cutover_require_bound_request()", "direct_account_sanction_active(account uuid)", "installation_sanction_active(installation text)", "keep_avatar_revision_monotonic()", "keep_session_epoch_monotonic()", "privacy_begin_deletion_intent(p_id uuid, p_capability uuid, p_capability_sha bytea, p_secret bytea, p_expires timestamp with time zone)", "privacy_begin_deletion_oauth(p_id uuid, p_secret bytea, p_expires timestamp with time zone, p_provider text, p_state bytea, p_verifier text, p_nonce text, p_expected_account uuid)", "privacy_begin_enrollment(p_id uuid, p_account uuid, p_secret bytea, p_expires timestamp with time zone, p_epoch bigint, p_jti text, p_valid_until timestamp with time zone, p_installation text)", "privacy_bind_suppression(p_request uuid, p_sequence bigint, p_receipt bytea)", "privacy_claim_deletion_oauth(p_state bytea, p_provider text)", "privacy_complete_deletion_oauth(p_intent uuid, p_provider text, p_subject text)", "privacy_confirm_deletion(p_intent uuid, p_secret bytea, p_capability uuid, p_capability_sha bytea, p_request uuid, p_status bytea, p_expected_account uuid)", "privacy_deletion_intent_status(p_id uuid, p_secret bytea)", "privacy_enroll_capability(p_intent uuid, p_secret bytea, p_capability uuid, p_capability_sha bytea)", "privacy_erase_profile_batch(p_request uuid, p_limit integer)", "privacy_expire_deletion_intents(p_limit integer)", "privacy_prepare_verified_request(p_request uuid, p_account uuid, p_proof bytea, p_status bytea)", "privacy_security_revoke_deletion(p_account uuid)", "protect_account_auth_purpose()", "refuse_retained_value_truncate()", "report_protect_target()", "retain_text_abandon()", "text_freeze_archive_sources()", "text_protect_applied_effects()", "text_protect_closed_ranking()", "text_protect_delivery_identity()", "text_protect_match_identity()", "text_protect_process_binding()", "text_protect_process_owner()", "text_protect_rank_snapshot()", "text_protect_release_identity()", "text_protect_reviewed_source()", "text_protect_week_identity()", "text_refuse_value_rewrite()"}
+var cutoverFunctions = []string{"account_deletion_status(p_status bytea)", "billing_provider_work_guard()", "billing_retained_identity()", "billing_subscription_immutable()", "billing_subscription_projection_guard()", "billing_subscription_receipt_guard()", "billing_subscription_replacement_guard()", "billing_subscription_task_guard()", "billing_verification_slot_guard()", "cutover_guard_handoff()", "cutover_guard_instance()", "cutover_guard_request()", "cutover_guard_watermark()", "cutover_require_bound_request()", "direct_account_sanction_active(account uuid)", "installation_sanction_active(installation text)", "keep_avatar_revision_monotonic()", "keep_session_epoch_monotonic()", "privacy_allow_installation_erasure()", "privacy_begin_billing_drain(p_request uuid)", "privacy_begin_deletion_intent(p_id uuid, p_capability uuid, p_capability_sha bytea, p_secret bytea, p_expires timestamp with time zone)", "privacy_begin_deletion_oauth(p_id uuid, p_secret bytea, p_expires timestamp with time zone, p_provider text, p_state bytea, p_verifier text, p_nonce text, p_expected_account uuid)", "privacy_begin_enrollment(p_id uuid, p_account uuid, p_secret bytea, p_expires timestamp with time zone, p_epoch bigint, p_jti text, p_valid_until timestamp with time zone, p_installation text)", "privacy_bind_suppression(p_request uuid, p_sequence bigint, p_receipt bytea)", "privacy_claim_billing_attempt(p_request uuid, p_purchase uuid, p_operation text, p_attempt uuid, p_timeout integer)", "privacy_claim_deletion_oauth(p_state bytea, p_provider text)", "privacy_complete_deletion_oauth(p_intent uuid, p_provider text, p_subject text)", "privacy_confirm_deletion(p_intent uuid, p_secret bytea, p_capability uuid, p_capability_sha bytea, p_request uuid, p_status bytea, p_expected_account uuid)", "privacy_deletion_intent_status(p_id uuid, p_secret bytea)", "privacy_enroll_capability(p_intent uuid, p_secret bytea, p_capability uuid, p_capability_sha bytea)", "privacy_erase_credentials_batch(p_request uuid, p_limit integer)", "privacy_erase_installations_batch(p_request uuid, p_limit integer, p_keys text[])", "privacy_erase_profile_batch(p_request uuid, p_limit integer)", "privacy_erased_bootstrap_active(installation text)", "privacy_expire_deletion_intents(p_limit integer)", "privacy_finish_billing_attempt(p_request uuid, p_purchase uuid, p_operation text, p_generation bigint, p_attempt uuid, p_request_sha bytea, p_proof_sha bytea, p_outcome text)", "privacy_finish_billing_drain(p_request uuid)", "privacy_installation_sources(p_request uuid, p_limit integer)", "privacy_prepare_verified_request(p_request uuid, p_account uuid, p_proof bytea, p_status bytea)", "privacy_protect_admin_credentials()", "privacy_protect_confirmation()", "privacy_purge_installation_evidence(p_limit integer)", "privacy_register_installation_keys(p_hash text, p_keys text[], p_sanctions bytea[], p_bootstraps bytea[])", "privacy_security_revoke_deletion(p_account uuid)", "protect_account_auth_purpose()", "refuse_retained_value_truncate()", "report_protect_target()", "retain_text_abandon()", "text_bonus_source(p_match uuid, p_account uuid)", "text_freeze_archive_sources()", "text_protect_applied_effects()", "text_protect_closed_ranking()", "text_protect_delivery_identity()", "text_protect_match_identity()", "text_protect_process_binding()", "text_protect_process_owner()", "text_protect_rank_snapshot()", "text_protect_release_identity()", "text_protect_reviewed_source()", "text_protect_week_identity()", "text_refuse_erased_effect()", "text_refuse_value_rewrite()", "text_require_bonus_outbox()", "text_validate_bonus_outbox()", "text_validate_bonus_payment()", "text_validate_erased_settlement()", "text_validate_erasure_disposition()"}
+
+// Runtime writes only reviewed provider-attempt columns; private request binding is excluded.
+var cutoverRuntimeColumnACL = [][3]string{
+	{"billing_provider_work", "purchase_id", "INSERT"},
+	{"billing_provider_work", "operation", "INSERT"},
+	{"billing_provider_work", "work_kind", "INSERT"},
+	{"billing_provider_work", "generation", "UPDATE"},
+	{"billing_provider_work", "attempt_id", "UPDATE"},
+	{"billing_provider_work", "state", "UPDATE"},
+	{"billing_provider_work", "deadline_at", "UPDATE"},
+	{"billing_provider_work", "request_sha256", "UPDATE"},
+	{"billing_provider_work", "proof_sha256", "UPDATE"},
+	{"billing_provider_work", "last_outcome", "UPDATE"},
+	{"billing_provider_work", "updated_at", "UPDATE"},
+	{"billing_verification_slots", "account_id", "INSERT"},
+	{"billing_verification_slots", "slot", "INSERT"},
+	{"billing_verification_slots", "generation", "INSERT"},
+	{"billing_verification_slots", "attempt_id", "INSERT"},
+	{"billing_verification_slots", "request_sha256", "INSERT"},
+	{"billing_verification_slots", "deadline_at", "INSERT"},
+	{"billing_verification_slots", "state", "INSERT"},
+	{"billing_verification_slots", "generation", "UPDATE"},
+	{"billing_verification_slots", "attempt_id", "UPDATE"},
+	{"billing_verification_slots", "request_sha256", "UPDATE"},
+	{"billing_verification_slots", "deadline_at", "UPDATE"},
+	{"billing_verification_slots", "state", "UPDATE"},
+	{"billing_verification_slots", "updated_at", "UPDATE"},
+}
+
+func cutoverRuntimeColumnJSON() string {
+	raw, _ := json.Marshal(cutoverRuntimeColumnACL)
+	return string(raw)
+}
+
 var cutoverLargeObjectWriters = strings.Fields("lo_create lo_creat lo_from_bytea lo_put lowrite lo_unlink lo_truncate lo_truncate64 lo_import lo_export")
 
 func cutoverName(name string) bool {
@@ -135,10 +170,13 @@ func verifyCutoverRolesSnapshot(ctx context.Context, q cutoverRoleQuerier, spec 
 	if err = q.QueryRowContext(ctx, `SELECT COALESCE(array_agg(p.proname::text||'('||pg_get_function_identity_arguments(p.oid)||')' ORDER BY p.proname),'{}') FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public'`).Scan(pq.Array(&actual)); err != nil || !slices.Equal(actual, cutoverFunctions) {
 		return ErrCutoverPrivileges
 	}
-	if err = q.QueryRowContext(ctx, cutoverObjectQuery, spec.Owner, spec.Runtime, spec.Capture, pq.Array(cutoverReadOnlyTables), pq.Array(cutoverLargeObjectWriters), pq.Array(cutoverInsertOnlyTables), control, spec.PrivacyOwner, pq.Array(cutoverPrivacyTables), pq.Array(cutoverPrivacyNames)).Scan(&valid); err != nil || !valid {
+	if err = q.QueryRowContext(ctx, cutoverObjectQuery, spec.Owner, spec.Runtime, spec.Capture, pq.Array(cutoverReadOnlyTables), pq.Array(cutoverLargeObjectWriters), pq.Array(cutoverInsertOnlyTables), control, spec.PrivacyOwner, pq.Array(cutoverPrivacyTables), pq.Array(cutoverPrivacyNames), cutoverRuntimeColumnJSON()).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
 	if err = q.QueryRowContext(ctx, cutoverCatalogQuery, pq.Array(names), spec.Runtime, spec.Capture, control, spec.PrivacyExecutor, spec.PrivacyOwner).Scan(&valid); err != nil || !valid {
+		return ErrCutoverPrivileges
+	}
+	if err = q.QueryRowContext(ctx, cutoverBonusSourceQuery).Scan(&valid); err != nil || !valid {
 		return ErrCutoverPrivileges
 	}
 	return verifyCutoverPrivacy(ctx, q, spec, control)
@@ -194,7 +232,7 @@ const cutoverCatalogQuery = `
 WITH roles AS (SELECT oid FROM pg_roles WHERE rolname=ANY($1::text[])),
 readers AS (SELECT oid FROM pg_roles WHERE rolname IN($2,$3,$4,$5,$6)),
 control_role AS (SELECT oid FROM pg_roles WHERE rolname=$4),
-private_toast AS (SELECT c.reltoastrelid AS oid FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN('privacy_requests','privacy_step_receipts','account_deletion_fences','privacy_deletion_capabilities','privacy_deletion_intents'))
+private_toast AS (SELECT c.reltoastrelid AS oid FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN('privacy_requests','privacy_step_receipts','account_deletion_fences','privacy_deletion_capabilities','privacy_deletion_intents','privacy_installation_keys','privacy_installation_evidence','privacy_installation_erasure_authorizations'))
 SELECT NOT EXISTS(SELECT 1 FROM pg_parameter_acl p CROSS JOIN LATERAL aclexplode(p.paracl) a WHERE a.grantee=0 OR a.grantee IN(SELECT oid FROM roles))
 AND NOT EXISTS(SELECT 1 FROM pg_db_role_setting WHERE cardinality(setconfig)>0 AND (setrole IN(SELECT oid FROM roles) OR setrole=0 AND setdatabase IN(0,(SELECT oid FROM pg_database WHERE datname=current_database()))))
 AND NOT EXISTS(SELECT 1 FROM pg_namespace n WHERE nspowner IN(SELECT oid FROM readers) OR EXISTS(SELECT 1 FROM readers r WHERE has_schema_privilege(r.oid,n.oid,'CREATE')))
@@ -216,18 +254,21 @@ actors AS (SELECT oid FROM pg_roles WHERE rolname IN($1,$2,$3,$7,$8)),
 control_role AS (SELECT oid FROM pg_roles WHERE rolname=$7),
 objects AS (SELECT c.* FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT c.relname=ANY($9::text[])
  AND NOT EXISTS(SELECT 1 FROM pg_index i JOIN pg_class t ON t.oid=i.indrelid WHERE i.indexrelid=c.oid AND t.relname=ANY($9::text[]))),
-functions AS (SELECT p.* FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND NOT p.proname=ANY($10::text[]))
+functions AS (SELECT p.* FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND NOT p.proname=ANY($10::text[])),
+expected_runtime AS (SELECT v->>0 AS relation,v->>1 AS col,v->>2 AS privilege FROM jsonb_array_elements($11::jsonb) v),
+runtime_columns AS (SELECT c.relname::text AS relation,a.attname::text AS col,x.privilege_type AS privilege FROM objects c JOIN pg_attribute a ON a.attrelid=c.oid CROSS JOIN LATERAL aclexplode(a.attacl) x WHERE x.grantee=(SELECT oid FROM pg_roles WHERE rolname=$2))
 SELECT NOT EXISTS(SELECT 1 FROM objects WHERE relowner<>(SELECT oid FROM own) OR relkind NOT IN('r','i','S') OR relpersistence<>'p' OR relrowsecurity OR relforcerowsecurity)
 AND NOT EXISTS(SELECT 1 FROM objects c CROSS JOIN LATERAL aclexplode(COALESCE(c.relacl,acldefault(CASE WHEN c.relkind='S' THEN 'S'::"char" ELSE 'r'::"char" END,c.relowner))) a WHERE a.grantee NOT IN(SELECT oid FROM actors) OR a.grantee<>(SELECT oid FROM own) AND a.is_grantable)
 AND NOT EXISTS(SELECT 1 FROM pg_attribute a JOIN objects c ON c.oid=a.attrelid CROSS JOIN LATERAL aclexplode(a.attacl) x WHERE
- NOT (x.grantee=(SELECT oid FROM pg_roles WHERE rolname=$8) AND NOT x.is_grantable))
+ NOT (NOT x.is_grantable AND (x.grantee=(SELECT oid FROM pg_roles WHERE rolname=$8) OR x.grantee=(SELECT oid FROM pg_roles WHERE rolname=$2))))
+AND NOT EXISTS((SELECT * FROM runtime_columns EXCEPT ALL SELECT * FROM expected_runtime) UNION ALL (SELECT * FROM expected_runtime EXCEPT ALL SELECT * FROM runtime_columns))
 AND NOT EXISTS(SELECT 1 FROM objects WHERE relkind='r' AND (
  NOT has_table_privilege($2::text,oid,'SELECT') OR NOT has_table_privilege($3::text,oid,'SELECT')
  OR has_table_privilege($2::text,oid,'TRUNCATE,TRIGGER,REFERENCES')
  OR has_table_privilege($3::text,oid,'INSERT,UPDATE,DELETE,TRUNCATE,TRIGGER,REFERENCES')
- OR has_table_privilege($2::text,oid,'INSERT')<>(NOT relname=ANY($4::text[]))
- OR has_table_privilege($2::text,oid,'UPDATE')<>(NOT relname=ANY($4::text[]) AND NOT relname=ANY($6::text[]))
- OR has_table_privilege($2::text,oid,'DELETE')<>(NOT relname=ANY($4::text[]) AND NOT relname=ANY($6::text[]))))
+ OR has_table_privilege($2::text,oid,'INSERT')<>(NOT relname=ANY($4::text[]) AND relname NOT IN('billing_provider_work','billing_verification_slots'))
+ OR has_table_privilege($2::text,oid,'UPDATE')<>(NOT relname=ANY($4::text[]) AND relname NOT IN('billing_provider_work','billing_verification_slots') AND NOT relname=ANY($6::text[]))
+ OR has_table_privilege($2::text,oid,'DELETE')<>(NOT relname=ANY($4::text[]) AND relname NOT IN('billing_provider_work','billing_verification_slots') AND NOT relname=ANY($6::text[]) AND relname<>'text_bonus_outbox')))
 AND NOT EXISTS(SELECT 1 FROM objects o CROSS JOIN control_role c WHERE o.relkind='r' AND (
  NOT has_table_privilege(c.oid,o.oid,'SELECT') OR has_table_privilege(c.oid,o.oid,'DELETE,TRUNCATE,TRIGGER,REFERENCES')
  OR has_table_privilege(c.oid,o.oid,'INSERT')<>(o.relname IN('cutover_instances','cutover_requests','cutover_watermarks','cutover_handoffs'))
@@ -238,7 +279,8 @@ AND NOT EXISTS(SELECT 1 FROM objects WHERE relkind='S' AND (
 AND NOT EXISTS(SELECT 1 FROM objects o CROSS JOIN control_role c WHERE o.relkind='S' AND (NOT has_sequence_privilege(c.oid,o.oid,'SELECT') OR has_sequence_privilege(c.oid,o.oid,'USAGE,UPDATE')))
 AND NOT EXISTS(SELECT 1 FROM functions WHERE proowner<>(SELECT oid FROM own) OR prosecdef OR prokind<>'f'
  OR (prorettype<>'trigger'::regtype AND NOT (prorettype='boolean'::regtype AND prolang=(SELECT oid FROM pg_language WHERE lanname='sql')
- AND oid IN('public.direct_account_sanction_active(uuid)'::regprocedure,'public.installation_sanction_active(text)'::regprocedure))))
+ AND oid IN('public.direct_account_sanction_active(uuid)'::regprocedure,'public.installation_sanction_active(text)'::regprocedure))
+ AND NOT (oid='public.text_bonus_source(uuid,uuid)'::regprocedure AND prorettype='jsonb'::regtype)))
 AND NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='pg_catalog' AND p.proname=ANY($5::text[]) AND (has_function_privilege($2::text,p.oid,'EXECUTE') OR has_function_privilege($3::text,p.oid,'EXECUTE')))
 AND NOT EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace CROSS JOIN control_role c WHERE n.nspname='pg_catalog' AND p.proname=ANY($5::text[]) AND has_function_privilege(c.oid,p.oid,'EXECUTE'))
 AND NOT EXISTS(SELECT 1 FROM pg_largeobject_metadata)
@@ -246,3 +288,15 @@ AND NOT EXISTS(SELECT 1 FROM pg_foreign_server)
 AND NOT EXISTS(SELECT 1 FROM pg_subscription)
 AND NOT EXISTS(SELECT 1 FROM pg_prepared_xacts WHERE database=current_database())
 `
+
+// The sole JSONB read routine is an invoker with a reviewed, immutable source
+// definition. Its runtime-only EXECUTE ACL is checked with all other routines.
+const cutoverBonusSourceQuery = `SELECT count(*)=1 AND bool_and(
+ NOT prosecdef AND prokind='f' AND prorettype='jsonb'::regtype
+ AND prolang=(SELECT oid FROM pg_language WHERE lanname='sql')
+ AND provolatile='s' AND proparallel='u' AND NOT proisstrict
+ AND NOT proleakproof AND NOT proretset AND provariadic=0
+ AND pronargdefaults=0 AND proargdefaults IS NULL AND probin IS NULL
+ AND prosqlbody IS NULL AND proconfig=ARRAY['search_path=pg_catalog']::text[]
+ AND encode(sha256(convert_to(prosrc,'UTF8')),'hex')='8c5dca466544f273fbccf5dfe49f9ff7f92a7b23ebc04e043f8c9c7e3037ba24')
+ FROM pg_proc WHERE oid='public.text_bonus_source(uuid,uuid)'::regprocedure`

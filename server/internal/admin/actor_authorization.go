@@ -27,7 +27,7 @@ func (m *Manager) AuthorizeSessionTx(ctx context.Context, tx *sql.Tx, sessionID,
 		return "", denied
 	}
 	var role, lockedAccount string
-	if err := tx.QueryRowContext(ctx, `SELECT role,account_id FROM admin_accounts WHERE id=$1 FOR SHARE`, adminID).Scan(&role, &lockedAccount); err != nil || role != "admin" || lockedAccount != accountID {
+	if err := tx.QueryRowContext(ctx, `SELECT role,account_id FROM admin_accounts WHERE id=$1 AND credentials_erased_at IS NULL FOR SHARE`, adminID).Scan(&role, &lockedAccount); err != nil || role != "admin" || lockedAccount != accountID {
 		return "", denied
 	}
 	var storedCSRF string

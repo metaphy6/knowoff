@@ -13,6 +13,7 @@ import (
 type TextDeliveries interface {
 	RecoverPending(context.Context, int) (int, error)
 	ClaimAccountDeliveries(context.Context, string, []string, time.Time, time.Duration, int) ([]store.TextDelivery, error)
+	WithTextDeliveryEnqueue(context.Context, string, store.TextDelivery, func() error) error
 }
 
 func (m *TextManager) Owner() string { return m.owner }
@@ -65,7 +66,11 @@ func (m *TextManager) PumpDeliveries(ctx context.Context, source TextDeliveries)
 				}
 			}
 			if m.current(p) {
-				result = errors.Join(result, m.emit(p, "settlement", "", delivery))
+				// Lock order is lobby -> account -> outbox. The one-shot guard
+				// invokes only this bounded enqueue, never reentering the lobby.
+				result = errors.Join(result, source.WithTextDeliveryEnqueue(ctx, m.owner, delivery, func() error {
+					return m.emit(p, "settlement", "", delivery)
+				}))
 			}
 		}
 		m.mu.Unlock()

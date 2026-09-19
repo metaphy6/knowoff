@@ -1,3 +1,6 @@
+import '../../data/rewarded_session.dart';
+import '../widgets/rewarded_lifecycle.dart';
+import '../widgets/rewarded_offer.dart';
 import 'package:flutter/material.dart';
 import '../../core/config/app_config.dart';
 import '../../data/api_client.dart';
@@ -12,8 +15,9 @@ import 'community_screens.dart';
 import 'safety_screens.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({this.api, super.key});
+  const HomeScreen({this.api, this.rewarded, super.key});
   final ApiClient? api;
+  final RewardedSessionController? rewarded;
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -52,7 +56,11 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _busy = true);
     await koPush<void>(
       context,
-      TextPlayScreen(api: widget.api, initialSize: _size),
+      TextPlayScreen(
+        api: widget.api,
+        rewarded: widget.rewarded,
+        initialSize: _size,
+      ),
     );
     if (mounted) setState(() => _busy = false);
   }
@@ -90,7 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     : switch (index) {
                         0 => _playPage(context),
                         1 => LeaderboardScreen(api: widget.api),
-                        2 => StoreScreen(api: widget.api),
+                        2 => StoreScreen(
+                          api: widget.api,
+                          rewarded: widget.rewarded,
+                        ),
                         _ => ProfileScreen(
                           api: widget.api,
                           onAccountChanged: _accountChanged,
@@ -106,12 +117,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _playPage(BuildContext context) {
     final l = AppLocalizations.of(context);
     final device = KoDeviceLayout.of(context);
+    final rewarded =
+        widget.rewarded ??
+        (widget.api == null ? RewardedScope.maybeOf(context) : null);
     return KoPage(
       title: l.appTitle,
       showBack: false,
       compactHeader: device.isPhone,
       maxWidth: 1280,
       actions: [
+        if (rewarded != null) RewardedPrivacyButton(session: rewarded),
         IconButton(
           key: const Key('home-account'),
           tooltip: l.oauthTitle,

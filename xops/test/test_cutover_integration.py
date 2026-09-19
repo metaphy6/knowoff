@@ -14,8 +14,19 @@ class CutoverFixtureSafetyTests(unittest.TestCase):
         body = source.split("var cutoverPrivacySourceACL = [][3]string{", 1)[1].split("\n}", 1)[0]
         actual = re.findall(r'\{"([^"]+)", "([^"]*)", "([^"]+)"\}', body)
         self.assertEqual(tuple(actual), proof.PRIVACY_SOURCE_ACL)
-        self.assertEqual(len(actual), 37)
+        self.assertEqual(len(actual), 157)
         self.assertEqual(len(set(actual)), len(actual))
+
+    def test_runtime_columns_match_provisioner_without_private_binding(self):
+        import re
+        import cutover_integration as proof
+        source = (proof.ROOT / "server/internal/store/cutover_roles.go").read_text()
+        body = source.split("var cutoverRuntimeColumnACL = [][3]string{", 1)[1].split("\n}", 1)[0]
+        actual = re.findall(r'\{"([^"]+)", "([^"]+)", "([^"]+)"\}', body)
+        self.assertEqual(tuple(actual), proof.RUNTIME_COLUMN_ACL)
+        self.assertEqual(len(actual), 24)
+        self.assertEqual(len(set(actual)), len(actual))
+        self.assertFalse(any(column == "privacy_request_id" for _, column, _ in actual))
 
     def test_resource_identity_refuses_foreign_or_exposed_containers(self):
         import cutover_integration as proof

@@ -27,6 +27,7 @@ type textRuntime struct {
 	Lobby     *lobby.TextManager
 	closeOnce sync.Once
 	closeErr  error
+	bonus     textBonusWorker
 }
 
 // No listener or worker is opened until the confirmed old owner work is closed.
@@ -169,6 +170,12 @@ func (r *textRuntime) Close(ctx context.Context) error {
 		r.closeErr = drainTextRuntime(ctx, r.Lobby)
 		cleanup, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+		// Gameplay keeps its clock through drain. This separate value worker
+		// must finish before releasing the process authority it observed.
+		if err := r.bonus.stop(cleanup); err != nil {
+			r.closeErr = errors.Join(r.closeErr, err)
+			return
+		}
 		r.closeErr = errors.Join(r.closeErr, r.Owner.Release(cleanup))
 		r.closeErr = errors.Join(r.closeErr, r.Owner.Wait(cleanup))
 	})

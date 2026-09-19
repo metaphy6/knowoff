@@ -7,6 +7,9 @@ import 'dart:async';
 class _StoreAuth extends AuthService {
   _StoreAuth() : super(baseUrl: 'http://test');
   String current = 'store-owner';
+  int generation = 0;
+  @override
+  int get sessionGeneration => generation;
   @override
   String get accountId => current;
   @override
@@ -42,6 +45,49 @@ class _Api extends ApiClient {
 }
 
 void main() {
+  test(
+    'store invalidation immediately clears values and rejects in-flight reload',
+    () async {
+      final api = _Api();
+      final store = StoreActions(api);
+      await store.load();
+      store.invalidate();
+      expect(store.wallet, isNull);
+      expect(store.catalog, isNull);
+      expect(store.accountID, isNull);
+      final hold = Completer<void>();
+      api.walletWait = hold;
+      final load = store.load();
+      await Future<void>.delayed(Duration.zero);
+      store.invalidate();
+      hold.complete();
+      await expectLater(load, throwsA(isA<AuthSessionException>()));
+      expect(store.wallet, isNull);
+    },
+  );
+
+  for (final stage in ['wallet', 'catalog']) {
+    test(
+      'store snapshot rejects same-account generation change during $stage',
+      () async {
+        final api = _Api(), hold = Completer<void>();
+        if (stage == 'wallet') {
+          api.walletWait = hold;
+        } else {
+          api.catalogWait = hold;
+        }
+        final store = StoreActions(api);
+        final load = store.load();
+        await Future<void>.delayed(Duration.zero);
+        (api.authService as _StoreAuth).generation++;
+        hold.complete();
+        await expectLater(load, throwsA(isA<AuthSessionException>()));
+        expect(store.wallet, isNull);
+        expect(store.catalog, isNull);
+      },
+    );
+  }
+
   for (final stage in ['wallet', 'catalog']) {
     test('store snapshot rejects account switch during $stage', () async {
       final api = _Api(), hold = Completer<void>();

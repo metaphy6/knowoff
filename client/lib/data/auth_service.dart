@@ -2,6 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -29,10 +32,12 @@ class AuthService {
   final DateTime Function() _now;
   Future<void> _storageTail = Future<void>.value();
   int _sessionGeneration = 0;
+  bool _sessionCommitDispatched = false;
 
   static const _accessKey = 'knowoff_access_token';
   static const _refreshKey = 'knowoff_refresh_token';
   static const _accountKey = 'knowoff_account_id';
+  static const _sessionCommitKey = 'knowoff_session_commit';
   static const _installationKey = 'knowoff_installation_id';
   static Future<void>? _installationTail;
 
@@ -44,17 +49,28 @@ class AuthService {
 
   String? get accessToken => _accessToken;
   String? get accountId => _accountId;
+  int get sessionGeneration => _sessionGeneration;
+  final _identity = ValueNotifier<({String? accountId, int generation})>((
+    accountId: null,
+    generation: 0,
+  ));
+  ValueListenable<({String? accountId, int generation})> get identityChanges =>
+      _identity;
+  void _notifyIdentity() =>
+      _identity.value = (accountId: _accountId, generation: _sessionGeneration);
 
   /// Background transaction recovery must never create a replacement identity.
   Future<bool> restoreExistingSession() async {
     final generation = _sessionGeneration;
     final prefs = await SharedPreferences.getInstance();
-    if (!prefs.containsKey(_accountKey) &&
+    await prefs.reload();
+    if (!prefs.containsKey(_sessionCommitKey) &&
+        !prefs.containsKey(_accountKey) &&
         !prefs.containsKey(_accessKey) &&
         !prefs.containsKey(_refreshKey)) {
       return false;
     }
-    _load(prefs);
+    await _load(prefs);
     final account = _accountId;
     if (account == null || _refreshToken == null) {
       throw const AuthSessionException('auth.restore_required');
@@ -86,7 +102,7 @@ class AuthService {
     final generation = _sessionGeneration;
     if (_refreshing case final pending?) return pending;
     final prefs = await SharedPreferences.getInstance();
-    _load(prefs);
+    await _load(prefs);
     await _installation();
     if (_accessToken != null &&
         _refreshToken != null &&
@@ -146,7 +162,7 @@ class AuthService {
   Future<void> _refresh() async {
     final generation = _sessionGeneration;
     final prefs = await SharedPreferences.getInstance();
-    _load(prefs);
+    await _load(prefs);
     final expectedAccount = _accountId;
     final token = _refreshToken;
     if (expectedAccount == null || token == null || _isTokenExpired(token)) {
@@ -181,18 +197,55 @@ class AuthService {
   /// Keep the account and refresh token intact if restoration is unavailable.
   Future<void> invalidateSession() => refresh();
 
-  void _load(SharedPreferences prefs) {
-    _accessToken = _nonempty(prefs.getString(_accessKey));
-    _refreshToken = _nonempty(prefs.getString(_refreshKey));
-    _accountId = _nonempty(prefs.getString(_accountKey));
+  String _sessionDigest(String account, String access, String refresh) => sha256
+      .convert(utf8.encode(jsonEncode([1, account, access, refresh])))
+      .toString();
+
+  void _clearSession() {
+    _accessToken = null;
+    _refreshToken = null;
+    _accountId = null;
+    _sessionGeneration++;
+    _notifyIdentity();
   }
+
+  // The account marker is recovery metadata, never partial login authority.
+  Future<String?> _load(
+    SharedPreferences prefs, {
+    bool recovery = false,
+  }) => _store((_) async {
+    await prefs.reload();
+    final account = _nonempty(prefs.getString(_accountKey));
+    final access = _nonempty(prefs.getString(_accessKey));
+    final refresh = _nonempty(prefs.getString(_refreshKey));
+    final marker = prefs.getString(_sessionCommitKey);
+    if (marker != null &&
+        (account == null ||
+            access == null ||
+            refresh == null ||
+            marker != _sessionDigest(account, access, refresh))) {
+      _clearSession();
+      if (!recovery) {
+        throw const AuthSessionException('auth.storage_unavailable');
+      }
+      return account;
+    }
+    // Marker-less saved sessions are the explicitly supported legacy format.
+    _accountId = account;
+    _accessToken = access;
+    _refreshToken = refresh;
+    _notifyIdentity();
+    return account;
+  });
 
   String? _nonempty(Object? value) =>
       value is String && value.isNotEmpty ? value : null;
 
-  Future<void> _store(Future<void> Function(SharedPreferences) write) {
-    final operation = _storageTail.then((_) async {
-      await write(await SharedPreferences.getInstance());
+  Future<T> _store<T>(Future<T> Function(SharedPreferences) write) {
+    final operation = _storageTail.then<T>((_) async {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      return write(prefs);
     });
     _storageTail = operation.then<void>(
       (_) {},
@@ -206,6 +259,7 @@ class AuthService {
     String? expectedAccount,
     int? expectedGeneration,
     bool Function(SharedPreferences)? authorized,
+    bool Function()? stillAuthorized,
     bool advanceGeneration = false,
   }) async {
     final access = _nonempty(data['access_token']);
@@ -229,13 +283,40 @@ class AuthService {
       }
       // The account marker survives interrupted storage. Account changes are
       // serialized with refresh writes, so an old response cannot undo a switch.
-      await prefs.setString(_accountKey, account);
-      await prefs.setString(_refreshKey, refresh);
-      await prefs.setString(_accessKey, access);
-      _accessToken = access;
-      _refreshToken = refresh;
-      _accountId = account;
-      if (advanceGeneration) _sessionGeneration++;
+      try {
+        if (!await prefs.setString(_sessionCommitKey, 'incomplete') ||
+            !await prefs.setString(_accountKey, account) ||
+            !await prefs.setString(_refreshKey, refresh) ||
+            !await prefs.setString(_accessKey, access)) {
+          throw const AuthSessionException('auth.storage_unavailable');
+        }
+        if ((expectedGeneration != null &&
+                expectedGeneration != _sessionGeneration) ||
+            (stillAuthorized != null && !stillAuthorized())) {
+          throw const AuthSessionException('oauth.cancelled');
+        }
+        // Dispatch is the acceptance boundary. Cancellation before this point
+        // wins; afterward it joins this write instead of promising rollback.
+        _sessionCommitDispatched = true;
+        if (!await prefs.setString(
+          _sessionCommitKey,
+          _sessionDigest(account, access, refresh),
+        )) {
+          throw const AuthSessionException('auth.storage_unavailable');
+        }
+        _accessToken = access;
+        _refreshToken = refresh;
+        _accountId = account;
+        if (advanceGeneration) _sessionGeneration++;
+        _notifyIdentity();
+      } catch (error) {
+        _clearSession();
+        await prefs.reload();
+        if (error is AuthSessionException) rethrow;
+        throw const AuthSessionException('auth.storage_unavailable');
+      } finally {
+        _sessionCommitDispatched = false;
+      }
     });
   }
 
@@ -260,10 +341,14 @@ class AuthService {
     }
     _startingOAuth = true;
     try {
+      // A new flow can fence pending work, but cannot undo a commit whose
+      // durable final-marker write has already been dispatched.
+      if (_sessionCommitDispatched) await _storageTail;
       if (intent == OAuthIntent.restore) {
         // Restoration cannot wait for a stalled device/refresh request. Fence its
         // eventual storage write and let subsequent reads use the restored session.
         _sessionGeneration++;
+        _notifyIdentity();
         _ensuring = null;
         _refreshing = null;
       }
@@ -274,8 +359,10 @@ class AuthService {
       if (generation != _oauthGeneration) {
         throw const AuthSessionException('oauth.cancelled');
       }
-      _load(prefs);
-      final originalAccount = _accountId;
+      final originalAccount = await _load(
+        prefs,
+        recovery: intent == OAuthIntent.restore,
+      );
       final response = await _oauthPost('/start', {
         'provider': provider,
         'intent': intent.name,
@@ -319,13 +406,17 @@ class AuthService {
     if (generation != _oauthGeneration) {
       throw const AuthSessionException('oauth.cancelled');
     }
-    _load(prefs);
+    await prefs.reload();
     final saved = prefs.getString(_oauthKey);
     if (saved == null) return null;
     try {
       final data = _oauthMap(saved);
+      final originalAccount = await _load(
+        prefs,
+        recovery: data['intent'] == 'restore',
+      );
       if (data['server'] != _baseUrl ||
-          data['original_account'] != _accountId) {
+          data['original_account'] != originalAccount) {
         throw const AuthSessionException('oauth.cancelled');
       }
       final provider = data['provider'];
@@ -337,7 +428,7 @@ class AuthService {
         data,
         provider,
         intent == 'link' ? OAuthIntent.link : OAuthIntent.restore,
-        _accountId,
+        originalAccount,
         _baseUrl,
         _now(),
       );
@@ -351,6 +442,11 @@ class AuthService {
 
   Future<void> cancelOAuth({int? generation}) async {
     if (generation != null && generation != _oauthGeneration) return;
+    final target = _oauthGeneration;
+    if (_sessionCommitDispatched) {
+      await _storageTail;
+      if (target != _oauthGeneration) return;
+    }
     final current = ++_oauthGeneration;
     _oauth = null;
     _oauthCandidate = null;
@@ -408,13 +504,17 @@ class AuthService {
       }
       _oauthCandidate = data;
     }
-    _load(await SharedPreferences.getInstance());
+    final originalAccount = await _load(
+      await SharedPreferences.getInstance(),
+      recovery: attempt.intent == OAuthIntent.restore,
+    );
     if (generation != _oauthGeneration ||
-        _accountId != attempt._originalAccount) {
+        originalAccount != attempt._originalAccount) {
       throw const AuthSessionException('oauth.cancelled');
     }
     final different =
-        _accountId != null && _oauthCandidate!['account_id'] != _accountId;
+        originalAccount != null &&
+        _oauthCandidate!['account_id'] != originalAccount;
     if (different && attempt.intent == OAuthIntent.link) {
       throw const AuthSessionException('oauth.account_mismatch');
     }
@@ -438,7 +538,6 @@ class AuthService {
   }
 
   Future<void> _applyOAuth(int generation, OAuthAttempt attempt) async {
-    final sessionGeneration = _sessionGeneration;
     var candidate = _oauthCandidate;
     if (candidate == null ||
         !attempt.expiresAt.isAfter(_now()) ||
@@ -446,9 +545,13 @@ class AuthService {
         _isTokenExpired(candidate['refresh_token'] as String)) {
       throw const AuthSessionException('oauth.expired');
     }
-    _load(await SharedPreferences.getInstance());
+    final originalAccount = await _load(
+      await SharedPreferences.getInstance(),
+      recovery: attempt.intent == OAuthIntent.restore,
+    );
+    final sessionGeneration = _sessionGeneration;
     if (generation != _oauthGeneration ||
-        _accountId != attempt._originalAccount) {
+        originalAccount != attempt._originalAccount) {
       throw const AuthSessionException('oauth.cancelled');
     }
     if (attempt.intent == OAuthIntent.link &&
@@ -490,6 +593,11 @@ class AuthService {
         return generation == _oauthGeneration &&
             prefs.getString(_accountKey) == attempt._originalAccount;
       },
+      stillAuthorized: () =>
+          generation == _oauthGeneration &&
+          attempt.expiresAt.isAfter(_now()) &&
+          !_isTokenExpired(candidate!['access_token'] as String) &&
+          !_isTokenExpired(candidate['refresh_token'] as String),
       advanceGeneration: true,
     );
     await cancelOAuth(generation: generation);
@@ -575,9 +683,19 @@ class AuthService {
       // Only persisted identity may authorize a subsequent network request.
       await prefs.reload();
       final existing = _nonempty(prefs.getString(_installationKey));
-      final signed =
-          _tokenInstallation(prefs.getString(_refreshKey)) ??
-          _tokenInstallation(prefs.getString(_accessKey));
+      final marker = prefs.getString(_sessionCommitKey);
+      final account = _nonempty(prefs.getString(_accountKey));
+      final access = _nonempty(prefs.getString(_accessKey));
+      final refresh = _nonempty(prefs.getString(_refreshKey));
+      final coherent =
+          marker == null ||
+          account != null &&
+              access != null &&
+              refresh != null &&
+              marker == _sessionDigest(account, access, refresh);
+      final signed = coherent
+          ? _tokenInstallation(refresh) ?? _tokenInstallation(access)
+          : null;
       if (existing != null) {
         if (signed != null && signed != existing) {
           throw const AuthSessionException('auth.installation_mismatch');

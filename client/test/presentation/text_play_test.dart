@@ -1,3 +1,10 @@
+import 'package:knowoff_client/data/rewarded_session.dart';
+import '../data/rewarded_ads_test.dart' as ads;
+import 'package:knowoff_client/data/bonus_delivery.dart';
+import 'package:knowoff_client/data/bonus_session.dart';
+import '../data/bonus_delivery_test.dart'
+    show Transport, MemoryDismissals, account;
+import '../data/bonus_session_test.dart' show SessionAuth;
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -14,7 +21,167 @@ import '../core/network/text_session_test.dart'
     show FakeTextTransport, hello, admit;
 import '../core/network/text_reducer_test.dart' show fixture;
 
+class ObservedBonusSession extends BonusSessionController {
+  ObservedBonusSession(super.auth, super.deliveries);
+  bool get observed => hasListeners;
+}
+
 void main() {
+  testWidgets(
+    'text screen rebinds injected reward listener without relabeling socket',
+    (t) async {
+      SharedPreferences.setMockInitialValues({});
+      final transport = FakeTextTransport();
+      final session = TextSession(
+        transport: transport,
+        tokenLoader: () async => 'token',
+      );
+      final firstTransport = Transport(), secondTransport = Transport();
+      final first = ObservedBonusSession(
+        SessionAuth(firstTransport),
+        BonusDeliveryController(firstTransport, MemoryDismissals()),
+      )..start();
+      final second = ObservedBonusSession(
+        SessionAuth(secondTransport),
+        BonusDeliveryController(secondTransport, MemoryDismissals()),
+      )..start();
+      await first.refresh();
+      await second.refresh();
+      Future<void> mount(BonusSessionController bonuses) async {
+        await t.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: knowoffTheme(),
+            home: TextPlayScreen(
+              session: session,
+              api: SafetyApi(),
+              bonuses: bonuses,
+              rewardIdentity: (accountId: account, generation: 0),
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+      }
+
+      await mount(first);
+      await mount(second);
+      expect(first.observed, isFalse);
+      expect(second.observed, isTrue);
+      await session.connect();
+      await t.pump();
+      transport.emit('hello', hello());
+      await t.pumpAndSettle();
+      expect(firstTransport.claims, 1);
+      expect(secondTransport.claims, 2);
+      await t.pumpWidget(const SizedBox());
+      session.dispose();
+      first.dispose();
+      first.deliveries.dispose();
+      second.dispose();
+      second.deliveries.dispose();
+    },
+  );
+
+  for (final terminalCase in ['completed', 'interrupted', 'prototype']) {
+    testWidgets(
+      'reward reads follow authenticated hello and terminal policy $terminalCase',
+      (t) async {
+        SharedPreferences.setMockInitialValues({});
+        final transport = FakeTextTransport();
+        final session = TextSession(
+          transport: transport,
+          tokenLoader: () async => 'token',
+        );
+        final rewardTransport = Transport();
+        final auth = SessionAuth(rewardTransport);
+        final bonuses = BonusSessionController(
+          auth,
+          BonusDeliveryController(rewardTransport, MemoryDismissals()),
+        )..start();
+        await bonuses.refresh();
+        final claims = ads.Claims()
+          ..accountId = account
+          ..sessionGeneration = 0;
+        final platform = ads.Platform();
+        final rewarded = RewardedSessionController(
+          claims,
+          platform,
+          identityChanges: auth.identity,
+          sdkAdUnit: ads.unit,
+          now: () => ads.at,
+        )..start();
+
+        await t.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: knowoffTheme(),
+            home: TextPlayScreen(
+              session: session,
+              api: SafetyApi(),
+              bonuses: bonuses,
+              rewarded: rewarded,
+              rewardIdentity: (accountId: account, generation: 0),
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+        expect(rewardTransport.claims, 1);
+        await session.connect();
+        await t.pump();
+        transport.emit('hello', hello(prototype: terminalCase == 'prototype'));
+        await t.pumpAndSettle();
+        expect(rewardTransport.claims, terminalCase == 'prototype' ? 1 : 2);
+        await session.control('room_create', {});
+        admit(transport);
+        final terminal = fixture('snapshot-verdict-begun-only');
+        terminal['contract']['match_id'] = ads.match;
+        if (terminalCase == 'interrupted') {
+          terminal['verdict'] = {'outcome': 'interrupted'};
+        }
+        transport.emit('snapshot', terminal);
+        await t.pumpAndSettle();
+        expect(session.snapshot?.phase, 'verdict');
+        expect(claims.issues, terminalCase == 'completed' ? 1 : 0);
+        expect(platform.loads, terminalCase == 'completed' ? 1 : 0);
+        expect(platform.ad.shows, 0);
+        expect(
+          rewardTransport.claims,
+          terminalCase == 'prototype'
+              ? 1
+              : terminalCase == 'interrupted'
+              ? 2
+              : 3,
+        );
+        transport.emit('snapshot', terminal);
+        await t.pumpAndSettle();
+        expect(
+          rewardTransport.claims,
+          terminalCase == 'prototype'
+              ? 1
+              : terminalCase == 'interrupted'
+              ? 2
+              : 3,
+        );
+        expect(claims.issues, terminalCase == 'completed' ? 1 : 0);
+        claims.sessionGeneration++;
+        auth.switchAccount(account);
+        await bonuses.refresh();
+        final afterSwitch = rewardTransport.claims;
+        await transport.reconnect();
+        await t.pump();
+        transport.emit('hello', hello(prototype: terminalCase == 'prototype'));
+        await t.pumpAndSettle();
+        expect(rewardTransport.claims, afterSwitch);
+        await t.pumpWidget(const SizedBox());
+        session.dispose();
+        rewarded.dispose();
+        bonuses.dispose();
+        bonuses.deliveries.dispose();
+      },
+    );
+  }
   for (final local in [false, true]) {
     testWidgets(
       'six-seat selection sends exact v2 admission tuple local=$local',

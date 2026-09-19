@@ -2,6 +2,30 @@
 
 Flutter codebase for Android, iOS, and Web PWA.
 
+## Local Flutter SDK and editor diagnostics
+
+The client requires Flutter ≥3.44.0 and Dart ≥3.12.0 as declared in
+`pubspec.yaml`. Older analyzers report misleading syntax and missing-parameter
+errors for newer Dart features. The repository's VS Code settings select
+`.tools/flutter` at the repository root; this SDK is ignored by Git. Put a
+compatible Flutter SDK there, or override `dart.flutterSdkPath` with your own
+compatible installation. This workstation uses Flutter 3.47.1 / Dart 3.13.1.
+
+From the repository root:
+
+```bash
+export PATH="$PWD/.tools/flutter/bin:$PATH"
+cd client
+flutter pub get
+flutter gen-l10n
+flutter analyze
+```
+
+After changing SDK selection, run **Dart: Restart Analysis Server** (or reload
+the editor window). Do not suppress diagnostics or rewrite valid newer syntax
+for an SDK older than the project's declared minimum.
+
+
 The active generation uses five text modes: Missed the Briefing, Secret Scale,
 Make Room, Bad Bargains and Top That. Quick Play and Local Rooms choose an
 explicit mode, 4/6-seat size, content language and server-advertised release.
@@ -124,3 +148,33 @@ flutter build web
 From the repository root, run the unified gate with `python3 xops/test/tests-lints.py`.
 The browser migration has a separate dependency-free check:
 `node --test client/test/web/text_generation_test.mjs`.
+
+## Native rewarded ads
+
+Rewarded ads default to disabled (`KNOWOFF_REWARDED_ADS=false`) and are
+unavailable on Web. The pinned `google_mobile_ads` 9.1.0 adapter requires Android
+API 24 or newer, compile SDK 36, and iOS deployment target 13.0 or newer.
+Enabling a native build requires `--dart-define=KNOWOFF_REWARDED_ADS=true` plus
+`KNOWOFF_ADMOB_ANDROID_APP_ID` and `KNOWOFF_ADMOB_ANDROID_AD_UNIT` for Android,
+or `KNOWOFF_ADMOB_IOS_APP_ID` and `KNOWOFF_ADMOB_IOS_AD_UNIT` for iOS. Supply your
+configured AdMob identifiers through the same `--dart-define` build mechanism.
+The app ID (`ca-app-pub-…~…`) and rewarded unit (`ca-app-pub-…/…`) must have the
+same publisher. The server AdMob allowlist uses the numeric unit suffix returned
+in SSV callbacks. No production identifiers are included in this repository.
+
+Debug builds with ads enabled and both platform IDs omitted use Google's
+[official test identifiers](https://developers.google.com/admob/flutter/test-ads).
+Enabled release builds reject missing, mismatched or sample identifiers during
+the native build. Disabled builds retain sample app metadata so the plugin can
+be packaged safely; Android explicitly removes `MobileAdsInitProvider` from the
+merged manifest. This artifact check establishes initializer absence, not a
+physical-device network measurement. iOS build execution, on-device consent,
+SDK traffic and live signed callback evidence remain separate release gates.
+
+Consent uses the current UMP `canRequestAds` result after its update/form flow;
+constructing the Dart adapter or refreshing consent does not initialize Mobile
+Ads. Only an authorized claim can load an ad, and showing it requires an explicit
+player action and a fresh server check. SDK reward/dismissal callbacks refresh
+server receipts and never credit the wallet. See Google's
+[Flutter privacy guidance](https://developers.google.com/admob/flutter/privacy)
+and [rewarded SSV guidance](https://developers.google.com/admob/flutter/ssv).

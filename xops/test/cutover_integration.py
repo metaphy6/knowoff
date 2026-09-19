@@ -34,51 +34,198 @@ READ_ONLY = {"billing_legacy_premium", "billing_subscription_imports", "schema_m
              "cutover_instances", "cutover_requests", "cutover_watermarks", "cutover_handoffs"}
 INSERT_ONLY = {"admin_audit_log", "admin_operation_decisions", "admin_operation_results",
                "portal_terms", "user_terms_versions", "user_terms_acceptances",
-               "account_sanctions", "account_sanction_installations", "account_sanction_lifts", "account_sanction_deliveries", "auth_installation_bootstrap", "auth_installation_rotations", "leaderboard_admin_decisions", "leaderboard_admin_results", "text_bonus_eligibility", "text_reward_claims", "text_reward_ssv_receipts"}
-PRIVATE_TABLES = {"privacy_requests", "privacy_step_receipts", "account_deletion_fences", "privacy_deletion_capabilities", "privacy_deletion_intents"}
-PRIVACY_FUNCTIONS = {"privacy_prepare_verified_request", "privacy_bind_suppression", "privacy_erase_profile_batch", "account_deletion_status",
+               "account_sanctions", "account_sanction_installations", "account_sanction_lifts", "account_sanction_deliveries", "auth_installation_bootstrap", "auth_installation_rotations", "leaderboard_admin_decisions", "leaderboard_admin_results", "text_bonus_eligibility", "text_bonus_payment_items", "text_bonus_payments", "text_reward_claims", "text_reward_ssv_receipts", "text_value_erasure_dispositions"}
+PRIVATE_TABLES = {"privacy_requests", "privacy_step_receipts", "account_deletion_fences", "privacy_deletion_capabilities", "privacy_deletion_intents", "privacy_installation_keys", "privacy_installation_evidence", "privacy_installation_erasure_authorizations"}
+RUNTIME_COLUMN_ACL = (
+    ('billing_provider_work', 'purchase_id', 'INSERT'),
+    ('billing_provider_work', 'operation', 'INSERT'),
+    ('billing_provider_work', 'work_kind', 'INSERT'),
+    ('billing_provider_work', 'generation', 'UPDATE'),
+    ('billing_provider_work', 'attempt_id', 'UPDATE'),
+    ('billing_provider_work', 'state', 'UPDATE'),
+    ('billing_provider_work', 'deadline_at', 'UPDATE'),
+    ('billing_provider_work', 'request_sha256', 'UPDATE'),
+    ('billing_provider_work', 'proof_sha256', 'UPDATE'),
+    ('billing_provider_work', 'last_outcome', 'UPDATE'),
+    ('billing_provider_work', 'updated_at', 'UPDATE'),
+    ('billing_verification_slots', 'account_id', 'INSERT'),
+    ('billing_verification_slots', 'slot', 'INSERT'),
+    ('billing_verification_slots', 'generation', 'INSERT'),
+    ('billing_verification_slots', 'attempt_id', 'INSERT'),
+    ('billing_verification_slots', 'request_sha256', 'INSERT'),
+    ('billing_verification_slots', 'deadline_at', 'INSERT'),
+    ('billing_verification_slots', 'state', 'INSERT'),
+    ('billing_verification_slots', 'generation', 'UPDATE'),
+    ('billing_verification_slots', 'attempt_id', 'UPDATE'),
+    ('billing_verification_slots', 'request_sha256', 'UPDATE'),
+    ('billing_verification_slots', 'deadline_at', 'UPDATE'),
+    ('billing_verification_slots', 'state', 'UPDATE'),
+    ('billing_verification_slots', 'updated_at', 'UPDATE'),
+)
+PRIVACY_FUNCTIONS = {"privacy_begin_billing_drain", "privacy_claim_billing_attempt", "privacy_finish_billing_attempt", "privacy_finish_billing_drain", "privacy_prepare_verified_request", "privacy_bind_suppression", "privacy_erase_credentials_batch", "privacy_erase_profile_batch", "account_deletion_status",
                      "privacy_begin_enrollment", "privacy_enroll_capability", "privacy_begin_deletion_intent",
                      "privacy_begin_deletion_oauth", "privacy_claim_deletion_oauth", "privacy_complete_deletion_oauth",
-                     "privacy_confirm_deletion", "privacy_security_revoke_deletion", "privacy_deletion_intent_status", "privacy_expire_deletion_intents"}
+                     "privacy_confirm_deletion", "privacy_security_revoke_deletion", "privacy_deletion_intent_status", "privacy_expire_deletion_intents", "installation_sanction_active", "privacy_allow_installation_erasure", "privacy_erased_bootstrap_active", "privacy_installation_sources", "privacy_register_installation_keys", "privacy_erase_installations_batch", "privacy_purge_installation_evidence"}
 # Exact source authority of the NOLOGIN definer; empty column means table grant.
 PRIVACY_SOURCE_ACL = (
-    ("account_sanction_installations", "device_hash", "SELECT"),
-    ("account_sanction_installations", "operation_id", "SELECT"),
-    ("account_sanction_lifts", "sanction_id", "SELECT"),
-    ("account_sanctions", "account_id", "SELECT"),
-    ("account_sanctions", "operation_id", "SELECT"),
-    ("account_sanctions", "until_at", "SELECT"),
-    ("accounts", "auth_purpose", "SELECT"),
-    ("accounts", "banned_at", "SELECT"),
-    ("accounts", "deleted_at", "SELECT"),
-    ("accounts", "deleted_at", "UPDATE"),
-    ("accounts", "id", "SELECT"),
-    ("accounts", "id", "UPDATE"),
-    ("accounts", "nickname", "SELECT"),
-    ("accounts", "session_epoch", "SELECT"),
-    ("accounts", "session_epoch", "UPDATE"),
-    ("accounts", "suspended_until", "SELECT"),
-    ("admin_accounts", "account_id", "SELECT"),
-    ("admin_accounts", "id", "SELECT"),
-    ("admin_sessions", "", "DELETE"),
-    ("admin_sessions", "admin_id", "SELECT"),
-    ("auth_installations", "device_hash", "SELECT"),
-    ("auth_installations", "device_hash", "UPDATE"),
-    ("auth_revocations", "token_id", "SELECT"),
-    ("device_tokens", "account_id", "SELECT"),
-    ("device_tokens", "device_hash", "SELECT"),
-    ("noin_ledger", "account_id", "SELECT"),
-    ("oauth_links", "account_id", "SELECT"),
-    ("oauth_links", "provider", "SELECT"),
-    ("oauth_links", "provider_subject", "SELECT"),
-    ("portal_browser_sessions", "", "DELETE"),
-    ("portal_browser_sessions", "account_id", "SELECT"),
-    ("portal_login_requests", "", "DELETE"),
-    ("portal_login_requests", "account_id", "SELECT"),
-    ("profiles", "", "DELETE"),
-    ("profiles", "", "SELECT"),
-    ("profiles", "account_id", "UPDATE"),
-    ("text_admissions", "account_id", "SELECT"),
+    ('account_sanction_installations', '', 'DELETE'),
+    ('account_sanction_installations', 'device_hash', 'SELECT'),
+    ('account_sanction_installations', 'device_hash', 'UPDATE'),
+    ('account_sanction_installations', 'operation_id', 'SELECT'),
+    ('account_sanction_lifts', 'sanction_id', 'SELECT'),
+    ('account_sanctions', 'account_id', 'SELECT'),
+    ('account_sanctions', 'created_at', 'SELECT'),
+    ('account_sanctions', 'operation_id', 'SELECT'),
+    ('account_sanctions', 'until_at', 'SELECT'),
+    ('accounts', 'auth_purpose', 'SELECT'),
+    ('accounts', 'banned_at', 'SELECT'),
+    ('accounts', 'deleted_at', 'SELECT'),
+    ('accounts', 'deleted_at', 'UPDATE'),
+    ('accounts', 'id', 'SELECT'),
+    ('accounts', 'id', 'UPDATE'),
+    ('accounts', 'nickname', 'SELECT'),
+    ('accounts', 'session_epoch', 'SELECT'),
+    ('accounts', 'session_epoch', 'UPDATE'),
+    ('accounts', 'suspended_until', 'SELECT'),
+    ('admin_accounts', 'account_id', 'SELECT'),
+    ('admin_accounts', 'backup_codes', 'SELECT'),
+    ('admin_accounts', 'backup_codes', 'UPDATE'),
+    ('admin_accounts', 'credentials_erased_at', 'SELECT'),
+    ('admin_accounts', 'credentials_erased_at', 'UPDATE'),
+    ('admin_accounts', 'email', 'SELECT'),
+    ('admin_accounts', 'email', 'UPDATE'),
+    ('admin_accounts', 'id', 'SELECT'),
+    ('admin_accounts', 'password_hash', 'SELECT'),
+    ('admin_accounts', 'password_hash', 'UPDATE'),
+    ('admin_accounts', 'role', 'SELECT'),
+    ('admin_accounts', 'role', 'UPDATE'),
+    ('admin_accounts', 'totp_secret', 'SELECT'),
+    ('admin_accounts', 'totp_secret', 'UPDATE'),
+    ('admin_accounts', 'updated_at', 'UPDATE'),
+    ('admin_sessions', '', 'DELETE'),
+    ('admin_sessions', 'admin_id', 'SELECT'),
+    ('admin_sessions', 'id', 'SELECT'),
+    ('admin_sessions', 'id', 'UPDATE'),
+    ('auth_installation_bootstrap', '', 'DELETE'),
+    ('auth_installation_bootstrap', 'account_id', 'SELECT'),
+    ('auth_installation_bootstrap', 'device_hash', 'SELECT'),
+    ('auth_installation_bootstrap', 'device_hash', 'UPDATE'),
+    ('auth_installation_bootstrap', 'state', 'SELECT'),
+    ('auth_installation_rotations', '', 'DELETE'),
+    ('auth_installation_rotations', 'access_id', 'SELECT'),
+    ('auth_installation_rotations', 'account_id', 'SELECT'),
+    ('auth_installation_rotations', 'device_hash', 'SELECT'),
+    ('auth_installation_rotations', 'issuance_config_hash', 'SELECT'),
+    ('auth_installation_rotations', 'issued_at', 'SELECT'),
+    ('auth_installation_rotations', 'old_refresh_id', 'SELECT'),
+    ('auth_installation_rotations', 'old_refresh_id', 'UPDATE'),
+    ('auth_installation_rotations', 'refresh_id', 'SELECT'),
+    ('auth_installation_rotations', 'session_epoch', 'SELECT'),
+    ('auth_installations', '', 'DELETE'),
+    ('auth_installations', 'device_hash', 'INSERT'),
+    ('auth_installations', 'device_hash', 'SELECT'),
+    ('auth_installations', 'device_hash', 'UPDATE'),
+    ('auth_revocations', '', 'DELETE'),
+    ('auth_revocations', 'token_id', 'SELECT'),
+    ('auth_revocations', 'token_id', 'UPDATE'),
+    ('billing_account_sources', 'account_id', 'SELECT'),
+    ('billing_account_sources', 'original_key', 'SELECT'),
+    ('billing_account_sources', 'original_key', 'UPDATE'),
+    ('billing_account_sources', 'platform', 'SELECT'),
+    ('billing_provider_tasks', '', 'DELETE'),
+    ('billing_provider_tasks', 'attempts', 'SELECT'),
+    ('billing_provider_tasks', 'attempts', 'UPDATE'),
+    ('billing_provider_tasks', 'proof', 'SELECT'),
+    ('billing_provider_tasks', 'purchase_id', 'SELECT'),
+    ('billing_provider_tasks', 'request', 'SELECT'),
+    ('billing_provider_tasks', 'state', 'SELECT'),
+    ('billing_provider_tasks', 'state', 'UPDATE'),
+    ('billing_provider_tasks', 'updated_at', 'UPDATE'),
+    ('billing_provider_work', '', 'INSERT'),
+    ('billing_provider_work', '', 'SELECT'),
+    ('billing_provider_work', '', 'UPDATE'),
+    ('billing_subscription_replacements', 'platform', 'SELECT'),
+    ('billing_subscription_replacements', 'predecessor_key', 'SELECT'),
+    ('billing_subscription_replacements', 'successor_key', 'SELECT'),
+    ('billing_subscription_sources', 'account_id', 'SELECT'),
+    ('billing_subscription_sources', 'initial_purchase_id', 'SELECT'),
+    ('billing_subscription_sources', 'platform', 'SELECT'),
+    ('billing_subscription_sources', 'source_key', 'SELECT'),
+    ('billing_subscription_tasks', '', 'DELETE'),
+    ('billing_subscription_tasks', 'attempts', 'SELECT'),
+    ('billing_subscription_tasks', 'attempts', 'UPDATE'),
+    ('billing_subscription_tasks', 'platform', 'SELECT'),
+    ('billing_subscription_tasks', 'proof', 'SELECT'),
+    ('billing_subscription_tasks', 'request', 'SELECT'),
+    ('billing_subscription_tasks', 'source_key', 'SELECT'),
+    ('billing_subscription_tasks', 'state', 'SELECT'),
+    ('billing_subscription_tasks', 'state', 'UPDATE'),
+    ('billing_subscription_tasks', 'updated_at', 'UPDATE'),
+    ('billing_transactions', 'account_id', 'SELECT'),
+    ('billing_transactions', 'original_key', 'SELECT'),
+    ('billing_transactions', 'product_kind', 'SELECT'),
+    ('billing_transactions', 'purchase_id', 'SELECT'),
+    ('billing_verification_slots', '', 'DELETE'),
+    ('billing_verification_slots', '', 'SELECT'),
+    ('billing_verification_slots', 'state', 'UPDATE'),
+    ('billing_verification_slots', 'updated_at', 'UPDATE'),
+    ('challenge_entries', 'account_id', 'SELECT'),
+    ('challenge_entries', 'id', 'SELECT'),
+    ('challenge_entries', 'id', 'UPDATE'),
+    ('device_tokens', '', 'DELETE'),
+    ('device_tokens', 'account_id', 'SELECT'),
+    ('device_tokens', 'created_at', 'SELECT'),
+    ('device_tokens', 'device_hash', 'SELECT'),
+    ('device_tokens', 'id', 'SELECT'),
+    ('device_tokens', 'id', 'UPDATE'),
+    ('device_tokens', 'last_seen_at', 'SELECT'),
+    ('noin_ledger', 'account_id', 'SELECT'),
+    ('oauth_flows', '', 'DELETE'),
+    ('oauth_flows', 'access_id', 'SELECT'),
+    ('oauth_flows', 'account_id', 'SELECT'),
+    ('oauth_flows', 'device_hash', 'SELECT'),
+    ('oauth_flows', 'id', 'SELECT'),
+    ('oauth_flows', 'id', 'UPDATE'),
+    ('oauth_flows', 'initiating_token_id', 'SELECT'),
+    ('oauth_flows', 'refresh_id', 'SELECT'),
+    ('oauth_links', '', 'DELETE'),
+    ('oauth_links', 'account_id', 'SELECT'),
+    ('oauth_links', 'id', 'SELECT'),
+    ('oauth_links', 'id', 'UPDATE'),
+    ('oauth_links', 'provider', 'SELECT'),
+    ('oauth_links', 'provider_subject', 'SELECT'),
+    ('portal_browser_sessions', '', 'DELETE'),
+    ('portal_browser_sessions', 'account_id', 'SELECT'),
+    ('portal_browser_sessions', 'device_hash', 'SELECT'),
+    ('portal_browser_sessions', 'token_hash', 'SELECT'),
+    ('portal_browser_sessions', 'token_hash', 'UPDATE'),
+    ('portal_login_requests', '', 'DELETE'),
+    ('portal_login_requests', 'account_id', 'SELECT'),
+    ('portal_login_requests', 'browser_hash', 'SELECT'),
+    ('portal_login_requests', 'browser_hash', 'UPDATE'),
+    ('portal_login_requests', 'device_hash', 'SELECT'),
+    ('portal_submissions', 'account_id', 'SELECT'),
+    ('portal_submissions', 'id', 'SELECT'),
+    ('portal_submissions', 'id', 'UPDATE'),
+    ('profiles', '', 'DELETE'),
+    ('profiles', '', 'SELECT'),
+    ('profiles', 'account_id', 'UPDATE'),
+    ('store_purchases', 'account_id', 'SELECT'),
+    ('store_purchases', 'id', 'SELECT'),
+    ('store_purchases', 'id', 'UPDATE'),
+    ('store_purchases', 'platform', 'SELECT'),
+    ('text_accepted_inputs', 'id', 'SELECT'),
+    ('text_accepted_inputs', 'source_id', 'SELECT'),
+    ('text_accepted_inputs', 'source_kind', 'SELECT'),
+    ('text_active_releases', '', 'DELETE'),
+    ('text_active_releases', 'release_id', 'SELECT'),
+    ('text_admissions', 'account_id', 'SELECT'),
+    ('text_releases', '', 'DELETE'),
+    ('text_releases', 'bundle', 'SELECT'),
+    ('text_releases', 'release_id', 'SELECT'),
+    ('text_releases', 'withdrawn_at', 'SELECT'),
+    ('text_releases', 'withdrawn_at', 'UPDATE'),
+
 )
 WRITERS = ("fixture_runtime", "fixture_migrator", "fixture_privacy_executor")
 LO_FUNCTIONS = ("lo_create(oid)", "lo_creat(integer)", "lo_from_bytea(oid,bytea)",
@@ -232,12 +379,15 @@ class Fixture:
     def provision(self, service):
         self.validate()
         files = sorted((ROOT / "server/migrations").glob("*.up.sql"))
-        require([int(p.name[:6]) for p in files] == list(range(1, 35)), "reviewed schema head changed")
+        require([int(p.name[:6]) for p in files] == list(range(1, 42)), "reviewed schema head changed")
         self.pg(service, "CREATE TABLE schema_migrations(version bigint PRIMARY KEY,dirty boolean NOT NULL)")
         for path in files:
             require(path.with_name(path.name.replace(".up.sql", ".down.sql")).is_file(), "unpaired migration")
-            self.pg(service, path.read_text())
-        self.pg(service, "INSERT INTO schema_migrations VALUES(34,false)")
+            # Match the migration runner's single-file transaction. Streaming
+            # psql statements separately would release locks/drop temporary
+            # validation tables before the migration is complete.
+            self.pg(service, "BEGIN;\n" + path.read_text() + "\nCOMMIT;")
+        self.pg(service, "INSERT INTO schema_migrations VALUES(41,false)")
         statements = []
         for role in ("fixture_owner", "fixture_capture", "fixture_control", "fixture_privacy_owner", *WRITERS):
             login = "NOLOGIN" if role in ("fixture_owner", "fixture_privacy_owner") or (service == "target" and role in WRITERS) else "LOGIN"
@@ -260,8 +410,8 @@ class Fixture:
                     statements += [f"GRANT SELECT ON {name} TO fixture_runtime"]
                 continue
             statements += [f"ALTER TABLE {name} OWNER TO fixture_owner", f"GRANT SELECT ON {name} TO fixture_runtime,fixture_capture,fixture_control"]
-            privileges = "INSERT" if table in INSERT_ONLY else "INSERT,UPDATE,DELETE"
-            if table not in READ_ONLY:
+            privileges = "INSERT" if table in INSERT_ONLY else "INSERT,UPDATE" if table == "text_bonus_outbox" else "INSERT,UPDATE,DELETE"
+            if table not in READ_ONLY and table not in {"billing_provider_work", "billing_verification_slots"}:
                 statements += [f"GRANT {privileges} ON {name} TO fixture_runtime"]
         sequences = self.pg(service, "SELECT sequencename FROM pg_sequences WHERE schemaname='public' ORDER BY sequencename").decode().splitlines()
         for sequence in sequences:
@@ -271,10 +421,12 @@ class Fixture:
         for name, identity in functions:
             owner = "fixture_privacy_owner" if name in PRIVACY_FUNCTIONS else "fixture_owner"
             statements += [f"ALTER FUNCTION {identity} OWNER TO {owner}", f"REVOKE ALL ON FUNCTION {identity} FROM PUBLIC"]
-            if name in {"account_deletion_status", "direct_account_sanction_active", "installation_sanction_active"}:
+            if name in {"account_deletion_status", "direct_account_sanction_active", "installation_sanction_active", "privacy_erased_bootstrap_active", "text_bonus_source"}:
                 statements += [f"GRANT EXECUTE ON FUNCTION {identity} TO fixture_runtime"]
-            elif name in PRIVACY_FUNCTIONS and name != "privacy_prepare_verified_request":
+            elif name in PRIVACY_FUNCTIONS and name not in {"privacy_prepare_verified_request", "privacy_allow_installation_erasure"}:
                 statements += [f"GRANT EXECUTE ON FUNCTION {identity} TO fixture_privacy_executor"]
+        for relation, column, privilege in RUNTIME_COLUMN_ACL:
+            statements += [f"GRANT {privilege}({snapshot.identifier(column)}) ON public.{snapshot.identifier(relation)} TO fixture_runtime"]
         for relation, column, privilege in PRIVACY_SOURCE_ACL:
             if column:
                 privilege += "(" + snapshot.identifier(column) + ")"

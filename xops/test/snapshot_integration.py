@@ -5,6 +5,7 @@ import json
 import argparse
 import importlib.util
 import os
+import re
 import subprocess
 import time
 
@@ -37,6 +38,19 @@ def retain_inputs(ops, fixture):
         ops.write_private(target, path.read_bytes())
 
 
+def migration_statement(raw, version):
+    body = raw.decode("utf-8").strip()
+    # psql stdin normally commits each statement; the Go driver executes a
+    # migration file as one unit. Normalize the existing20/26 outer wrappers
+    # so an inner COMMIT cannot separate DDL from its version marker.
+    if body.startswith("BEGIN;\n") and body.endswith("\nCOMMIT;"):
+        body = body[len("BEGIN;\n"):-len("\nCOMMIT;")]
+    if re.search(r"(?im)^\s*(?:BEGIN|COMMIT|ROLLBACK)\s*;", body):
+        raise AssertionError("migration has unsupported transaction boundaries")
+    return ("BEGIN;\n" + body +
+            f"\nDELETE FROM schema_migrations; INSERT INTO schema_migrations VALUES({version},false);\nCOMMIT;")
+
+
 def migrate(fixture, through=None):
     root = Path(__file__).resolve().parents[2]
     present = fixture.pg("SELECT to_regclass('public.schema_migrations') IS NOT NULL").strip() == b"t"
@@ -53,11 +67,11 @@ def migrate(fixture, through=None):
         version = int(path.name[:6])
         if version <= current or (through is not None and version > through):
             continue
+        raw = path.read_bytes()
         captured = fixture.retained / path.relative_to(root)
-        if captured.exists() and captured.read_bytes() != path.read_bytes():
+        if captured.exists() and captured.read_bytes() != raw:
             raise AssertionError("migration changed after retained-input capture")
-        fixture.seed_sql(path.read_text())
-        fixture.seed_sql(f"DELETE FROM schema_migrations; INSERT INTO schema_migrations VALUES({version},false)")
+        fixture.seed_sql(migration_statement(raw, version))
     return through or int(paths[-1].name[:6])
 
 
@@ -231,6 +245,21 @@ def rehearse(ops, directory):
             pass
         else:
             raise AssertionError("restored trigger did not enforce immutability")
+        # Exercise failures in both migration DDL and its version marker against
+        # real PostgreSQL. Neither may leave a partially advanced restored DB.
+        for failure in (
+                "DO $$ BEGIN RAISE EXCEPTION 'synthetic migration failure'; END $$;",
+                "ALTER TABLE schema_migrations ADD CONSTRAINT snapshot_version_refusal CHECK(version<9);"):
+            body = ("CREATE TABLE public.snapshot_migration_rollback(id integer);\n" + failure).encode()
+            try:
+                restored.seed_sql(migration_statement(body, 9))
+            except ops.SnapshotError:
+                pass
+            else:
+                raise AssertionError("failing migration committed")
+            assert restored.pg("SELECT to_regclass('public.snapshot_migration_rollback') IS NULL").strip() == b"t", "failed migration retained DDL"
+            assert restored.pg("SELECT version FROM schema_migrations").strip() == b"8", "failed migration advanced version"
+            assert restored.pg("SELECT count(*) FROM pg_constraint WHERE conname='snapshot_version_refusal'").strip() == b"0", "failed version marker retained constraint"
         head = migrate(restored)
         seed_current(restored)
         before = ops.inventory(restored)

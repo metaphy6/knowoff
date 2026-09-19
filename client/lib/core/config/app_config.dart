@@ -1,4 +1,7 @@
 import '../../data/auth_service.dart';
+import '../../data/bonus_delivery.dart';
+import '../../data/bonus_session.dart';
+import '../../data/rewarded_session.dart';
 import '../../data/api_client.dart';
 import '../../data/native_purchase_bridge.dart';
 import '../../data/purchase_controller.dart';
@@ -28,6 +31,19 @@ class AppConfig {
 
   final ClientConfig clientConfig;
   final AuthService authService;
+  // Lazy and closed until the joined reward lifecycle is mounted by main.
+  late final BonusSessionController bonuses = BonusSessionController.connected(
+    authService,
+    ApiClient(baseUrl: serverUrl, auth: authService),
+    PreferencesBonusDismissals(serverUrl),
+  );
+  late final RewardedSessionController rewarded =
+      RewardedSessionController.connected(
+        authService,
+        ApiClient(baseUrl: serverUrl, auth: authService),
+        bonuses,
+        config: clientConfig.rewardedAds,
+      );
   late final PurchaseController purchases = PurchaseController(
     auth: authService,
     api: ApiClient(baseUrl: serverUrl, auth: authService),

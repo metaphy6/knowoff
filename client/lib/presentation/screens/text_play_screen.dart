@@ -1,3 +1,9 @@
+import '../../data/rewarded_session.dart';
+import '../widgets/rewarded_lifecycle.dart';
+import '../widgets/rewarded_offer.dart';
+import '../../data/bonus_session.dart';
+import '../widgets/bonus_lifecycle.dart';
+import '../widgets/bonus_receipts.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -19,6 +25,9 @@ import 'text_match_screen.dart';
 class TextPlayScreen extends StatefulWidget {
   const TextPlayScreen({
     this.session,
+    this.bonuses,
+    this.rewarded,
+    this.rewardIdentity,
     this.api,
     this.initialCode,
     this.initialSize = 4,
@@ -26,6 +35,11 @@ class TextPlayScreen extends StatefulWidget {
     super.key,
   }) : assert(initialSize == 4 || initialSize == 6);
   final TextSession? session;
+  final BonusSessionController? bonuses;
+  final RewardedSessionController? rewarded;
+
+  /// For injected sessions, the identity captured when their socket authenticated.
+  final ({String? accountId, int generation})? rewardIdentity;
   final ApiClient? api;
   final String? initialCode;
   final int initialSize;
@@ -37,6 +51,108 @@ class TextPlayScreen extends StatefulWidget {
 class _TextPlayScreenState extends State<TextPlayScreen>
     with WidgetsBindingObserver {
   late final TextSession session;
+  BonusSessionController? _bonuses;
+  RewardedSessionController? _rewarded;
+  bool _adConnected = false;
+  ({String? accountId, int generation})? _socketRewardIdentity;
+  bool _rewardReady = false;
+  bool get _rewardIdentityMatches =>
+      _bonuses != null &&
+      _socketRewardIdentity?.accountId != null &&
+      _socketRewardIdentity == _bonuses!.identity;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindBonuses();
+  }
+
+  @override
+  void didUpdateWidget(TextPlayScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _bindBonuses();
+  }
+
+  void _bindBonuses() {
+    final nextRewarded =
+        widget.rewarded ??
+        (widget.session == null && widget.api == null
+            ? RewardedScope.maybeOf(context)
+            : null);
+    if (!identical(nextRewarded, _rewarded)) {
+      _rewarded?.removeListener(_bonusChanged);
+      _rewarded = nextRewarded;
+      _adConnected = false;
+      _rewarded?.addListener(_bonusChanged);
+    }
+
+    final next =
+        widget.bonuses ??
+        (widget.session == null && widget.api == null
+            ? BonusScope.maybeOf(context)
+            : null);
+    if (!identical(next, _bonuses)) {
+      _bonuses?.removeListener(_bonusChanged);
+      _bonuses = next;
+      _rewardReady = false;
+      _bonuses?.addListener(_bonusChanged);
+    }
+  }
+
+  void _bonusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  RewardedMatchCandidate? get _adCandidate {
+    final snapshot = session.snapshot, identity = _socketRewardIdentity;
+    if (_rewarded == null ||
+        identity?.accountId == null ||
+        identity != _rewarded!.identity ||
+        !_foreground ||
+        !session.ready ||
+        session.prototype ||
+        snapshot?.phase != 'verdict' ||
+        !{'completed', 'scored_low_population'}.contains(snapshot?.outcome) ||
+        snapshot!.json['contract']['eligibility']['rewards'] != true) {
+      return null;
+    }
+    return RewardedMatchCandidate(
+      matchId: snapshot.matchID,
+      accountId: identity!.accountId!,
+      generation: identity.generation,
+    );
+  }
+
+  void _signalBonuses() {
+    if (!_foreground || !session.ready || session.prototype) {
+      _rewardReady = false;
+      _adConnected = false;
+      return;
+    }
+    if (_rewardIdentityMatches) {
+      if (!_rewardReady) {
+        _rewardReady = true;
+        unawaited(_bonuses!.refresh());
+      }
+      final snapshot = session.snapshot;
+      if (snapshot?.phase == 'verdict' &&
+          {'completed', 'scored_low_population'}.contains(snapshot?.outcome)) {
+        _bonuses!.completedMatch(snapshot!.matchID);
+      }
+    } else {
+      _rewardReady = false;
+    }
+    final candidate = _adCandidate;
+    if (candidate != null) {
+      if (!_adConnected && _rewarded!.candidate == candidate) {
+        unawaited(_rewarded!.retry());
+      } else {
+        unawaited(_rewarded!.offer(candidate));
+      }
+      _adConnected = true;
+    }
+  }
+
   late final bool _supportedProtocol;
   late final Timer _clock;
   late final ApiClient _api = serviceApi(widget.api);
@@ -56,6 +172,7 @@ class _TextPlayScreenState extends State<TextPlayScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _socketRewardIdentity = widget.rewardIdentity;
     _size = widget.initialSize;
     _supportedProtocol = AppConfig.instance.clientConfig.protocolVersion == 2;
     if (widget.session != null) {
@@ -71,6 +188,11 @@ class _TextPlayScreenState extends State<TextPlayScreen>
         transport: transport,
         tokenLoader: () async {
           await config.authService.ensureSession();
+          // One screen never relabels an old snapshot under a replacement identity.
+          _socketRewardIdentity ??= (
+            accountId: config.authService.accountId,
+            generation: config.authService.sessionGeneration,
+          );
           return config.authService.accessToken ?? '';
         },
       );
@@ -95,6 +217,7 @@ class _TextPlayScreenState extends State<TextPlayScreen>
 
   void _changed() {
     if (!mounted || !_supportedProtocol) return;
+    _signalBonuses();
     if (!session.ready) {
       _termsGeneration++;
       _termsLoaded = false;
@@ -250,6 +373,8 @@ class _TextPlayScreenState extends State<TextPlayScreen>
 
   @override
   void dispose() {
+    _bonuses?.removeListener(_bonusChanged);
+    _rewarded?.removeListener(_bonusChanged);
     WidgetsBinding.instance.removeObserver(this);
     _clock.cancel();
     session.removeListener(_changed);
@@ -376,6 +501,9 @@ class _TextPlayScreenState extends State<TextPlayScreen>
                 session.reducer?.needsResync != true &&
                 session.reducer?.hasPendingSnapshot != true &&
                 (snapshot == null || snapshot.phase == 'verdict')) ...[
+              if (_adCandidate case final candidate?)
+                RewardedOffer(session: _rewarded!, candidate: candidate),
+              if (_rewardIdentityMatches) BonusReceipts(session: _bonuses!),
               for (final receipt in session.awards)
                 KoPanel(
                   child: Text(

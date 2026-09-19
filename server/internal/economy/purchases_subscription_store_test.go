@@ -525,7 +525,7 @@ func TestSubscriptionGoogleWorkerDiscoversCollapsedRollover(t *testing.T) {
 	f.body["lineItems"] = []any{old, future}
 	f.ackError = true
 	for _, source := range []string{"current-token", "different-token"} {
-		if _, err = p.verifyReceipt(t.Context(), account, f.request, source); err == nil {
+		if _, err = p.verifyReceipt(t.Context(), account, f.request, source, nil); err == nil {
 			t.Fatal("discovery created or changed its source identity", source)
 		}
 	}

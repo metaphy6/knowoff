@@ -14,7 +14,7 @@ import (
 	"github.com/knowoff/knowoff/server/internal/store"
 )
 
-func (p *Purchases) verifySubscriptionReceipt(ctx context.Context, account string, req ReceiptRequest, raw []byte, knownSource string) (PurchaseResult, error) {
+func (p *Purchases) verifySubscriptionReceipt(ctx context.Context, account string, req ReceiptRequest, raw []byte, knownSource string, attempt billingVerificationAttempt, work *billingProviderAttempt) (PurchaseResult, error) {
 	verifier, ok := p.verifiers[req.Platform].(SubscriptionReceiptVerifier)
 	if !ok {
 		return PurchaseResult{}, ErrBillingUnavailable
@@ -91,7 +91,16 @@ func (p *Purchases) verifySubscriptionReceipt(ctx context.Context, account strin
 	err = store.WithValueTransaction(ctx, p.db, func(tx *sql.Tx) error {
 		var e error
 		result, e = p.applySubscription(ctx, tx, account, req, proof, product.Kind, hash, encoded, raw, knownSource != "")
-		return e
+		if e != nil {
+			return e
+		}
+		if e = attempt.finishTx(ctx, tx); e != nil {
+			return e
+		}
+		if work != nil {
+			return work.finishTx(ctx, tx, "observed")
+		}
+		return nil
 	})
 	if err != nil {
 		return PurchaseResult{}, err
@@ -276,39 +285,11 @@ func (p *Purchases) applySubscription(ctx context.Context, tx *sql.Tx, account s
 }
 
 func (p *Purchases) acknowledgeSubscription(ctx context.Context, platform PurchasePlatform, source string) error {
-	queryCtx, cancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	var raw, proof []byte
-	err := p.db.QueryRowContext(queryCtx, `SELECT t.request,t.proof FROM billing_subscription_tasks t JOIN billing_subscription_current c USING(platform,source_key) JOIN billing_subscription_observations o ON (o.platform,o.source_key,o.id)=(c.platform,c.source_key,c.observation_id) WHERE t.platform=$1 AND t.source_key=$2 AND t.state='pending' AND o.state IN ('purchased','grace') AND NOT EXISTS(SELECT 1 FROM billing_subscription_replacements r WHERE r.platform=t.platform AND r.predecessor_key=t.source_key)`, platform, source).Scan(&raw, &proof)
-	cancel()
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
+	var purchase string
+	if err := p.db.QueryRowContext(ctx, `SELECT initial_purchase_id FROM billing_subscription_sources WHERE platform=$1 AND source_key=$2`, platform, source).Scan(&purchase); err != nil {
 		return err
 	}
-	var req ReceiptRequest
-	var v VerifiedPurchase
-	if billingJSON(raw, &req) != nil || billingJSON(proof, &v) != nil {
-		return ErrBillingProof
-	}
-	providerCtx, providerCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	err = p.verifiers[platform].Acknowledge(providerCtx, req, v)
-	providerCancel()
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	state := "pending"
-	if err == nil {
-		state = "done"
-	}
-	// A provider timeout must not consume the independent retry-persistence budget.
-	writeCtx, writeCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	defer writeCancel()
-	_, writeErr := p.db.ExecContext(writeCtx, `UPDATE billing_subscription_tasks SET state=$3,attempts=attempts+1,updated_at=clock_timestamp() WHERE platform=$1 AND source_key=$2 AND state='pending'`, platform, source, state)
-	if writeErr != nil {
-		return writeErr
-	}
-	return err
+	return p.acknowledgeWork(ctx, purchase)
 }
 
 func (p *Purchases) retrySubscriptionAcknowledgements(ctx context.Context, limit int) error {

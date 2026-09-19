@@ -10,9 +10,26 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/knowoff/knowoff/server/internal/privacy"
 )
 
 var errBootstrapChanged = errors.New("installation mapping changed")
+
+// SetInstallationAuthority is explicit dependency injection; startup does not
+// enable a production keyring or privacy executor by default.
+func (m *Manager) SetInstallationAuthority(a *privacy.InstallationAuthority) {
+	m.installations.Store(a)
+}
+
+// RegisterInstallationPrivacy must run before acquiring installation row locks.
+// An absent adapter preserves pre-erasure auth; SQL still refuses missing key
+// coverage once finite evidence exists, including after a configuration downgrade.
+func (m *Manager) RegisterInstallationPrivacy(ctx context.Context, hash string) error {
+	if a := m.installations.Load(); a != nil {
+		return a.Register(ctx, hash)
+	}
+	return nil
+}
 
 func validInstallation(hash string) bool {
 	if hash == "" || len(hash) > 256 || !utf8.ValidString(hash) || strings.HasPrefix(hash, developmentDevicePrefix) {
@@ -71,24 +88,21 @@ func linkInstallationTx(ctx context.Context, tx *sql.Tx, account, hash, purpose 
 }
 
 func bootstrapAccount(ctx context.Context, q accountSessionQuerier, hash string) (string, error) {
-	var canonical string
-	err := q.QueryRowContext(ctx, `SELECT account_id FROM auth_installation_bootstrap WHERE device_hash=$1`, hash).Scan(&canonical)
+	var canonical sql.NullString
+	var state string
+	err := q.QueryRowContext(ctx, `SELECT account_id,state FROM auth_installation_bootstrap WHERE device_hash=$1`, hash).Scan(&canonical, &state)
 	if err == nil {
-		return canonical, nil
+		if state != "bound" || !canonical.Valid {
+			return "", ErrDeletionRecoveryRequired
+		}
+		return canonical.String, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return "", err
 	}
-	var count int
-	var legacy sql.NullString
-	err = q.QueryRowContext(ctx, `SELECT count(*),min(account_id::text) FROM (SELECT DISTINCT account_id FROM device_tokens WHERE device_hash=$1 LIMIT 2) owners`, hash).Scan(&count, &legacy)
-	if err != nil {
-		return "", err
-	}
-	if count > 1 {
-		return "", fmt.Errorf("ambiguous legacy installation")
-	}
-	return legacy.String, nil
+	// Legacy bindings were migrated to explicit canonical/ambiguous state.
+	// A surviving association can never become anonymous bootstrap authority.
+	return "", nil
 }
 
 func (m *Manager) authenticateInstallation(ctx context.Context, hash string) (*TokenPair, error) {
@@ -96,6 +110,9 @@ func (m *Manager) authenticateInstallation(ctx context.Context, hash string) (*T
 	defer cancel()
 	if !validInstallation(hash) {
 		return nil, fmt.Errorf("device_hash required")
+	}
+	if err := m.RegisterInstallationPrivacy(ctx, hash); err != nil {
+		return nil, err
 	}
 	for attempt := 0; attempt < 8; attempt++ {
 		known, err := bootstrapAccount(ctx, m.db, hash)
@@ -141,6 +158,10 @@ func (m *Manager) bootstrapInstallationTx(ctx context.Context, hash, known strin
 	if current != known {
 		return nil, errBootstrapChanged
 	}
+	var erased bool
+	if err = tx.QueryRowContext(ctx, `SELECT public.privacy_erased_bootstrap_active($1)`, hash).Scan(&erased); err != nil || erased {
+		return nil, fmt.Errorf("installation bootstrap unavailable")
+	}
 	if err = installationAllowed(ctx, tx, hash, purpose); err != nil {
 		return nil, err
 	}
@@ -172,6 +193,9 @@ func (m *Manager) BindInstallation(ctx context.Context, refreshToken, hash strin
 	}
 	if claims.Purpose != "player" || !validInstallation(hash) || claims.DeviceHash != "" && claims.DeviceHash != hash {
 		return nil, fmt.Errorf("invalid installation binding")
+	}
+	if err = m.RegisterInstallationPrivacy(ctx, hash); err != nil {
+		return nil, err
 	}
 	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {

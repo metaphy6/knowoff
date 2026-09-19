@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"github.com/knowoff/knowoff/server/internal/config"
 	"os"
@@ -13,10 +14,248 @@ import (
 	"time"
 )
 
+func TestTextRewardInterruptedPermanentlyRefusesBonusPreservingBase(t *testing.T) {
+	for _, premium := range []bool{false, true} {
+		name := "ad"
+		if premium {
+			name = "premium"
+		}
+		t.Run(name, func(t *testing.T) {
+			db, v := textValueDB(t)
+			at := valueTime(time.Now().UTC())
+			m, ids := valuePreparedMatch(t, v, db, at, false)
+			if premium {
+				if _, err := db.Exec(`INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,'premium_monthly',$2)`, ids[0], at.Add(time.Hour)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := v.Start(t.Context(), m.Contract.MatchID, m.Owner, 1, at); err != nil {
+				t.Fatal(err)
+			}
+			award := TextAward{MatchID: m.Contract.MatchID, Owner: m.Owner, Epoch: 1, AccountID: ids[0], Kind: "correct_vote", Ordinal: 1, Amount: v.tuning.Noin.CorrectVote, At: at.Add(time.Second)}
+			if n, err := v.Award(t.Context(), award); err != nil || n != award.Amount || n <= 0 {
+				t.Fatal("base award was not earned", n, err)
+			}
+			if err := v.Interrupt(t.Context(), m.Contract.MatchID, m.Owner, 1, at.Add(2*time.Second)); err != nil {
+				t.Fatal(err)
+			}
+			// Trusted historical receipt fixture reaches the shared SSV eligibility
+			// check; the current issuer cannot issue a claim for this match.
+			claim := base64.RawURLEncoding.EncodeToString([]byte(strings.Repeat("x", 32)))
+			hash, err := rewardClaimHash(claim)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO text_reward_claims(claim_hash,match_id,account_id,ad_unit,issued_at,expires_at) VALUES($1,$2,$3,'123',$4,$5)`, hash, m.Contract.MatchID, ids[0], at, at.Add(time.Minute)); err != nil {
+				t.Fatal(err)
+			}
+			state := func() string {
+				var raw string
+				if err := db.QueryRow(`SELECT jsonb_build_array(
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM text_award_receipts r),
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM noin_ledger r),
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM noin_wallets r),
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM daily_noin_earned r),
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM text_reward_claims r),
+ (SELECT jsonb_agg(to_jsonb(r) ORDER BY to_jsonb(r)::text) FROM text_reward_ssv_receipts r))::text`).Scan(&raw); err != nil {
+					t.Fatal(err)
+				}
+				return raw
+			}
+			before := state()
+			s, err := NewTextRewardStore(db, rewardConfig())
+			if err != nil {
+				t.Fatal(err)
+			}
+			for range 2 {
+				got, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", rewardAuthorize)
+				if !errors.Is(err, ErrRewardClaimInvalid) || got.Claim != "" {
+					t.Fatal("interrupted claim did not permanently refuse", got, err)
+				}
+				err = s.RecordVerifiedSSV(t.Context(), VerifiedRewardInteraction{TransactionID: "abcdef", Fingerprint: strings.Repeat("b", 64), Claim: claim, AdUnit: "123", OccurredAt: at.Add(3 * time.Second)})
+				if !errors.Is(err, ErrRewardClaimInvalid) {
+					t.Fatal("interrupted SSV did not permanently refuse", err)
+				}
+			}
+			if after := state(); after != before {
+				t.Fatal("bonus refusal changed earned value or proof receipts")
+			}
+		})
+	}
+}
+
 func rewardConfig() config.RewardedConfig {
 	return config.RewardedConfig{Enabled: true, MaxQueryBytes: 16384, MaxResponseBytes: 262144, HTTPTimeoutS: 2, KeyCacheS: 60, KeyRefreshMinS: 1, MaxConcurrentRequests: 4, ClaimTTLS: 60, MaxClaimsPerMatchWindow: 2, AdUnits: map[string]config.RewardedUnit{"123": {RewardItem: "match_bonus", RewardAmount: 1}}}
 }
 func rewardAuthorize(context.Context, *sql.Tx) error { return nil }
+
+func TestTextRewardCheckExactClaimReadOnly(t *testing.T) {
+	db, v := textValueDB(t)
+	m, ids := rewardSettled(t, db, v, valueTime(time.Now().UTC().Add(-time.Minute)))
+	s, _ := NewTextRewardStore(db, rewardConfig())
+	claim, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", rewardAuthorize)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range 3 {
+		if err := s.CheckClaim(t.Context(), m.Contract.MatchID, ids[0], "123", claim.Claim, rewardAuthorize); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if valueCount(t, db, `SELECT count(*) FROM text_reward_claims`) != 1 || valueCount(t, db, `SELECT count(*) FROM text_reward_ssv_receipts`) != 0 || valueCount(t, db, `SELECT count(*) FROM text_bonus_payments`) != 0 {
+		t.Fatal("check mutated authority")
+	}
+	for _, input := range [][3]string{{ids[1], "123", claim.Claim}, {ids[0], "other", claim.Claim}, {ids[0], "123", strings.Repeat("x", 43)}} {
+		if err := s.CheckClaim(t.Context(), m.Contract.MatchID, input[0], input[1], input[2], rewardAuthorize); !errors.Is(err, ErrRewardClaimInvalid) {
+			t.Fatal("wrong binding accepted", err)
+		}
+	}
+	if _, err := db.Exec(`INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,'premium_monthly',NULL)`, ids[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckClaim(t.Context(), m.Contract.MatchID, ids[0], "123", claim.Claim, rewardAuthorize); !errors.Is(err, ErrRewardClaimInvalid) {
+		t.Fatal("Premium after load accepted", err)
+	}
+	proof := VerifiedRewardInteraction{TransactionID: "aabb", Fingerprint: strings.Repeat("a", 64), Claim: claim.Claim, AdUnit: "123", OccurredAt: valueTime(time.Now().UTC())}
+	if err := s.RecordVerifiedSSV(t.Context(), proof); err != nil {
+		t.Fatal("check refusal revoked retained proof", err)
+	}
+	if _, err := db.Exec(`DELETE FROM entitlements WHERE account_id=$1`, ids[0]); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CheckClaim(t.Context(), m.Contract.MatchID, ids[0], "123", claim.Claim, rewardAuthorize); !errors.Is(err, ErrRewardClaimInvalid) {
+		t.Fatal("verified proof after load accepted", err)
+	}
+}
+
+func TestTextRewardCheckFreshAfterAccountWait(t *testing.T) {
+	for _, mode := range []string{"expires", "premium", "deleted"} {
+		t.Run(mode, func(t *testing.T) {
+			db, v := textValueDB(t)
+			m, ids := rewardSettled(t, db, v, valueTime(time.Now().UTC().Add(-time.Minute)))
+			cfg := rewardConfig()
+			cfg.HTTPTimeoutS = 5
+			s, _ := NewTextRewardStore(db, cfg)
+			if mode == "expires" {
+				s.now = func() time.Time { return time.Now().UTC().Add(-59 * time.Second) }
+			}
+			claim, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", rewardAuthorize)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(t.Context(), 4*time.Second)
+			defer cancel()
+			tx, err := db.BeginTx(ctx, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			if _, err = tx.ExecContext(ctx, `SELECT id FROM accounts WHERE id=$1 FOR UPDATE`, ids[0]); err != nil {
+				t.Fatal(err)
+			}
+			done := make(chan error, 1)
+			go func() { done <- s.CheckClaim(ctx, m.Contract.MatchID, ids[0], "123", claim.Claim, rewardAuthorize) }()
+			waitAdmissionLock(t, ctx, db, "FROM accounts")
+			if mode == "expires" {
+				var expired bool
+				for !expired {
+					if err = db.QueryRowContext(ctx, `SELECT clock_timestamp()>$1`, claim.ExpiresAt).Scan(&expired); err != nil {
+						t.Fatal(err)
+					}
+					if !expired {
+						time.Sleep(10 * time.Millisecond)
+					}
+				}
+			} else if mode == "premium" {
+				if _, err = tx.ExecContext(ctx, `INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,'premium_yearly',NULL)`, ids[0]); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err = tx.ExecContext(ctx, `UPDATE accounts SET deleted_at=clock_timestamp() WHERE id=$1`, ids[0]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err = tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+			if err = <-done; !errors.Is(err, ErrRewardClaimInvalid) {
+				t.Fatal("stale claim accepted", mode, err)
+			}
+			if valueCount(t, db, `SELECT count(*) FROM text_reward_claims`) != 1 || valueCount(t, db, `SELECT count(*) FROM text_bonus_payments`) != 0 {
+				t.Fatal("read check mutated value")
+			}
+		})
+	}
+}
+
+func TestTextRewardNewClaimEligibilityAndRetainedProof(t *testing.T) {
+	for _, mode := range []string{"current_premium", "expired_start_premium", "verified", "paid", "final_premium"} {
+		t.Run(mode, func(t *testing.T) {
+			db, v := textValueDB(t)
+			at := valueTime(time.Now().UTC().Add(-time.Minute))
+			m, ids := rewardSettledPremium(t, db, v, at, mode == "expired_start_premium")
+			s, _ := NewTextRewardStore(db, rewardConfig())
+			guard := rewardAuthorize
+			if mode == "expired_start_premium" {
+				if _, err := db.Exec(`DELETE FROM entitlements WHERE account_id=$1`, ids[0]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "current_premium" {
+				if _, err := db.Exec(`INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,'premium_yearly',NULL)`, ids[0]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "final_premium" {
+				if _, err := db.Exec(`CREATE FUNCTION test_claim_premium() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES(NEW.account_id,'premium_monthly',NULL); RETURN NEW; END $$; CREATE TRIGGER test_claim_premium AFTER INSERT ON text_reward_claims FOR EACH ROW EXECUTE FUNCTION test_claim_premium()`); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "verified" || mode == "paid" {
+				first, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", rewardAuthorize)
+				if err != nil {
+					t.Fatal(err)
+				}
+				second, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", rewardAuthorize)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for i, claim := range []TextRewardClaim{first, second} {
+					proof := VerifiedRewardInteraction{TransactionID: []string{"aabb", "ccdd"}[i], Fingerprint: strings.Repeat("a", 64), Claim: claim.Claim, AdUnit: "123", OccurredAt: valueTime(time.Now().UTC())}
+					if err = s.RecordVerifiedSSV(t.Context(), proof); err != nil {
+						t.Fatal(err)
+					}
+					if i == 0 && mode == "paid" {
+						if _, err = v.ApplyBonus(t.Context(), m.Contract.MatchID, ids[0]); err != nil {
+							t.Fatal(err)
+						}
+					}
+					// Newly acquired Premium cannot revoke either pre-issued claim's
+					// signed occurrence, including delayed proof after payment.
+					if i == 0 {
+						if _, err = db.Exec(`INSERT INTO entitlements(account_id,entitlement_type,active_until) VALUES($1,'premium_monthly',NULL)`, ids[0]); err != nil {
+							t.Fatal(err)
+						}
+					}
+					if err = s.RecordVerifiedSSV(t.Context(), proof); err != nil {
+						t.Fatal("retained exact proof", err)
+					}
+				}
+				if _, err := db.Exec(`DELETE FROM entitlements WHERE account_id=$1`, ids[0]); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := valueCount(t, db, `SELECT count(*) FROM text_reward_claims`)
+			claim, err := s.IssueClaim(t.Context(), m.Contract.MatchID, ids[0], "123", guard)
+			if !errors.Is(err, ErrRewardClaimInvalid) || claim.Claim != "" {
+				t.Fatal("unnecessary ad claim issued", mode, err)
+			}
+			if valueCount(t, db, `SELECT count(*) FROM text_reward_claims`) != before {
+				t.Fatal("refusal retained claim")
+			}
+		})
+	}
+}
 func rewardSettled(t *testing.T, db *sql.DB, s *TextValueStore, at time.Time) (TextMatchRecord, []string) {
 	return rewardSettledPremium(t, db, s, at, false)
 }

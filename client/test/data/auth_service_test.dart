@@ -53,8 +53,150 @@ class RejectingInstallationStore extends InMemorySharedPreferencesStore {
   }
 }
 
+class RejectingSessionStore extends InMemorySharedPreferencesStore {
+  RejectingSessionStore(this.rejectedKey, this.throwFailure) : super.empty();
+  final String rejectedKey;
+  final bool throwFailure;
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.$rejectedKey') {
+      if (throwFailure) throw StateError('fixture storage failure');
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
+class RejectingCommitStore extends InMemorySharedPreferencesStore {
+  RejectingCommitStore(this.throwFailure) : super.empty();
+  final bool throwFailure;
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.knowoff_session_commit' && value != 'incomplete') {
+      if (throwFailure) throw StateError('fixture commit failure');
+      return false;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  for (final throws in [false, true]) {
+    test(
+      'failed final session marker remains uncommitted after reopen: $throws',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        SharedPreferencesStorePlatform.instance = RejectingCommitStore(throws);
+        addTearDown(() => SharedPreferences.setMockInitialValues({}));
+        var requests = 0;
+        final client = MockClient((r) async {
+          requests++;
+          return issued(
+            'new-account',
+            binding: (jsonDecode(r.body) as Map)['device_hash'] as String,
+          );
+        });
+        final service = AuthService(
+          baseUrl: 'https://game.example',
+          client: client,
+        );
+        await expectLater(
+          service.ensureSession(),
+          throwsA(isA<AuthSessionException>()),
+        );
+        expect(service.accountId, isNull);
+        final reopened = AuthService(
+          baseUrl: 'https://game.example',
+          client: client,
+        );
+        await expectLater(
+          reopened.restoreExistingSession(),
+          throwsA(isA<AuthSessionException>()),
+        );
+        expect(reopened.accessToken, isNull);
+        expect(requests, 1);
+      },
+    );
+  }
+  for (final key in [
+    'knowoff_account_id',
+    'knowoff_refresh_token',
+    'knowoff_access_token',
+  ]) {
+    for (final throws in [false, true]) {
+      test(
+        'session persistence $key throw=$throws never publishes partial identity',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final store = RejectingSessionStore(key, throws);
+          SharedPreferencesStorePlatform.instance = store;
+          addTearDown(() => SharedPreferences.setMockInitialValues({}));
+          await store.setValue(
+            'String',
+            'flutter.knowoff_installation_id',
+            'fixture-installation',
+          );
+          var requests = 0;
+          final client = MockClient((r) async {
+            requests++;
+            return issued('new-account');
+          });
+          final service = AuthService(
+            baseUrl: 'https://game.example',
+            client: client,
+          );
+          await expectLater(
+            service.ensureSession(),
+            throwsA(isA<AuthSessionException>()),
+          );
+          expect(service.accountId, isNull);
+          expect(service.accessToken, isNull);
+          final reopened = AuthService(
+            baseUrl: 'https://game.example',
+            client: client,
+          );
+          await expectLater(
+            reopened.restoreExistingSession(),
+            throwsA(isA<AuthSessionException>()),
+          );
+          expect(reopened.accountId, isNull);
+          expect(reopened.accessToken, isNull);
+          expect(
+            requests,
+            1,
+            reason:
+                'partial persistence must not authorize HTTP or bootstrap a replacement',
+          );
+        },
+      );
+    }
+  }
+  test(
+    'identity notifications exclude token refresh and fence restore immediately',
+    () async {
+      SharedPreferences.setMockInitialValues(saved(expiredAccess: false));
+      final service = AuthService(
+        baseUrl: 'https://game.example',
+        client: MockClient((r) async {
+          if (r.url.path.endsWith('/refresh')) return issued('saved-account');
+          return http.Response('', 503);
+        }),
+      );
+      final identities = <({String? accountId, int generation})>[];
+      service.identityChanges.addListener(
+        () => identities.add(service.identityChanges.value),
+      );
+      expect(await service.restoreExistingSession(), isTrue);
+      expect(identities, [(accountId: 'saved-account', generation: 0)]);
+      await service.refresh();
+      expect(identities, hasLength(1));
+      final restore = service.startOAuth('google', OAuthIntent.restore);
+      expect(identities.last, (accountId: 'saved-account', generation: 1));
+      await expectLater(restore, throwsA(isA<AuthSessionException>()));
+    },
+  );
+
   test(
     'failed installation writes never reach HTTP, including retries',
     () async {

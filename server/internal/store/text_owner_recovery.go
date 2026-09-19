@@ -66,8 +66,28 @@ func (o *TextOwner) RecoverLostOwners(ctx context.Context, values *TextValueStor
 			if err = tx.QueryRowContext(ctx, `SELECT account_id FROM text_admissions WHERE id=$1`, id).Scan(&account); err != nil {
 				return err
 			}
-			if err = valueAccountLock(ctx, tx, account); err != nil {
+			request, err := lockAcceptedTextTombstone(ctx, tx, account)
+			if err != nil {
 				return err
+			}
+			var admissionOwner string
+			if err = tx.QueryRowContext(ctx, `SELECT process_owner_id FROM text_admissions WHERE id=$1 AND account_id=$2 AND state='reserved' AND match_id IS NULL FOR UPDATE`, id, account).Scan(&admissionOwner); err == sql.ErrNoRows {
+				kind = ""
+				return nil
+			} else if err != nil {
+				return err
+			}
+			var lost bool
+			if err = tx.QueryRowContext(ctx, `SELECT lost_at IS NOT NULL FROM text_process_owners WHERE incarnation_id=$1`, admissionOwner).Scan(&lost); err != nil {
+				return err
+			}
+			if !lost {
+				return ErrValueFence
+			}
+			if request != "" {
+				if err = recordTextAdmissionErasure(ctx, tx, acceptedTextAccount{admission: id, account: account, request: request}, "cancel_reservation", at); err != nil {
+					return err
+				}
 			}
 			update, err := tx.ExecContext(ctx, `UPDATE text_admissions SET state='released' WHERE id=$1 AND state='reserved' AND match_id IS NULL`, id)
 			if err != nil {

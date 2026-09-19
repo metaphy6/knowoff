@@ -62,12 +62,12 @@ func (p *Purchases) BillingAvailable(platform PurchasePlatform) bool {
 	return p.verifiers[platform] != nil && ((platform == PlatformGooglePlay && p.billing.Google.Enabled) || (platform == PlatformAppStore && p.billing.Apple.Enabled))
 }
 func (p *Purchases) VerifyReceipt(ctx context.Context, account string, req ReceiptRequest) (PurchaseResult, error) {
-	return p.verifyReceipt(ctx, account, req, "")
+	return p.verifyReceipt(ctx, account, req, "", nil)
 }
 
 // knownSource is supplied exclusively by the persisted subscription worker;
 // authenticated client receipt requests never supply discovery authority.
-func (p *Purchases) verifyReceipt(ctx context.Context, account string, req ReceiptRequest, knownSource string) (PurchaseResult, error) {
+func (p *Purchases) verifyReceipt(ctx context.Context, account string, req ReceiptRequest, knownSource string, work *billingProviderAttempt) (PurchaseResult, error) {
 	var result PurchaseResult
 	if !p.BillingAvailable(req.Platform) {
 		return result, ErrBillingUnavailable
@@ -90,10 +90,24 @@ func (p *Purchases) verifyReceipt(ctx context.Context, account string, req Recei
 	default:
 		return result, ErrBillingBusy
 	}
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
+	claimCtx, claimCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
+	attempt, err := p.claimVerification(claimCtx, account, raw)
+	claimCancel()
+	if err != nil {
+		return result, err
+	}
+	defer p.uncertainVerification(ctx, attempt)
+	deadline := attempt.deadline
+	if work != nil && work.deadline.Before(deadline) {
+		deadline = work.deadline
+	}
+	ctx, cancel := context.WithDeadline(ctx, deadline)
 	defer cancel()
+	if ctx.Err() != nil || !attempt.deadline.After(time.Now()) {
+		return result, ErrBillingUnavailable
+	}
 	if product.Kind != "noin" {
-		return p.verifySubscriptionReceipt(ctx, account, req, raw, knownSource)
+		return p.verifySubscriptionReceipt(ctx, account, req, raw, knownSource, attempt, work)
 	}
 	if knownSource != "" {
 		return result, ErrBillingProof
@@ -123,7 +137,16 @@ func (p *Purchases) verifyReceipt(ctx context.Context, account string, req Recei
 		result = PurchaseResult{}
 		var e error
 		result, e = p.applyProof(ctx, tx, account, req, product, proof, raw)
-		return e
+		if e != nil {
+			return e
+		}
+		if e = attempt.finishTx(ctx, tx); e != nil {
+			return e
+		}
+		if work != nil {
+			return work.finishTx(ctx, tx, "observed")
+		}
+		return nil
 	})
 	if err != nil {
 		return PurchaseResult{}, err
@@ -354,37 +377,11 @@ func billingSameTime(old sql.NullTime, next *time.Time) bool {
 	return (!old.Valid && next == nil) || (old.Valid && next != nil && old.Time.Equal(*next))
 }
 func (p *Purchases) acknowledge(ctx context.Context, id string, r ReceiptRequest, v VerifiedPurchase) error {
-	queryCtx, cancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	var state string
-	err := p.db.QueryRowContext(queryCtx, `SELECT state FROM billing_provider_tasks WHERE purchase_id=$1`, id).Scan(&state)
-	cancel()
-	if err != nil {
-		return err
-	}
-	if state != "pending" {
-		return nil
-	}
-	providerCtx, providerCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	err = p.verifiers[r.Platform].Acknowledge(providerCtx, r, v)
-	providerCancel()
-	if ctx.Err() != nil {
-		return ctx.Err()
-	}
-	next := "pending"
-	if err == nil {
-		next = "done"
-	}
-	writeCtx, writeCancel := context.WithTimeout(ctx, time.Duration(p.billing.HTTPTimeoutS)*time.Second)
-	defer writeCancel()
-	_, writeErr := p.db.ExecContext(writeCtx, `UPDATE billing_provider_tasks SET state=$2,attempts=attempts+1,updated_at=now() WHERE purchase_id=$1 AND state='pending'`, id, next)
-	if writeErr != nil {
-		return writeErr
-	}
-	return err
+	return p.acknowledgeWork(ctx, id)
 }
 
 // RetryAcknowledgements performs one bounded pass. Provider acknowledgement is
-// itself idempotent, so concurrent workers or lost responses cannot grant twice.
+// reconciled through exact claims and concrete GET-before-write adapters.
 func (p *Purchases) RetryAcknowledgements(ctx context.Context, limit int) error {
 	if limit < 1 || limit > 100 {
 		return ErrBillingProof
