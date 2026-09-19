@@ -123,7 +123,25 @@ func (m *TextManager) start(ctx context.Context, r *textRoom) (err error) {
 			return m.deps.ModerateChat(ctx, accounts[seat], a)
 		}
 	}
-	engine, err := game.NewTextMatch(game.TextOptions{Contract: contract, Deal: deal, Config: m.deps.Config, Now: m.deps.Now, Hooks: hooks, Prototype: prototype})
+	devRoles := map[int]string{}
+	for seat, member := range r.seats {
+		if member.devRole != "" && member.devRole != "random" {
+			devRoles[seat] = member.devRole
+		}
+	}
+	donowers, nowers := 0, 0
+	for _, role := range devRoles {
+		if role == "donower" {
+			donowers++
+		}
+		if role == "nower" {
+			nowers++
+		}
+	}
+	if donowers > r.settings.Size/2-1 || nowers > r.settings.Size-(r.settings.Size/2-1) {
+		return ErrTextDevRoleConflict
+	}
+	engine, err := game.NewTextMatch(game.TextOptions{DevRoles: devRoles, Contract: contract, Deal: deal, Config: m.deps.Config, Now: m.deps.Now, Hooks: hooks, Prototype: prototype})
 	if err != nil {
 		return err
 	}
@@ -307,7 +325,7 @@ func (m *TextManager) Resync(ctx context.Context, p *TextPeer) error {
 	if e := m.snapshot(ctx, r, seat, p); e != nil {
 		return e
 	}
-	return nil
+	return m.devRoleFrame(r, p)
 }
 func (m *TextManager) Action(ctx context.Context, p *TextPeer, req v2.ActionRequest) error {
 	r, unlock, err := m.lockRuntime(ctx, p)

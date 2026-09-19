@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -20,6 +21,7 @@ const TuningSnapshotVersion = "text-tuning-v1"
 
 func (t TuningConfig) Clone() TuningConfig {
 	t.cloneRetiredPolicy()
+	t.Hand.SpecialtyWeights = maps.Clone(t.Hand.SpecialtyWeights)
 	t.Game.RoomSizes = slices.Clone(t.Game.RoomSizes)
 	t.Game.DonowersBySize = maps.Clone(t.Game.DonowersBySize)
 	t.Game.VotesBySize = maps.Clone(t.Game.VotesBySize)
@@ -128,6 +130,20 @@ func validateTextConfig(cfg *Config) []string {
 	if cfg.Tuning.Timers.RoundStartCountdown < 0 || cfg.Tuning.Timers.RoundStartCountdown > 60 {
 		errs = append(errs, "tuning.timers.round_start_countdown must be between 0 and 60")
 	}
+	weights := cfg.Tuning.Hand.SpecialtyWeights
+	for name, weight := range weights {
+		switch name {
+		case "pass", "reveal", "one_more_free_card", "shuffle", "revote":
+		default:
+			errs = append(errs, "tuning.hand.specialty_weights contains unknown specialty")
+		}
+		if math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 || weight > 1 {
+			errs = append(errs, "specialty weights must be finite nonnegative weights")
+		}
+	}
+	if len(weights) > 0 && (cfg.Tuning.Timers.RevealLockout <= 0 || cfg.Tuning.Timers.RevealLockout >= cfg.Tuning.Timers.PlayTurn || cfg.Tuning.Timers.RevealView <= 0 || cfg.Tuning.Timers.RevealView > 30 || cfg.Tuning.Timers.ShuffleBonusSeconds <= 0 || cfg.Tuning.Timers.ShuffleBonusSeconds > 60) {
+		errs = append(errs, "specialty timers require lockout before turn end, view 1-30s and shuffle bonus 1-60s")
+	}
 	limits := cfg.Tuning.Contract
 	catalog := cfg.Tuning.TextCatalog
 	if catalog.MaxRecords <= 0 || catalog.MaxFileBytes <= 0 || catalog.MaxBundleBytes < catalog.MaxFileBytes || catalog.MaxSearchNodes <= 0 {
@@ -158,13 +174,9 @@ func ValidateTextCutover(mergedYAML []byte) error {
 		"bots",
 		"security.ssv_callback_key",
 		"security.ssv_allowed_senders",
-		"tuning.hand.specialty_weights",
 		"tuning.dealing.band_high",
 		"tuning.dealing.band_low",
 		"tuning.timers.prefetch_countdown",
-		"tuning.timers.reveal_lockout",
-		"tuning.timers.reveal_view",
-		"tuning.timers.shuffle_bonus_seconds",
 		"tuning.liquidity.backfill_enabled",
 		"tuning.liquidity.bot_think_min_s",
 		"tuning.liquidity.bot_think_max_s",

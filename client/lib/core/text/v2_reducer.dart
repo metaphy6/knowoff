@@ -65,6 +65,8 @@ class V2Reducer {
   final _historyHashes = <_EvidenceFingerprint>[];
   int _round = 0, _turn = 0;
   int _phase = -1;
+  int _appliedEvidenceSeq = 0;
+  String? _appliedPhaseID;
   bool _eliminated = false,
       _requestAcknowledged = false,
       _requestStateSeen = false;
@@ -89,6 +91,8 @@ class V2Reducer {
     _round = 0;
     _turn = 0;
     _phase = -1;
+    _appliedEvidenceSeq = 0;
+    _appliedPhaseID = null;
     _eliminated = false;
     _requestAcknowledged = false;
     _requestStateSeen = false;
@@ -140,9 +144,6 @@ class V2Reducer {
         s.boardRevision < _boardRevision ||
         s.round < _round ||
         (_phase == 6 && s.phase != 'verdict') ||
-        (s.round == _round &&
-            (_phaseOrder(s.phase) < _phase ||
-                (s.phase != 'verdict' && s.turn < _turn))) ||
         (_eliminated && !eliminated)) {
       _reject('stream.stale_evidence', clear: true);
     }
@@ -176,9 +177,6 @@ class V2Reducer {
     _boardRevision = s.boardRevision;
     _lastDigest = digest;
     _identityHash = identity;
-    _round = s.round;
-    _turn = s.turn;
-    _phase = _phaseOrder(s.phase);
     _eliminated = eliminated;
     if (s.paged) {
       current = null;
@@ -190,6 +188,26 @@ class V2Reducer {
   }
 
   void _apply(V2Snapshot s) {
+    // A restarted turn/ballot is valid only with new immutable specialty
+    // evidence. Paged snapshots reach this check after complete assembly.
+    if (s.round == _round && s.phase != 'verdict') {
+      bool resetBy(String kind) =>
+          s.phaseID != _appliedPhaseID &&
+          (s.json['history'] as List).any(
+            (e) =>
+                e['evidence_seq'] > _appliedEvidenceSeq &&
+                e['round'] == s.round &&
+                e['kind'] == kind,
+          );
+      if (_phaseOrder(s.phase) < _phase &&
+          !(_phase == 4 && s.phase == 'knowoff' && resetBy('revote'))) {
+        _reject('stream.stale_evidence', clear: true);
+      }
+      if (s.turn < _turn && !(_phase == 1 && resetBy('shuffle'))) {
+        _reject('stream.stale_evidence', clear: true);
+      }
+    }
+
     final history = (s.json['history'] as List)
         .map(_EvidenceFingerprint.new)
         .toList();
@@ -204,6 +222,11 @@ class V2Reducer {
     _historyHashes
       ..clear()
       ..addAll(history);
+    _round = s.round;
+    _turn = s.turn;
+    _phase = _phaseOrder(s.phase);
+    _appliedEvidenceSeq = s.evidenceSeq;
+    _appliedPhaseID = s.phaseID;
     current = s;
     _pending = null;
     _pages.clear();

@@ -20,7 +20,7 @@ no unexplained executable remnants of the association/image architecture.
 
 The original planning pass changed no code or deployed data; the owner's
 subsequent request authorizes implementation following this sequence.
-Implementation excludes specialty powers,
+Implementation retains all five specialty powers across all modes; it excludes
 production bot backfill, free-typed turn answers, semantic judges, new currencies,
 paid gameplay advantage, renamed roles, a visual rebrand or orchestration rewrite.
 All five modes remain intended; stagger exposure according to evidence.
@@ -31,7 +31,7 @@ All five modes remain intended; stagger exposure according to evidence.
 |---|---|---|---|
 | 1 — Contract, baseline and migration preflight | 12 | 12 | Complete; independent review and full validation passed |
 | 2 — Text catalog, dealing and content certification | 10 | 8 | Technical action certification and bounded exhaustive/replay fixtures independently verified; human editorial/release gates open |
-| 3 — Shared match state and five mode engines | 14 | 14 | Complete; independent review, cold race/property/privacy checks and full unified gate passed |
+| 3 — Shared match state and five mode engines | 14 | 14 | Complete, including restored five-mode specialties; independent review and fresh engine/wire gates passed |
 | 4 — Lobbies, protocol and client integration | 12 | 10 | Technical integration independently verified; physical-device journeys/performance and final gate open |
 | 5 — Durable value, community and trust | 20 | 11 | Durable settlement/recovery, Guard, weekly lifecycle, OAuth, avatar and curation/report integration verified; remaining trust/provider gates open |
 | 6 — Retirement, compatibility and operations | 11 | 0 | Three bounded cleanup children complete (below); broader retirement/cutover gates open |
@@ -172,6 +172,26 @@ new phase. No automated bot may replace a disconnected human or earn live value.
 | M3 — [x] Human plus bots | Explicit dev/test companions join the human's room through authenticated v2 role-scoped observations; support all modes, 4/6 seats, Ready, actions, recipient replies, votes and fresh rematch without earned progression. Production refuses this path. |
 | M4 — [x] Handoff | Record actual human-controlled UI plus bot verification, exact commands and known limitations; run relevant regression and unified gates and independent review. Preserve the open ten-cell/device/terminal-sync evidence above. |
 
+**Developer controls and specialties restoration — owner correction, 2026-09-19.**
+Goal: restore Freeze, next-match role and specialty selection, with all five
+specialties playable across every mode. This corrects the prior removal decision;
+it does not reopen image gameplay, v1 protocol, production backfill or release gates.
+Files: client text session/screens/contracts/tests; server game/v2/lobby/handler
+and config/tests; tuning; active blueprint/design/developer guides.
+
+| Existing home / delivery | Acceptance |
+|---|---|
+| Phase 4 — [x] Freeze and role controls | Debug private UI freezes bounded incoming state and countdown, resumes/resyncs safely, conceals on background; role preferences apply before next start, preserve team counts and refuse production authority. |
+| Phase 3 — [x] Five specialties | All five × five modes × both sizes: legal uses, off-role/phase rejection, Reveal privacy/expiry, Shuffle conservation/trade cancellation, Revote budget and Free Card penalty; ordinary clients can play dealt specialties. |
+| Phase 4 — [x] Dev grants and playable UI | Grant own held specialty only in private prototype; usable typed controls, targets and private timed views; actual browser Freeze/role/grant/use checks. |
+| Phase 6 / current handoff — [x] Regression and documentation | Historical policy hashes preserved; active retirement wording corrected; complete unified suites plus independent review and verification. |
+
+Risks: stale frozen state, privileged debug leakage, Reveal retention, Shuffle
+copy loss and obsolete strict schemas. Bound buffers, reject unauthorized paths,
+keep copy invariants and exercise protocol/engine/UI tests before acceptance.
+
+Completed evidence: [restoration follow-up](../reports/2026-09-19-private-playtest.md#developer-controls-and-specialty-restoration-follow-up) records 3,432 passing tests (including Go subtests), clean lint/build gates, updated Web/Android artifacts, actual use of all five cards in the debug UI, independent review and the repaired long-session bot refresh. These controls do not close Phase 4's device/performance gate or Phase 6's production cutover parents.
+
 **Files and evidence homes.** Extend existing startup/config paths under
 `configs/`, `infra/compose/` and `xops/makefile/` only after verifying their
 consumers. Align `README.md`, `client/README.md`, `infra/README.md`,
@@ -267,7 +287,7 @@ the normal green suite until their repair phase.
 | Sequencing — replay contract | Freeze public `evidence_seq`, per-recipient `recipient_seq`, reconnect `stream_epoch` and atomic snapshot cursors. Fixtures cover a private event to another seat without a local gap, duplicate/out-of-order events, stale epoch/board, identical request retry and conflicting reuse. Cached outcomes reauthorize private replies after elimination; absolute deadlines survive reconnect. |
 | Sequencing — bounds | Serialize a six-seat/three-round maximum-action trace with draws, penalties, trades, ballots and permitted chat. Prove the configured effective frame/history limits; if it exceeds them, freeze and test bounded cursor/hash pages with complete assembly. Never truncate required evidence or claim a future runtime sequence assignment already exists. |
 | Typed config — additions | Add strict typed mode/language availability and compatibility contracts with positive bounded `timers.trade_response_s: 10`. Positive/negative load fixtures prove missing/unknown/duplicate modes, unknown defaults, unsupported versions/languages and timer bounds. Availability starts closed until certification; a known future default can remain disabled, and loading config does not enable unimplemented handlers. |
-| Typed config — transition | Define the v2 obsolete-key migration errors and neutral round-start countdown replacement. Preserve legacy config compatibility until the declared boundary; test old-key rejection there, unchanged economy/clock defaults and fail-fast unknown keys. Final specialty/image/backfill field removal remains Phase 6 consumer-verified work. |
+| Typed config — transition | Define the v2 obsolete-key migration errors and neutral round-start countdown replacement. Preserve legacy config compatibility until the declared boundary; test old-key rejection there, unchanged economy/clock defaults and fail-fast unknown keys. Final obsolete image/backfill field removal remains Phase 6 consumer-verified work. |
 | Regression records — draws/pack | Record bounded reproductions of out-of-turn/public draw and same-ID wording replacement during a match, with preconditions and expected target assertions. Keep the current contradictory draw test attributable; replace it with the adopted regression alongside the Phase 3 repair, and pinning proof with Phase 2. |
 | Regression records — resync/locks | Record zero-sequence/incomplete reconnect and a real websocket Room→Match→Room current-turn disconnect deadlock under an explicit timeout. Specify callbacks and socket writes outside incompatible nested locks and one connection writer. Save the observed failure; fixes and executable green regressions belong to Phases 3/4. |
 | Durable identity design | Review match/account admission identity, immutable award keys, settlement/outbox replay states and shared UTC daily counters with wallet ownership. Specify atomic reserve/start/cancel/interrupt compensation, committed-award preservation, no double first-win/points/XP/leaderboard grants, and no process-loss fabrication of results. Tabletop failure traces include crash after start, partial award, callback retry and first-row races. |
@@ -465,7 +485,7 @@ state-machine/property/race tests, full no-leak event scanning.
 - [x] Add stable match/round/action/copy identity and one-owner location registry for hand/reserve/board/discard/pending; copied wording never conflates copies.
 - [x] Implement whole-match ordered public evidence and private per-seat state, round reset and bounded snapshots using the pinned pack/rules.
 - [x] Fix draws to current-turn-only, private owner delivery/public count and exactly-once penalty; reject eliminated/disconnected/pending-offer draws.
-- [x] Remove specialty dealing/use from text engine and reject legacy specialty/dev grants; preserve timeout passes and tied runoffs.
+- [x] Restore all five specialties across every text mode with role-blind dealing, strict typed actions, private debug grants and per-mode secrecy/conservation proofs (owner correction 2026-09-19); retain v1 rejection.
 - [x] Implement Missed the Briefing response confirmation/consumption, preview revision and attributed evidence with idempotent retry.
 - [x] Implement Secret Scale atomic card+1–5 placement, neutral labels, multiple copies per rating and immutable history.
 - [x] Implement Make Room three-item seeding and atomic slot replacement/discard with original before/after evidence retained.
@@ -502,7 +522,7 @@ retry; Phase 5 owns their durable persistence.
 | 3a — History | Retain attributed ordered actions, public before/after state, penalties and system seeds by original round; board reset preserves hand/reserve and previous evidence. |
 | 3b — Projection | Build v2 active-Nower/Donower/eliminated snapshots from pinned bytes, including ballot/Ready/pending deadlines; full serialized scans reject future prompts, other hands/reserves and role-linked value. Page assembly preserves complete history. |
 | 4 — Draw repair | Add current-turn-only text-engine draw proof; private instances/public count, one penalty per copy and no mutation for disconnected/eliminated/pending/stale requests. Keep the historical v1 behavior test until its consumer is retired under Phase 6. |
-| 5 — Legacy rejection | Text setup deals no specialties; specialty/dev grants fail explicitly at every text entry point. Keep ordinary timeout passes, random penalty discard, no-card pass and tied runoff proofs. |
+| 5 — Specialties and legacy rejection | Restore Pass, Reveal, Free Card, Shuffle and Revote across all ten mode/size cells with typed actions and private debug grants. Preserve v1 rejection, timeout passes, draw rules and tied runoffs; test secrets, conservation and once-per-match restrictions. |
 | 6 — Respond | Validate phase/turn/copy/preview revision, consume once and append attributed response; same request/body replays, changed body/stale revision refuses unchanged. |
 | 7 — Place | Commit copy plus integer 1–5 atomically; duplicate ratings are legal, neutral endpoints expose no criterion, malformed ratings never spend a copy. |
 | 8 — Replace | Seed three distinct items, replace one occupied slot and archive its removed copy; before/after history remains exact and restoration requires another owned copy. |
@@ -1000,7 +1020,7 @@ inventory, rollback before/after writes, every module/platform build.
 - [ ] Build text-compatible deployment/config/pack manifest, explicitly fence v1 clients and drain old matches on their original rules/content.
 - [ ] Implement selective stale room/queue/cache invalidation and single-writer cutover with account/ledger/entitlement parity and real enabled-mode human smoke.
 - [ ] Exercise server crash, Redis/Postgres loss and restore; no fabricated live-match recovery or lost/duplicate durable value; readiness recovers correctly, with Blueprint latency/100-room/soak budgets and frame bounds proven.
-- [ ] Retire association-game handlers, specialty states/dev grants, production backfill scheduler, obsolete wire branches/UI/strings after new rejection proofs.
+- [ ] Retire association-game handlers, obsolete specialty wire branches, production backfill scheduler, obsolete wire branches/UI/strings after new rejection proofs.
 - [ ] Retire playable-image loaders/signed URLs/prefetch/catalog caches, workbench/image candidate path and sole-use config/assets/dependencies; preserve avatar/UI consumers.
 - [ ] Retire MinIO/game-content CDN/credentials/healthchecks only after consumer/backup inventory; preserve authorized archives and all applied migration history.
 - [ ] Replace obsolete fixtures/assertions with mode/privacy/migration/unsupported-input tests; obtain concrete approval before deleting test files and record release notes.
@@ -1025,7 +1045,7 @@ unchanged. Evidence: [cleanup inventory and verification](../reports/2026-09-19-
 **Why original parents remain open.** Parents 1–5 require complete restore,
 upgrade/rollback, release/drain, single-writer/invalidation/human smoke and
 outage/budget evidence respectively. Parent 6 still requires the complete
-association/specialty/backfill/wire/UI retirement inventory and replacement
+association/backfill/obsolete-wire/UI retirement inventory and replacement
 rejection proofs; parent 7 requires all image/catalog/workbench/config/asset
 consumers accounted for; parent 8 requires retained archive/backup/storage
 inventory; parent 9 requires the complete replacement-test mapping and any
@@ -1059,7 +1079,7 @@ release manifest and operator authorization.
 | 4b — Selective invalidation | Namespace/expire stale room/queue/cache generations while retaining identity/security/entitlement state; fixture parity and real human smoke cover every enabled mode/size. |
 | 5a — Outage recovery | Inject server, Redis and PostgreSQL loss, restore from actual artifacts and prove readiness recovery/clean interruption without reconstructed hands or duplicated value. |
 | 5b — Budgets | Run recorded-host 100-room mixed-size latency (p95≤200 ms/p99≤500 ms), worst-frame and 100-match soak tests; after cleanup/GC heap within 10% of warm baseline and room/socket/goroutine counts recover. |
-| 6 — Gameplay retirement | Remove active association/specialty/dev-grant/backfill scheduler/wire/UI/string consumers in bounded module patches after replacement rejection tests; update every retained caller before removing its API. |
+| 6 — Gameplay retirement | Remove active association/backfill scheduler/obsolete wire/UI/string consumers in bounded module patches after replacement rejection tests; update every retained caller before removing its API. |
 | 7a — Content retirement | Remove playable-image loaders/URLs/prefetch/catalog/workbench ingest routes and stale packaged secrets; prove unsupported input rejection and absence from route/artifact inventories. |
 | 7b — Dependency retirement | Remove only packages/config/assets with no retained caller using official module tooling; rebuild server/tools/Android/Web and macOS iOS, retaining avatar WebP/CGO and account/UI utilities. |
 | 8 — Storage retirement | Inventory archive/artifact/avatar consumers, then remove unused MinIO/CDN wiring, secrets and readiness checks; preserve authorized archives/applied SQL and verify text fresh-clone startup without cloud keys. |

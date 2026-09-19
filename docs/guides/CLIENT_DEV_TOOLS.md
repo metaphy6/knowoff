@@ -1,48 +1,56 @@
 # Client developer tools
 
-**Status — 2026-09-19:** the normal Flutter client uses the five-mode text
-runtime. The former association-game Dev tools sheet, specialty grants and
-next-match role overrides have been removed. Debug builds do not restore these
-controls. See the [client guide](../../client/README.md) for current UI behavior
-and [Roadmap Phase 4](../planning/ROADMAP.md#phase-4--lobbies-protocol-and-client-integration)
-for the remaining client playtest evidence.
+The normal five-mode client keeps the requested development controls:
+**Freeze/Resume, next-match role selection and specialty grants**. Start the
+private manual server with `make up` and Flutter debug client with `make web.run`;
+see [the manual workflow](PLAYTEST.md#manual-debugging-with-bot-companions).
 
-## Private playtesting
+## Controls
 
-Use the server's private prototype configuration with ordinary Flutter clients.
-The server selects prototype eligibility; a debug build or client preference
-cannot enable a mode or bypass admission. Production modes remain disabled until
-their release requirements are met. Private prototype matches support all five
-modes at 4/6 players without earned currency or progression.
+Open **Dev tools** in the private debug client's game/room header.
 
-Choose the mode, table size and content language in the lobby. Each player must
-acknowledge the current settings and membership before the host starts. Rematch
-returns to the lobby for another Ready/start cycle. Exercise reconnect through
-the ordinary session flow; server deadlines continue while a client disconnects.
-There is no multiplayer pause or role-selection control.
+* **Freeze / Resume** holds the local game view and countdown, buffering a
+  bounded set of incoming frames. The server and other players continue.
+  Resume catches up; overflow requests fresh authoritative state. Frozen
+  controls cannot submit actions against stale game state. Backgrounding clears
+  private material, and the normal reconnect/resync flow still applies.
+* **Next-match role: Random / Nower / Donower** stores your debugging preference.
+  It applies on joining and on the next start/rematch, not to a role already
+  assigned. Start waits for the server acknowledgement. The server preserves
+  the exact team sizes and rejects conflicting preferences. Random clears the
+  override. Preferences survive reopening the debug screen.
+* **Grant specialty: Pass / Reveal / Free Card / Shuffle / Revote** replaces
+  your own held specialty in an active private match. It does not auto-play
+  the card or bypass its phase, target, role or once-per-match restrictions.
+  Use the regular specialty control to play it. Shuffle requires Donower;
+  Revote requires Nower; choose the next-match role before starting to test them.
 
-Use separate browser profiles or devices for distinct players. Tabs sharing
-browser storage can share an installation/account and are not reliable separate
-player sessions. Do not use developer actions to manufacture gameplay evidence.
+Only the debug controls are development-only. **All five specialty mechanics
+remain playable in every mode**, including ordinary clients with dealt cards.
+The server refuses grants and role overrides in production or a nonprototype
+match regardless of client flags. Private matches earn no currency/progression.
 
-## Retained verification
+## Specialty behavior
 
-The historical filename
-[`dev_tools_panel_test.dart`](../../client/test/presentation/dev_tools_panel_test.dart)
-now verifies that the text shell has no legacy debug entry points and that
-retired specialty/role actions cannot emit text intents. It also checks compact
-accessible controls, large text, countdown behavior and finite poke feedback.
-A countdown widget's local frozen-display test is not an exposed game pause.
+Pass ends your turn without playing a text card. Reveal announces a target
+without leaking cards in public history; use the revealed-hand control for a
+short private view. Free Card makes your next reserve draw this round free of
+its point penalty. Shuffle restarts the current round's table and hands without
+changing Nown, reserves or roles. Revote restarts an open ballot without spending
+another vote budget; it cannot erase a shown result. See
+[Blueprint Rules §5](../../BLUEPRINT.md#5-card-specialties) for exact boundaries.
 
-[`game_session_provider_test.dart`](../../client/test/presentation/game_session_provider_test.dart)
-and the [v2 session tests](../../client/test/core/network/text_session_test.dart)
-retain session/rejection coverage. Keep these test files and the historical
-[retirement mapping](../reports/2026-09-12-client-retirement-test-map.json);
-legacy filenames do not imply a runnable legacy client.
+## Verification
 
-From the repository root, run the unified gate with
-`python3 xops/test/tests-lints.py`. Automated widget/contract checks do not replace
-actual joining, actions, voting, results, reconnect and rematch journeys across
-all ten mode/size combinations or physical-device measurements. Billing/provider
-acceptance, complete deletion, certified content and public deployment remain
-separate unfinished production requirements.
+Tests cover the session buffer, stale-action guards, role acknowledgements,
+production refusal, specialty targets/ownership, history/privacy and card-copy
+conservation across five modes and both table sizes. Run
+`python3 xops/test/tests-lints.py` from the repository root. Actual browser checks
+and remaining device/production gates are recorded separately in the
+[playtest report](../reports/2026-09-19-private-playtest.md).
+
+The old v1 association-game wire protocol stays retired. Its blanket exclusion
+of development controls and all specialties was corrected by the owner on
+2026-09-19; historical retirement reports describe the earlier state, not the
+current intended behavior. Billing/provider acceptance, deletion, certified
+content and deployment requirements remain open.

@@ -34,6 +34,8 @@ func joinManualBots(ctx context.Context, endpoint, code string, count int, seed 
 			closeManualBots(peers)
 			return nil, err
 		}
+		// Refresh retries return fresh authorized state while retaining one receipt.
+		p.resyncRequestID = p.nextID()
 		peers = append(peers, p)
 		if err = p.control(ctx, "room_join", map[string]string{"code": code}); err != nil {
 			closeManualBots(peers)

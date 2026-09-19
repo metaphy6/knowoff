@@ -71,6 +71,12 @@ func (s Snapshot) Clone() Snapshot {
 	s.ReadySeats = slices.Clone(s.ReadySeats)
 	s.Ballot = s.Ballot.Clone()
 	s.PendingOffer = clonePointer(s.PendingOffer)
+	s.RevealTarget = clonePointer(s.RevealTarget)
+	s.Private.Reveal = clonePointer(s.Private.Reveal)
+	if s.Private.Reveal != nil {
+		s.Private.Reveal.Hand = slices.Clone(s.Private.Reveal.Hand)
+		s.Private.Reveal.Reserve = slices.Clone(s.Private.Reveal.Reserve)
+	}
 	s.Private.Nown = clonePointer(s.Private.Nown)
 	s.Private.Hand = slices.Clone(s.Private.Hand)
 	s.Private.Capabilities = slices.Clone(s.Private.Capabilities)

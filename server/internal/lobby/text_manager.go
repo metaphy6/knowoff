@@ -120,6 +120,7 @@ type TextPeer struct {
 }
 type textMember struct {
 	account, admission string
+	devRole            string
 	peer               *TextPeer
 	joined             uint64
 	originalSeat       int
@@ -626,7 +627,10 @@ func (m *TextManager) lobby(r *textRoom, p *TextPeer) error {
 	if e := s.Validate(m.wireLimits()); e != nil {
 		return e
 	}
-	return m.emit(p, "lobby", "", TextLobbyView{my, r.code, s})
+	if err := m.emit(p, "lobby", "", TextLobbyView{my, r.code, s}); err != nil {
+		return err
+	}
+	return m.devRoleFrame(r, p)
 }
 func (m *TextManager) broadcastLobby(r *textRoom) {
 	for _, member := range r.seats {

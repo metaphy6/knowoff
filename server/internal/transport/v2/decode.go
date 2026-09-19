@@ -178,6 +178,7 @@ func actionShape(object map[string]json.RawMessage) error {
 		ActionRespond: "copy_id", ActionPlace: "copy_id rating", ActionReplace: "copy_id slot",
 		ActionOffer: "copy_id target_seat target_copy_id", ActionResolveOffer: "offer_id resolution",
 		ActionTop: "copy_id target_copy_id", ActionDraw: "count", ActionVote: "target_seat",
+		ActionPass: "", ActionReveal: "target_seat", ActionViewReveal: "", ActionFreeCard: "", ActionShuffle: "", ActionRevote: "",
 		ActionReady: "", ActionPoke: "target_seat", ActionChat: "phrase_id text ui_locale",
 	}
 	allowed, known := variants[kind]

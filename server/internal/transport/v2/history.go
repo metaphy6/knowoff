@@ -37,6 +37,15 @@ func (e PublicAction) validate(l Limits) error {
 	allowed := map[string]bool{}
 	valid := false
 	switch e.Kind {
+	case "pass", "free_card":
+		valid = e.Actor.Kind == "seat" && len(e.Cards) == 0 && e.Phase == PhasePlay
+	case "reveal":
+		allowed["target"] = true
+		valid = e.Actor.Kind == "seat" && len(e.Cards) == 0 && ptrSeat(e.TargetSeat, 6) && *e.TargetSeat != *e.Actor.Seat && e.Phase == PhasePlay
+	case "shuffle":
+		valid = e.Actor.Kind == "system" && len(e.Cards) <= 6 && (e.Phase == PhasePlay || e.Phase == PhaseTradeResponse)
+	case "revote":
+		valid = e.Actor.Kind == "seat" && len(e.Cards) == 0 && (e.Phase == PhaseKnowoff || e.Phase == PhaseRunoff)
 	case "seed":
 		valid = e.Phase == PhaseRoundStart && e.Actor.Kind == "system" && e.Reason == "seed" && len(e.Cards) > 0 && len(e.Cards) <= 6
 	case "respond":

@@ -1244,7 +1244,7 @@ func TestTextActiveRejoinBindsRoomBeforePrivateSnapshot(t *testing.T) {
 				for len(fresh.frames) > 0 {
 					frames = append(frames, <-fresh.frames)
 				}
-				if len(frames) < 2 || frames[0].Type != "lobby" || frames[1].Type != "snapshot" {
+				if len(frames) < 3 || frames[0].Type != "lobby" || frames[1].Type != "dev_role" || frames[2].Type != "snapshot" {
 					t.Fatalf("fresh rejoin must bind room before snapshot: %v", func() []string {
 						kinds := []string{}
 						for _, f := range frames {
@@ -1258,7 +1258,7 @@ func TestTextActiveRejoinBindsRoomBeforePrivateSnapshot(t *testing.T) {
 					t.Fatal(err)
 				}
 				var snapshot v2.Snapshot
-				if err = json.Unmarshal(frames[1].Payload, &snapshot); err != nil {
+				if err = json.Unmarshal(frames[2].Payload, &snapshot); err != nil {
 					t.Fatal(err)
 				}
 				if binding.Seat != seat || binding.Code != room.code || binding.Lobby.RoomID != room.id || snapshot.Contract.RoomID != room.id || snapshot.Private.Seat != seat {

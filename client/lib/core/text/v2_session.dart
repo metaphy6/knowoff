@@ -33,6 +33,7 @@ class TextSession extends ChangeNotifier {
       if (_disposed) return;
       // Socket changes matter even while private state is concealed. A new
       // transport connection has not authenticated until its hello is accepted.
+      _clearFreeze();
       _authenticatedToken = null;
       _helloToken = null;
       if (!_foreground) return;
@@ -60,7 +61,7 @@ class TextSession extends ChangeNotifier {
   String? _limitsHash, _authenticatedToken, _helloToken;
   bool? _prototype;
   bool get prototype => _prototype == true;
-  String? _roomID;
+  String? _roomID, _accountID;
   int _settingsRevision = 0, _membershipRevision = 0;
   final _deliveryHashes = <int, String>{};
   final _deliveries = <int, Map<String, dynamic>>{};
@@ -77,7 +78,49 @@ class TextSession extends ChangeNotifier {
   Map<String, dynamic>? lobby, queue;
   List<TextModeAvailability> availability = const [];
   int _serverOffset = 0;
-  int get serverNowMS => now().millisecondsSinceEpoch + _serverOffset;
+  int? _frozenNow;
+  final _frozenFrames = <({Map<String, dynamic> frame, int receivedAt})>[];
+  int? _replayReceivedAt;
+  int _frozenBytes = 0;
+  bool get frozen => _frozenNow != null;
+  bool get devToolsAvailable => kDebugMode && ready && prototype && _foreground;
+  String devRole = 'random';
+
+  void freeze() {
+    if (!devToolsAvailable || snapshot == null) {
+      throw const V2Failure('action.unauthorized');
+    }
+    _frozenNow ??= serverNowMS;
+    notifyListeners();
+  }
+
+  Future<void> unfreeze() async {
+    final frames = List.of(_frozenFrames);
+    _clearFreeze();
+    for (final entry in frames) {
+      _replayReceivedAt = entry.receivedAt;
+      receive(entry.frame);
+    }
+    _replayReceivedAt = null;
+    notifyListeners();
+  }
+
+  void _clearFreeze() {
+    _frozenNow = null;
+    _frozenFrames.clear();
+    _frozenBytes = 0;
+  }
+
+  Future<void> selectDevRole(String role) {
+    if (!devToolsAvailable || !{'random', 'nower', 'donower'}.contains(role)) {
+      throw const V2Failure('action.unauthorized');
+    }
+    return control('dev_role', {'role': role});
+  }
+
+  int get liveServerNowMS => now().millisecondsSinceEpoch + _serverOffset;
+  int get serverNowMS =>
+      _frozenNow ?? now().millisecondsSinceEpoch + _serverOffset;
   String nextRequestID() => List.generate(
     16,
     (_) => _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
@@ -121,6 +164,25 @@ class TextSession extends ChangeNotifier {
     try {
       final envelope = decode(jsonEncode(message));
       final type = envelope['type'];
+      if (frozen &&
+          (!{'hello', 'error', 'dev_role'}.contains(type) ||
+              type == 'error' &&
+                  (envelope['payload'] as Map).containsKey('cursor'))) {
+        final bytes = utf8.encode(jsonEncode(envelope)).length;
+        if (_frozenFrames.length >= 128 || _frozenBytes + bytes > 1048576) {
+          _clearFreeze();
+          reducer?.disconnect();
+          unawaited(control('resync', {}));
+          notifyListeners();
+        } else {
+          _frozenFrames.add((
+            frame: envelope,
+            receivedAt: now().millisecondsSinceEpoch,
+          ));
+          _frozenBytes += bytes;
+        }
+        return;
+      }
       final p = envelope['payload'] as Map<String, dynamic>;
       if (type == 'error') {
         if (p.containsKey('cursor')) {
@@ -183,6 +245,21 @@ class TextSession extends ChangeNotifier {
         if (_prototype != null && _prototype != p['prototype']) {
           throw const V2Failure('protocol.upgrade_required');
         }
+        if (_accountID != null && _accountID != p['account_id']) {
+          _clearValueViews();
+          reducer?.reset();
+          _controls.clear();
+          _admitted = false;
+          _roomID = null;
+          roomCode = null;
+          lobby = null;
+          queue = null;
+          seat = null;
+          _settingsRevision = 0;
+          _membershipRevision = 0;
+          devRole = 'random';
+        }
+        _accountID = p['account_id'];
         _prototype = p['prototype'];
         _limitsHash = limitsHash;
         _helloPending = false;
@@ -199,6 +276,11 @@ class TextSession extends ChangeNotifier {
       } else {
         if (!ready) throw const V2Failure('protocol.upgrade_required');
         switch (type) {
+          case 'dev_role':
+            V2Codec.control('devRole', p);
+            if (!prototype) throw const V2Failure('action.unauthorized');
+            devRole = p['role'];
+            break;
           case 'system_notice':
             V2Codec.control('systemNotice', p);
             noticeChanges.notifyListeners();
@@ -322,7 +404,8 @@ class TextSession extends ChangeNotifier {
             lobby = null;
             queue = null;
             _serverOffset =
-                (p['server_time_ms'] as int) - now().millisecondsSinceEpoch;
+                (p['server_time_ms'] as int) -
+                (_replayReceivedAt ?? now().millisecondsSinceEpoch);
             break;
           case 'action_ack':
           case 'control_ack':
@@ -419,6 +502,9 @@ class TextSession extends ChangeNotifier {
     if (!ready || _disposed || !_foreground) {
       throw const V2Failure('protocol.upgrade_required');
     }
+    if (frozen && !{'dev_role', 'room_leave'}.contains(type)) {
+      throw const V2Failure('action.unauthorized');
+    }
     if (type == 'resync' && _controls.containsValue('resync')) {
       return Future<void>.value();
     }
@@ -443,14 +529,23 @@ class TextSession extends ChangeNotifier {
   }
 
   Future<void> act(Map<String, dynamic> action) {
-    if (!ready || reducer == null) throw const V2Failure('action.unauthorized');
+    if (frozen || !ready || reducer == null) {
+      throw const V2Failure('action.unauthorized');
+    }
     final request = reducer!.confirm(action, nextRequestID(), serverNowMS);
     notifyListeners();
     return transport.send({'v': 2, 'type': 'action', 'payload': request});
   }
 
-  Future<void> retry() =>
-      transport.send({'v': 2, 'type': 'action', 'payload': reducer!.retry()});
+  Future<void> retry() {
+    if (frozen) throw const V2Failure('action.unauthorized');
+    return transport.send({
+      'v': 2,
+      'type': 'action',
+      'payload': reducer!.retry(),
+    });
+  }
+
   Future<void> dismissDelivery(int id) async {
     if (!_deliveries.containsKey(id)) return;
     await control('settlement_ack', {'id': id});
@@ -467,6 +562,7 @@ class TextSession extends ChangeNotifier {
   }
 
   Future<void> leave() async {
+    _clearFreeze();
     final type = queue != null ? 'queue_leave' : 'room_leave';
     roomCode = null;
     _roomID = null;
@@ -494,6 +590,7 @@ class TextSession extends ChangeNotifier {
   }
 
   void _clearValueViews() {
+    _clearFreeze();
     // Unacknowledged deliveries may be replayed after the server lease expires.
     for (final id in _deliveries.keys) {
       _deliveryHashes.remove(id);
@@ -535,6 +632,7 @@ class TextSession extends ChangeNotifier {
 
   @override
   void dispose() {
+    _clearFreeze();
     _disposed = true;
     _generation++;
     reducer?.reset();

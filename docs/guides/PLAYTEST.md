@@ -29,6 +29,8 @@ and take legal actions and votes from their own role-scoped state. Ready your
 own seat and start the match as host. Use the normal results/rematch controls;
 bots follow the lobby back to Ready while you choose when to start again.
 They never replace your disconnected seat or grant earned Noin/progression.
+The private debug header also exposes Freeze, next-match role and specialty
+grants; see [developer controls](CLIENT_DEV_TOOLS.md).
 The current v2 lobby shows seat numbers, not a Bot badge: you explicitly add
 these companions and know which seats they occupy.
 Stop the bot command with Ctrl+C when finished; lobby/results seats are released.

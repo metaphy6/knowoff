@@ -247,3 +247,101 @@ locally at `/tmp/agent-runs/manual-go-recovery.json`,
 `/tmp/agent-runs/manual-python.json` and `/tmp/agent-runs/manual-client-sdk.json`.
 Independent review and verification passed. The earlier failed infrastructure
 attempt remains recorded and is not counted as passing evidence.
+
+
+## Developer controls and specialty restoration follow-up
+
+The owner explicitly retained Pass, Reveal, One More Free Card, Shuffle and
+Revote across all five text modes. The current Blueprint and active guides now
+reflect that correction. The earlier specialty-retirement statements above are
+historical evidence, not the current product rule. Freeze, next-match role choice
+and private specialty selection are restored in the normal `make up` / `make
+web.run` workflow. Production admission and the outstanding release gates remain
+closed.
+
+Regression coverage exercises all 50 specialty/mode/size cells, including legal
+use, wrong-role/phase refusal, one-time global Shuffle/Revote limits, immutable
+Reveal captures and expiry, conserved physical copies, pending-trade cancellation
+and the Free Card draw exemption. Protocol tests cover strict payload validation,
+private projections, production refusals and grants through authenticated real
+WebSockets. Client regression tests cover bounded freeze/resume, concealment,
+role acknowledgement, timed Reveal rendering and fresh-evidence-only turn/ballot
+resets with both inline and paged history. Old v1 intents remain rejected.
+
+Actual browser proof used the normal Flutter debug client at
+`http://127.0.0.1:8000`, private room 36EA36 and three `make bots` companions:
+
+- A chosen Donower role hid the Nown. Freeze held the displayed turn and countdown
+  while the server continued; Resume caught up to the authoritative discussion
+  and its recorded missed-turn Auto Pass. Flutter hot reload preserved the room.
+- Selecting Shuffle and using its regular gameplay control redistributed the
+  hand, produced an anonymous System/Shuffle event and reset the first turn to
+  30 seconds. Reveal selected Seat 2, announced only the target, showed the
+  captured cards privately on request and concealed them after three seconds.
+- Free Card displayed the banked token and disabled the normal mode action until
+  a reserve draw consumed it. The draw increased the hand, reduced reserve from
+  three to two and restored the normal action controls.
+- Choosing Nower during that match applied on the next rematch, whose private
+  Nown became visible. Pass advanced the turn without playing a card and recorded
+  the attributed Pass event. Revote during Knowoff consumed the held specialty
+  and reset the ballot to its full 20-second window.
+- The expanded developer panel rendered all requested controls without overflow
+  at 1280×720. The browser console contained no warnings or errors during these
+  checks. These are observed four-player Briefing journeys; the 50-cell claim
+  above is automated engine coverage, not 50 new browser journeys.
+
+Known boundaries: Freeze pauses this client's view only. Role changes apply to
+next start/rematch, and grants do not bypass role, phase, target or once-per-match
+rules. The developer panel requires a debug client and private prototype server;
+ordinary clients can play dealt specialties. Bots use a mechanical policy.
+Android/iOS device proof, the earlier complete ten-cell browser acceptance gate,
+certified content, billing/provider acceptance, complete deletion and public
+cutover remain unfinished. No new readiness claim closes those requirements.
+
+
+The extended bot run exposed a real `request.limit` failure after roughly eight
+minutes: each one-second refresh consumed a new bounded control receipt. Manual
+bots now reuse one dedicated resync ID. The server reauthorizes duplicate resyncs
+and returns fresh state before acknowledgement, retaining conflict detection and
+the existing receipt bound. A regression reproduces the original failure at poll
+510, then passes more than 512 refreshes in the lobby, an active player's turn
+and a pending Bad Bargains trade. It checks fresh stream epochs, the unchanged
+socket, private hand/role, trade/deadline/evidence and rejection of an attempt to
+reuse that ID for `room_leave`. No disconnect-induced Auto Pass is used to avoid
+the limit.
+
+Final review also aligned client specialty privacy validation with server checks
+for eliminated players, disconnected Reveal viewers, eliminated targets and the
+combined card bound. Six regressions bring the fresh client suite to 666 Flutter
+and two Web-cache tests, with analysis and formatting passing. Independent live
+code review found no remaining blocking issue in the restored controls or the
+long-session fix.
+
+
+Both updated artifacts built successfully: `make playtest.web` produced
+`client/build/web` (42 MiB on disk), and `make playtest.android` produced
+`client/build/app/outputs/flutter-apk/app-debug.apk`. The Web compiler's Wasm dry
+run also succeeded. It still emits a Cupertino icon-font availability warning;
+the successful build and browser checks do not constitute a full icon audit or
+native-device acceptance. Build logs are retained at
+`/tmp/agent-runs/dev-controls-web-build--20260919T192824Z-2908229.log` and
+`/tmp/agent-runs/dev-controls-android-build--20260919T192932Z-2917569.log`.
+
+
+Final accepted validation totals **3,432 tests**, including Go subtests: 2,501
+server, 104 gamebot, 24 mediapack, 135 Python, 666 Flutter and two Web-cache tests.
+Zero final failures or skips; all format/vet/build/Flutter-analysis stages passed.
+The initial complete unified Go/Python runs were followed by a fresh complete
+client run and revalidation of all 151 handler tests plus the entire gamebot
+module after the refresh repair. The affected checks used the unified runner's
+own check functions and uniquely named disposable PostgreSQL/Redis fixtures.
+The handler count is part of the server total, not counted twice. The final
+100-room load/soak test passed. Independent review and verification passed.
+Reports: `/tmp/agent-runs/dev-controls-go.json`,
+`/tmp/agent-runs/dev-controls-python.json`,
+`/tmp/agent-runs/dev-client-unified-final.json` and
+`/tmp/agent-runs/dev-bot-budget-final.json`.
+An intermediate bot run compiled before the last refresh repair was deliberately
+interrupted and replaced by the final run; it is not accepted proof. Expected
+red regressions, a missing disposable-test-environment invocation and the fixed
+client test lint finding are retained in logs rather than counted as successes.

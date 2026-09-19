@@ -150,11 +150,7 @@ func TestTextCatalogBudgets(t *testing.T) {
 
 func TestTextCutoverRejectsObsoleteKeysByPresence(t *testing.T) {
 	for _, tc := range []struct{ yaml, path string }{
-		{"tuning:\n  hand:\n    specialty_weights: {}\n", "tuning.hand.specialty_weights"},
 		{"tuning:\n  timers:\n    prefetch_countdown: 0\n", "tuning.timers.prefetch_countdown"},
-		{"tuning:\n  timers:\n    reveal_lockout: null\n", "tuning.timers.reveal_lockout"},
-		{"tuning:\n  timers:\n    reveal_view: 0\n", "tuning.timers.reveal_view"},
-		{"tuning:\n  timers:\n    shuffle_bonus_seconds: 0\n", "tuning.timers.shuffle_bonus_seconds"},
 		{"tuning:\n  liquidity:\n    backfill_enabled: false\n", "tuning.liquidity.backfill_enabled"},
 		{"tuning:\n  liquidity:\n    bot_think_min_s: 0\n", "tuning.liquidity.bot_think_min_s"},
 		{"tuning:\n  liquidity:\n    bot_think_max_s: 0\n", "tuning.liquidity.bot_think_max_s"},

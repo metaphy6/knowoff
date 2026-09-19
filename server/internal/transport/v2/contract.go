@@ -111,6 +111,12 @@ const (
 type ActionKind string
 
 const (
+	ActionPass         ActionKind = "pass"
+	ActionReveal       ActionKind = "reveal"
+	ActionViewReveal   ActionKind = "view_reveal"
+	ActionFreeCard     ActionKind = "free_card"
+	ActionShuffle      ActionKind = "shuffle"
+	ActionRevote       ActionKind = "revote"
 	ActionRespond      ActionKind = "respond"
 	ActionPlace        ActionKind = "place"
 	ActionReplace      ActionKind = "replace"
@@ -227,7 +233,17 @@ type PublicSeat struct {
 	RevealedRole string `json:"revealed_role,omitempty"`
 }
 
+type RevealView struct {
+	TargetSeat  int    `json:"target_seat"`
+	ExpiresAtMS int64  `json:"expires_at_ms"`
+	Hand        []Card `json:"hand"`
+	Reserve     []Card `json:"reserve"`
+	Specialty   string `json:"specialty,omitempty"`
+}
 type PrivateState struct {
+	Specialty    string       `json:"specialty,omitempty"`
+	FreeDraws    int          `json:"free_draws,omitempty"`
+	Reveal       *RevealView  `json:"reveal,omitempty"`
 	Points       int64        `json:"points"`
 	Seat         int          `json:"seat"`
 	Role         string       `json:"role"`
@@ -273,6 +289,7 @@ type BallotState struct {
 // inline evidence or the complete immutable, hashed page set described by
 // HistoryPages. Clients must assemble all pages before applying that snapshot.
 type Snapshot struct {
+	RevealTarget     *int             `json:"reveal_target,omitempty"`
 	Scores           []SeatScore      `json:"scores,omitempty"`
 	Verdict          *MatchVerdict    `json:"verdict,omitempty"`
 	Version          int              `json:"v"`

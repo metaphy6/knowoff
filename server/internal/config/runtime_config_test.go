@@ -54,7 +54,6 @@ func TestRuntimeConfigRejectsRetiredInputBeforeInterpolation(t *testing.T) {
 		{"protocol: {version: 1}\n", "protocol.version"},
 		{"protocol: {version: 0}\n", "protocol.version"},
 		{"protocol: {version: 3}\n", "protocol.version"},
-		{"tuning:\n  hand:\n    specialty_weights: {}\n", "tuning.hand.specialty_weights"},
 		{"tuning:\n  liquidity:\n    backfill_enabled: false\n", "tuning.liquidity.backfill_enabled"},
 		{"tuning:\n  dealing:\n    band_high: ${MUST_NOT_BE_READ}\n", "tuning.dealing.band_high"},
 		{"tuning:\n  dealing:\n    band_low: null\n", "tuning.dealing.band_low"},
@@ -78,8 +77,7 @@ func TestLiveConfigTypesExcludeRetiredConsumers(t *testing.T) {
 	}{
 		{Config{}, []string{"Storage", "Media", "Bots"}},
 		{SecurityConfig{}, []string{"SSVCallbackKey", "SSVAllowedSenders"}},
-		{TimersTuning{}, []string{"RevealLockout", "RevealView", "ShuffleBonusSeconds", "PrefetchCountdown"}},
-		{HandTuning{}, []string{"SpecialtyWeights"}},
+		{TimersTuning{}, []string{"PrefetchCountdown"}},
 		{DealingTuning{}, []string{"BandHigh", "BandLow"}},
 		{LiquidityTuning{}, []string{"BackfillEnabled", "BotThinkMinS", "BotThinkMaxS"}},
 	} {
@@ -88,6 +86,45 @@ func TestLiveConfigTypesExcludeRetiredConsumers(t *testing.T) {
 			if _, found := typ.FieldByName(name); found {
 				t.Errorf("retired live field %s.%s remains", typ.Name(), name)
 			}
+		}
+	}
+}
+
+func TestRestoredSpecialtyConfiguration(t *testing.T) {
+	textConfigSecrets(t)
+	cfg, err := Load("../../../configs/base.yaml", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hand := reflect.ValueOf(cfg.Tuning.Hand).FieldByName("SpecialtyWeights")
+	if !hand.IsValid() {
+		t.Fatal("specialty weights were removed from live configuration")
+	}
+	weights := hand.Interface().(map[string]float64)
+	for _, name := range []string{"pass", "reveal", "one_more_free_card", "shuffle", "revote"} {
+		if weights[name] <= 0 {
+			t.Fatalf("specialty %s not dealt", name)
+		}
+	}
+	for _, name := range []string{"RevealLockout", "RevealView", "ShuffleBonusSeconds"} {
+		value := reflect.ValueOf(cfg.Tuning.Timers).FieldByName(name)
+		if !value.IsValid() || value.Int() <= 0 {
+			t.Fatalf("specialty timer %s absent", name)
+		}
+	}
+}
+
+func TestSpecialtyConfigurationRejectsInvalidTuning(t *testing.T) {
+	textConfigSecrets(t)
+	for _, body := range []string{
+		"tuning:\n  hand:\n    specialty_weights: {pass: -0.1}\n",
+		"tuning:\n  hand:\n    specialty_weights: {unknown: 0.1}\n",
+		"tuning:\n  timers:\n    reveal_view: 0\n",
+		"tuning:\n  timers:\n    reveal_lockout: 99\n",
+		"tuning:\n  timers:\n    shuffle_bonus_seconds: 61\n",
+	} {
+		if _, err := Load("../../../configs/base.yaml", writeTemp(t, "specialties.yaml", body)); err == nil {
+			t.Fatalf("accepted invalid specialty tuning: %s", body)
 		}
 	}
 }

@@ -121,6 +121,17 @@ func (r ActionRequest) Validate(l Limits) error {
 	allowed := ""
 	valid := false
 	switch a.Kind {
+	case ActionPass, ActionFreeCard:
+		valid = r.Phase == PhasePlay
+	case ActionReveal:
+		allowed = "target_seat"
+		valid = r.Phase == PhasePlay && ptrSeat(a.TargetSeat, 6)
+	case ActionViewReveal:
+		valid = r.Phase != PhaseRoundStart && r.Phase != PhaseVerdict
+	case ActionShuffle:
+		valid = r.Phase == PhasePlay || r.Phase == PhaseTradeResponse
+	case ActionRevote:
+		valid = r.Phase == PhaseKnowoff || r.Phase == PhaseRunoff
 	case ActionRespond:
 		allowed = "copy"
 		valid = r.ModeID == gamecontract.ModeMissedTheBriefing && r.Phase == PhasePlay

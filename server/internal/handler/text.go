@@ -109,7 +109,7 @@ func textErrorCode(err error) string {
 	if errors.As(err, &contract) {
 		return string(contract.Code)
 	}
-	for _, known := range []error{lobby.ErrTextUnavailable, lobby.ErrTextMembership, lobby.ErrTextReady, lobby.ErrTextHost, lobby.ErrTextRevision, lobby.ErrTextSlowConsumer, store.ErrQuotaExhausted, store.ErrTextCooldown, store.ErrValueConflict, store.ErrValueFence} {
+	for _, known := range []error{lobby.ErrTextDevUnavailable, lobby.ErrTextDevRoleInvalid, lobby.ErrTextDevRoleConflict, lobby.ErrTextUnavailable, lobby.ErrTextMembership, lobby.ErrTextReady, lobby.ErrTextHost, lobby.ErrTextRevision, lobby.ErrTextSlowConsumer, store.ErrQuotaExhausted, store.ErrTextCooldown, store.ErrValueConflict, store.ErrValueFence} {
 		if errors.Is(err, known) {
 			return known.Error()
 		}
@@ -361,7 +361,14 @@ func TextRealtimeHandler(d TextHandlerDeps) http.HandlerFunc {
 					if old != hash {
 						e = &v2.ContractError{Code: v2.ErrRequestConflict, Field: "request_id"}
 					} else {
-						e = d.Lobby.Send(peer, "control_ack", frame.RequestID, map[string]any{"request_id": frame.RequestID, "duplicate": true})
+						// Refresh retries return current authorized state, while their
+						// existing receipt preserves conflict detection and bounded memory.
+						if frame.Type == "resync" {
+							e = textHandleControl(work, d, peer, raw, frame.Type)
+						}
+						if e == nil {
+							e = d.Lobby.Send(peer, "control_ack", frame.RequestID, map[string]any{"request_id": frame.RequestID, "duplicate": true})
+						}
 					}
 				} else if len(receipts) >= d.Lobby.Limits().MaxRequestsPerSeat {
 					e = &v2.ContractError{Code: v2.ErrRequestLimit, Field: "controls"}
@@ -454,6 +461,22 @@ func textWriteLoop(ctx context.Context, conn *websocket.Conn, d TextHandlerDeps,
 }
 func textHandleControl(ctx context.Context, d TextHandlerDeps, p *lobby.TextPeer, raw []byte, kind string) error {
 	switch kind {
+	case "dev_specialty":
+		f, e := textDecode[struct {
+			Specialty string `json:"specialty"`
+		}](raw, d)
+		if e != nil {
+			return e
+		}
+		return d.Lobby.DevSpecialty(ctx, p, f.Payload.Specialty)
+	case "dev_role":
+		f, e := textDecode[struct {
+			Role string `json:"role"`
+		}](raw, d)
+		if e != nil {
+			return e
+		}
+		return d.Lobby.DevRole(ctx, p, f.Payload.Role)
 	case "queue_join", "room_create":
 		f, e := textDecode[v2.LobbySettings](raw, d)
 		if e != nil {

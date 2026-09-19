@@ -156,6 +156,9 @@ class _TextPlayScreenState extends State<TextPlayScreen>
   late final bool _supportedProtocol;
   late final Timer _clock;
   late final ApiClient _api = serviceApi(widget.api);
+  bool _devOpen = false, _devRolePending = false;
+  String _devRole = 'random';
+  String? _devRoom;
   bool _termsLoaded = false, _termsAccepted = false;
   int _termsGeneration = 0;
   String? _roomProfileKey;
@@ -211,6 +214,8 @@ class _TextPlayScreenState extends State<TextPlayScreen>
     final p = await SharedPreferences.getInstance();
     if (!mounted) return;
     _lastMode = p.getString('knowoff_text_last_mode');
+    final role = p.getString('knowoff_dev_role');
+    if ({'random', 'nower', 'donower'}.contains(role)) _devRole = role!;
     _selectionLoaded = true;
     _changed();
   }
@@ -218,6 +223,17 @@ class _TextPlayScreenState extends State<TextPlayScreen>
   void _changed() {
     if (!mounted || !_supportedProtocol) return;
     _signalBonuses();
+    if (session.devToolsAvailable && _selectionLoaded) {
+      final room = session.lobby?['room_id'] as String?;
+      if (room != null && room != _devRoom) {
+        _devRoom = room;
+        _devRolePending = true;
+        unawaited(_run(() => session.selectDevRole(_devRole)));
+      } else if (_devRolePending && session.devRole == _devRole) {
+        _devRolePending = false;
+      }
+    }
+
     if (!session.ready) {
       _termsGeneration++;
       _termsLoaded = false;
@@ -439,6 +455,15 @@ class _TextPlayScreenState extends State<TextPlayScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (_foreground && session.devToolsAvailable) ...[
+              KoButton(
+                key: const Key('dev-tools-open'),
+                label: _devOpen ? 'Close dev tools' : 'Dev tools',
+                color: KoColors.surface,
+                onPressed: () => setState(() => _devOpen = !_devOpen),
+              ),
+              if (_devOpen) _devTools(),
+            ],
             ServiceNoticeBanner(api: _api, changes: session.noticeChanges),
             if (session.ready && session.prototype)
               KoPanel(
@@ -475,9 +500,11 @@ class _TextPlayScreenState extends State<TextPlayScreen>
                       reason: reason,
                     ),
                 serverNowMS: session.serverNowMS,
+                privateNowMS: session.liveServerNowMS,
                 historyPageSize: session.limits!.maxHistoryPageEvents,
                 maxTextBytes: session.limits!.maxTextBytes,
-                busy: session.reducer!.pendingRequest != null,
+                frozen: session.frozen,
+                busy: session.frozen || session.reducer!.pendingRequest != null,
                 onAction: (a) => unawaited(_run(() => session.act(a))),
                 onRematch: () =>
                     unawaited(_run(() => session.control('rematch', {}))),
@@ -491,7 +518,7 @@ class _TextPlayScreenState extends State<TextPlayScreen>
               _queue()
             else
               _selection(),
-            if (session.reducer?.pendingRequest != null)
+            if (!session.frozen && session.reducer?.pendingRequest != null)
               KoButton(
                 label: l.textRetry,
                 onPressed: () => unawaited(_run(session.retry)),
@@ -517,6 +544,104 @@ class _TextPlayScreenState extends State<TextPlayScreen>
       ),
     );
   }
+
+  Future<void> _chooseDevRole(String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('knowoff_dev_role', role);
+    if (!mounted) return;
+    setState(() {
+      _devRole = role;
+      _devRolePending = session.lobby != null || session.snapshot != null;
+    });
+    if (_devRolePending) await session.selectDevRole(role);
+  }
+
+  Widget _devTools() => KoPanel(
+    key: const Key('dev-tools-panel'),
+    color: KoColors.lime,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Private prototype controls', style: koDisplayStyle(size: 22)),
+        const Text(
+          'Freeze holds this view only. The server and other players continue; resume catches up.',
+        ),
+        KoButton(
+          key: const Key('dev-freeze'),
+          label: session.frozen ? 'Resume view' : 'Freeze view',
+          onPressed: session.snapshot == null
+              ? null
+              : () => unawaited(
+                  _run(() async {
+                    if (session.frozen) {
+                      await session.unfreeze();
+                    } else {
+                      session.freeze();
+                    }
+                  }),
+                ),
+        ),
+        const Text('Role for next match'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final role in ['random', 'nower', 'donower'])
+              KoButton(
+                key: Key('dev-role-$role'),
+                label: role == 'random'
+                    ? 'Random'
+                    : role == 'nower'
+                    ? 'Nower'
+                    : 'Donower',
+                color: _devRole == role ? KoColors.violet : KoColors.surface,
+                onPressed: () => unawaited(_run(() => _chooseDevRole(role))),
+              ),
+          ],
+        ),
+        if (_devRolePending)
+          const Text('Waiting for role preference acknowledgement…'),
+        if (session.snapshot != null &&
+            session.snapshot!.phase != 'verdict') ...[
+          const Text('Select special card'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final specialty in [
+                'pass',
+                'reveal',
+                'one_more_free_card',
+                'shuffle',
+                'revote',
+                '',
+              ])
+                KoButton(
+                  key: Key(
+                    'dev-specialty-${specialty.isEmpty ? 'clear' : specialty}',
+                  ),
+                  label: textSpecialtyLabel(specialty),
+                  color:
+                      session.snapshot!.json['private']['specialty'] ==
+                          specialty
+                      ? KoColors.violet
+                      : KoColors.surface,
+                  onPressed: session.frozen
+                      ? null
+                      : () => unawaited(
+                          _run(
+                            () => session.control('dev_specialty', {
+                              'specialty': specialty,
+                            }),
+                          ),
+                        ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    ),
+  );
 
   String _awardLabel(String kind) => switch (kind) {
     'correct_vote' => l.textAwardVote,
@@ -765,7 +890,8 @@ class _TextPlayScreenState extends State<TextPlayScreen>
               KoButton(
                 label: l.textStart,
                 onPressed:
-                    seats.length == setting['size'] &&
+                    !_devRolePending &&
+                        seats.length == setting['size'] &&
                         seats.every((p) => p['connected'] && p['ready'] != null)
                     ? () => unawaited(
                         _run(() => session.control('room_start', {})),

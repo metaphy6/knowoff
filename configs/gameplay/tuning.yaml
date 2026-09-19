@@ -37,9 +37,14 @@ timers:                             # seconds; which windows may fast-forward is
   vote_result_window: 8             # result display before finalizing — 4s falling reveal + 4s role-reveal poster
   vote_result_falling: 4            # role and newly earned points stay hidden until this boundary
 
+  reveal_lockout: 5
+  reveal_view: 3
+  shuffle_bonus_seconds: 10
+
 hand:
   size: 5
   draw_pile: 3
+  specialty_weights: {pass: 0.10, reveal: 0.04, one_more_free_card: 0.08, shuffle: 0.05, revote: 0.05}
 
 dealing:                            # reviewed text suitability coverage (Media Engine §2)
   min_high_per_nown: 2
@@ -49,7 +54,7 @@ points:                             # match points — leaderboard, session scor
   correct_vote: 10
   nower_win_bonus: 10
   donower_team_win: 30
-  draw_penalty: 5                   # every drawn card, without specialty exemptions
+  draw_penalty: 5                   # each drawn card; one banked Free Card token exempts one draw
   # a match's net points floor at 0; the net adds to both Overall and Non-Converted Points
 
 noin:                               # currency earnings — instant, kept on disconnect (Rules §6)

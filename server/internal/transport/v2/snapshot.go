@@ -49,6 +49,14 @@ func (b Board) validate(size int, l Limits) error {
 
 func capability(kind ActionKind, mode gamecontract.ModeID, phase Phase) bool {
 	switch kind {
+	case ActionPass, ActionReveal, ActionFreeCard:
+		return phase == PhasePlay
+	case ActionViewReveal:
+		return phase != PhaseRoundStart && phase != PhaseVerdict
+	case ActionShuffle:
+		return phase == PhasePlay || phase == PhaseTradeResponse
+	case ActionRevote:
+		return phase == PhaseKnowoff || phase == PhaseRunoff
 	case ActionRespond:
 		return mode == gamecontract.ModeMissedTheBriefing && phase == PhasePlay
 	case ActionPlace:
@@ -192,14 +200,70 @@ func (s Snapshot) Validate(l Limits) error {
 		}
 		owned[c.CopyID] = true
 	}
+	if !validSpecialty(s.Private.Specialty) || s.Private.FreeDraws < 0 || s.Private.FreeDraws > 1 {
+		return invalid(ErrMalformed, "specialty")
+	}
+	if s.RevealTarget != nil && (!ptrSeat(s.RevealTarget, s.Contract.OriginalSize) || s.Phase == PhaseRoundStart || s.Phase == PhaseVerdict) {
+		return invalid(ErrMalformed, "reveal_target")
+	}
+	if recipient.Eliminated && (s.Private.Specialty != "" || s.Private.FreeDraws != 0 || s.Private.Reveal != nil) {
+		return invalid(ErrUnauthorized, "eliminated_specialty")
+	}
+	if r := s.Private.Reveal; r != nil {
+		if recipient.Eliminated || !recipient.Connected || s.RevealTarget == nil || r.TargetSeat != *s.RevealTarget || !clock(r.ExpiresAtMS) || r.ExpiresAtMS <= s.ServerTimeMS || !validSpecialty(r.Specialty) || r.Hand == nil || r.Reserve == nil || len(r.Hand)+len(r.Reserve) > l.MaxHistoryEvents {
+			return invalid(ErrUnauthorized, "reveal")
+		}
+		for _, seat := range s.Seats {
+			if seat.Seat == r.TargetSeat && seat.Eliminated {
+				return invalid(ErrUnauthorized, "reveal_eliminated")
+			}
+		}
+		seen := map[CopyID]bool{}
+		for _, cards := range [][]Card{r.Hand, r.Reserve} {
+			for _, c := range cards {
+				if err := c.validate(l); err != nil {
+					return err
+				}
+				if seen[c.CopyID] {
+					return invalid(ErrMalformed, "reveal_copy")
+				}
+				seen[c.CopyID] = true
+			}
+		}
+	}
 	seenActions := map[ActionKind]bool{}
 	for _, a := range s.Private.Capabilities {
 		if recipient.Eliminated || !recipient.Connected || !capability(a, s.Contract.ModeID, s.Phase) || seenActions[a] {
 			return invalid(ErrUnauthorized, "capabilities")
 		}
 		seenActions[a] = true
+		held := ""
 		switch a {
-		case ActionRespond, ActionPlace, ActionReplace, ActionOffer, ActionTop, ActionDraw:
+		case ActionPass, ActionReveal, ActionShuffle, ActionRevote:
+			held = string(a)
+		case ActionFreeCard:
+			held = "one_more_free_card"
+		}
+		if held != "" && s.Private.Specialty != held {
+			return invalid(ErrUnauthorized, "specialty_capability")
+		}
+		if a == ActionShuffle && s.Private.Role != "donower" || a == ActionRevote && s.Private.Role != "nower" {
+			return invalid(ErrUnauthorized, "specialty_role")
+		}
+		if a == ActionFreeCard && (s.Private.ReserveCount == 0 || s.Private.FreeDraws != 0) {
+			return invalid(ErrUnauthorized, "free_draw")
+		}
+		if a == ActionViewReveal && s.RevealTarget == nil {
+			return invalid(ErrUnauthorized, "reveal_target")
+		}
+		switch a {
+		case ActionRespond, ActionPlace, ActionReplace, ActionOffer, ActionTop:
+			if s.Private.FreeDraws > 0 {
+				return invalid(ErrUnauthorized, "free_draw_required")
+			}
+		}
+		switch a {
+		case ActionPass, ActionReveal, ActionFreeCard, ActionRespond, ActionPlace, ActionReplace, ActionOffer, ActionTop, ActionDraw:
 			if s.CurrentSeat == nil || *s.CurrentSeat != s.Private.Seat {
 				return invalid(ErrUnauthorized, "current_actor")
 			}
@@ -380,4 +444,12 @@ func (s Snapshot) validateBallot() error {
 		return invalid(ErrMalformed, "premature_ballot_result")
 	}
 	return nil
+}
+
+func validSpecialty(s string) bool {
+	switch s {
+	case "", "pass", "reveal", "one_more_free_card", "shuffle", "revote":
+		return true
+	}
+	return false
 }

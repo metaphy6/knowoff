@@ -18,6 +18,14 @@ String textModeLabel(AppLocalizations l, String mode) => switch (mode) {
   'top_that' => l.textModeTop,
   _ => l.textUnavailable,
 };
+String textSpecialtyLabel(String specialty) => switch (specialty) {
+  'pass' => 'Pass',
+  'reveal' => 'Reveal',
+  'one_more_free_card' || 'free_card' => 'One More Free Card',
+  'shuffle' => 'Shuffle',
+  'revote' => 'Revote',
+  _ => 'No special card',
+};
 String textActionLabel(AppLocalizations l, String action) => switch (action) {
   'respond' => l.textRespond,
   'place' => l.textPlace,
@@ -33,6 +41,11 @@ String textActionLabel(AppLocalizations l, String action) => switch (action) {
   'ballot_result' => l.textResults,
   'seed' => l.textSeed,
   'auto_pass' => l.textAutoPass,
+  'pass' ||
+  'reveal' ||
+  'free_card' ||
+  'shuffle' ||
+  'revote' => textSpecialtyLabel(action),
   _ => l.textSystem,
 };
 String textErrorLabel(AppLocalizations l, String code) => switch (code) {
@@ -67,6 +80,8 @@ class TextMatchView extends StatefulWidget {
     required this.historyPageSize,
     required this.maxTextBytes,
     this.busy = false,
+    this.frozen = false,
+    this.privateNowMS,
     this.authoredChatAllowed = false,
     this.onSafety,
     this.onTerms,
@@ -77,7 +92,8 @@ class TextMatchView extends StatefulWidget {
   final ValueChanged<Map<String, dynamic>> onAction;
   final VoidCallback onRematch;
   final int serverNowMS, historyPageSize, maxTextBytes;
-  final bool busy, authoredChatAllowed;
+  final int? privateNowMS;
+  final bool busy, authoredChatAllowed, frozen;
   final ValueChanged<int>? onSafety;
   final VoidCallback? onTerms;
   final Future<void> Function(String contentID, int revision, String reason)?
@@ -92,6 +108,8 @@ class _TextMatchViewState extends State<TextMatchView>
   int? _rating, _slot, _targetSeat;
   int _historyPage = 0;
   int _pokeTick = 0;
+  Timer? _revealTimer;
+  int? _expiredReveal;
   final _chat = TextEditingController();
   bool _foreground = true;
   V2Snapshot get s => widget.snapshot;
@@ -102,6 +120,21 @@ class _TextMatchViewState extends State<TextMatchView>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scheduleRevealExpiry();
+  }
+
+  void _scheduleRevealExpiry() {
+    _revealTimer?.cancel();
+    final expiry = s.json['private']['reveal']?['expires_at_ms'] as int?;
+    if (expiry == null || expiry == _expiredReveal) return;
+    final remaining = expiry - (widget.privateNowMS ?? widget.serverNowMS);
+    if (remaining <= 0) {
+      _expiredReveal = expiry;
+      return;
+    }
+    _revealTimer = Timer(Duration(milliseconds: remaining), () {
+      if (mounted) setState(() => _expiredReveal = expiry);
+    });
   }
 
   void _clear() {
@@ -116,6 +149,7 @@ class _TextMatchViewState extends State<TextMatchView>
   @override
   void didUpdateWidget(TextMatchView old) {
     super.didUpdateWidget(old);
+    _scheduleRevealExpiry();
     if (!widget.authoredChatAllowed) _chat.clear();
     // Only fresh evidence on this live stream can trigger physical feedback.
     // Initial state and resync pages may contain old pokes and never replay it.
@@ -156,6 +190,7 @@ class _TextMatchViewState extends State<TextMatchView>
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _chat.clear();
     _chat.dispose();
@@ -171,6 +206,92 @@ class _TextMatchViewState extends State<TextMatchView>
     }
     widget.onAction(action);
     setState(_clear);
+  }
+
+  Widget _specialties() {
+    final held = s.json['private']['specialty'] as String?;
+    final reveal = s.json['private']['reveal'];
+    final visibleReveal =
+        reveal != null &&
+        reveal['expires_at_ms'] != _expiredReveal &&
+        (widget.privateNowMS ?? widget.serverNowMS) < reveal['expires_at_ms'];
+    return KoPanel(
+      key: const Key('text-specialty'),
+      color: KoColors.lime,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(textSpecialtyLabel(held ?? ''), style: koDisplayStyle(size: 22)),
+          if (held == 'pass')
+            const Text('Pass this turn without changing the board.'),
+          if (held == 'reveal')
+            const Text(
+              'Expose a player’s cards. Each player may look once for three seconds this round.',
+            ),
+          if (held == 'one_more_free_card')
+            const Text(
+              'Make your next single draw free. Draw it before playing a card.',
+            ),
+          if (held == 'shuffle')
+            const Text(
+              'Donowers only. Redistribute the remaining private cards anonymously.',
+            ),
+          if (held == 'revote') Text(l.specialtyRevoteOwnerHint),
+          if ((s.json['private']['free_draws'] ?? 0) > 0)
+            Text(l.freeDrawHeadline),
+          for (final kind in ['pass', 'free_card', 'shuffle', 'revote'])
+            if (s.capabilities.contains(kind))
+              KoButton(
+                key: Key('text-specialty-$kind'),
+                label: 'Use ${textSpecialtyLabel(kind)}',
+                onPressed: enabled ? () => _send({'kind': kind}) : null,
+              ),
+          if (s.capabilities.contains('reveal'))
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final seat in s.json['seats'])
+                  if (seat['seat'] != s.seat && !seat['eliminated'])
+                    KoButton(
+                      key: Key('text-specialty-reveal-${seat['seat']}'),
+                      label: 'Reveal ${_seat(seat['seat'])}',
+                      onPressed: enabled
+                          ? () => _send({
+                              'kind': 'reveal',
+                              'target_seat': seat['seat'],
+                            })
+                          : null,
+                    ),
+              ],
+            ),
+          if (s.json['reveal_target'] != null)
+            Text(l.handRevealAnnouncement(_seat(s.json['reveal_target']))),
+          if (s.capabilities.contains('view_reveal'))
+            KoButton(
+              key: const Key('text-view-reveal'),
+              label: 'View exposed cards (3 seconds)',
+              onPressed: enabled ? () => _send({'kind': 'view_reveal'}) : null,
+            ),
+          if (visibleReveal)
+            KoPanel(
+              key: const Key('text-revealed-hand'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _seat(reveal['target_seat']),
+                    style: koDisplayStyle(size: 20),
+                  ),
+                  for (final card in [...reveal['hand'], ...reveal['reserve']])
+                    _authored(card['content']['text']),
+                  Text(textSpecialtyLabel(reveal['specialty'] ?? '')),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   List<dynamic> get board => s.json['board']['cards'];
@@ -246,6 +367,7 @@ class _TextMatchViewState extends State<TextMatchView>
               Text(textPhaseLabel(l, s.phase)),
               Text('${l.textPoints}: ${s.points}'),
               GameCountdown(
+                frozen: widget.frozen,
                 deadline: DateTime.now().add(
                   Duration(milliseconds: s.deadlineMS - widget.serverNowMS),
                 ),
@@ -319,6 +441,7 @@ class _TextMatchViewState extends State<TextMatchView>
           const SizedBox(height: 16),
           _section(l.textBoard, [_board()]),
           if (s.phase == 'trade_response') _offer(),
+          if (!s.eliminated && s.phase != 'verdict') _specialties(),
           if (!s.eliminated && s.phase == 'play') ...[_hand(), _preview()],
           if (s.json['ballot'] != null) _ballot(),
           if (s.capabilities.contains('ready'))
@@ -361,7 +484,10 @@ class _TextMatchViewState extends State<TextMatchView>
                   ),
                 ),
             ]),
-            KoButton(label: l.textRematch, onPressed: widget.onRematch),
+            KoButton(
+              label: l.textRematch,
+              onPressed: widget.frozen ? null : widget.onRematch,
+            ),
           ],
         ],
       ),

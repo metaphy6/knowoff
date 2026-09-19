@@ -36,6 +36,13 @@ func (m *TextMatch) event(s *textState, seat int, kind, reason string, now time.
 	return &s.History[len(s.History)-1]
 }
 func (m *TextMatch) beginRound(s *textState, now time.Time) error {
+	s.RevealTarget = nil
+	s.RevealCards = nil
+	for i := range s.Players {
+		s.Players[i].FreeDraws = 0
+		s.Players[i].RevealUntil = 0
+		s.Players[i].RevealUsed = false
+	}
 	for _, b := range s.Board.Cards {
 		c := s.Copies[b.Card.CopyID]
 		c.Zone = "spent"
@@ -169,6 +176,9 @@ func (m *TextMatch) spend(s *textState, seat int, c textCopy, owner int) {
 	s.Copies[c.Card.CopyID] = c
 }
 func (m *TextMatch) act(s *textState, seat int, a v2.Action, now time.Time, p *textPending) error {
+	if isSpecialtyAction(a.Kind) {
+		return m.specialty(s, seat, a, now)
+	}
 	if a.Kind == v2.ActionResolveOffer {
 		if s.Offer == nil || s.Offer.OfferID != a.OfferID || s.Offer.RecipientSeat != seat {
 			return textError(v2.ErrUnauthorized, "offer_id")
@@ -231,9 +241,14 @@ func (m *TextMatch) act(s *textState, seat int, a v2.Action, now time.Time, p *t
 			player.Hand = append(player.Hand, id)
 		}
 		player.Reserve = player.Reserve[count:]
-		player.Points -= count * m.points.DrawPenalty
+		free := min(count, player.FreeDraws)
+		player.FreeDraws -= free
+		player.Points -= (count - free) * m.points.DrawPenalty
 		m.event(s, seat, "draw", "player", now, s.Board.Revision).Count = a.Count
 		return nil
+	}
+	if s.Players[seat].FreeDraws > 0 {
+		return textError(v2.ErrInvalidAction, "free_draw_required")
 	}
 	c, e := m.owned(s, seat, a.CopyID)
 	if e != nil {

@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:knowoff_client/presentation/screens/text_play_screen.dart';
+import 'safety_screens_test.dart' show SafetyApi;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:knowoff_client/core/text/v2_session.dart';
@@ -11,6 +14,57 @@ import '../core/network/text_session_test.dart'
 import '../core/network/text_reducer_test.dart' show fixture;
 
 void main() {
+  testWidgets('prototype tools offer freeze and persistent next-match role', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final transport = FakeTextTransport();
+    final session = TextSession(
+      transport: transport,
+      tokenLoader: () async => 'token',
+    );
+    await session.connect();
+    await tester.pump();
+    transport.emit('hello', hello(prototype: true));
+    await tester.pumpWidget(
+      MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: TextPlayScreen(session: session, api: SafetyApi()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('dev-tools-open')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dev-freeze')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('dev-role-donower')));
+    await tester.pumpAndSettle();
+    expect(
+      (await SharedPreferences.getInstance()).getString('knowoff_dev_role'),
+      'donower',
+    );
+    expect(
+      transport.sent.where((m) => m['type'] == 'dev_role'),
+      isEmpty,
+      reason: 'preference waits for room admission',
+    );
+    await session.control('room_create', {});
+    admit(transport);
+    await tester.pumpAndSettle();
+    expect(transport.sent.last['type'], 'dev_role');
+    expect(transport.sent.last['payload'], {'role': 'donower'});
+    transport.emit('dev_role', {'role': 'donower'});
+    transport.emit('snapshot', fixture('snapshot-nower'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('dev-freeze')));
+    await tester.pumpAndSettle();
+    expect(session.frozen, isTrue);
+    expect(find.text('Resume view'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    session.dispose();
+  });
+
   for (final compact in [false, true]) {
     testWidgets('text shell has no legacy debug authority compact=$compact', (
       tester,
@@ -85,7 +139,7 @@ void main() {
     'snapshot-top_that',
   ]) {
     test(
-      'retired powers and roles cannot emit text intents in $name',
+      'unadvertised powers and legacy role intents are rejected in $name',
       () async {
         final t = FakeTextTransport();
         final s = TextSession(

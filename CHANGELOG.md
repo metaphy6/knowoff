@@ -15,6 +15,17 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Developer controls and specialties restored — 2026-09-19
+
+- Restore private debug Freeze/Resume, next-match role choice and the specialty
+  selector. Freeze holds the local client; authoritative multiplayer clocks continue.
+- Retain Pass, Reveal, Free Card, Shuffle and Revote across all five text modes,
+  correcting the earlier removal decision. Private grants obey ordinary use rules.
+- Preserve production gating, role privacy, historical tuning identities and the
+  separate manual/agent playtest workflows.
+- Fix long manual bot sessions exhausting control receipts: repeated refreshes
+  now return fresh authorized state with bounded receipts and no reconnect.
+
 ### Manual debugging restored — 2026-09-19
 
 - Restore `make up` plus `make web.run` for private five-mode debugging with

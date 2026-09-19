@@ -192,6 +192,9 @@ type GameTuning struct {
 
 // TimersTuning is phase timers in seconds.
 type TimersTuning struct {
+	RevealLockout       int `yaml:"reveal_lockout"`
+	RevealView          int `yaml:"reveal_view"`
+	ShuffleBonusSeconds int `yaml:"shuffle_bonus_seconds"`
 	TradeResponseS      int `yaml:"trade_response_s"`
 	RoundStartCountdown int `yaml:"round_start_countdown"`
 	PlayTurn            int `yaml:"play_turn"`
@@ -204,8 +207,9 @@ type TimersTuning struct {
 
 // HandTuning sets retained hand and reserve sizes.
 type HandTuning struct {
-	Size     int `yaml:"size"`
-	DrawPile int `yaml:"draw_pile"`
+	SpecialtyWeights map[string]float64 `yaml:"specialty_weights"`
+	Size             int                `yaml:"size"`
+	DrawPile         int                `yaml:"draw_pile"`
 }
 
 // DealingTuning requires reviewed coverage across every scheduled text Nown.

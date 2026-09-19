@@ -65,6 +65,53 @@ void main() {
     await t.pumpAndSettle();
   }
 
+  testWidgets('special card controls send only advertised server intents', (
+    t,
+  ) async {
+    for (final kind in ['pass', 'reveal', 'free_card']) {
+      final wire = fixture('snapshot-nower');
+      wire['private']['specialty'] = kind == 'free_card'
+          ? 'one_more_free_card'
+          : kind;
+      wire['private']['capabilities'] = [kind];
+      final actions = <Map<String, dynamic>>[];
+      await pump(t, '', wire: wire, action: actions.add);
+      final key = Key(
+        kind == 'reveal' ? 'text-specialty-reveal-1' : 'text-specialty-$kind',
+      );
+      await t.ensureVisible(find.byKey(key));
+      await t.tap(find.byKey(key));
+      expect(actions, [
+        {'kind': kind, if (kind == 'reveal') 'target_seat': 1},
+      ]);
+      expect(t.takeException(), isNull);
+    }
+  });
+
+  testWidgets(
+    'revealed private cards vanish at expiry without a new snapshot',
+    (t) async {
+      final wire = fixture('snapshot-nower');
+      wire['reveal_target'] = 1;
+      final card = Map<String, dynamic>.from(wire['private']['hand'][0]);
+      card['content'] = {
+        ...card['content'],
+        'text': 'Temporary exposed secret',
+      };
+      wire['private']['reveal'] = {
+        'target_seat': 1,
+        'expires_at_ms': wire['server_time_ms'] + 3000,
+        'hand': [card],
+        'reserve': [],
+      };
+      await pump(t, '', wire: wire, nowMS: wire['server_time_ms']);
+      expect(find.text('Temporary exposed secret'), findsOneWidget);
+      await t.pump(const Duration(seconds: 3));
+      expect(find.text('Temporary exposed secret'), findsNothing);
+      expect(t.takeException(), isNull);
+    },
+  );
+
   testWidgets('reports bind only visible Nown and hand immutable references', (
     t,
   ) async {

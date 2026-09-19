@@ -40,8 +40,8 @@ func TestHistoricalTuningPolicyCanonicalIdentity(t *testing.T) {
 		}
 		copy := policy.Clone()
 		if copy.retiredPolicy != nil {
-			copy.retiredPolicy.specialtyWeights["shuffle"] = 91
-			if policy.retiredPolicy.specialtyWeights["shuffle"] != 0.75 {
+			copy.Hand.SpecialtyWeights["shuffle"] = 91
+			if policy.Hand.SpecialtyWeights["shuffle"] != 0.75 {
 				t.Fatal("cloned historical policy aliases original")
 			}
 		}

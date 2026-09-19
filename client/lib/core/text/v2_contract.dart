@@ -169,6 +169,7 @@ const _schemas = <String, Map<String, String>>{
     'awards': '[award]',
   },
   'delivery': {'id': 'int', 'match_id': 'str', 'settlement': 'settlement'},
+  'devRole': {'role': 'str'},
   'controlError': {'code': 'str', 'request_id?': 'str'},
   'limits': {
     'max_frame_bytes': 'int',
@@ -297,6 +298,13 @@ const _schemas = <String, Map<String, String>>{
     'eliminated': 'bool',
     'revealed_role?': 'str',
   },
+  'specialtyReveal': {
+    'target_seat': 'int',
+    'expires_at_ms': 'int',
+    'hand': '[card]',
+    'reserve': '[card]',
+    'specialty?': 'str',
+  },
   'private': {
     'seat': 'int',
     'role': 'str',
@@ -304,6 +312,9 @@ const _schemas = <String, Map<String, String>>{
     'nown?': 'content',
     'hand': '[card]',
     'reserve_count': 'int',
+    'specialty?': 'str',
+    'free_draws?': 'int',
+    'reveal?': 'specialtyReveal',
     'capabilities': '[str]',
   },
   'manifest': {
@@ -334,6 +345,7 @@ const _schemas = <String, Map<String, String>>{
     'server_time_ms': 'int',
     'deadline_ms': 'int',
     'result_reveal_at_ms?': 'int',
+    'reveal_target?': 'int',
     'board': 'board',
     'seats': '[seat]',
     'ready_seats': '[int]',
@@ -472,6 +484,9 @@ class V2Codec {
   static Map<String, dynamic> control(String kind, Map<String, dynamic> value) {
     _shape(value, kind);
     switch (kind) {
+      case 'devRole':
+        _check({'random', 'nower', 'donower'}.contains(value['role']));
+        break;
       case 'systemNotice':
         _check(value['refresh'] == true);
         break;
@@ -724,7 +739,10 @@ bool _capability(String kind, String mode, String phase) {
   if (i >= 0) return phase == 'play' && textModes[i] == mode;
   return switch (kind) {
     'resolve_offer' => mode == 'bad_bargains' && phase == 'trade_response',
-    'draw' => phase == 'play',
+    'draw' || 'pass' || 'reveal' || 'free_card' => phase == 'play',
+    'shuffle' => ['play', 'trade_response'].contains(phase),
+    'revote' => ['knowoff', 'runoff'].contains(phase),
+    'view_reveal' => !['round_start', 'verdict'].contains(phase),
     'vote' => ['knowoff', 'runoff'].contains(phase),
     'ready' => ['discussion', 'knowoff', 'runoff', 'result'].contains(phase),
     'poke' => [
@@ -763,7 +781,7 @@ void _request(dynamic r, V2Limits l) {
     'top' => ['copy_id', 'target_copy_id'],
     'resolve_offer' => ['offer_id', 'resolution'],
     'draw' => ['count'],
-    'vote' || 'poke' => ['target_seat'],
+    'vote' || 'poke' || 'reveal' => ['target_seat'],
     'chat' => ['phrase_id', 'text', 'ui_locale'],
     _ => <String>[],
   };
@@ -969,6 +987,42 @@ void _event(dynamic e, V2Limits l) {
             count == 0 &&
             _seat(e['target_seat'], 6) &&
             e['target_seat'] != actor['seat'],
+      );
+      break;
+    case 'pass':
+    case 'free_card':
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            e['phase'] == 'play' &&
+            e['reason'] == 'player',
+      );
+      break;
+    case 'reveal':
+      fields.add('target_seat');
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            e['phase'] == 'play' &&
+            e['reason'] == 'player' &&
+            _seat(e['target_seat'], 6) &&
+            e['target_seat'] != actor['seat'],
+      );
+      break;
+    case 'shuffle':
+      _check(
+        actor['kind'] == 'system' &&
+            count <= 6 &&
+            ['play', 'trade_response'].contains(e['phase']) &&
+            e['reason'] == 'player',
+      );
+      break;
+    case 'revote':
+      _check(
+        actor['kind'] == 'seat' &&
+            count == 0 &&
+            ['knowoff', 'runoff'].contains(e['phase']) &&
+            e['reason'] == 'player',
       );
       break;
     case 'ready':
@@ -1229,6 +1283,58 @@ void _snapshot(dynamic s, V2Limits l) {
     _card(c, l);
     _check(copies.add(c['copy_id']));
   }
+  const specialties = {
+    'pass',
+    'reveal',
+    'one_more_free_card',
+    'shuffle',
+    'revote',
+  };
+  if (p.containsKey('specialty')) {
+    _check(specialties.contains(p['specialty']), 'action.unauthorized');
+  }
+  if (p.containsKey('free_draws')) {
+    _check(p['free_draws'] <= 1, 'action.unauthorized');
+  }
+  if (me['eliminated']) {
+    _check(
+      !p.containsKey('specialty') && (p['free_draws'] ?? 0) == 0,
+      'action.unauthorized',
+    );
+  }
+  final revealTarget = s['reveal_target'];
+  if (revealTarget != null) {
+    _check(
+      _seat(revealTarget, size) && !['round_start', 'verdict'].contains(phase),
+    );
+  }
+  final privateReveal = p['reveal'];
+  if (privateReveal != null) {
+    _check(
+      !me['eliminated'] &&
+          me['connected'] &&
+          revealTarget != null &&
+          !bySeat[revealTarget]['eliminated'] &&
+          privateReveal['target_seat'] == revealTarget &&
+          privateReveal['expires_at_ms'] > s['server_time_ms'],
+      'action.unauthorized',
+    );
+    if (privateReveal.containsKey('specialty')) {
+      _check(specialties.contains(privateReveal['specialty']));
+    }
+    _check(
+      privateReveal['hand'].length + privateReveal['reserve'].length <=
+          l.maxHistoryEvents,
+      'action.unauthorized',
+    );
+    final revealedCopies = <String>{};
+    for (final cards in [privateReveal['hand'], privateReveal['reserve']]) {
+      for (final c in cards) {
+        _card(c, l);
+        _check(revealedCopies.add(c['copy_id']));
+      }
+    }
+  }
   final caps = <String>{};
   for (final a in p['capabilities']) {
     _check(
@@ -1238,9 +1344,33 @@ void _snapshot(dynamic s, V2Limits l) {
           caps.add(a),
       'action.unauthorized',
     );
-    if (textModeActions.contains(a) || a == 'draw') {
+    if (textModeActions.contains(a) ||
+        ['draw', 'pass', 'reveal', 'free_card'].contains(a)) {
       _check(s['current_seat'] == p['seat'], 'action.unauthorized');
     }
+  }
+  for (final kind in ['pass', 'reveal', 'free_card', 'shuffle', 'revote']) {
+    if (!caps.contains(kind)) continue;
+    _check(
+      p['specialty'] == (kind == 'free_card' ? 'one_more_free_card' : kind),
+      'action.unauthorized',
+    );
+    if (kind == 'shuffle') {
+      _check(p['role'] == 'donower', 'action.unauthorized');
+    }
+    if (kind == 'revote') _check(p['role'] == 'nower', 'action.unauthorized');
+    if (kind == 'free_card') {
+      _check(
+        p['reserve_count'] > 0 && (p['free_draws'] ?? 0) == 0,
+        'action.unauthorized',
+      );
+    }
+  }
+  if (caps.contains('view_reveal')) {
+    _check(revealTarget != null, 'action.unauthorized');
+  }
+  if ((p['free_draws'] ?? 0) > 0) {
+    _check(!caps.any(textModeActions.contains), 'action.unauthorized');
   }
   final ready = <int>{};
   for (final n in s['ready_seats']) {

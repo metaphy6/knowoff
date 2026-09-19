@@ -73,7 +73,7 @@ There is deliberately no separate rulebook: the **Game Rules** section below is 
 
 Retain server authority (ADR-001), Flutter (ADR-002) and the public shared Go
 content-library boundary in `server/pkg/media` (ADR-004). The historical package
-name may remain: a name is not dead code; unused image/specialty behavior is.
+name may remain: a name is not dead code; unused image behavior is.
 The core Compose stack no longer requires MinIO. Preserve authorized historical
 object archives through the separately verified retention/restore path; do not
 delete them as a side effect of removing playable delivery.
@@ -94,7 +94,7 @@ old zero-cost, VPS-price and CDN-free-tier examples are not business evidence.
   * 4 players: Donower survives both votings → Donowers win.
   * 6 players: **if neither of the first two votings catches a Donower, the match ends right after the second Knowoff — one vote can't catch two Donowers — and Donowers win.** Otherwise it runs to the third voting, and any Donower still uncaught after it wins.
 * **Donowers win and lose together**: a caught Donower still wins if their partner survives. Donowers don't know each other at match start; quietly working out who your partner is, and covering for them, is intended strategy.
-* No specialty can reset a ballot in the first text release (§5).
+* Revote may restart an open ballot; it cannot undo a revealed result (§5).
 * Match duration is a playtest metric by mode and size, not a verified 5/8-minute promise. Acting early and Ready (§8) can shorten phase ceilings.
 
 ### 2. Roles, Nown & Hands
@@ -145,7 +145,7 @@ must provide the same confirmed action without requiring drag or free typing.
 **Draws.** Optional, current-turn-only; draw from the remaining personal reserve,
 without ending the turn. Charge `points.draw_penalty` per card (currently 5).
 Publish only player and count; deliver new instances privately to the owner.
-No draw while an offer is pending; no free-draw specialty exception.
+No draw while an offer is pending. One banked Free Card token exempts one drawn card from its point penalty (§5).
 
 **Timeout.** No action before deadline produces attributed auto-pass and one
 random hand-copy discard. Show that copy as penalty evidence, not intentional
@@ -184,13 +184,40 @@ At each new round retire displays/bag/chain into history, reseed, and keep hands
 
 ### 5. Card Specialties
 
-All five old specialties — Pass, Reveal, One More Free Card, Shuffle and Revote —
-are absent from the first text release for every role and mode. Show this rule
-before Ready. Remove their dealing, handlers, wire variants, client controls,
-debug grant paths, localization, sole-use assets/config and obsolete tests only
-with replacement proof and the retirement process. Ordinary draws, timeout
-passes and tied-ballot runoffs remain. Reintroduction is a new design decision
-with per-mode interaction/secrecy proofs, not dormant enabled-by-config code.
+Pass, Reveal, One More Free Card, Shuffle and Revote remain available across
+**all five text modes** (owner correction, 2026-09-19). Deal one specialty
+per player, independently of role, using normalized `hand.specialty_weights`. Consuming a
+specialty is authoritative, request-deduplicated and recorded without exposing
+private cards or future Nowns. Eliminated/disconnected seats cannot use them.
+
+* **Pass:** on your play turn, spend the specialty and end that turn without
+  spending a hand card. Leave the mode board unchanged.
+* **Reveal:** on your play turn before `timers.reveal_lockout`, expose another
+  active player's hand, reserve and held specialty as captured at activation,
+  available for the current round.
+  Announce only the target publicly. Each active player may request one private
+  `timers.reveal_view`-second look; never include roles or Nowns. Expiry,
+  elimination, round change and backgrounding conceal the view.
+* **One More Free Card:** on your play turn, bank one round-scoped token; the
+  next reserve draw exempts one drawn card from the point penalty. Spend the
+  token before making the normal mode action; unused tokens expire at round end.
+  It cannot be used with an empty reserve or pending trade.
+* **Shuffle:** Donower-only, once per match total, during play (including a
+  pending Bad Bargains trade, which cancels first). Restart the current round's
+  table and turn order, redistributing its board and unplayed hand copies while
+  conserving physical cards and leaving reserves untouched. Rebuild the mode's
+  initial board shape, keep the same Nown and earlier evidence, and give the
+  first turn its full window plus `timers.shuffle_bonus_seconds`. Public
+  announcement is anonymous; it must not identify the Donower who used it.
+* **Revote:** Nower-only, once per match total, during an open ballot or runoff.
+  Clear its votes and Ready acknowledgements and start a fresh full ballot,
+  without consuming another vote budget. The public event identifies its user.
+  It cannot undo a result window or revealed role.
+
+Off-role or already-used unique specialties remain unusable. Specialties use
+separate ownership from text-card copy identities; the old v1 protocol stays
+retired. Debug grants and next-match role choices require a nonproduction
+private synthetic session, earn no live value, and cannot bypass use rules.
 
 ### 6. Match Points & Noin Earnings
 
@@ -498,7 +525,7 @@ filenames here (some former blueprint paths were aspirational).
 |---|---|
 | `client/lib/core/` | Config, transport, logging and shared services retained; v2 network handling added. |
 | `client/lib/data/` | API/auth and DTOs retained/adapted to copy IDs, contract and sequence snapshots. |
-| `client/lib/presentation/` | Shared theme/screens/state retained; five mode controls added, specialty/image gameplay views retired. |
+| `client/lib/presentation/` | Shared theme/screens/state retained; five mode controls added, specialty controls adapted; image gameplay views retired. |
 | `client/lib/media/` | Playable catalog/cache/prefetch implementation retired; retain only the selective cache-upgrade boundary. |
 | `server/cmd/knowoffd/` | Wiring, health, graceful drain and config, with obsolete storage/bot entry points removed. |
 | `server/internal/{game,lobby,handler,transport}/` | One authoritative shared engine, compatible queues/readiness, role-scoped v2 protocol. |
@@ -636,10 +663,10 @@ change does not edit it. Resolve its comments and add typed validation in Phase 
 | Inter-round countdown | `timers.prefetch_countdown: 5` | Replace with neutral round-start countdown in versioned config; no asset prefetch dependency |
 | Hand/reserve | `hand.size: 5`, `hand.draw_pile: 3` | Provisional, certify before release |
 | Trade response | Absent | Planned `timers.trade_response_s: 10`, positive bounded validation |
-| Specialties | Nonzero weights + timers | Remove all first-release dealing/use/debug/config paths |
+| Specialties | Nonzero weights + timers | Retain all five across every text mode; restore typed use and private debug grants |
 | Backfill | `liquidity.backfill_enabled: true` | Off for text; remove production scheduler after cutover |
 | Queue timeout | `liquidity.queue_timeout_s: 25` | Offer explicit waiting/change/leave; no silent expiry/substitution |
-| Draw penalty | `points.draw_penalty: 5` | Every ordinary drawn card, no free-card exemption |
+| Draw penalty | `points.draw_penalty: 5` | Every drawn card except one exempted by a banked Free Card token |
 | Economy/progression | Existing `points/noin/economy/liveops/progression` | Preserve values and account-wide caps; measure, do not invent mode multipliers |
 
 Economy hypotheses remain: active free player affords a one-day pass in roughly
@@ -675,7 +702,8 @@ Idempotency is per match/seat/request: the same ID and body returns the original
 result without another mutation; conflicting reuse is rejected. Validate and
 mutate under match serialization; timer/leave/accept races have one winner.
 Sequence gaps trigger a role-scoped snapshot; requests to resync do not replay
-mutations. Stale boards/actions/deadlines fail with stable localized error codes.
+mutations. Retrying the same resync ID returns fresh authorized state while
+retaining one bounded control receipt; conflicting reuse still fails. Stale boards/actions/deadlines fail with stable localized error codes.
 Limit frames, request frequency, action-history size and slow consumers; preserve
 complete bounded match evidence without exposing a private raw event log.
 
@@ -758,7 +786,7 @@ new purchases or earned balances using an old snapshot as routine rollback.
 Retain layered `configs/base.yaml` + local/staging/prod overlays and typed,
 fail-fast validation. Environment variables select the config and inject secrets.
 Text-mode availability, rules and content-language eligibility are server-owned.
-Reject unknown keys; old specialty/image keys receive an explicit migration
+Reject unknown keys; obsolete image/backfill keys receive an explicit migration
 error at the version boundary, then leave examples/overlays/tests too.
 
 ### 4. Local Development
@@ -768,7 +796,10 @@ explicit private synthetic prototype overlay. `make web.run` retains Flutter
 debugging on port 8000; `make bots ROOM=<code> COUNT=3` (or 5) adds visible,
 authenticated development companions to a human-hosted room. They Ready, act
 and vote through role-scoped v2 state; the human controls starting/rematching.
-Production mode flags remain closed and these matches earn no live value.
+Debug clients expose Freeze/Resume, next-match role choice and specialty grants.
+Freeze holds the local view; the server and other players keep running, and
+Resume catches up to authoritative state. Production mode flags remain closed
+and these matches earn no live value.
 The separate agent verification path, `make playtest.up`, starts isolated
 PostgreSQL/Redis/server/Web clients with the existing synthetic text fixture and
 no cloud key or playable object store. Its engineering fixture is not certified

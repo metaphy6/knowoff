@@ -70,6 +70,8 @@ type TextAbandonEvent struct {
 // Callers supply a validated, pinned catalog deal; no roles enter its dealing
 // API. Advance is driven by the owning server's clock, never by client time.
 type TextOptions struct {
+	// DevRoles pins only next-match roles in a private prototype.
+	DevRoles  map[int]string
 	Contract  v2.MatchContract
 	Deal      media.TextDeal
 	Config    *config.Config
@@ -90,6 +92,7 @@ type TextActionResult struct {
 // Failed persistence retains the exact candidate for retry without changing its
 // occurrence time or logical identity, even if an earlier hook already committed.
 type TextMatch struct {
+	devEnabled      bool
 	serial          sync.Mutex
 	mu              sync.RWMutex
 	state           *textState
@@ -120,6 +123,10 @@ type textCopy struct {
 	Reserved bool
 }
 type textPlayer struct {
+	Specialty                                         string
+	FreeDraws                                         int
+	RevealUntil                                       int64
+	RevealUsed                                        bool
 	Role                                              string
 	Connected, Eliminated, Absent                     bool
 	GraceDeadline                                     int64
@@ -129,28 +136,31 @@ type textPlayer struct {
 	Points, CorrectVotes, VotesCast, Survivals, Pokes int
 }
 type textState struct {
-	Round, Turn    int
-	Phase          v2.Phase
-	PhaseID        string
-	PhaseSerial    uint64
-	Deadline       int64
-	ResultRevealAt int64
-	ResultRevealed bool
-	Board          v2.Board
-	Players        []textPlayer
-	Copies         map[v2.CopyID]textCopy
-	Order          []int
-	RemainingVotes int
-	Ready          map[int]bool
-	Pokes          map[string]bool
-	Votes          map[int]int
-	BallotKind     v2.Phase
-	Candidates     []int
-	BallotResult   *v2.BallotResult
-	Offer          *v2.PendingOffer
-	History        []v2.PublicAction
-	Requests       map[string]v2.RequestRecord
-	Result         *TextResult
+	RevealCards             *v2.RevealView
+	RevealTarget            *int
+	ShuffleUsed, RevoteUsed bool
+	Round, Turn             int
+	Phase                   v2.Phase
+	PhaseID                 string
+	PhaseSerial             uint64
+	Deadline                int64
+	ResultRevealAt          int64
+	ResultRevealed          bool
+	Board                   v2.Board
+	Players                 []textPlayer
+	Copies                  map[v2.CopyID]textCopy
+	Order                   []int
+	RemainingVotes          int
+	Ready                   map[int]bool
+	Pokes                   map[string]bool
+	Votes                   map[int]int
+	BallotKind              v2.Phase
+	Candidates              []int
+	BallotResult            *v2.BallotResult
+	Offer                   *v2.PendingOffer
+	History                 []v2.PublicAction
+	Requests                map[string]v2.RequestRecord
+	Result                  *TextResult
 }
 type textPending struct {
 	State    *textState
@@ -221,6 +231,7 @@ func NewTextMatch(o TextOptions) (*TextMatch, error) {
 		o.Now = time.Now
 	}
 	m := &TextMatch{contract: o.Contract, limits: limits, timers: c.Tuning.Timers, points: c.Tuning.Points, noin: c.Tuning.Noin, minRewardHumans: c.Tuning.Liquidity.NoinMinHumans, grace: time.Duration(c.Tuning.Game.ReconnectGraceS) * time.Second, seed: o.Seed, now: o.Now, hooks: o.Hooks, seq: make([]uint64, size), epoch: make([]string, size)}
+	m.devEnabled = o.Prototype && c.App.Env != "prod" && c.App.Env != "production"
 	m.penalizeAbandon = !o.Prototype && o.Contract.Eligibility.EntryPath == "quick_play"
 	s := &textState{Round: 1, Board: v2.Board{ModeID: o.Contract.ModeID, Cards: []v2.BoardCard{}}, Players: make([]textPlayer, size), Copies: map[v2.CopyID]textCopy{}, RemainingVotes: size / 2, Ready: map[int]bool{}, Pokes: map[string]bool{}, Votes: map[int]int{}, History: []v2.PublicAction{}, Requests: map[string]v2.RequestRecord{}}
 	m.allCopies = map[v2.CopyID]v2.Card{}
@@ -247,6 +258,7 @@ func NewTextMatch(o TextOptions) (*TextMatch, error) {
 			s.Copies[v.CopyID] = textCopy{Card: v, Zone: "reserve", Owner: i}
 			s.Players[i].Reserve = append(s.Players[i].Reserve, v.CopyID)
 		}
+		s.Players[i].Specialty = dealTextSpecialty(o.Seed, i, c.Tuning.Hand.SpecialtyWeights)
 		m.epoch[i] = uuid.NewString()
 	}
 	for _, n := range o.Deal.Nowns {
@@ -259,9 +271,36 @@ func NewTextMatch(o TextOptions) (*TextMatch, error) {
 		}
 		m.seeds = append(m.seeds, out)
 	}
+	if len(o.DevRoles) > 0 && (!o.Prototype || c.App.Env == "prod" || c.App.Env == "production") {
+		return nil, fmt.Errorf("dev.role_unavailable")
+	}
+	remaining := size/2 - 1
+	available := size
+	for seat, role := range o.DevRoles {
+		if seat < 0 || seat >= size || (role != "random" && role != "nower" && role != "donower") {
+			return nil, fmt.Errorf("dev.role_invalid")
+		}
+		if role != "random" {
+			available--
+		}
+		if role == "donower" {
+			s.Players[seat].Role = role
+			remaining--
+		}
+	}
+	if remaining < 0 || remaining > available {
+		return nil, fmt.Errorf("dev.role_conflict")
+	}
 	perm := rand.New(rand.NewSource(o.Seed)).Perm(size)
-	for _, seat := range perm[:size/2-1] {
+	for _, seat := range perm {
+		if remaining == 0 {
+			break
+		}
+		if role := o.DevRoles[seat]; role == "nower" || role == "donower" {
+			continue
+		}
 		s.Players[seat].Role = "donower"
+		remaining--
 	}
 	m.state = s
 	if e := m.beginRound(s, o.Now()); e != nil {
@@ -308,6 +347,16 @@ func (m *TextMatch) cloneState() (*textState, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	s := *m.state
+	if s.RevealTarget != nil {
+		target := *s.RevealTarget
+		s.RevealTarget = &target
+	}
+	if s.RevealCards != nil {
+		view := *s.RevealCards
+		view.Hand = slices.Clone(view.Hand)
+		view.Reserve = slices.Clone(view.Reserve)
+		s.RevealCards = &view
+	}
 	s.Board = s.Board.Clone()
 	s.Players = slices.Clone(s.Players)
 	for i := range s.Players {

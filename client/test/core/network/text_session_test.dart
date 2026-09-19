@@ -59,6 +59,115 @@ void admit(FakeTextTransport t) => t.emit('lobby', {
   'lobby': fixture('lobby-ready-revisions'),
 });
 void main() {
+  test(
+    'identity replacement clears frozen state and role acknowledgement',
+    () async {
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () async => 'token');
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello(prototype: true));
+      await s.control('room_create', {});
+      admit(t);
+      t.emit('dev_role', {'role': 'donower'});
+      t.emit('snapshot', fixture('snapshot-nower'));
+      s.freeze();
+      await t.reconnect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', {
+        ...hello(prototype: true),
+        'account_id': 'other-account',
+      });
+      expect(s.frozen, isFalse);
+      expect(s.snapshot, isNull);
+      expect(s.roomCode, isNull);
+      expect(s.devRole, 'random');
+      s.dispose();
+    },
+  );
+
+  test(
+    'prototype freeze holds clock, blocks actions and replays snapshots',
+    () async {
+      var clock = 1000;
+      final t = FakeTextTransport();
+      final s = TextSession(
+        transport: t,
+        tokenLoader: () async => 'token',
+        now: () => DateTime.fromMillisecondsSinceEpoch(clock),
+      );
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello(prototype: true));
+      await s.control('room_create', {});
+      admit(t);
+      final first = fixture('snapshot-nower');
+      t.emit('snapshot', first);
+      s.freeze();
+      final held = s.serverNowMS;
+      clock += 10000;
+      final next = fixture('snapshot-nower');
+      next['cursor']['recipient_seq']++;
+      next['deadline_ms'] += 20000;
+      t.emit('snapshot', next);
+      clock += 1000;
+      expect(s.frozen, isTrue);
+      expect(s.serverNowMS, held);
+      expect(s.snapshot!.deadlineMS, first['deadline_ms']);
+      expect(() => s.act({'kind': 'ready'}), throwsA(anything));
+      await s.unfreeze();
+      expect(s.frozen, isFalse);
+      expect(s.snapshot!.deadlineMS, next['deadline_ms']);
+      expect(s.serverNowMS, isNot(held));
+      s.freeze();
+      s.background();
+      expect(s.frozen, isFalse);
+      expect(s.snapshot, isNull);
+      s.dispose();
+    },
+  );
+
+  test('freeze overflow discards private buffer and requires resync', () async {
+    final t = FakeTextTransport();
+    final s = TextSession(transport: t, tokenLoader: () async => 'token');
+    await s.connect();
+    await Future<void>.delayed(Duration.zero);
+    t.emit('hello', hello(prototype: true));
+    await s.control('room_create', {});
+    admit(t);
+    t.emit('snapshot', fixture('snapshot-nower'));
+    s.freeze();
+    for (var i = 0; i < 130; i++) {
+      t.emit('snapshot', fixture('snapshot-nower'));
+    }
+    expect(s.frozen, isFalse);
+    expect(s.snapshot, isNull);
+    expect(t.sent.last['type'], 'resync');
+    s.dispose();
+  });
+
+  test('dev role is prototype only and server acknowledged', () async {
+    final t = FakeTextTransport();
+    final s = TextSession(transport: t, tokenLoader: () async => 'token');
+    await s.connect();
+    await Future<void>.delayed(Duration.zero);
+    t.emit('hello', hello(prototype: true));
+    await s.selectDevRole('donower');
+    expect(t.sent.last['type'], 'dev_role');
+    expect(t.sent.last['payload'], {'role': 'donower'});
+    t.emit('dev_role', {'role': 'donower'});
+    expect(s.devRole, 'donower');
+    expect(s.ready, isTrue);
+    s.dispose();
+    final production = TextSession(
+      transport: FakeTextTransport(),
+      tokenLoader: () async => 'token',
+    );
+    expect(() => production.freeze(), throwsA(anything));
+    expect(() => production.selectDevRole('nower'), throwsA(anything));
+    production.dispose();
+  });
+
   test('rejected resync stops retries and later focus recovers', () async {
     final t = FakeTextTransport();
     final s = TextSession(transport: t, tokenLoader: () async => 'token');

@@ -209,6 +209,9 @@ func TestTextWebsocketControlsAreStrictAndDuplicateSafe(t *testing.T) {
 	if r := textRead(t, c); r.Type != "lobby" {
 		t.Fatalf("create: %s", r.Payload)
 	}
+	if r := textRead(t, c); r.Type != "dev_role" || string(r.Payload) != `{"role":"random"}` {
+		t.Fatalf("initial dev role: %s", r.Payload)
+	}
 	if r := textRead(t, c); r.Type != "control_ack" {
 		t.Fatalf("create ack: %s", r.Payload)
 	}
@@ -823,6 +826,62 @@ func TestTextManualDebugBrowserOrigins(t *testing.T) {
 		}
 		if err == nil || response == nil || response.StatusCode != http.StatusForbidden {
 			t.Fatalf("unlisted origin admitted: %s", origin)
+		}
+	}
+}
+
+func TestTextWebsocketDevelopmentRoleAndSpecialties(t *testing.T) {
+	for _, mode := range gamecontract.AllModes() {
+		for _, size := range []int{4, 6} {
+			t.Run(fmt.Sprintf("%s/%d", mode, size), func(t *testing.T) {
+				srv, _, _ := textHTTPFixture(t)
+				peers := make([]*websocket.Conn, size)
+				for i := range peers {
+					peers[i] = textDial(t, srv)
+					textHello(t, peers[i], uuid.NewString())
+				}
+				settings := v2.LobbySettings{ModeID: mode, Size: size, ContentLanguage: "en", PackReleaseID: "synthetic-text-en", RulesVersion: "text-v1"}
+				created := textLastLobby(t, textControl(t, peers[0], "room_create", "create-dev", settings))
+				for _, peer := range peers[1:] {
+					textControl(t, peer, "room_join", "join-dev", map[string]string{"code": created.Code})
+				}
+				textControl(t, peers[0], "dev_role", "role-dev", map[string]string{"role": "donower"})
+				for i, peer := range peers {
+					view := textLastLobby(t, textControl(t, peer, "resync", fmt.Sprintf("sync-dev-%d", i), struct{}{}))
+					textControl(t, peer, "room_ready", fmt.Sprintf("ready-dev-%d", i), v2.ReadyAcknowledgement{SettingsRevision: view.Lobby.SettingsRevision, MembershipRevision: view.Lobby.MembershipRevision})
+				}
+				frames := textControl(t, peers[0], "room_start", "start-dev", struct{}{})
+				var before v2.Snapshot
+				for _, f := range frames {
+					if f.Type == "snapshot" {
+						if err := json.Unmarshal(f.Payload, &before); err != nil {
+							t.Fatal(err)
+						}
+					}
+				}
+				if before.Private.Role != "donower" || before.Contract.Eligibility.Rewards || before.Contract.Eligibility.Leaderboard {
+					t.Fatal("role/prototype admission mismatch")
+				}
+				for i, name := range []string{"pass", "reveal", "one_more_free_card", "shuffle", "revote", ""} {
+					frames = textControl(t, peers[0], "dev_specialty", fmt.Sprintf("grant-%d", i), map[string]string{"specialty": name})
+					found := false
+					for _, f := range frames {
+						if f.Type == "snapshot" {
+							var snapshot v2.Snapshot
+							if err := json.Unmarshal(f.Payload, &snapshot); err != nil {
+								t.Fatal(err)
+							}
+							if snapshot.Private.Specialty != name || snapshot.Private.Seat != 0 || snapshot.Private.Role != "donower" {
+								t.Fatal("wrong grant projection")
+							}
+							found = true
+						}
+					}
+					if !found {
+						t.Fatal("grant acknowledgement without authoritative snapshot")
+					}
+				}
+			})
 		}
 	}
 }

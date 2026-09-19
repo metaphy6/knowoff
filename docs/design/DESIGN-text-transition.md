@@ -142,8 +142,8 @@ reducer, live sequence assignment or reconnect integration.
 ## Contract decisions and remaining owner evidence
 
 The selected five-mode mechanics, 5+3 prototype budget, first default, ten-second
-trade reply, shared economy and initial backfill/specialty exclusion are adopted
-planning defaults. Playtests may revise them under versioned spec/roadmap updates.
+trade reply, shared economy and initial backfill exclusion are adopted
+planning defaults. The owner superseded specialty exclusion on 2026-09-19. Playtests may revise them under versioned spec/roadmap updates.
 This is enough to implement local contracts without repeatedly asking permission.
 The following require real owner/operator evidence before the dependent release:
 
@@ -209,13 +209,13 @@ for completed repairs and the remaining acceptance gates.
 - `client/lib/presentation/screens/home_screen.dart:29` _play only queues size; _quickPlay:224 renders 4/6 controls. LocalRoomScreen._submit:403 creates size-only room then opens GameScreen.
 - Target: queue key includes mode + table size + content locale (+ compatible rules/content release cohort when concurrently supported); explicit one-mode preference, cancellation before changing queue, waiting timeout notice with Keep waiting/Change mode/Leave; no silent fallback. Local/rematch lobby has immutable settings revision for Ready acknowledgments, full connected table, deterministic host transfer and reset on membership/settings changes. Rematch roles redeal only after fresh start. Persist last available mode as a client preference, not an authority override.
 
-### G. Disabled production backfill/specialties must include every entry point
+### G. Production backfill remains disabled; specialties are retained
 
 - `configs/gameplay/tuning.yaml` currently enables backfill and configures all five specialty weights. `Match.Start:188–190` always deals specialties; use_specialty routes at match.go:447, dev grant at handler.go:370 -> Match.GrantSpecialty:254; five implementations and freeDraws/reveal/shuffle/revote state remain active.
 - `Manager.ProcessBackfill` (`lobby/manager.go:270`) fills both fresh queues and reopened rematches; `Room.FillVacantSeatsWithBots:572`, `startBotActorsLocked:181` and public labels participate. Disable only one branch or set only UI hidden would be incomplete.
 - `server/internal/bots/manager.go:267` playTurn chooses random cards, draws, executes old specialties; castVote:373 uses current TablePlays. Production actors take *game.Match and can call raw getters; future mode bots need a bounded role-scoped observation/intent interface rather than privileged Match access.
 - `tools/gamebot/main.go:26` is v1; event handling at 183 expects payload.hand as string IDs, while current `sendHandDealt` (`match.go:1751`) emits payload.cards as objects. This is an already-drifting external test driver; do not claim it can certify new modes without conversion.
-- Target: first text release rejects retired specialty intents and never deals/grants them, including dev paths, fixtures, labels, help, events and tuning. Production bot backfill and its schedulers stay out of admission for all modes and rematches. Retain test simulators only where actively used and owned; later production bots require a new feature scope and fairness gate.
+- Current target (owner correction 2026-09-19): retain all five specialties across all text modes, with typed actions, role-blind dealing, private timed Reveal views, copy-conserving Shuffle and private debug grants. Reject old v1 intents rather than removing the mechanic. Production bot backfill and its schedulers stay out of admission for all modes and rematches. Retain test simulators only where actively used and owned; later production bots require a new feature scope and fairness gate.
 
 ### H. Real-room locking/writes need integrity proofs before extending disconnect behavior
 
@@ -237,7 +237,7 @@ for completed repairs and the remaining acceptance gates.
 - GameActions.confirmSelection (`client/lib/presentation/state/game_actions.dart:21`) locks a selection out of turn; provider `_autoPlayLockedMove:791` automatically sends on turn_started. Board-changing modes cannot safely inherit stale target/rating/trade previews or auto-confirmation. Preserve a tentative draft only; require current-turn atomic confirmation against current board revision.
 - Provider `_retryPendingRequests:408` can re-add the whole pending batch when connection drops mid-loop (418), including earlier sent requests. `_send:800` has no action ID. Add idempotency and revalidation; do not blindly replay gameplay intents after authoritative snapshot/phase changes.
 - `_mergeState:699` preserves existing Nown if a subsequent payload lacks nown; eliminated handling at `_onMessage:246` records elimination only. GameSession.showNown hides display for eliminated seats, but old secret DTO content remains unless explicitly cleared. Clear stale prompt/selection/pending private projections at elimination, sign-out, terminal rejoin failure and match replacement; do not misdescribe visual hiding as wire confidentiality.
-- `GameMediaWell` (`client/lib/presentation/widgets/game_surfaces.dart:274`) renders text already, but image network/cache branches at 300–327 are still live gameplay rendering. Shared visual tokens, role shutter, accessible controls, cards, people/chat, ballots and result surfaces can stay; old gameplay image URLs, prefetch/retry affordances, specialty panels and terminology retire.
+- `GameMediaWell` (`client/lib/presentation/widgets/game_surfaces.dart:274`) renders text already, but image network/cache branches at 300–327 are still live gameplay rendering. Shared visual tokens, role shutter, accessible controls, cards, people/chat, ballots and result surfaces can stay; old gameplay image URLs and prefetch/retry affordances retire, while specialty panels are adapted to the text actions.
 - `client/lib/media/media_engine.dart:11` MediaEngine has only `client/test/media/media_engine_test.dart:14` as a CodeGraph constructor caller. This is a concrete dead-code candidate for the retirement inventory. Verify its cache/pack/downloader dependencies and test-only consumers before removal; do not indiscriminately delete shared avatar/brand assets or avatar services.
 
 ### Phase 1 executed reproductions — 2026-09-12
@@ -526,7 +526,7 @@ An entry here does not imply that a removed production file still exists.
 | `tools/mediapack/prepare_candidates.py`, `test_prepare_candidates.py` | Retire gameplay image candidate workflow after archives verified; preserve/replace substantive malicious input/hash/provenance tests rather than silently dropping coverage. User instruction currently forbids deleting test files without confirmation; plan concrete removals and release-note entry for the future implementation handoff. |
 | `tools/mediapack` CLI, generator, bundlewriter | Keep package route and meaningful fixtures, replace synthetic-only production assumptions and overwrite publication behavior; share runtime tuning instead of current hardcoded defaults (`main.go:174`). |
 | `content/packs/core-2026.10`, media testdata | Preserve deterministic legacy fixture evidence until negative migration tests exist; add new mode-aware fixtures with independent seeds and explicit synthetic status. No current fixture becomes production content by renaming. |
-| Config keys `media.*`, `storage.*`, old prefetch/cache/bot/specialty tuning | Strict loader rejects unknown YAML keys, so remove keys/type fields/env interpolation/tests/docs in one contract phase; no premature blanket deletion. New mode defaults cannot change an in-flight match. |
+| Config keys `media.*`, `storage.*`, old prefetch/cache/bot tuning | Strict loader rejects unknown YAML keys, so remove keys/type fields/env interpolation/tests/docs in one contract phase; no premature blanket deletion. New mode defaults cannot change an in-flight match. |
 | `infra/compose` MinIO, ingest/pack volumes, nginx MinIO vhost, storage secrets | Retire only when no archive/artifact/avatar/other retained operational consumer needs service. Serve text game data through scoped server payloads; a public content CDN is not required for prompt delivery. Retain web static hosting/brand assets separately. |
 | `server/Dockerfile*`, Go modules, client pubspec, CI | Keep WebP/CGO while avatars depend on it; remove actual unused game-only packages through official module tooling and prove all builds. Do not remove `http`, `crypto`, `shared_preferences`, file picker merely because game images disappear; account/security/avatar uses remain. |
 | `tools/gamebot`, internal bots | Retain only updated dev/test clients with mode-aware legal actions and authorized observations. Production backfill disabled; remove unsupported behavior/caller switches, not just hide selector. |
@@ -543,7 +543,7 @@ An entry here does not imply that a removed production file still exists.
 - Performance: apply Blueprint 📦 §5 budgets for client 16.7 ms p95, server 200/500 ms p95/p99 at 100 rooms, 100-match soak with bounded retained heap and baseline resource recovery; record actual host/device/network and worst-case history-frame proof. These are acceptance assumptions, not prior results.
 - Deployment: health/readiness reflects *actual* required dependencies/catalogs; maintenance rejects new joins but preserves active matches until drained; authenticated snapshot, finite error handling, object archive checksums and full relational parity; isolated restore and crash recovery; single writer throughout rollback; no unhandled Redis command pretending to prove drain.
 - Build/platform: Go server and both tools, native dependency/image rebuild, Android/Web release artifacts and size, iOS on macOS/Xcode, PWA service worker update, small/low-end physical devices, keyboard/screen reader/large text, 64 KiB configured frame limit versus complete public history, bounded memory/soak and action latency by mode.
-- No leftovers: call-graph and text/config/build asset scans, dependency graph, route inventory and packaged-artifact listing show no active association-game/image-prefetch/specialty/backfill code. Every retained historical exception has explicit purpose and consumer; no dead feature flag standing in for removal.
+- No leftovers: call-graph and text/config/build asset scans, dependency graph, route inventory and packaged-artifact listing show no active association-game/image-prefetch/backfill code. Every retained historical exception has explicit purpose and consumer; no dead feature flag standing in for removal.
 
 
 ## Documentation coverage and historical exceptions

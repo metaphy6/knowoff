@@ -103,6 +103,19 @@ func (m *TextMatch) snapshotLocked(seat int, now time.Time) (v2.Snapshot, error)
 func (m *TextMatch) project(s *textState, seat int, now time.Time) v2.Snapshot {
 	p := s.Players[seat]
 	out := v2.Snapshot{Version: 2, SnapshotID: fmt.Sprintf("%s.s%d.%d.%d", m.contract.MatchID, seat, s.PhaseSerial, len(s.History)), Contract: m.contract, Cursor: v2.Cursor{StreamEpoch: "projection", RecipientSeq: 1, EvidenceSeq: uint64(len(s.History))}, Round: s.Round, Turn: s.Turn, Phase: s.Phase, PhaseID: s.PhaseID, ServerTimeMS: now.UnixMilli(), DeadlineMS: s.Deadline, Board: s.Board, Seats: []v2.PublicSeat{}, ReadySeats: []int{}, PendingOffer: s.Offer, History: s.History, Private: v2.PrivateState{Seat: seat, Role: p.Role, Points: int64(max(p.Points, 0)), Hand: []v2.Card{}, ReserveCount: len(p.Reserve), Capabilities: []v2.ActionKind{}}}
+	if !p.Eliminated && s.Phase != v2.PhaseVerdict {
+		out.Private.Specialty = p.Specialty
+		out.Private.FreeDraws = p.FreeDraws
+	}
+	if s.RevealTarget != nil && s.Phase != v2.PhaseVerdict && s.Phase != v2.PhaseRoundStart {
+		target := *s.RevealTarget
+		out.RevealTarget = &target
+		if !p.Eliminated && p.Connected && !s.Players[target].Eliminated && p.RevealUntil > now.UnixMilli() {
+			view := *s.RevealCards
+			view.ExpiresAtMS = p.RevealUntil
+			out.Private.Reveal = &view
+		}
+	}
 	if s.Phase == v2.PhaseResult && now.UnixMilli() < s.ResultRevealAt {
 		out.Private.Points = int64(max(p.PointsBeforeResult, 0))
 	}
@@ -167,6 +180,29 @@ func (m *TextMatch) project(s *textState, seat int, now time.Time) v2.Snapshot {
 		if m.hooks.ModerateChat != nil && s.Phase != v2.PhaseRoundStart && s.Phase != v2.PhaseVerdict {
 			out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionChat)
 		}
+		if s.RevealTarget != nil && !s.Players[*s.RevealTarget].Eliminated && !p.RevealUsed && s.Phase != v2.PhaseRoundStart && s.Phase != v2.PhaseVerdict {
+			out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionViewReveal)
+		}
+		if p.Specialty == "shuffle" && p.Role == "donower" && !s.ShuffleUsed && (s.Phase == v2.PhasePlay || s.Phase == v2.PhaseTradeResponse) {
+			out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionShuffle)
+		}
+		if p.Specialty == "revote" && p.Role == "nower" && !s.RevoteUsed && (s.Phase == v2.PhaseKnowoff || s.Phase == v2.PhaseRunoff) {
+			out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionRevote)
+		}
+		if s.Phase == v2.PhasePlay && m.current(s) == seat {
+			switch p.Specialty {
+			case "pass":
+				out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionPass)
+			case "reveal":
+				if s.Deadline-now.UnixMilli() > int64(specialtyTimer(m.timers.RevealLockout, 5))*1000 {
+					out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionReveal)
+				}
+			case "one_more_free_card":
+				if len(p.Reserve) > 0 && p.FreeDraws == 0 {
+					out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionFreeCard)
+				}
+			}
+		}
 		switch s.Phase {
 		case v2.PhasePlay:
 			out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionPoke)
@@ -174,7 +210,7 @@ func (m *TextMatch) project(s *textState, seat int, now time.Time) v2.Snapshot {
 				if len(p.Reserve) > 0 {
 					out.Private.Capabilities = append(out.Private.Capabilities, v2.ActionDraw)
 				}
-				if len(p.Hand) > 0 {
+				if len(p.Hand) > 0 && p.FreeDraws == 0 {
 					kind := map[gamecontract.ModeID]v2.ActionKind{gamecontract.ModeMissedTheBriefing: v2.ActionRespond, gamecontract.ModeSecretScale: v2.ActionPlace, gamecontract.ModeMakeRoom: v2.ActionReplace, gamecontract.ModeBadBargains: v2.ActionOffer, gamecontract.ModeTopThat: v2.ActionTop}[m.contract.ModeID]
 					out.Private.Capabilities = append(out.Private.Capabilities, kind)
 				}

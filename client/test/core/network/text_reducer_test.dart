@@ -22,6 +22,237 @@ Map<String, dynamic> fixture(String name) =>
             .singleWhere((f) => f['name'] == name)['wire']
         as Map<String, dynamic>;
 void main() {
+  test('pending trade shuffle can restart play at turn one', () {
+    final r = V2Reducer(limits);
+    final before = fixture('snapshot-pending-offer');
+    before['turn'] = 3;
+    r.snapshot(before);
+    final after = jsonDecode(jsonEncode(before)) as Map<String, dynamic>;
+    after.remove('pending_offer');
+    after['phase'] = 'play';
+    after['phase_id'] = 'after-shuffle';
+    after['turn'] = 1;
+    after['private']['capabilities'] = [];
+    after['cursor']['recipient_seq']++;
+    after['history'].add({
+      'event_id': 'trade-shuffle',
+      'evidence_seq': before['cursor']['evidence_seq'] + 1,
+      'round': before['round'],
+      'phase': before['phase'],
+      'phase_id': before['phase_id'],
+      'kind': 'shuffle',
+      'actor': {'kind': 'system'},
+      'reason': 'player',
+      'cards': [],
+      'before_revision': before['board']['revision'],
+      'after_revision': before['board']['revision'],
+      'server_time_ms': before['server_time_ms'],
+    });
+    after['cursor']['evidence_seq'] = after['history'].length;
+    r.snapshot(after);
+    expect(r.current!.phase, 'play');
+    expect(r.current!.turn, 1);
+  });
+  for (final kind in ['shuffle', 'revote']) {
+    for (final paged in [false, true]) {
+      test(
+        '$kind authoritative evidence permits turn or ballot restart paged=$paged',
+        () {
+          final r = V2Reducer(limits);
+          final before = fixture(
+            kind == 'shuffle' ? 'snapshot-nower' : 'snapshot-runoff',
+          );
+          if (kind == 'shuffle') before['turn'] = 3;
+          r.snapshot(before);
+          final after = fixture(
+            kind == 'shuffle' ? 'snapshot-nower' : 'snapshot-knowoff',
+          );
+          after['phase_id'] = 'restarted-phase';
+          after['cursor']['recipient_seq'] =
+              before['cursor']['recipient_seq'] + 1;
+          after['history'] = [
+            ...before['history'],
+            {
+              'event_id': 'specialty-reset',
+              'evidence_seq': before['cursor']['evidence_seq'] + 1,
+              'round': before['round'],
+              'phase': before['phase'],
+              'phase_id': before['phase_id'],
+              'kind': kind,
+              'actor': kind == 'shuffle'
+                  ? {'kind': 'system'}
+                  : {'kind': 'seat', 'seat': 0},
+              'reason': 'player',
+              'cards': [],
+              'before_revision': before['board']['revision'],
+              'after_revision': before['board']['revision'],
+              'server_time_ms': before['server_time_ms'],
+            },
+          ];
+          after['cursor']['evidence_seq'] = after['history'].length;
+          if (paged) {
+            final events = after['history'];
+            final hash = v2Hash(events);
+            final wire = jsonDecode(jsonEncode(after)) as Map<String, dynamic>;
+            wire['history'] = [];
+            wire['history_pages'] = {
+              'total_events': events.length,
+              'page_count': 1,
+              'through_evidence_seq': events.length,
+              'root_sha256': sha256.convert([
+                for (var i = 0; i < hash.length; i += 2)
+                  int.parse(hash.substring(i, i + 2), radix: 16),
+              ]).toString(),
+            };
+            r.snapshot(wire);
+            expect(r.current, isNull);
+            r.page({
+              'v': 2,
+              'match_id': after['contract']['match_id'],
+              'snapshot_id': after['snapshot_id'],
+              'stream_epoch': after['cursor']['stream_epoch'],
+              'index': 0,
+              'from_evidence_seq': 1,
+              'through_evidence_seq': events.length,
+              'sha256': hash,
+              'events': events,
+            });
+          } else {
+            r.snapshot(after);
+          }
+          expect(r.current!.phaseID, 'restarted-phase');
+          final forged = Map<String, dynamic>.from(after);
+          forged['phase_id'] = 'forged-restart';
+          forged['cursor'] = {
+            ...after['cursor'],
+            'recipient_seq': after['cursor']['recipient_seq'] + 1,
+          };
+          // Replaying old evidence cannot authorize a later regression.
+          final advanced = Map<String, dynamic>.from(after);
+          advanced['turn'] = kind == 'shuffle' ? 3 : before['turn'];
+          if (kind == 'revote') {
+            advanced['phase'] = 'runoff';
+            advanced['phase_id'] = 'later-runoff';
+            advanced['ballot'] = before['ballot'];
+          }
+          advanced['cursor'] = {
+            ...after['cursor'],
+            'recipient_seq': after['cursor']['recipient_seq'] + 1,
+          };
+          r.snapshot(advanced);
+          forged['cursor']['recipient_seq']++;
+          expect(() => r.snapshot(forged), throwsA(isA<V2Failure>()));
+        },
+      );
+    }
+  }
+  for (final name in [
+    'snapshot-nower',
+    'snapshot-secret_scale',
+    'snapshot-make_room',
+    'snapshot-bad_bargains',
+    'snapshot-top_that',
+  ]) {
+    for (final kind in ['pass', 'reveal', 'free_card']) {
+      test('advertised specialty $kind works in $name', () {
+        final r = V2Reducer(limits);
+        final s = fixture(name);
+        s['private']['specialty'] = kind == 'free_card'
+            ? 'one_more_free_card'
+            : kind;
+        s['private']['capabilities'] = [kind];
+        r.snapshot(s);
+        final action = {'kind': kind, if (kind == 'reveal') 'target_seat': 1};
+        expect(r.confirm(action, 'specialty-request', 0)['action'], action);
+      });
+    }
+  }
+  for (final field in ['specialty', 'free_draws']) {
+    test('eliminated recipient cannot retain $field', () {
+      final s = fixture('snapshot-eliminated');
+      s['private'][field] = field == 'specialty' ? 'pass' : 1;
+      expect(
+        () => V2Snapshot.decode(jsonEncode(s), limits),
+        throwsA(isA<V2Failure>()),
+      );
+    });
+  }
+  for (final invalid in [
+    'disconnected',
+    'eliminated_target',
+    'combined_limit',
+  ]) {
+    test('private reveal rejects $invalid', () {
+      final s = fixture('snapshot-nower');
+      s['private']['capabilities'] = [];
+      s['reveal_target'] = 1;
+      s['private']['reveal'] = {
+        'target_seat': 1,
+        'expires_at_ms': s['server_time_ms'] + 3000,
+        'hand': [],
+        'reserve': [],
+      };
+      if (invalid == 'disconnected') {
+        s['seats'][0]['connected'] = false;
+        s['phase'] = 'discussion';
+        s.remove('current_seat');
+      }
+      if (invalid == 'eliminated_target') {
+        s['seats'][1]['eliminated'] = true;
+        s['seats'][1]['revealed_role'] = 'nower';
+      }
+      const bounded = V2Limits(
+        maxFrameBytes: 65536,
+        maxHistoryEvents: 2,
+        maxHistoryPageEvents: 2,
+        maxTextBytes: 512,
+        maxRequestsPerSeat: 512,
+      );
+      if (invalid == 'combined_limit') {
+        final card = s['private']['hand'][0];
+        s['private']['reveal']['hand'] = [
+          {...card, 'copy_id': 'exposed-1'},
+          {...card, 'copy_id': 'exposed-2'},
+        ];
+        s['private']['reveal']['reserve'] = [
+          {...card, 'copy_id': 'exposed-3'},
+        ];
+      }
+      expect(
+        () => V2Snapshot.decode(jsonEncode(s), bounded),
+        throwsA(isA<V2Failure>()),
+      );
+    });
+  }
+  test('free draws cannot be negative', () {
+    final s = fixture('snapshot-nower');
+    s['private']['free_draws'] = -1;
+    expect(
+      () => V2Snapshot.decode(jsonEncode(s), limits),
+      throwsA(isA<V2Failure>()),
+    );
+  });
+
+  test('private reveal validates target and future expiry', () {
+    final s = fixture('snapshot-nower');
+    s['reveal_target'] = 1;
+    s['private']['reveal'] = {
+      'target_seat': 1,
+      'expires_at_ms': s['server_time_ms'] + 3000,
+      'hand': [],
+      'reserve': [],
+    };
+    expect(
+      V2Snapshot.decode(jsonEncode(s), limits).json['private']['reveal'],
+      isNotNull,
+    );
+    s['private']['reveal']['target_seat'] = 2;
+    expect(
+      () => V2Snapshot.decode(jsonEncode(s), limits),
+      throwsA(isA<V2Failure>()),
+    );
+  });
+
   test(
     'same-round terminal turn zero is accepted and terminal rollback is refused',
     () {

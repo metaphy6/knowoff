@@ -217,6 +217,7 @@ type textNetworkBot struct {
 	rng             *rand.Rand
 	seed            int64
 	serial          int
+	resyncRequestID string
 	account         string
 	availability    lobby.TextAvailability
 	limits          v2.Limits
@@ -458,6 +459,17 @@ func (b *textNetworkBot) apply(snapshot v2.Snapshot) error {
 
 func (b *textNetworkBot) receive(frame lobby.TextEnvelope) error {
 	switch frame.Type {
+	case "dev_role":
+		var state struct {
+			Role string `json:"role"`
+		}
+		if err := networkDecode(frame.Payload, &state); err != nil {
+			return err
+		}
+		if state.Role != "random" && state.Role != "nower" && state.Role != "donower" {
+			return errors.New("invalid development role metadata")
+		}
+		return nil
 	case "lobby":
 		var next lobby.TextLobbyView
 		if err := networkDecode(frame.Payload, &next); err != nil {
@@ -587,6 +599,9 @@ func (b *textNetworkBot) control(ctx context.Context, kind string, payload any) 
 		return errors.New("prototype admission not authorized")
 	}
 	id := b.nextID()
+	if kind == "resync" && b.resyncRequestID != "" {
+		id = b.resyncRequestID
+	}
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("control %s request %s: %w", kind, id, err)
