@@ -450,6 +450,16 @@ void main() {
         final restored = fixture('snapshot-nower');
         restored['cursor']['stream_epoch'] = 'after-terms';
         transport.emit('snapshot', restored);
+        // The real server acknowledges the resync after its snapshot frames.
+        transport.frames.add({
+          'v': 2,
+          'type': 'control_ack',
+          'request_id': transport.sent.last['request_id'],
+          'payload': {
+            'request_id': transport.sent.last['request_id'],
+            'duplicate': false,
+          },
+        });
         await t.pumpAndSettle();
         expect(
           t

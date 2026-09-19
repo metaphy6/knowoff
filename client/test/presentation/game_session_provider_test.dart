@@ -137,9 +137,9 @@ void main() {
         expect(s.snapshot, isNull);
         await s.resume();
         await Future<void>.delayed(Duration.zero);
-        t.emit('hello', hello());
-        expect(t.sent.last['type'], 'room_join');
-        expect(t.sent.last['payload'], {'code': 'ABC123'});
+        expect(t.reconnects, 0);
+        expect(t.sent.last['type'], 'resync');
+        expect(t.sent.last['payload'], isEmpty);
         final next = fixture('snapshot-${entry.key}');
         next['cursor']['stream_epoch'] = 'resumed';
         t.emit('snapshot', next);

@@ -13,7 +13,7 @@ humans on **the project's design and history**.
 | [`code/`](code/) | Module-level documentation (architecture, modules, APIs). | Devs joining the codebase. |
 | [`project/`](project/) | The project's charter, decision log, glossary — [`GLOSSARY.md`](project/GLOSSARY.md) holds the normative Knowoff terminology. | New contributors. |
 | [`design/`](design/) | Design docs (DESIGN.md) and ADRs. | Reviewers + future-you. |
-| [`design/DESIGN-text-game-modes.md`](design/DESIGN-text-game-modes.md) | Adopted five-mode planning rationale and illustrative examples; runtime pending. | Product planning + playtesting. |
+| [`design/DESIGN-text-game-modes.md`](design/DESIGN-text-game-modes.md) | Adopted five-mode design rationale and illustrative examples; current proof lives in the roadmap. | Product planning + playtesting. |
 | [`design/DESIGN-text-transition.md`](design/DESIGN-text-transition.md) | Source audit, protocol/data contracts, migration, retirement and verification. | Engineering + operations. |
 | [`product/BUSINESS_PLAN.md`](product/BUSINESS_PLAN.md) | Customer strategy, content operations, economics assumptions and launch gates. | Product + business. |
 | [`reports/2026-09-12-text-transition-doc-audit.md`](reports/2026-09-12-text-transition-doc-audit.md) | Complete documentation coverage and retained historical exceptions. | Reviewers. |
@@ -26,6 +26,8 @@ humans on **the project's design and history**.
 | [`launch/`](launch/) | Release-gated copy, clip brief and migration runbook. | Launch operators. |
 | [`planning/`](planning/) | The **ROADMAP** — single source of truth for sequenced work. | Agents + humans. |
 | [`tracking/`](tracking/) | How the `docs/tracking/tracking.csv` workflow is used; [`context.md`](tracking/context.md) is the project context pack. | Agents. |
+| [`guides/PLAYTEST.md`](guides/PLAYTEST.md) | Private prototype startup, separate players, resets and builds. | Playtest hosts. |
+| [`reports/2026-09-19-private-playtest.md`](reports/2026-09-19-private-playtest.md) | Ten-cell UI checklist, observed findings and known limitations. | Playtest hosts + engineering. |
 | [`guides/`](guides/) | Cross-cutting how-tos: agent operating model, model profiles, MCP usage. | Agents + ops. |
 | [`reports/`](reports/) | Generated reports (audit, status snapshots). | Reviewers. |
 | [`.agents/skills/`](../.agents/skills/) | The **skill library** — load on demand. | Agents. |

@@ -103,6 +103,76 @@ or push. No test is silenced; deleting obsolete test files needs the concrete
 owner approval required by AGENTS.md, with release notes and replacement proofs.
 A failed gate enters diagnosis/repair; preserve pre-existing human changes.
 
+### Current priority — private playtesting, 2026-09-19
+
+**Goal.** Make the existing real-server private prototype easy to launch with
+normal Flutter clients, finish its testing setup, and collect actual UI evidence
+for all five modes at both sizes before choosing the next implementation work.
+This owner-directed ordering uses existing Phase 4, 6 and 7 items; it adds no
+phase or parent checkbox and changes no product rule or completion count.
+
+**Boundary.** A private prototype enables five modes for 4/6-player tables with
+no earned Noin, progression or leaderboard credit. Production availability stays
+closed. Billing/provider acceptance, complete deletion, certified content and
+public deployment remain unfinished requirements. Phase 6 final cutover still
+depends on Phases 2–5 green; verified unused-source cleanup can proceed earlier.
+Neither full architectural retirement nor those production approvals is a
+prerequisite for the first private playtest. Automated UI runs are engineering
+evidence; they do not count as human cohorts, editorial approval or fun/balance
+validation.
+
+**Ordered work and acceptance.** Each row is a bounded child of the existing
+items named below. Record implementation and evidence separately; keep a parent
+unchecked until its complete original proof is present.
+
+| Order / existing home | Delivery | Required proof before accepting the child |
+|---|---|---|
+| 1a — Phase 4.11a / 7.1a | Add an explicit private-prototype launch path to the existing startup/configuration tools; document prerequisites and exact startup/shutdown commands. | Start from a clean disposable local stack without cloud keys; ordinary clients discover all five modes and both sizes. Default/production configuration remains closed, and mismatched configuration refuses rather than silently substituting a mode. |
+| 1b — Phase 4.11a / 7.1a | Pin existing synthetic test content, build, rules and tuning identities; document content limitations and isolate the playtest data. | Complete a match using that fixture through the real server; verify zero earned currency, XP, overall/non-converted points and leaderboard effects, including reconnect and rematch. Synthetic content never becomes production-certified by relabeling. |
+| 1c — Phase 4.11a | Provide reproducible separate player sessions, reset instructions and usable Web/Android artifacts through existing build/run paths. | Six independent client identities join one table without shared-storage takeover; a returning session reconnects as the same player. Repeat the documented reset/start procedure on owned test data and rejoin. Build Web and Android, record artifact/config identity and demonstrate actual launch; a build alone is not a device pass. |
+| 2a — Phase 6.6–10 | Inventory candidate obsolete gameplay/image paths, routes, packaged assets, configuration and dependencies; classify each as remove or retain with its remaining consumers and replacement proof. | CodeGraph/caller evidence plus source/config/route/artifact scans agree; account/avatar/UI, dev/test and archive consumers are checked explicitly. Ambiguous consumers remain retained with a reason. |
+| 2b — Phase 6.6–10 | Remove only verified obsolete consumers in bounded module changes and align their active documentation. | Retained consumers build; unsupported legacy input still refuses with substantive tests; manifests and artifacts no longer contain the removed active path. Preserve applied SQL, historical evidence and avatar WebP/CGO. Exact test-file deletion approval remains required; retain files while that narrow decision is pending. |
+| 3a — Phase 4.11a/12 | Exercise the ten mode/size cells below through normal Flutter UI against the real server, using independent sessions. | Every cell records joining/settings/Ready, its mode action, draw where legal, voting, results, disconnect/reconnect and rematch; retain failures and redacted evidence. Exercise Web and Android with a per-platform result, not an inferred cross-platform pass. |
+| 3b — Phase 4.11b/12 | Check privacy and usable controls during those journeys; keep wider device/performance proof explicit. | Donower/eliminated/hidden views and accessibility semantics contain no secret; reconnect restores only authorized state; pending Bad Bargains offers preserve deadlines and resolve once. Record resize/large-text/focus checks and actual devices; low-end p95, iOS and untested accessibility proof remain open until measured. |
+| 4 — Phase 7.1b/2/5 | Deliver a facilitator checklist, known-limitations list and finding-prioritized follow-up within existing roadmap items. | Each finding has reproduction, mode/size/platform, impact, evidence and owning roadmap item. Prioritize privacy/value/integrity failures, then blocked journeys, then comprehension/friction; distinguish engineering observations from human feedback. No unrun cohort, provider or production gate is marked complete. |
+
+**Ten-cell checklist.** For each cell record Web and Android separately as
+`not run`, `pass` or `fail`, with build/server/config/content identities, player
+session identities (pseudonymous), evidence location and open findings. Require
+the full journey in row 3a, not merely admission or a screenshot of the board.
+
+| Mode | 4 players | 6 players | Mode-specific action proof |
+|---|---|---|---|
+| Missed the Briefing | Web core journey pass; Android not run | Web core journey pass; Android not run | Select, preview and confirm response; consume one owned copy. |
+| Secret Scale | Web core journey pass; Android not run | Web final sync failure remains open; Android not run | Confirm card and rating 1–5; retain attributed placement/history. |
+| Make Room | Web core journey pass; Android not run | Web retest passed; prior terminal stall retained; Android not run | Replace a chosen slot; verify before/after evidence and discard. |
+| Bad Bargains | Web core journey pass; Android not run | Web core journey pass including pending reconnect/expiry; Android not run | Offer and recipient accept/refuse; exercise expiry and reconnect without duplicate transfer. |
+| Top That | Web core journey pass; Android not run | Web core journey pass; Android not run | Confirm against the current target; retain ordered chain and reject stale target. |
+
+Nine Web cells completed core joining/action/vote/result/reconnect/rematch checks;
+this does not close every detailed proof in rows 3a/3b. Secret Scale6 remains
+unaccepted after an intermittent terminal sync failure. Native journeys, wider
+edge/device checks and full post-reset UI rejoin remain open. The next engineering
+priority is capturing and repairing that terminal failure; see the evidence
+record for failures, subsequent retests and test-isolation limitations.
+
+**Files and evidence homes.** Extend existing startup/config paths under
+`configs/`, `infra/compose/` and `xops/makefile/` only after verifying their
+consumers. Align `README.md`, `client/README.md`, `infra/README.md`,
+`docs/README.md` and affected active module guides with the chosen launch path;
+historical ADRs, reports and tracking stay historical. Keep sequencing here;
+put observed runs and limitations in the [private playtest record](../reports/2026-09-19-private-playtest.md), with [startup instructions](../guides/PLAYTEST.md), rather than create a second roadmap.
+
+**Gates and risks.** Run scoped regressions, independent review then verification,
+and `python3 xops/test/tests-lints.py` via safe-run for implementation changes.
+Record commands, executed/failed/skipped checks and platform evidence. Default
+startup ambiguity, shared browser identity, stale Web cache and accidental
+deletion of retained image consumers are the primary setup risks. Isolate test
+data and restrict reset to that owned data; never use broad volume deletion or
+Redis flush as a routine playtest reset. A private-playtest handoff does not
+close Phase 4's remaining device gate, Phase 6's cutover, or Phase 7's release
+gate without each original requirement's evidence.
+
 ### Phase 1 — Contract, baseline and migration preflight
 
 **What/why.** Freeze cross-module identities, wire/config and data boundaries;

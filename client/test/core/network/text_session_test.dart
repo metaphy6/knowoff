@@ -20,8 +20,13 @@ class FakeTextTransport implements GameTransport {
     states.add(ConnectionState.connected);
   }
 
+  int reconnects = 0;
   @override
-  Future<void> reconnect() => connect();
+  Future<void> reconnect() {
+    reconnects++;
+    return connect();
+  }
+
   @override
   Future<void> send(Map<String, dynamic> m) async {
     sent.add(m);
@@ -54,6 +59,188 @@ void admit(FakeTextTransport t) => t.emit('lobby', {
   'lobby': fixture('lobby-ready-revisions'),
 });
 void main() {
+  test('rejected resync stops retries and later focus recovers', () async {
+    final t = FakeTextTransport();
+    final s = TextSession(transport: t, tokenLoader: () async => 'token');
+    await s.connect();
+    await Future<void>.delayed(Duration.zero);
+    t.emit('hello', hello());
+    await s.control('room_create', {});
+    admit(t);
+    t.emit('snapshot', fixture('snapshot-nower'));
+    s.background();
+    await s.resume();
+    final count = t.sent.length;
+    await s.control('resync', {});
+    expect(t.sent.length, count, reason: 'one outstanding resync');
+    final id = t.sent.last['request_id'];
+    t.emit('error', {'code': 'request.rate_limited', 'request_id': id});
+    expect(t.sent.length, count, reason: 'rejection must not retry itself');
+    expect(s.snapshot, isNull);
+    expect(s.reducer!.needsResync, isTrue);
+    s.background();
+    await s.resume();
+    expect(t.sent.length, count + 1);
+    expect(t.sent.last['type'], 'resync');
+    final next = fixture('snapshot-nower');
+    next['cursor']['stream_epoch'] = 'recovered';
+    t.emit('snapshot', next);
+    expect(s.snapshot, isNotNull);
+    expect(s.errorCode, isNull);
+    expect(t.sent.where((m) => m['type'] == 'action'), isEmpty);
+    s.dispose();
+  });
+
+  test(
+    'focus resume resyncs the same authenticated socket without disconnecting',
+    () async {
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () async => 'token');
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello());
+      await s.control('room_create', {});
+      admit(t);
+      final before = fixture('snapshot-nower');
+      t.emit('snapshot', before);
+      s.background();
+      expect(s.snapshot, isNull);
+      t.emit('snapshot', before);
+      expect(s.snapshot, isNull, reason: 'hidden frames never restore secrets');
+      await s.resume();
+      expect(t.reconnects, 0);
+      expect(t.sent.last['type'], 'resync');
+      expect(s.snapshot, isNull, reason: 'wait for authoritative state');
+      final restored = fixture('snapshot-nower');
+      restored['cursor']['stream_epoch'] = 'resumed-epoch';
+      t.emit('snapshot', restored);
+      expect(s.snapshot!.deadlineMS, before['deadline_ms']);
+      expect(
+        s.snapshot!.hand.map((c) => c.copyID),
+        (before['private']['hand'] as List).map((c) => c['copy_id']),
+      );
+      expect(t.sent.where((m) => m['type'] == 'action'), isEmpty);
+      s.dispose();
+    },
+  );
+
+  test(
+    'resume never reuses a changed token or a socket replaced while hidden',
+    () async {
+      for (final reason in ['token', 'socket', 'rejected']) {
+        final t = FakeTextTransport();
+        var token = 'original-token';
+        final s = TextSession(transport: t, tokenLoader: () async => token);
+        await s.connect();
+        await Future<void>.delayed(Duration.zero);
+        t.emit('hello', hello());
+        if (reason == 'rejected') t.emit('error', {'code': 'auth.required'});
+        s.background();
+        if (reason == 'token') {
+          token = 'replacement-token';
+        } else if (reason == 'socket') {
+          t.states.add(ConnectionState.disconnected);
+          t.states.add(ConnectionState.connected);
+        }
+        await s.resume();
+        await Future<void>.delayed(Duration.zero);
+        expect(t.reconnects, 1);
+        expect(t.sent.last['type'], 'hello');
+        expect(t.sent.last['payload']['access_token'], token);
+        expect(s.ready, isFalse);
+        expect(s.snapshot, isNull);
+        s.dispose();
+      }
+    },
+  );
+
+  test(
+    'a delayed resume identity cannot restore a newly backgrounded client',
+    () async {
+      final t = FakeTextTransport();
+      Completer<String>? pending;
+      final s = TextSession(
+        transport: t,
+        tokenLoader: () => pending?.future ?? Future.value('token'),
+      );
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello());
+      s.background();
+      pending = Completer<String>();
+      final resume = s.resume();
+      s.background();
+      pending.complete('token');
+      await resume;
+      expect(t.reconnects, 0);
+      expect(s.ready, isFalse);
+      expect(s.snapshot, isNull);
+      s.dispose();
+    },
+  );
+
+  test(
+    'a lobby started while hidden resumes through authorized match resync',
+    () async {
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () async => 'token');
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello());
+      await s.control('room_create', {});
+      admit(t);
+      s.background();
+      t.emit('snapshot', fixture('snapshot-nower'));
+      expect(s.snapshot, isNull);
+      await s.resume();
+      expect(t.reconnects, 0);
+      expect(t.sent.last['type'], 'resync');
+      t.emit('snapshot', fixture('snapshot-nower'));
+      expect(s.snapshot!.nown, isNotNull);
+      expect(s.lobby, isNull);
+      s.dispose();
+    },
+  );
+
+  test('resume refreshes authoritative lobby revisions', () async {
+    final t = FakeTextTransport();
+    final s = TextSession(transport: t, tokenLoader: () async => 'token');
+    await s.connect();
+    await Future<void>.delayed(Duration.zero);
+    t.emit('hello', hello());
+    await s.control('room_create', {});
+    admit(t);
+    s.background();
+    await s.resume();
+    final newer = fixture('lobby-ready-revisions');
+    newer['membership_revision'] = 9;
+    for (final seat in newer['seats']) {
+      seat.remove('ready');
+    }
+    t.emit('lobby', {'seat': 0, 'code': 'ABC123', 'lobby': newer});
+    expect(s.lobby!['membership_revision'], 9);
+    expect(t.reconnects, 0);
+    expect(s.reducer!.needsResync, isFalse);
+    s.dispose();
+  });
+
+  test(
+    'an unbound queue admission cannot reuse a socket as if it had a room',
+    () async {
+      final t = FakeTextTransport();
+      final s = TextSession(transport: t, tokenLoader: () async => 'token');
+      await s.connect();
+      await Future<void>.delayed(Duration.zero);
+      t.emit('hello', hello());
+      await s.control('queue_join', {});
+      s.background();
+      await s.resume();
+      expect(t.reconnects, 1);
+      expect(t.sent.where((m) => m['type'] == 'resync'), isEmpty);
+      s.dispose();
+    },
+  );
+
   test(
     'public notice invalidation is strict and never changes match state',
     () async {

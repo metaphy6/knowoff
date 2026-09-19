@@ -15,6 +15,26 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Private playtest preparation — 2026-09-19
+
+- Preserve a healthy authenticated game connection when returning browser focus,
+  fetching fresh authorized state instead of creating a disconnect that can
+  auto-pass the current turn. Hidden views still clear immediately; changed
+  identities and lost connections still require a fresh handshake.
+
+- Restore a returning player's room binding before the active match snapshot,
+  so reloading and joining the same room displays the authorized match again.
+- Coalesce history resync requests and stop retrying a rejected resync immediately;
+  a rate limit no longer creates an endless request loop.
+- Bring private prototype startup, player isolation, Web/Android builds and
+  documented resets forward under the existing roadmap. Keep production mode,
+  provider, deletion, content-certification and final cutover gates open.
+- Remove verified unused OAuth-server/embedded-store dependency trees and an
+  obsolete specialty audit constant; preserve avatar processing, active OAuth,
+  account security, migration history and every test file.
+- Replace obsolete client developer-control instructions with current text-mode
+  testing guidance and record actual UI results separately from automated tests.
+
 ### Roadmap continuation — 2026-09-19
 
 - Select a compatible project-local Flutter SDK in editor settings and document

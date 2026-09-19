@@ -11,7 +11,17 @@ The local reverse proxy lives at [`nginx/`](../nginx/README.md) (repo root,
 alongside `client/` and `server/`), not under `infra/` — it's built and
 versioned like the other service images, not a deployment artifact.
 
+## Private playtest stack
+
+From the repository root, `make playtest.up` starts the explicitly isolated
+prototype described in [PLAYTEST.md](../docs/guides/PLAYTEST.md). It uses the
+ordinary server and Flutter client with synthetic test content and separate
+browser origins. It does not enable production modes or reuse the general
+stack's database volumes. Stop/reset only through that guide's scoped commands.
+
 ## Local stack
+
+The general stack below does not enable private prototype mode.
 
 ```bash
 cd infra/compose

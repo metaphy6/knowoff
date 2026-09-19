@@ -597,6 +597,14 @@ func TestTextPrototypeIsServerMetadataBeforeAnyAdmission(t *testing.T) {
 // recipient chat redaction/resync and the terminal turn reset. Auth/value hooks
 // remain synthetic; the separate gamebot suite owns real account/Postgres proof.
 func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
+	textTerminalTrace(t, gamecontract.ModeMissedTheBriefing, 4)
+}
+
+func TestTextWebsocketSixPlayerTerminalTrace(t *testing.T) {
+	textTerminalTrace(t, gamecontract.ModeSecretScale, 6)
+}
+
+func textTerminalTrace(t *testing.T, mode gamecontract.ModeID, size int) {
 	var clockMS atomic.Int64
 	clockMS.Store(time.Date(2026, 9, 12, 12, 0, 0, 0, time.UTC).UnixMilli())
 	var blocked atomic.Bool
@@ -605,12 +613,12 @@ func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
 		deps.ModerateChat = func(_ context.Context, _ string, a v2.Action) (v2.Action, error) { return a, nil }
 		deps.HideChat = func(context.Context, string, string) (bool, error) { return blocked.Load(), nil }
 	})
-	peers := make([]*websocket.Conn, 4)
+	peers := make([]*websocket.Conn, size)
 	for i := range peers {
 		peers[i] = textDial(t, srv)
 		textHello(t, peers[i], uuid.NewString())
 	}
-	settings := v2.LobbySettings{ModeID: gamecontract.ModeMissedTheBriefing, Size: 4, ContentLanguage: "en", PackReleaseID: "synthetic-text-en", RulesVersion: "text-v1"}
+	settings := v2.LobbySettings{ModeID: mode, Size: size, ContentLanguage: "en", PackReleaseID: "synthetic-text-en", RulesVersion: "text-v1"}
 	view := textLastLobby(t, textControl(t, peers[0], "room_create", "create", settings))
 	for _, p := range peers[1:] {
 		textControl(t, p, "room_join", "join", map[string]any{"code": view.Code})
@@ -620,7 +628,7 @@ func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
 		textControl(t, p, "room_ready", fmt.Sprintf("ready-%d", i), v2.ReadyAcknowledgement{SettingsRevision: l.Lobby.SettingsRevision, MembershipRevision: l.Lobby.MembershipRevision})
 	}
 	frames := textControl(t, peers[0], "room_start", "start", struct{}{})
-	snapshots := make([]v2.Snapshot, 4)
+	snapshots := make([]v2.Snapshot, size)
 	for _, f := range frames {
 		if f.Type == "snapshot" {
 			if err := json.Unmarshal(f.Payload, &snapshots[0]); err != nil {
@@ -628,7 +636,7 @@ func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
 			}
 		}
 	}
-	for i := 1; i < 4; i++ {
+	for i := 1; i < size; i++ {
 		snapshots[i] = textNextSnapshot(t, peers[i])
 	}
 	readAll := func() {
@@ -682,22 +690,35 @@ func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
 	for step := 0; step < 40; step++ {
 		s := snapshots[0]
 		if s.Phase == v2.PhaseVerdict {
-			if s.Turn != 0 || s.Verdict == nil || s.Verdict.Outcome != "completed" || len(s.Scores) != 4 || resultWindows == 0 {
+			if s.Turn != 0 || s.Verdict == nil || s.Verdict.Outcome != "completed" || len(s.Scores) != size || resultWindows == 0 {
 				t.Fatal("terminal projection incomplete")
 			}
-			writeTextSessionTraces(t, []textSessionTrace{{string(settings.ModeID), 4, textCaptured(peers[0])}})
+			writeTextSessionTraces(t, []textSessionTrace{{string(settings.ModeID), size, textCaptured(peers[0])}})
 			return
 		}
 		if s.Phase == v2.PhaseKnowoff {
 			candidates := s.Ballot.Candidates
 			target := candidates[len(candidates)-1]
+			if size == 6 {
+				for _, candidate := range candidates {
+					if snapshots[candidate].Private.Role == "donower" {
+						target = candidate
+						break
+					}
+				}
+			}
 			for seat, p := range s.Seats {
 				if p.Eliminated || !p.Connected {
 					continue
 				}
 				vote := target
 				if seat == target {
-					vote = candidates[0]
+					for _, candidate := range candidates {
+						if candidate != seat {
+							vote = candidate
+							break
+						}
+					}
 				}
 				action(seat, fmt.Sprintf("vote-%d-%d", s.Round, seat), v2.Action{Kind: v2.ActionVote, TargetSeat: &vote})
 			}
@@ -716,4 +737,50 @@ func TestTextWebsocketTerminalRevealAndChatProjectionTrace(t *testing.T) {
 		tick(snapshots[0].DeadlineMS)
 	}
 	t.Fatal("terminal trace exceeded phase bound")
+}
+
+// The private launcher serves ordinary browser clients on six separate origins.
+// A REST wildcard does not authorize WebSocket upgrades; exercise the actual
+// checked-in overlay against the real handler instead of an origin-free bot.
+func TestTextPlaytestBrowserOrigins(t *testing.T) {
+	raw, err := os.ReadFile("../../../configs/playtest.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var overlay config.Config
+	if err := yaml.Unmarshal(raw, &overlay); err != nil {
+		t.Fatal(err)
+	}
+	if overlay.App.Env != "local" || overlay.Text != nil || len(overlay.Server.AllowedOrigins) != 6 {
+		t.Fatal("prototype overlay must remain local, explicit-origin, and without production mode activation")
+	}
+	srv, _, _ := textHTTPCustomFixture(t, textAuthStub{}, func(cfg *config.Config, _ *lobby.TextDeps) {
+		cfg.Server.AllowedOrigins = overlay.Server.AllowedOrigins
+	})
+	for port := 8001; port <= 8006; port++ {
+		origin := fmt.Sprintf("http://localhost:%d", port)
+		t.Run(origin, func(t *testing.T) {
+			connection, response, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/ws/v2", http.Header{"Origin": {origin}})
+			if err != nil {
+				t.Fatalf("browser upgrade refused: %v", err)
+			}
+			defer connection.Close()
+			if response.StatusCode != http.StatusSwitchingProtocols {
+				t.Fatalf("upgrade = %d", response.StatusCode)
+			}
+			textHello(t, connection, uuid.NewString())
+		})
+	}
+	for _, origin := range []string{"http://localhost:8007", "https://untrusted.invalid"} {
+		connection, response, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/ws/v2", http.Header{"Origin": {origin}})
+		if connection != nil {
+			connection.Close()
+		}
+		if response != nil {
+			response.Body.Close()
+		}
+		if err == nil || response == nil || response.StatusCode != http.StatusForbidden {
+			t.Fatal("unlisted browser origin admitted")
+		}
+	}
 }

@@ -64,6 +64,11 @@ func (m *TextManager) Join(ctx context.Context, p *TextPeer, code string) error 
 			if e := r.match.ResetStream(seat); e != nil {
 				return e
 			}
+			// A freshly loaded client has no room binding yet. Send only this
+			// authenticated member's binding before its private match projection.
+			if e := m.lobby(r, p); e != nil {
+				return e
+			}
 			if e := m.broadcastMatch(ctx, r); e != nil {
 				return e
 			}

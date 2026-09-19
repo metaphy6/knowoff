@@ -79,8 +79,9 @@ bootstrap retires the app's old Flutter service worker and obsolete compiled
 code/config cache entries before loading the text entrypoint. Authentication,
 account preferences and non-playable assets remain. A stale installed page must
 fetch the new bootstrap; protocol refusal protects admission before that refresh.
-The retained legacy gameplay/media sources and tests remain for transition
-history and explicit v1 test fixtures, and are not reached by v2 play entry.
+The old gameplay/media runtime has been removed. Test files with legacy names
+now cover text-mode rejection, cache migration and privacy boundaries; historical
+fixtures and applied migrations remain transition evidence.
 
 New text-interface strings include English, the expanded pseudo-locale, Turkish
 and Arabic. Content language stays separate from interface locale; authored text
@@ -105,21 +106,16 @@ lib/
 │   ├── config/     # Client config loader (server URL, feature flags)
 │   ├── network/    # GameTransport abstraction + WebSocket implementation
 │   └── text/       # v2 strict contract, session, history reducer and cache migration
-├── data/
-│   ├── models/     # GameState, Player, Card, NownRef DTOs
-│   └── repositories/
+├── data/           # Authenticated APIs, purchases and rewarded-service adapters
 ├── domain/
-│   ├── entities/
-│   ├── repositories/
-│   └── usecases/   # QuickPlay, JoinRoom, PlayCard, DrawCards, CastVote, SendQuickChat, ConvertPoints
+│   └── entities/   # Localized quick-chat phrases
 ├── presentation/
-│   ├── state/      # Riverpod state and nonvisual action controllers
+│   ├── state/      # Nonvisual store action controllers
 │   ├── theme/      # Locked palette, hard shadows, bundled display typography
 │   ├── icons/      # Brand doodles
-│   ├── widgets/    # Shared controls, bounded motion, media and service surfaces
+│   ├── widgets/    # Shared controls, bounded motion, avatars and service surfaces
 │   └── screens/    # Home/local rooms, match lifecycle and account pages
-├── l10n/           # English/pseudo-locale and new Turkish/Arabic text surfaces
-└── media/          # Retained legacy/non-playable asset code; no v2 catalog sync
+└── l10n/           # English/pseudo-locale and new Turkish/Arabic text surfaces
 ```
 
 Local-room QR/clipboard links open a validated, prefilled join form; joining is

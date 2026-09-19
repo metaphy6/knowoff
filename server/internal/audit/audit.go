@@ -20,7 +20,6 @@ const (
 	EventMatchFinished  EventType = "match_finished"
 	EventVoteCast       EventType = "vote_cast"
 	EventCardPlayed     EventType = "card_played"
-	EventSpecialtyUsed  EventType = "specialty_used"
 	EventPointsScored   EventType = "points_scored"
 	EventNoinGranted    EventType = "noin_granted"
 	EventIntentRejected EventType = "intent_rejected"

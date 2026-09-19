@@ -10,18 +10,22 @@ Rooms assemble the table; they are separate from gameplay mode and content
 language. Missed the Briefing is the initial default, with each mode exposed
 only after its release checks pass.
 
-**Development resumed (2026-09-19).** Phase 1 is complete. The saved runtime
-implements protocol v2, five text modes, compatible lobbies and role-scoped
-client views. Durable value, content, trust and retirement work has targeted
-test evidence; the full repository gate passed 2,404 tests/subtests with zero
-failures or skips. Phase 3's technical gate is complete; release gates remain open. Public
-mode availability stays closed pending certified content and human evidence.
-See the [current recovery record](docs/reports/2026-09-19-text-transition-resumption.md).
-[ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the
-text pivot; the [transition design](docs/design/DESIGN-text-transition.md)
-maps source gaps, data preservation, compatibility and retirement proofs.
-The [business plan](docs/product/BUSINESS_PLAN.md) records customer, content,
-liquidity and financial assumptions and their validation gates.
+**Current priority: private playtesting (2026-09-19).** The real server has a
+private synthetic prototype for all five modes and both table sizes, with no
+earned currency or account progression. Normal Flutter clients can join it.
+Use the [private playtest guide](docs/guides/PLAYTEST.md) for isolated startup,
+separate player sessions, resets and Web/Android builds, and the
+[test checklist and findings](docs/reports/2026-09-19-private-playtest.md) for
+observed journey evidence and remaining limitations.
+
+Production mode availability stays closed. Billing/provider acceptance,
+complete deletion, certified content and public deployment remain unfinished;
+Phase 6 final cutover still requires its existing dependencies. Bounded cleanup
+and Phase 4 playtest setup proceed under the [existing roadmap](docs/planning/ROADMAP.md#current-priority--private-playtesting-2026-09-19).
+[ADR-012](docs/design/ADR-012-text-only-selectable-modes.md) records the text pivot;
+the [transition design](docs/design/DESIGN-text-transition.md) preserves migration
+and retirement contracts. Earlier technical validation remains in the
+[resumption record](docs/reports/2026-09-19-text-transition-resumption.md).
 
 📖 The normative spec lives in [`BLUEPRINT.md`](BLUEPRINT.md) — game rules,
 tech stack, architecture, economy, and the product baseline. The sequenced
@@ -39,14 +43,22 @@ build plan — phases, checkboxes, proof tests — lives in
 
 ## Status
 
-The current Flutter UI, account/economy/community services and static text
-rendering are reusable foundations. The audit reopened draw privacy, full-match
-history, sequence/snapshot recovery, content pinning, settlement and operational
-proofs. Existing tests and historical completion checkmarks are not text-mode
-readiness evidence. See [client documentation](client/README.md) for current
-implementation and the [Roadmap](docs/planning/ROADMAP.md) for new proof gates.
+The active runtime and client implement the five text modes. Prior audits and
+captured traces are useful technical evidence, but do not replace actual UI
+journeys or human content playtests. Phase 4 device/accessibility/performance
+proofs and broader production gates remain open.
 
 ## Quickstart
+
+For the private prototype, follow [PLAYTEST.md](docs/guides/PLAYTEST.md):
+
+```bash
+make playtest.up       # isolated private server and six independent Web origins
+make playtest.down     # stop the private stack; preserve its data
+```
+
+The general development stack below retains production-style mode gating;
+`make up` alone does not enable prototype play.
 
 ```bash
 make server.build    # build the Go server
@@ -66,10 +78,12 @@ python3 xops/makefile/roadmap_ops.py status
 
 ## Local stack
 
-`make up` brings up server + postgres + redis + adminer +
-client-web, fronted by a local **nginx** reverse proxy that terminates TLS
+`make up` brings up server + postgres + redis + adminer, fronted by a local
+**nginx** reverse proxy that terminates TLS
 and publishes friendly `*.knowoff.local` names (dev convenience only — the
-public ingress is a Cloudflare Tunnel, see [`nginx/README.md`](nginx/README.md)).
+planned public ingress is a Cloudflare Tunnel; it is currently disabled. See
+[`nginx/README.md`](nginx/README.md)). The `client-web` Compose service is
+commented out; start Flutter separately for this general development stack.
 Run `make localhostfile.add` once to resolve those names, then:
 
 | URL | What |

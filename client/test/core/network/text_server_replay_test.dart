@@ -42,6 +42,7 @@ void main() {
         var snapshots = 0;
         final observed = <V2Snapshot>[];
         final rejectedInputs = <String>{};
+        final controlIDs = <String, String>{};
         for (final entry in trace['frames']) {
           final frame = Map<String, dynamic>.from(entry['frame']);
           final payload = Map<String, dynamic>.from(frame['payload']);
@@ -63,8 +64,19 @@ void main() {
               );
             } else {
               await session.control(frame['type'], payload);
+              controlIDs[frame['request_id'] as String] =
+                  transport.sent.last['request_id'] as String;
             }
           } else {
+            // Correlate recorded acknowledgments with this replay's generated
+            // control IDs; snapshot and action evidence remains byte-for-byte.
+            if (frame['type'] == 'control_ack' || frame['type'] == 'error') {
+              final id = controlIDs[payload['request_id']];
+              if (id != null) {
+                frame['request_id'] = id;
+                frame['payload'] = {...payload, 'request_id': id};
+              }
+            }
             session.receive(frame);
             if (frame['type'] == 'error') {
               expect(rejectedInputs.remove(payload['request_id']), isTrue);
@@ -150,10 +162,15 @@ void _expectTerminalTransitions(List<V2Snapshot> snapshots) {
   }
 
   final ballots = snapshots.where((s) => s.phase == 'knowoff').toList();
-  expect((ballots.last.json['ballot']['votes'] as List), hasLength(4));
+  final size = snapshots.last.json['contract']['original_size'] as int;
+  final rounds = size == 6 ? 2 : 1;
+  expect(
+    (ballots.last.json['ballot']['votes'] as List),
+    hasLength(size - rounds + 1),
+  );
   final results = snapshots.where((s) => s.phase == 'result').toList();
-  expect(results, hasLength(2));
-  final falling = results.first, poster = results.last;
+  expect(results, hasLength(rounds * 2));
+  final falling = results[results.length - 2], poster = results.last;
   final fallingResult = falling.json['ballot']['result'];
   final posterResult = poster.json['ballot']['result'];
   expect(falling.json['server_time_ms'], lessThan(falling.resultRevealAtMS!));
@@ -179,7 +196,10 @@ void _expectTerminalTransitions(List<V2Snapshot> snapshots) {
   expect(terminal.round, poster.round);
   expect(terminal.outcome, 'completed');
   expect(terminal.winner, 'nower');
-  expect(terminal.scores.map((s) => s.seat).toSet(), {0, 1, 2, 3});
+  expect(
+    terminal.scores.map((s) => s.seat).toSet(),
+    List.generate(size, (i) => i).toSet(),
+  );
   expect(terminal.scores.map((s) => s.points), everyElement(0));
   expect(terminal.points, 0);
   expect(terminal.evidenceSeq, poster.evidenceSeq);

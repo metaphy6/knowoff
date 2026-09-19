@@ -100,3 +100,24 @@ localhostfile.remove:
 ## localhostfile.status Show whether the *.knowoff.local hosts block is present
 localhostfile.status:
 	@$(XOPS)/hosts_ops.py status
+
+.PHONY: playtest.up playtest.down playtest.reset playtest.web playtest.android
+## playtest.up       Build Web and start the private five-mode prototype with six player origins
+playtest.up:
+	@$(XOPS)/playtest_ops.py up
+
+## playtest.down     Stop the private prototype, preserving its disposable accounts and history
+playtest.down:
+	@$(XOPS)/playtest_ops.py down
+
+## playtest.reset    Stop and delete only the private prototype database (then clear player site data)
+playtest.reset:
+	@$(XOPS)/playtest_ops.py reset
+
+## playtest.web      Rebuild the ordinary Web client served by the private prototype
+playtest.web:
+	@$(XOPS)/playtest_ops.py web
+
+## playtest.android  Build a debug APK for Android emulator playtesting
+playtest.android:
+	@$(XOPS)/playtest_ops.py android

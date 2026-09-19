@@ -30,7 +30,12 @@ class TextSession extends ChangeNotifier {
       onError: (_) => _failure('protocol.malformed'),
     );
     _connection = transport.state.listen((state) {
-      if (_disposed || !_foreground) return;
+      if (_disposed) return;
+      // Socket changes matter even while private state is concealed. A new
+      // transport connection has not authenticated until its hello is accepted.
+      _authenticatedToken = null;
+      _helloToken = null;
+      if (!_foreground) return;
       if (state == ConnectionState.connected) {
         unawaited(_hello());
       } else {
@@ -52,7 +57,7 @@ class TextSession extends ChangeNotifier {
   bool _foreground = true, _helloPending = false, _admitted = false;
   final _controls = <String, String>{};
   final noticeChanges = ChangeNotifier();
-  String? _limitsHash;
+  String? _limitsHash, _authenticatedToken, _helloToken;
   bool? _prototype;
   bool get prototype => _prototype == true;
   String? _roomID;
@@ -88,6 +93,7 @@ class TextSession extends ChangeNotifier {
     try {
       final token = await tokenLoader();
       if (_disposed || !_foreground || generation != _generation) return;
+      _helloToken = token;
       await transport.send({
         'v': 2,
         'type': 'hello',
@@ -101,6 +107,7 @@ class TextSession extends ChangeNotifier {
   void _failure(String code) {
     if (_disposed || !_foreground) return;
     errorCode = code;
+    _authenticatedToken = null;
     ready = false;
     _clearValueViews();
     reducer?.disconnect();
@@ -151,12 +158,13 @@ class TextSession extends ChangeNotifier {
           _admitted = false;
         }
         if (fatal) {
+          _authenticatedToken = null;
           ready = false;
           _clearValueViews();
           _helloPending = false;
           reducer?.disconnect();
         }
-        if (reducer?.needsResync == true && ready) {
+        if (controlType != 'resync' && reducer?.needsResync == true && ready) {
           unawaited(control('resync', {}));
         }
         notifyListeners();
@@ -178,6 +186,8 @@ class TextSession extends ChangeNotifier {
         _prototype = p['prototype'];
         _limitsHash = limitsHash;
         _helloPending = false;
+        _authenticatedToken = _helloToken;
+        _helloToken = null;
         limits = V2Limits.fromJson(p['limits']);
         reducer ??= V2Reducer(limits!);
         ready = true;
@@ -351,6 +361,7 @@ class TextSession extends ChangeNotifier {
           ].contains(e.code)) {
         unawaited(control('resync', {}));
       } else {
+        _authenticatedToken = null;
         ready = false;
         _clearValueViews();
       }
@@ -407,6 +418,9 @@ class TextSession extends ChangeNotifier {
   Future<void> control(String type, Map<String, dynamic> payload) {
     if (!ready || _disposed || !_foreground) {
       throw const V2Failure('protocol.upgrade_required');
+    }
+    if (type == 'resync' && _controls.containsValue('resync')) {
+      return Future<void>.value();
     }
     if (_controls.length >= limits!.maxRequestsPerSeat) {
       throw const V2Failure('request.limit');
@@ -488,9 +502,35 @@ class TextSession extends ChangeNotifier {
     _awards.clear();
   }
 
-  Future<void> resume() {
+  Future<void> resume() async {
+    final generation = ++_generation;
+    if (!transport.isConnected ||
+        _authenticatedToken == null ||
+        (_admitted && roomCode == null)) {
+      _foreground = true;
+      await transport.reconnect();
+      return;
+    }
+    // Keep hidden frames discarded until the same current identity is verified.
+    // Reopening a healthy socket on every browser focus change makes the server
+    // observe a real disconnect, potentially auto-passing the current turn.
+    final token = await tokenLoader();
+    if (_disposed || generation != _generation) return;
+    final reuse =
+        transport.isConnected &&
+        _authenticatedToken != null &&
+        token == _authenticatedToken &&
+        (!_admitted || roomCode != null);
     _foreground = true;
-    return transport.reconnect();
+    if (!reuse) {
+      await transport.reconnect();
+      return;
+    }
+    ready = true;
+    errorCode = null;
+    if (roomCode == null) reducer?.reset();
+    await control(roomCode == null ? 'availability' : 'resync', {});
+    if (!_disposed && generation == _generation) notifyListeners();
   }
 
   @override

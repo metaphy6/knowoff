@@ -603,6 +603,26 @@ func (m *TextManager) lobby(r *textRoom, p *TextPeer) error {
 			my = seat
 		}
 	}
+	if r.match != nil {
+		// This active-match envelope only binds a fresh client's room and seat.
+		// Prematch Ready is obsolete; a connected projected host satisfies the
+		// lobby contract without transferring the room's actual host authority.
+		hostConnected := false
+		for i := range s.Seats {
+			s.Seats[i].Ready = nil
+			if s.Seats[i].Seat == s.HostSeat && s.Seats[i].Connected {
+				hostConnected = true
+			}
+		}
+		if !hostConnected {
+			for _, seat := range s.Seats {
+				if seat.Connected {
+					s.HostSeat = seat.Seat
+					break
+				}
+			}
+		}
+	}
 	if e := s.Validate(m.wireLimits()); e != nil {
 		return e
 	}

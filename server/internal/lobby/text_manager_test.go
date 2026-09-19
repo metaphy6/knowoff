@@ -1217,3 +1217,66 @@ func TestTextReportAuthorizationUsesOnlyRecipientVisibleContent(t *testing.T) {
 		}
 	}
 }
+
+func TestTextActiveRejoinBindsRoomBeforePrivateSnapshot(t *testing.T) {
+	for _, mode := range gamecontract.AllModes() {
+		for _, size := range []int{4, 6} {
+			t.Run(fmt.Sprintf("%s/%d", mode, size), func(t *testing.T) {
+				m, _, _, settings := textManagerFixture(t)
+				settings.ModeID, settings.Size = mode, size
+				ctx := t.Context()
+				peers, room := textReadyRoom(t, m, settings)
+				if err := m.Start(ctx, peers[0]); err != nil {
+					t.Fatal(err)
+				}
+				seat := size - 1
+				if err := m.Disconnect(ctx, peers[0]); err != nil {
+					t.Fatal(err)
+				}
+				fresh, err := m.Open(ctx, peers[seat].AccountID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = m.Join(ctx, fresh, room.code); err != nil {
+					t.Fatal(err)
+				}
+				frames := []TextEnvelope{}
+				for len(fresh.frames) > 0 {
+					frames = append(frames, <-fresh.frames)
+				}
+				if len(frames) < 2 || frames[0].Type != "lobby" || frames[1].Type != "snapshot" {
+					t.Fatalf("fresh rejoin must bind room before snapshot: %v", func() []string {
+						kinds := []string{}
+						for _, f := range frames {
+							kinds = append(kinds, f.Type)
+						}
+						return kinds
+					}())
+				}
+				var binding TextLobbyView
+				if err = json.Unmarshal(frames[0].Payload, &binding); err != nil {
+					t.Fatal(err)
+				}
+				var snapshot v2.Snapshot
+				if err = json.Unmarshal(frames[1].Payload, &snapshot); err != nil {
+					t.Fatal(err)
+				}
+				if binding.Seat != seat || binding.Code != room.code || binding.Lobby.RoomID != room.id || snapshot.Contract.RoomID != room.id || snapshot.Private.Seat != seat {
+					t.Fatal("rejoin changed authorized room or seat")
+				}
+				if room.host != 0 || binding.Lobby.HostSeat != 1 {
+					t.Fatal("binding transferred authoritative host or advertised disconnected host")
+				}
+				for _, member := range binding.Lobby.Seats {
+					if member.Ready != nil || member.Connected != (member.Seat != 0) {
+						t.Fatal("active binding retained prematch Ready or fabricated connectivity")
+					}
+				}
+				outsider := textPeer(t, m)
+				if err = m.Join(ctx, outsider, room.code); !errors.Is(err, ErrTextMembership) || len(outsider.frames) != 0 {
+					t.Fatal("nonmember received active room binding", err)
+				}
+			})
+		}
+	}
+}

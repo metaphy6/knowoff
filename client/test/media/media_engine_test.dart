@@ -84,9 +84,9 @@ void main() {
         expect(session.snapshot, isNull);
         session.resume();
         await t.pump();
-        transport.emit('hello', hello());
-        await t.pump();
-        expect(transport.sent.last['type'], 'room_join');
+        expect(transport.reconnects, 0);
+        expect(transport.sent.last['type'], 'resync');
+        expect(transport.sent.last['payload'], isEmpty);
         admit(transport);
         final next = fixture('snapshot-nower');
         next['cursor']['stream_epoch'] = 'reconnected';

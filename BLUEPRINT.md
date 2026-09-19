@@ -763,9 +763,11 @@ error at the version boundary, then leave examples/overlays/tests too.
 
 ### 4. Local Development
 
-Current `make up` remains the existing full Compose stack until implementation.
-Target fresh-clone proof starts PostgreSQL/Redis/server/client with a certified
-synthetic text fixture and no cloud key or playable object store. Run real
+`make up` remains the general development Compose stack with production modes
+closed. The explicit private prototype path, `make playtest.up`, starts isolated
+PostgreSQL/Redis/server/Web clients with the existing synthetic text fixture and
+no cloud key or playable object store. Its engineering fixture is not certified
+production content; see [playtest setup](docs/guides/PLAYTEST.md). Run real
 4/6-seat scripted mode matches over WebSocket, native/PWA smoke tests and
 reconnect checks. The unified runner plus explicit standalone-module and real-DB
 checks must execute without silent skips. Do not install host OS packages as
