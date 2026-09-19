@@ -459,7 +459,16 @@ func (b *textNetworkBot) apply(snapshot v2.Snapshot) error {
 func (b *textNetworkBot) receive(frame lobby.TextEnvelope) error {
 	switch frame.Type {
 	case "lobby":
-		return networkDecode(frame.Payload, &b.lobby)
+		var next lobby.TextLobbyView
+		if err := networkDecode(frame.Payload, &next); err != nil {
+			return err
+		}
+		if b.snapshot.Phase == v2.PhaseVerdict && next.Lobby.SettingsRevision > b.lobby.Lobby.SettingsRevision && next.Lobby.MembershipRevision > b.lobby.Lobby.MembershipRevision {
+			b.snapshot = v2.Snapshot{}
+			b.pending, b.pages, b.retiredEpochs = nil, nil, nil
+		}
+		b.lobby = next
+		return nil
 	case "snapshot":
 		var s v2.Snapshot
 		if err := v2.Decode(frame.Payload, &s, b.limits); err != nil {

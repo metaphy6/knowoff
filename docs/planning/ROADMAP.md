@@ -1,6 +1,6 @@
 # 🗺 Knowoff — Text Transition Roadmap
 
-**Status: Verified continuation handoff after pushed commit 1274814 — 2026-09-19. Phases 1 and 3 complete; remaining implementation and release proof are not complete.**
+**Status: Private playtest setup and bounded cleanup landed in 6b9efbb — 2026-09-19. Phases 1 and 3 complete; remaining implementation and release proof are not complete.**
 See the [current recovery record](../reports/2026-09-19-text-transition-resumption.md) and [earlier resumption evidence](../reports/2026-09-12-text-transition-resumption.md) for validation and remaining work; the earlier pause is historical.
 Read [Blueprint](../../BLUEPRINT.md) for normative requirements, then the
 [technical transition design](../design/DESIGN-text-transition.md) for audited
@@ -34,13 +34,15 @@ All five modes remain intended; stagger exposure according to evidence.
 | 3 — Shared match state and five mode engines | 14 | 14 | Complete; independent review, cold race/property/privacy checks and full unified gate passed |
 | 4 — Lobbies, protocol and client integration | 12 | 10 | Technical integration independently verified; physical-device journeys/performance and final gate open |
 | 5 — Durable value, community and trust | 20 | 11 | Durable settlement/recovery, Guard, weekly lifecycle, OAuth, avatar and curation/report integration verified; remaining trust/provider gates open |
-| 6 — Retirement, compatibility and operations | 11 | 0 | Drain and isolated restore proofs in progress; full retirement gates open |
+| 6 — Retirement, compatibility and operations | 11 | 0 | Three bounded cleanup children complete (below); broader retirement/cutover gates open |
 | 7 — Playtests, business validation and release | 12 | 0 | Planned |
 
 **Original roadmap: 55 of 91 tasks complete; 2 of 7 phases complete.**
 Continuation tables below document components of these existing tasks; they do
-not increase the denominator or establish product readiness. The current
-handoff ends at schema migration 41 and the joined reward/client implementation.
+not increase the denominator or establish product readiness. Phase 6 records
+**3 completed cleanup children** separately from its **0 of 11 complete parent
+tasks**; those bounded removals do not certify full architectural retirement.
+The schema handoff remains migration 41 and the joined reward/client implementation.
 Unfinished migration 42 and unused billing-erasure preparation were excluded;
 the next run starts a new implementation slice rather than repairing partial code.
 
@@ -127,7 +129,7 @@ unchecked until its complete original proof is present.
 
 | Order / existing home | Delivery | Required proof before accepting the child |
 |---|---|---|
-| 1a — Phase 4.11a / 7.1a | Add an explicit private-prototype launch path to the existing startup/configuration tools; document prerequisites and exact startup/shutdown commands. | Start from a clean disposable local stack without cloud keys; ordinary clients discover all five modes and both sizes. Default/production configuration remains closed, and mismatched configuration refuses rather than silently substituting a mode. |
+| 1a — Phase 4.11a / 7.1a | Add an explicit private-prototype launch path to the existing startup/configuration tools; document prerequisites and exact startup/shutdown commands. | Start from a clean disposable local stack without cloud keys; ordinary clients discover all five modes and both sizes. Production configuration remains closed; explicit local prototype configuration may be selected by the documented development launcher. Mismatched configuration refuses rather than silently substituting a mode. |
 | 1b — Phase 4.11a / 7.1a | Pin existing synthetic test content, build, rules and tuning identities; document content limitations and isolate the playtest data. | Complete a match using that fixture through the real server; verify zero earned currency, XP, overall/non-converted points and leaderboard effects, including reconnect and rematch. Synthetic content never becomes production-certified by relabeling. |
 | 1c — Phase 4.11a | Provide reproducible separate player sessions, reset instructions and usable Web/Android artifacts through existing build/run paths. | Six independent client identities join one table without shared-storage takeover; a returning session reconnects as the same player. Repeat the documented reset/start procedure on owned test data and rejoin. Build Web and Android, record artifact/config identity and demonstrate actual launch; a build alone is not a device pass. |
 | 2a — Phase 6.6–10 | Inventory candidate obsolete gameplay/image paths, routes, packaged assets, configuration and dependencies; classify each as remove or retain with its remaining consumers and replacement proof. | CodeGraph/caller evidence plus source/config/route/artifact scans agree; account/avatar/UI, dev/test and archive consumers are checked explicitly. Ambiguous consumers remain retained with a reason. |
@@ -153,8 +155,22 @@ Nine Web cells completed core joining/action/vote/result/reconnect/rematch check
 this does not close every detailed proof in rows 3a/3b. Secret Scale6 remains
 unaccepted after an intermittent terminal sync failure. Native journeys, wider
 edge/device checks and full post-reset UI rejoin remain open. The next engineering
-priority is capturing and repairing that terminal failure; see the evidence
-record for failures, subsequent retests and test-isolation limitations.
+priority after restoring the owner's manual debug workflow below is capturing
+and repairing that terminal failure; see the evidence record for failures,
+subsequent retests and test-isolation limitations.
+
+**Manual development restoration — owner priority, 2026-09-19.** Preserve
+`make up` and `make web.run` for the owner's interactive Flutter debugging with
+explicit dev/test bots; retain `playtest.*` for agent-operated isolated evidence.
+This is a Phase 4.11a / 7.1a setup continuation, not production bot backfill or a
+new phase. No automated bot may replace a disconnected human or earn live value.
+
+| Child / state | Required proof before completion |
+|---|---|
+| M1 — [x] Local startup | `make up` starts the real private-prototype configuration with all five modes and both sizes; production overlays remain closed and local fixtures require no cloud keys. |
+| M2 — [x] Flutter debugging | `make web.run` starts a normal debug client on its documented origin and admits it to that server; ordinary source edit/reload remains usable. Document stopping competing stacks that own the same API port. |
+| M3 — [x] Human plus bots | Explicit dev/test companions join the human's room through authenticated v2 role-scoped observations; support all modes, 4/6 seats, Ready, actions, recipient replies, votes and fresh rematch without earned progression. Production refuses this path. |
+| M4 — [x] Handoff | Record actual human-controlled UI plus bot verification, exact commands and known limitations; run relevant regression and unified gates and independent review. Preserve the open ten-cell/device/terminal-sync evidence above. |
 
 **Files and evidence homes.** Extend existing startup/config paths under
 `configs/`, `infra/compose/` and `xops/makefile/` only after verifying their
@@ -990,6 +1006,36 @@ inventory, rollback before/after writes, every module/platform build.
 - [ ] Replace obsolete fixtures/assertions with mode/privacy/migration/unsupported-input tests; obtain concrete approval before deleting test files and record release notes.
 - [ ] Close every temporary compatibility entry after measured rollback window; run no-leftovers source/call/dependency/route/packaged-artifact scans and align active docs/skills.
 - [ ] Gate: rehearsal/parity/build/load/security tests green, rollback demonstrated, retirement exceptions have owner/reason/expiry, no dormant old gameplay architecture.
+
+#### Phase 6 completed cleanup children — 6b9efbb, 2026-09-19
+
+The previous handoff recorded these removals only in its report, obscuring
+completed work here. The following checked table rows expose the **three
+completed bounded children** of existing parents 6, 7 and 10. They are not
+additional original roadmap tasks; `make roadmap.status` continues counting
+only the 91 original list checkboxes. Parent wording and acceptance remain
+unchanged. Evidence: [cleanup inventory and verification](../reports/2026-09-19-private-playtest.md#cleanup-inventory).
+
+| Parent / completed child | Evidence and retained boundary |
+|---|---|
+| 6 — [x] Remove the unused `EventSpecialtyUsed` audit constant after caller inventory. | Commit 6b9efbb removes its sole declaration; CodeGraph returns no remaining symbol. Server compilation and affected test verification passed. Historical audit data remains; this alone does not certify every gameplay/wire/UI retirement consumer. |
+| 7 — [x] Remove the verified unused Go dependency subset with official module tooling. | `go mod tidy` removed `go-oauth2/oauth2/v4`, BuntDB/Tidwall and `skip2/go-qrcode` from active server/gamebot manifests. Retained server/tools checks and Web/Android builds are recorded. Avatar WebP/CGO, admin OTP/barcode and account OAuth remain active; complete image/config/artifact inventories and iOS proof are separate. |
+| 10 — [x] Align active client/development entry documentation with the text runtime and isolated playtest launcher. | Commit 6b9efbb updates root/client/infra documentation and documentation indexes, replacing obsolete specialty/dev-overlay and nonexistent-directory guidance in `CLIENT_DEV_TOOLS.md`. This is the listed document subset, not closure of all compatibility entries, skills or packaged-artifact scans. The manual startup restoration above updates its newly identified workflow gap. |
+
+**Why original parents remain open.** Parents 1–5 require complete restore,
+upgrade/rollback, release/drain, single-writer/invalidation/human smoke and
+outage/budget evidence respectively. Parent 6 still requires the complete
+association/specialty/backfill/wire/UI retirement inventory and replacement
+rejection proofs; parent 7 requires all image/catalog/workbench/config/asset
+consumers accounted for; parent 8 requires retained archive/backup/storage
+inventory; parent 9 requires the complete replacement-test mapping and any
+concrete test-deletion approval; parent 10 requires every compatibility entry
+and final source/route/dependency/artifact/doc inventory closed or justified.
+Parent 11 additionally requires its full rehearsal/parity/build/load/security
+and rollback gate. The scoped cleanup and nine successful Web journeys do not
+supply those broader proofs. Billing/provider acceptance, complete deletion,
+certified content and public deployment remain unfinished dependencies of final
+cutover, as required above.
 
 #### Phase 6 execution detail — 2026-09-12
 

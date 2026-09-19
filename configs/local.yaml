@@ -17,7 +17,12 @@ server:
   admin_port: 9090
   metrics_bind_addr: 0.0.0.0
   metrics_port: 9091
-  allowed_origins: ["*"]
+  # The v2 WebSocket upgrade requires exact origins; a REST wildcard is not enough.
+  allowed_origins:
+    - 'http://localhost:8000'
+    - 'http://127.0.0.1:8000'
+    - 'http://0.0.0.0:8000'
+    - 'https://app.knowoff.local'
 
 tuning:
   economy:

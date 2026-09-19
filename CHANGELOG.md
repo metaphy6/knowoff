@@ -15,6 +15,15 @@ All notable changes to Knowoff are documented in this file.
 
 ## [Unreleased]
 
+### Manual debugging restored — 2026-09-19
+
+- Restore `make up` plus `make web.run` for private five-mode debugging with
+  Go Air reload and the project Flutter SDK. Production modes remain closed.
+- Add `make bots ROOM=<code> COUNT=3` (or 5) for explicit private room companions;
+  preserve the separate `playtest.*` commands for agent verification.
+- Show completed Phase 6 cleanup children with evidence while retaining the
+  broader unfinished retirement and production gates.
+
 ### Private playtest preparation — 2026-09-19
 
 - Preserve a healthy authenticated game connection when returning browser focus,

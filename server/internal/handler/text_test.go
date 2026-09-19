@@ -784,3 +784,45 @@ func TestTextPlaytestBrowserOrigins(t *testing.T) {
 		}
 	}
 }
+
+// make web.run uses port 8000; its origins must pass the actual v2 upgrade
+// policy, whose exact matching deliberately does not interpret a REST wildcard.
+func TestTextManualDebugBrowserOrigins(t *testing.T) {
+	raw, err := os.ReadFile("../../../configs/local.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var local config.Config
+	if err := yaml.Unmarshal(raw, &local); err != nil {
+		t.Fatal(err)
+	}
+	srv, _, _ := textHTTPCustomFixture(t, textAuthStub{}, func(cfg *config.Config, _ *lobby.TextDeps) { cfg.Server.AllowedOrigins = local.Server.AllowedOrigins })
+	for _, origin := range []string{"http://localhost:8000", "http://127.0.0.1:8000", "http://0.0.0.0:8000", "https://app.knowoff.local"} {
+		t.Run(origin, func(t *testing.T) {
+			connection, response, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/ws/v2", http.Header{"Origin": {origin}})
+			if response != nil {
+				defer response.Body.Close()
+			}
+			if err != nil {
+				t.Fatalf("manual browser upgrade refused: %v", err)
+			}
+			defer connection.Close()
+			if response.StatusCode != http.StatusSwitchingProtocols {
+				t.Fatalf("upgrade=%d", response.StatusCode)
+			}
+			textHello(t, connection, uuid.NewString())
+		})
+	}
+	for _, origin := range []string{"http://localhost:8007", "https://untrusted.invalid", "http://localhost:8000.untrusted.invalid"} {
+		connection, response, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(srv.URL, "http")+"/ws/v2", http.Header{"Origin": {origin}})
+		if connection != nil {
+			connection.Close()
+		}
+		if response != nil {
+			response.Body.Close()
+		}
+		if err == nil || response == nil || response.StatusCode != http.StatusForbidden {
+			t.Fatalf("unlisted origin admitted: %s", origin)
+		}
+	}
+}

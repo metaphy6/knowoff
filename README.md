@@ -57,14 +57,16 @@ make playtest.up       # isolated private server and six independent Web origins
 make playtest.down     # stop the private stack; preserve its data
 ```
 
-The general development stack below retains production-style mode gating;
-`make up` alone does not enable prototype play.
+For your usual interactive debugging, `make up` enables the same private
+zero-value prototype in the development stack, with Go Air reload:
 
 ```bash
 make server.build    # build the Go server
 make server.rebuild  # stop, rebuild, and recreate the server container
 python3 xops/test/tests-lints.py  # all tests and lint checks
-make up              # start the local Docker Compose stack
+make up              # start local server with all five private prototype modes
+make web.run         # interactive Flutter debug client on http://localhost:8000
+make bots ROOM=ABC123 COUNT=3  # after creating a room; use COUNT=5 for six seats
 make down            # stop the local stack
 make web.rebuild     # force-rebuild + recreate the client-web dev container, cache-bust the browser
 make web.stop        # stop locally owned Flutter web servers on any port
@@ -78,7 +80,8 @@ python3 xops/makefile/roadmap_ops.py status
 
 ## Local stack
 
-`make up` brings up server + postgres + redis + adminer, fronted by a local
+`make up` brings up server + postgres + redis + adminer, enables synthetic
+private matches through `infra/compose/manual.yaml`, and is fronted by a local
 **nginx** reverse proxy that terminates TLS
 and publishes friendly `*.knowoff.local` names (dev convenience only — the
 planned public ingress is a Cloudflare Tunnel; it is currently disabled. See

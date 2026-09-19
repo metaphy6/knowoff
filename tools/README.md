@@ -225,7 +225,20 @@ server-only prototype with `-text-network MODE -text-size 4/6 -text-out PATH`
 and the configured `KNOWOFF_DEV_BOT_KEY` environment secret. The default endpoint
 is `ws://127.0.0.1:8080/ws/v2`; only literal loopback prototype endpoints are
 accepted. Network execution refuses ordinary availability before admission.
-Choose exactly one command: simulation, replay or network. The old `-room`,
-`-queue` and `-count` flags are retired; conflicting or command-incompatible
-flags fail before file or network work. Existing historical replay files remain
-private evidence, not an ordinary-room bot entry point.
+For manual debugging, create a private room in the Flutter client, then run
+`make bots ROOM=ABCDEF COUNT=3` from the repository root (use `COUNT=5` for
+six seats). The local launcher supplies the development credential; direct CLI
+use from `tools/gamebot` is `go run . -room ABCDEF -count 3`, with
+`KNOWOFF_DEV_BOT_KEY` in the environment. Bots occupy their own development
+seats, acknowledge readiness, act and vote using only their own recipient view.
+The human starts each match and initiates rematches; companions stay connected
+and ready again. Ctrl+C releases lobby/results seats; after stopping during an
+active match, create a fresh room before restarting bots. These simple policies are debugging
+companions, not gameplay-quality opponents. They cannot join nonprototype or
+remote servers, use production value, or replace disconnected humans.
+
+Choose exactly one command: simulation, replay, network proof or manual room.
+`-queue` remains retired; conflicting or command-incompatible flags fail before
+file or network work. Manual sessions retain no replay file; use network proofs
+for reproducible agent evidence. Existing historical replay files remain
+private evidence.

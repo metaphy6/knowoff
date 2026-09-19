@@ -2,6 +2,17 @@
 
 Flutter codebase for Android, iOS, and Web PWA.
 
+## Manual debugging
+
+From the repository root, run `make up`, then `make web.run` in another terminal.
+Create a Local Room in the debug client at http://localhost:8000 and add companions
+with `make bots ROOM=<code> COUNT=3` (or 5 for six seats). All five private synthetic
+modes are available with no earned currency or progression. Flutter terminal
+reload/restart controls and server Air reload remain available; a server restart
+interrupts its in-memory match. The separate `playtest.*` commands serve agent
+verification. See [the complete manual workflow](../docs/guides/PLAYTEST.md#manual-debugging-with-bot-companions)
+for switching stacks, bot lifecycle and saved-account limitations.
+
 ## Local Flutter SDK and editor diagnostics
 
 The client requires Flutter ≥3.44.0 and Dart ≥3.12.0 as declared in

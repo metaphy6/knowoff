@@ -1,0 +1,10 @@
+# Explicit make up overlay: private zero-value synthetic matches for debugging.
+# Base Compose and production config do not activate this prototype.
+services:
+  server:
+    environment:
+      KNOWOFF_CONFIG: configs/local.yaml
+      KNOWOFF_TEXT_PROTOTYPE_PACK: /prototype
+      KNOWOFF_DEV_BOT_KEY: ${KNOWOFF_DEV_BOT_KEY:?use make up}
+    volumes:
+      - ../../server/pkg/media/testdata/text-en:/prototype:ro

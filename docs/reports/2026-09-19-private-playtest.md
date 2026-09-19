@@ -180,3 +180,70 @@ Production mode gates remain closed. Native/PWA/iOS and physical performance
 proofs are not inferred from Web observations. Process restarts do not restore
 live in-memory matches. The private stack is loopback-only and supplies no bots;
 real participant studies need independently operated clients.
+
+## Manual debugging restoration — follow-up 2026-09-19
+
+The owner's manual path is separate from the agent-operated matrix above:
+`make up`, interactive `make web.run`, then `make bots ROOM=<code> COUNT=3`
+(or 5). The ordinary `knowoff` Compose stack retains Air source mounts and data;
+an explicit local override enables synthetic zero-value matches. Base and
+production configuration remain closed. The local config now permits exact
+port-8000 origins; the former REST wildcard did not authorize v2 WebSockets.
+Flutter uses the project SDK and local renderer resources.
+
+Regression evidence: the new startup dispatcher initially failed four tests
+before implementation; the real handler rejected all four manual origins before
+the config fix and accepted them afterward while refusing unlisted origins.
+The bot test uses normal device-auth human accounts and authenticated development
+companions against the real server for ten mode/size cells, two matches per cell,
+including Ready, actions, votes, results and rematch; durable reward exclusion
+is asserted. Cancellation waits for human start and releases lobby seats. These
+are protocol/integration proofs, not ten newly observed browser journeys.
+
+Independent review found no blocking source issue. The final Python suite has
+135 passing tests; the project-SDK client suite has 632 Flutter and two Web-cache
+tests, with analysis and formatting passing. An initial client invocation used
+the older SDK on PATH and failed dependency resolution; rerunning with the
+project SDK repaired that environment error. A full Go attempt lost its temporary
+PostgreSQL/Redis containers mid-run (connection reset/refused, no OOM evidence);
+its failed report is retained separately from the recovery run.
+
+Known manual limitations: bot policy chooses mechanically rather than judging
+humor; lobby seats are numbered without a Bot badge. Stopping bots mid-match
+leaves disconnected seats. Backend/Air restarts lose in-memory matches, so create
+a fresh room and restart companions. A stale Flutter debug-service connection
+while switching browser origins required restarting `make web.run`. None of
+these runs completes Android UI, human content cohorts, or the earlier Scale6
+terminal-history acceptance gate.
+
+Actual debug UI observation: the normal Flutter debug client at
+`http://127.0.0.1:8000` discovered all five modes, created a four-seat Missed the
+Briefing room, and admitted three companions through `make bots`. Each bot
+readied without starting the match. The human seat started, previewed/confirmed
+a response, voted, reached the final two-round result, and saw zero points/XP,
+no leaderboard credit and zero earned Noin. Flutter terminal hot reload (`r`)
+completed in 267 ms during the match and preserved its live state. A missed
+first-turn deadline produced the expected Auto Pass; the later human response
+was confirmed successfully. Bot identities displayed as `Test …` profiles in
+numbered seats; there is no distinct lobby Bot badge.
+
+The human returned to rematch settings and all three companions automatically
+readied. Ctrl+C stopped that bot command and the UI removed all three seats.
+The same host then changed to six-seat Bad Bargains and `COUNT=5` filled and
+readied all five companion seats. Flutter hot restart (`R`) completed in 488 ms.
+The subsequent browser view emitted an engine `window.dart:99:12` assertion.
+A full browser reload cleared it; the same origin/account rejoined CE7B0D with
+all five companions still seated. Lobby ownership had transferred while the
+human was disconnected. Stopping companions and clicking Refresh restored
+the human's Start/settings controls. This is a verified lobby recovery with
+manual steps, not seamless active-match reconnect acceptance.
+
+Final recovery gate: the unified runner's Go suite exited zero with 2,421
+server, 102 gamebot and 24 mediapack tests passing, zero failures/skips, and all
+Go format/vet/build checks passing. The existing 100-room load/soak test passed.
+Together with the 135 Python, 632 Flutter and two Web-cache tests above, every
+suite of `xops/test/tests-lints.py` passed on the final code. Reports are retained
+locally at `/tmp/agent-runs/manual-go-recovery.json`,
+`/tmp/agent-runs/manual-python.json` and `/tmp/agent-runs/manual-client-sdk.json`.
+Independent review and verification passed. The earlier failed infrastructure
+attempt remains recorded and is not counted as passing evidence.

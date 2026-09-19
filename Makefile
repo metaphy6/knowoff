@@ -25,7 +25,7 @@ RUN_ID  ?=
 
 .PHONY: help git git.dry track.add track.list codeg \
 	server.build server.rebuild web.rebuild web.run web.stop \
-	up down \
+	up down bots \
 	label.version label.list localhostfile.add localhostfile.remove localhostfile.status
 
 ## help              List all available targets
@@ -57,9 +57,7 @@ codeg:
 
 ## server.rebuild    Stop the current server, then rebuild and recreate it
 server.rebuild:
-	@cd infra/compose && docker compose --profile core rm --stop --force server
-	@cd infra/compose && docker compose --profile core build server migrate
-	@cd infra/compose && docker compose --profile core up -d --force-recreate server
+	@$(XOPS)/dev_ops.py rebuild
 
 ## web.rebuild       Force-rebuild + recreate the client-web (Flutter web) dev container, then open the dev URL in a fresh private browser window
 web.rebuild:
@@ -67,19 +65,25 @@ web.rebuild:
 
 ## web.run           Run the Flutter web client natively via the Flutter CLI (no Docker) at http://localhost:8000 or http://0.0.0.0:8000 for integrated browser
 web.run:
-	@cd client && flutter run -d web-server --web-hostname=0.0.0.0 --web-port=8000
+	@$(XOPS)/flutter_web_ops.py run
 
 ## web.stop          Stop every locally owned Flutter web-server process, regardless of port
 web.stop:
 	@$(XOPS)/flutter_web_ops.py stop
 
-## up                Start the local Docker Compose stack
+## up                Start the manual debug stack with private five-mode prototype enabled
 up:
-	@cd infra/compose && docker compose --profile core up --build -d
+	@$(XOPS)/dev_ops.py up
 
 ## down              Stop the local Docker Compose stack
 down:
-	@cd infra/compose && docker compose --profile core down
+	@$(XOPS)/dev_ops.py down
+
+export ROOM COUNT
+COUNT ?= 3
+## bots              Join your private room with explicit bot companions (ROOM=code COUNT=3 or 5)
+bots:
+	@$(XOPS)/dev_ops.py bots
 
 ## label.version     Bump a Dockerfile's org.opencontainers.image.version (vars: SERVICE VERSION)
 label.version:

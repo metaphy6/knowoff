@@ -9,7 +9,8 @@ import time
 from pathlib import Path
 from typing import Iterable, List
 
-from _common import dispatch, err, info, ok, step, warn
+from _common import REPO_ROOT, dispatch, err, info, ok, run, step, warn
+from playtest_ops import flutter
 
 PROC_ROOT = Path("/proc")
 
@@ -95,7 +96,15 @@ def cmd_stop(args: List[str]) -> None:
     ok(f"stopped {len(processes)} Flutter web-server process(es)")
 
 
+def cmd_run(args: List[str]) -> None:
+    if args:
+        raise SystemExit('make web.run accepts no arguments')
+    run([flutter(), 'run', '-d', 'web-server', '--web-hostname=0.0.0.0',
+         '--web-port=8000', '--no-web-resources-cdn'], cwd=REPO_ROOT / 'client')
+
+
 TABLE = {
+    "run": cmd_run,
     "stop": cmd_stop,
 }
 

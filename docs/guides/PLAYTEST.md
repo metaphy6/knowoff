@@ -6,7 +6,62 @@ clients join through their ordinary anonymous accounts. Matches have no earned
 Noin, XP, progression or leaderboard credit. Production availability remains
 closed, and this does not complete Phase 6 cutover.
 
-## Start
+## Manual debugging with bot companions
+
+Use your usual two terminals:
+
+```bash
+make up
+make web.run
+```
+
+Open **http://localhost:8000**, choose **Host a Room**, check available modes,
+select any of the five modes and four or six seats, then create the room.
+In a third terminal, substitute the displayed room code:
+
+```bash
+make bots ROOM=ABC123 COUNT=3   # you plus three bots: four seats
+# or: make bots ROOM=ABC123 COUNT=5   # you plus five bots: six seats
+```
+
+Bots occupy their own numbered seats, automatically Ready after lobby changes,
+and take legal actions and votes from their own role-scoped state. Ready your
+own seat and start the match as host. Use the normal results/rematch controls;
+bots follow the lobby back to Ready while you choose when to start again.
+They never replace your disconnected seat or grant earned Noin/progression.
+The current v2 lobby shows seat numbers, not a Bot badge: you explicitly add
+these companions and know which seats they occupy.
+Stop the bot command with Ctrl+C when finished; lobby/results seats are released.
+Stopping bots during an active match leaves disconnected seats, so create a
+fresh room before restarting companions. A backend/Air restart loses the
+in-memory match: restart the bot command and create a fresh room afterward.
+These companions are for
+manual functional debugging, not human humor/balance evidence.
+
+Prefer hot reload (`r`) while playing. Hot restart (`R`) resets client state;
+if Flutter reports a browser-engine assertion, reload the browser and rejoin
+using the same origin and room code. A disconnected lobby host can transfer
+ownership to a companion. After rejoining, stop the bot command, click Refresh
+to recover host controls, and add companions again. This recovery was checked
+in the six-seat lobby; it is not proof of seamless active-match reconnect.
+
+`make web.run` is an interactive Flutter debug process using `.tools/flutter`
+when present, otherwise the SDK on PATH. Renderer resources are served locally
+so a blocked CDN cannot leave the debug page blank. Its ordinary terminal controls remain
+available. Server source is mounted into the Air development container;
+`make server.rebuild` retains the private prototype overlay. `make down`
+stops this stack without deleting its database. The generated bot key lives
+in ignored, mode-0600 `docs/tracking/state/dev.env`; the launcher passes it only
+through the process environment, never a command-line argument. Do not share it.
+Base Compose and production configuration do not activate synthetic content.
+
+The manual `knowoff` stack and isolated `knowoff-playtest` stack both use API
+port 8080, so run one at a time. To switch to agent verification, stop bots,
+run `make down`, then `make playtest.up`. To return, run `make playtest.down`,
+then `make up`. Their databases and credentials remain separate; clear browser
+site data if you reused an origin with accounts from a different database.
+
+## Agent playtest startup
 
 Prerequisites: Docker with Compose v2, Python 3 and a compatible Flutter SDK
 (the workspace `.tools/flutter` is preferred; otherwise `flutter` on PATH).

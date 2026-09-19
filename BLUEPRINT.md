@@ -763,8 +763,13 @@ error at the version boundary, then leave examples/overlays/tests too.
 
 ### 4. Local Development
 
-`make up` remains the general development Compose stack with production modes
-closed. The explicit private prototype path, `make playtest.up`, starts isolated
+`make up` starts the local development Compose stack with Air reload and an
+explicit private synthetic prototype overlay. `make web.run` retains Flutter
+debugging on port 8000; `make bots ROOM=<code> COUNT=3` (or 5) adds visible,
+authenticated development companions to a human-hosted room. They Ready, act
+and vote through role-scoped v2 state; the human controls starting/rematching.
+Production mode flags remain closed and these matches earn no live value.
+The separate agent verification path, `make playtest.up`, starts isolated
 PostgreSQL/Redis/server/Web clients with the existing synthetic text fixture and
 no cloud key or playable object store. Its engineering fixture is not certified
 production content; see [playtest setup](docs/guides/PLAYTEST.md). Run real

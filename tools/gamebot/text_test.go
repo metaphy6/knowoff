@@ -142,9 +142,9 @@ func TestGamebotCLIRefusesRetiredAndAmbiguousCommandsBeforeIO(t *testing.T) {
 		args []string
 		want string
 	}{
-		{"room", []string{"-room", "ABCDEF", "-text-simulate", "top_that"}, "retired"},
+		{"room", []string{"-room", "ABCDEF", "-text-simulate", "top_that"}, "incompatible"},
 		{"queue", []string{"-queue", "4", "-text-simulate", "top_that"}, "retired"},
-		{"count", []string{"-count", "0", "-text-simulate", "top_that"}, "retired"},
+		{"count", []string{"-count", "0", "-text-simulate", "top_that"}, "requires -room"},
 		{"ambiguous_replay", []string{"-text-simulate", "top_that", "-text-replay", "missing.json"}, "exactly one"},
 		{"ambiguous_network", []string{"-text-network", "top_that", "-text-simulate", "top_that"}, "exactly one"},
 		{"missing_command", nil, "exactly one"},

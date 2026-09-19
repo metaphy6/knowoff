@@ -21,18 +21,24 @@ stack's database volumes. Stop/reset only through that guide's scoped commands.
 
 ## Local stack
 
-The general stack below does not enable private prototype mode.
+Use `make up` from the repository root for manual debugging. It overlays
+`compose/manual.yaml` on the base Compose file, mounts the synthetic fixture,
+and injects a generated private bot key from ignored `docs/tracking/state/dev.env`.
+Go Air reload remains enabled; start Flutter with `make web.run`, host a room,
+and use `make bots ROOM=<code> COUNT=3` (or 5). Stop with `make down`, preserving
+data. The manual and isolated agent stacks share API port 8080; stop one before
+starting the other. See the [manual workflow](../docs/guides/PLAYTEST.md#manual-debugging-with-bot-companions).
+
+The base Compose invocation below retains production gating and does **not**
+include that private overlay:
 
 ```bash
 cd infra/compose
 docker compose --profile core up --build
 ```
 
-Opening this workspace in VS Code also runs this automatically (the
-"Compose: Up (core)" task has `runOn: folderOpen` — see
-[`.vscode/tasks.json`](../.vscode/tasks.json); port 443 is configured to
-auto-open in VS Code's browser preview once nginx is reachable (see
-[`.vscode/settings.json`](../.vscode/settings.json)).
+The example automatic Compose task in [`.vscode/tasks.json`](../.vscode/tasks.json)
+is commented out; opening the workspace does not start the stack.
 
 Then resolve the local domains once (see [`nginx/README.md`](../nginx/README.md)):
 

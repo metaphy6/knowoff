@@ -1,5 +1,5 @@
 // Command gamebot runs zero-effect text simulations and authenticated local
-// prototype network proofs. It cannot join ordinary rooms or use protocol v1.
+// prototype network proofs and explicit human-room companions. No protocol v1.
 package main
 
 import (
@@ -28,10 +28,9 @@ func runGamebot(args []string) int {
 	textSize := flags.Int("text-size", 4, "original table size (4 or 6)")
 	server := flags.String("server", "ws://127.0.0.1:8080/ws/v2", "local prototype WebSocket endpoint")
 	seed := flags.Int64("seed", time.Now().UnixNano(), "simulation or network random seed")
-	// Retain names only to provide an explicit refusal, including default values.
-	flags.String("room", "", "retired; ordinary room joining is unsupported")
+	room := flags.String("room", "", "join an existing local private prototype room")
 	flags.String("queue", "", "retired; ordinary queue joining is unsupported")
-	flags.String("count", "", "retired; use the explicit text table size")
+	count := flags.Int("count", 3, "manual companion seats (1..5)")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return 0
@@ -42,13 +41,33 @@ func runGamebot(args []string) int {
 	flags.Visit(func(f *flag.Flag) { visited[f.Name] = true })
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	refuse := func(message string) int { logger.Error(message); return 2 }
-	for _, name := range []string{"room", "queue", "count"} {
+	for _, name := range []string{"queue"} {
 		if visited[name] {
 			return refuse("retired gamebot flag: -" + name)
 		}
 	}
 	if flags.NArg() != 0 {
 		return refuse("positional arguments are unsupported")
+	}
+	if visited["room"] {
+		for _, name := range []string{"text-network", "text-simulate", "text-replay", "text-pack", "text-tuning", "text-out", "text-size"} {
+			if visited[name] {
+				return refuse("-room is incompatible with -" + name)
+			}
+		}
+		if !manualRoomCode.MatchString(*room) || *count < 1 || *count > 5 {
+			return refuse("manual bots require -room CODE and -count 1..5")
+		}
+		ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+		defer cancel()
+		if err := runManualBots(ctx, *server, *room, *count, *seed, os.Getenv("KNOWOFF_DEV_BOT_KEY")); err != nil && !errors.Is(err, context.Canceled) {
+			logger.Error("manual prototype companions stopped", "error", err)
+			return 1
+		}
+		return 0
+	}
+	if visited["count"] {
+		return refuse("-count requires -room")
 	}
 	commands := 0
 	for _, name := range []string{"text-network", "text-simulate", "text-replay"} {
